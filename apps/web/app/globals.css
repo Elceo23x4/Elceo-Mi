@@ -1,0 +1,21 @@
+:root {
+  color-scheme: dark;
+  --elceo-bg: #0b0b0f;
+  --elceo-text: #f5f5f7;
+  --elceo-accent-main: #d15a5a;
+  --elceo-accent-positive: #44c977;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  font-family: Inter, 'Segoe UI', sans-serif;
+  background: radial-gradient(circle at 20% 20%, #1a1115, var(--elceo-bg));
+  color: var(--elceo-text);
+}

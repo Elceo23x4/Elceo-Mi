@@ -1,0 +1,22 @@
+{
+  "name": "elceo",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "npm@10.9.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*"
+  ],
+  "scripts": {
+    "build": "npm run -ws --if-present build",
+    "dev": "npm run dev -w apps/web",
+    "lint": "npm run -ws --if-present lint",
+    "typecheck": "npm run -ws --if-present typecheck",
+    "test": "npm run -ws --if-present test",
+    "format": "npm run -ws --if-present format"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

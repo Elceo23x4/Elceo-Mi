@@ -1,0 +1,1 @@
+-- ELCEO foundation schema bootstrap (slice 1)

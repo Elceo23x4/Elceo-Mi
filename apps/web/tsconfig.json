@@ -9,7 +9,11 @@
     ],
     "strict": false,
     "noImplicitAny": false,
-    "exactOptionalPropertyTypes": false
+    "exactOptionalPropertyTypes": false,
+    "allowJs": true,
+    "noEmit": true,
+    "incremental": true,
+    "isolatedModules": true
   },
   "include": [
     "**/*.ts",

@@ -1,7 +1,13 @@
 import type { MarketDataProvider } from '@elceo/providers';
 import { MarketDataCompositeAdapter } from '@elceo/providers';
 import { normalizeEvent } from '../normalization/normalizeEvent';
-import { persistNormalizedEvents, persistChartViewModel, readPersistedState } from '../store/persistence-store';
+import {
+  appendNormalizedEvents,
+  persistChartViewModel,
+  readPersistedState,
+  setPersistenceStore,
+  InMemoryPersistenceStore
+} from '../store/persistence-store';
 import type { DashboardCognitionViewModel } from '@elceo/types';
 
 function assert(condition: boolean, message: string): void {
@@ -10,8 +16,12 @@ function assert(condition: boolean, message: string): void {
 
 class EmptyProvider implements MarketDataProvider {
   readonly providerId = 'empty';
-  async getLatestQuote() { return null; }
-  async getCandles() { return []; }
+  async getLatestQuote() {
+    return null;
+  }
+  async getCandles() {
+    return [];
+  }
 }
 
 class QuoteProvider implements MarketDataProvider {
@@ -25,10 +35,14 @@ class QuoteProvider implements MarketDataProvider {
       timestampUtc: new Date().toISOString()
     };
   }
-  async getCandles() { return []; }
+  async getCandles() {
+    return [];
+  }
 }
 
 export async function runLiveDataPlumbingTests(): Promise<void> {
+  setPersistenceStore(new InMemoryPersistenceStore());
+
   const composite = new MarketDataCompositeAdapter({
     finnhub: new EmptyProvider(),
     alphavantage: new QuoteProvider(),
@@ -49,7 +63,7 @@ export async function runLiveDataPlumbingTests(): Promise<void> {
     mentionedAssets: ['XAU/USD'],
     dedupeKey: 'dedupe'
   });
-  persistNormalizedEvents([normalized]);
+  await appendNormalizedEvents([normalized]);
 
   const vm: DashboardCognitionViewModel = {
     asset_code: 'XAU/USD',
@@ -62,9 +76,9 @@ export async function runLiveDataPlumbingTests(): Promise<void> {
     evidence_notes: [],
     modules: []
   };
-  persistChartViewModel('XAU/USD', vm);
+  await persistChartViewModel('XAU/USD', vm);
 
-  const snapshot = readPersistedState();
+  const snapshot = await readPersistedState();
   assert(snapshot.normalizedEvents.length > 0, 'normalized events persisted');
   assert(snapshot.chartViewModelByAsset['XAU/USD']?.asset_code === 'XAU/USD', 'dashboard mapping persisted');
 }

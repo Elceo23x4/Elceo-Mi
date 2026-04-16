@@ -1,8 +1,8 @@
 import { DashboardShell } from '../../../components/dashboard/DashboardShell';
-import { buildDashboardViewModelFromInternalData } from '../../../lib/mock-cognition';
+import { buildDashboardViewModelFromAppData } from '../../../lib/dashboard-data';
 
 export default async function DashboardPage() {
-  const viewModel = await buildDashboardViewModelFromInternalData('XAU/USD');
+  const viewModel = await buildDashboardViewModelFromAppData('XAU/USD');
 
   if (!viewModel) {
     return <div style={{ padding: '1rem' }}>Dashboard data is warming up. Please refresh shortly.</div>;

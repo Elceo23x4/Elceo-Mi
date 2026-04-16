@@ -3,11 +3,11 @@ import { readPersistedState } from '../store/persistence-store';
 import { runIngestionTick } from '../worker';
 
 export async function getDashboardData(assetCode: string): Promise<DashboardCognitionViewModel | null> {
-  let snapshot = readPersistedState();
+  let snapshot = await readPersistedState();
 
   if (!snapshot.chartViewModelByAsset[assetCode]) {
     await runIngestionTick();
-    snapshot = readPersistedState();
+    snapshot = await readPersistedState();
   }
 
   return snapshot.chartViewModelByAsset[assetCode] ?? null;

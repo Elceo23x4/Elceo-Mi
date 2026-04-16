@@ -4,22 +4,20 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Reveal } from '@elceo/motion';
 import { EditorialHeroFrame, Surface, Text } from '@elceo/ui';
-import {
-  DEFAULT_STATE,
-  getTrackedAssetLimit,
-  LAUNCH_ASSET_CLUSTER,
-  STORAGE_KEY,
-  type ElceoUserState,
-  type PlanTier
-} from '../../lib/mock-state';
+import { getTrackedAssetLimit, LAUNCH_ASSET_CLUSTER, STORAGE_KEY, type ElceoUserState, type PlanTier } from '../../lib/mock-state';
 import { SectionTitle } from '../shared/SectionTitle';
 
 const steps = ['welcome', 'compliance', 'assets', 'plan', 'complete'] as const;
 
-export function OnboardingFlow() {
+type OnboardingFlowProps = {
+  initialState: ElceoUserState;
+};
+
+export function OnboardingFlow({ initialState }: OnboardingFlowProps) {
   const router = useRouter();
   const [step, setStep] = useState<(typeof steps)[number]>('welcome');
-  const [state, setState] = useState<ElceoUserState>(DEFAULT_STATE);
+  const [state, setState] = useState<ElceoUserState>(initialState);
+  const [persistError, setPersistError] = useState<string | null>(null);
 
   const stepIndex = steps.indexOf(step) + 1;
   const stepTotal = steps.length;
@@ -50,14 +48,40 @@ export function OnboardingFlow() {
     if (next) setStep(next);
   };
 
-  const saveAndFinish = () => {
-    const completed = {
-      ...state,
-      onboardingCompletedAt: new Date().toISOString()
+  const saveAndFinish = async () => {
+    setPersistError(null);
+
+    const response = await fetch('/api/app-state/onboarding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        termsAccepted: state.termsAccepted,
+        disclaimerAccepted: state.disclaimerAccepted,
+        planTier: state.planTier,
+        selectedAssets: state.selectedAssets
+      })
+    });
+
+    if (!response.ok) {
+      const failure = (await response.json().catch(() => ({ error: 'Failed to persist onboarding state' }))) as { error?: string };
+      setPersistError(failure.error ?? 'Failed to persist onboarding state');
+      return;
+    }
+
+    const persisted = (await response.json()) as {
+      profile: { onboardingCompletedAt: string | null };
+      watchlist: { assets: string[] };
     };
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(completed));
-    document.cookie = 'elceo_onboarding=complete; path=/; max-age=31536000';
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...state,
+        selectedAssets: persisted.watchlist.assets,
+        onboardingCompletedAt: persisted.profile.onboardingCompletedAt ?? undefined
+      })
+    );
+
     router.push('/dashboard');
   };
 
@@ -124,12 +148,7 @@ export function OnboardingFlow() {
             {LAUNCH_ASSET_CLUSTER.map((asset) => {
               const selected = state.selectedAssets.includes(asset);
               return (
-                <button
-                  key={asset}
-                  className={selected ? 'elceo-chip active' : 'elceo-chip'}
-                  onClick={() => toggleAsset(asset)}
-                  type="button"
-                >
+                <button key={asset} className={selected ? 'elceo-chip active' : 'elceo-chip'} onClick={() => toggleAsset(asset)} type="button">
                   {asset}
                 </button>
               );
@@ -177,6 +196,7 @@ export function OnboardingFlow() {
           <button className="elceo-pill-button" type="button" onClick={saveAndFinish}>
             Enter ELCEO Dashboard
           </button>
+          {persistError ? <Text tone="primary">{persistError}</Text> : null}
         </Surface>
       ) : null}
 

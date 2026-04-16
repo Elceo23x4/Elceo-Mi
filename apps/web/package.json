@@ -18,6 +18,8 @@
     "react-dom": "19.0.0",
     "@elceo/chart-intelligence": "0.1.0",
     "@elceo/reasoning": "0.1.0",
-    "@elceo/ingestion": "0.1.0"
+    "@elceo/ingestion": "0.1.0",
+    "@elceo/application-state": "0.1.0",
+    "next-auth": "^5.0.0-beta.30"
   }
 }

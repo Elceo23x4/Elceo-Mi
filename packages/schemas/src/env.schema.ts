@@ -11,6 +11,10 @@ export type ProviderEnv = {
   ENABLE_KAFKA?: string;
   PERSISTENCE_MODE?: 'filesystem' | 'memory';
   PERSISTENCE_FILE_PATH?: string;
+  AUTH_SECRET?: string;
+  AUTH_GOOGLE_CLIENT_ID?: string;
+  AUTH_GOOGLE_CLIENT_SECRET?: string;
+  APP_STATE_REPOSITORY?: 'postgres' | 'memory';
 };
 
 export function readProviderEnv(env: Record<string, string | undefined> = {}): ProviderEnv {
@@ -27,5 +31,9 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   if (env.ENABLE_KAFKA) out.ENABLE_KAFKA = env.ENABLE_KAFKA;
   if (env.PERSISTENCE_MODE === 'filesystem' || env.PERSISTENCE_MODE === 'memory') out.PERSISTENCE_MODE = env.PERSISTENCE_MODE;
   if (env.PERSISTENCE_FILE_PATH) out.PERSISTENCE_FILE_PATH = env.PERSISTENCE_FILE_PATH;
+  if (env.AUTH_SECRET) out.AUTH_SECRET = env.AUTH_SECRET;
+  if (env.AUTH_GOOGLE_CLIENT_ID) out.AUTH_GOOGLE_CLIENT_ID = env.AUTH_GOOGLE_CLIENT_ID;
+  if (env.AUTH_GOOGLE_CLIENT_SECRET) out.AUTH_GOOGLE_CLIENT_SECRET = env.AUTH_GOOGLE_CLIENT_SECRET;
+  if (env.APP_STATE_REPOSITORY === 'postgres' || env.APP_STATE_REPOSITORY === 'memory') out.APP_STATE_REPOSITORY = env.APP_STATE_REPOSITORY;
   return out;
 }

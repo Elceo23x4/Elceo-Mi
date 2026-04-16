@@ -1,25 +1,29 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getToken } from 'next-auth/jwt';
+import { evaluateRouteGuard } from './lib/auth/route-protection';
 
-const protectedRoutes = ['/dashboard', '/portfolio', '/journal', '/analytics', '/settings', '/admin'];
+function runtimeEnv(): Record<string, string | undefined> {
+  return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
+}
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const onboardingComplete = request.cookies.get('elceo_onboarding')?.value === 'complete';
+  const token = await getToken({ req: request, secret: runtimeEnv().AUTH_SECRET });
 
-  const isProtected = protectedRoutes.some((route) => pathname.startsWith(route));
+  const decision = evaluateRouteGuard({
+    pathname,
+    isAuthenticated: Boolean(token?.sub),
+    role: String(token?.role ?? 'user')
+  });
 
-  if (isProtected && !onboardingComplete) {
-    return NextResponse.redirect(new URL('/onboarding', request.url));
-  }
-
-  if (pathname.startsWith('/onboarding') && onboardingComplete) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+  if (!decision.allow && decision.redirectTo) {
+    return NextResponse.redirect(new URL(decision.redirectTo, request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/portfolio/:path*', '/journal/:path*', '/analytics/:path*', '/settings/:path*', '/admin/:path*', '/onboarding']
+  matcher: ['/dashboard/:path*', '/portfolio/:path*', '/journal/:path*', '/analytics/:path*', '/settings/:path*', '/admin/:path*', '/onboarding', '/api/app-state/:path*']
 };

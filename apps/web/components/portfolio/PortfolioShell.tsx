@@ -2,47 +2,43 @@
 
 import { Reveal } from '@elceo/motion';
 import { Surface, Text } from '@elceo/ui';
-import {
-  getTrackedAssetLimit,
-  LAUNCH_ASSET_CLUSTER,
-  safeParseState,
-  STORAGE_KEY,
-  type ElceoUserState
-} from '../../lib/mock-state';
-import { useEffect, useMemo, useState } from 'react';
+import { getTrackedAssetLimit, LAUNCH_ASSET_CLUSTER, STORAGE_KEY, type ElceoUserState } from '../../lib/mock-state';
+import { useMemo, useState } from 'react';
 
-export function PortfolioShell() {
-  const [state, setState] = useState<ElceoUserState | null>(null);
+type PortfolioShellProps = {
+  initialState: ElceoUserState;
+};
 
-  useEffect(() => {
-    setState(safeParseState(localStorage.getItem(STORAGE_KEY)));
-  }, []);
+export function PortfolioShell({ initialState }: PortfolioShellProps) {
+  const [state, setState] = useState<ElceoUserState>(initialState);
+  const [persistError, setPersistError] = useState<string | null>(null);
 
-  const limit = useMemo(() => (state ? getTrackedAssetLimit(state.planTier) : 0), [state]);
+  const limit = useMemo(() => getTrackedAssetLimit(state.planTier), [state.planTier]);
 
-  const toggleAsset = (asset: string) => {
-    if (!state) return;
-
+  const toggleAsset = async (asset: string) => {
     const exists = state.selectedAssets.includes(asset);
-    let nextAssets = exists ? state.selectedAssets.filter((item) => item !== asset) : [...state.selectedAssets, asset];
+    const proposed = exists ? state.selectedAssets.filter((item) => item !== asset) : [...state.selectedAssets, asset];
 
-    if (!exists && nextAssets.length > limit) {
-      nextAssets = nextAssets.slice(0, limit);
+    setPersistError(null);
+
+    const response = await fetch('/api/app-state/watchlist', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assets: proposed })
+    });
+
+    if (!response.ok) {
+      const failure = (await response.json().catch(() => ({ error: 'Failed to persist watchlist' }))) as { error?: string };
+      setPersistError(failure.error ?? 'Failed to persist watchlist');
+      return;
     }
 
-    const next = { ...state, selectedAssets: nextAssets };
+    const data = (await response.json()) as { watchlist: { assets: string[] }; entitlement: { trackedAssetLimit: number } };
+
+    const next = { ...state, selectedAssets: data.watchlist.assets };
     setState(next);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   };
-
-  if (!state) {
-    return (
-      <Surface style={{ padding: '1rem' }}>
-        <p className="elceo-kicker">PORTFOLIO</p>
-        <p>Loading portfolio context…</p>
-      </Surface>
-    );
-  }
 
   const atLimit = state.selectedAssets.length >= limit;
 
@@ -55,9 +51,7 @@ export function PortfolioShell() {
           <Text tone="muted">
             Plan: {state.planTier.toUpperCase()} · Tracking {state.selectedAssets.length} / {limit} assets.
           </Text>
-          {state.planTier === 'free' ? (
-            <Text tone="primary">Upgrade to PREMIUM to unlock full launch-asset coverage and deeper cognition surfaces.</Text>
-          ) : null}
+          {state.planTier === 'free' ? <Text tone="primary">Upgrade to PREMIUM to unlock full launch-asset coverage and deeper cognition surfaces.</Text> : null}
         </Surface>
       </Reveal>
 
@@ -68,19 +62,14 @@ export function PortfolioShell() {
             const selected = state.selectedAssets.includes(asset);
             const disableNew = !selected && atLimit;
             return (
-              <button
-                key={asset}
-                type="button"
-                disabled={disableNew}
-                className={selected ? 'elceo-chip active' : 'elceo-chip'}
-                onClick={() => toggleAsset(asset)}
-              >
+              <button key={asset} type="button" disabled={disableNew} className={selected ? 'elceo-chip active' : 'elceo-chip'} onClick={() => toggleAsset(asset)}>
                 {asset}
               </button>
             );
           })}
         </div>
         <Text tone="muted">When free-plan limit is reached, choose replacements or upgrade for full set access.</Text>
+        {persistError ? <Text tone="primary">{persistError}</Text> : null}
       </Surface>
 
       <Surface style={{ padding: '1rem' }}>

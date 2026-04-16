@@ -49,6 +49,9 @@
       ],
       "@elceo/reasoning": [
         "services/reasoning/src/index.ts"
+      ],
+      "@elceo/application-state": [
+        "services/application-state/src/index.ts"
       ]
     }
   }

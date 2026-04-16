@@ -1,3 +1,5 @@
+import type { ApplicationUserState } from '@elceo/application-state';
+
 export type PlanTier = 'free' | 'premium';
 
 export type NotificationChannelPrefs = {
@@ -46,7 +48,7 @@ export const TRACKED_ASSET_LIMITS: Record<PlanTier, number> = {
   premium: LAUNCH_ASSET_CLUSTER.length
 };
 
-export const STORAGE_KEY = 'elceo-user-state';
+export const STORAGE_KEY = 'elceo-user-state-ui-cache';
 
 export const DEFAULT_STATE: ElceoUserState = {
   termsAccepted: false,
@@ -69,23 +71,30 @@ export const DEFAULT_STATE: ElceoUserState = {
   }
 };
 
-export function safeParseState(raw: string | null): ElceoUserState {
-  if (!raw) return DEFAULT_STATE;
-
-  try {
-    const parsed = JSON.parse(raw) as Partial<ElceoUserState>;
-    return {
-      ...DEFAULT_STATE,
-      ...parsed,
-      notifications: { ...DEFAULT_STATE.notifications, ...parsed.notifications },
-      notificationClasses: { ...DEFAULT_STATE.notificationClasses, ...parsed.notificationClasses },
-      selectedAssets: Array.isArray(parsed.selectedAssets) ? parsed.selectedAssets : DEFAULT_STATE.selectedAssets
-    };
-  } catch {
-    return DEFAULT_STATE;
-  }
-}
-
 export function getTrackedAssetLimit(plan: PlanTier): number {
   return TRACKED_ASSET_LIMITS[plan];
+}
+
+export function toUiState(appState: ApplicationUserState): ElceoUserState {
+  return {
+    termsAccepted: appState.profile.termsAccepted,
+    disclaimerAccepted: appState.profile.disclaimerAccepted,
+    selectedAssets: appState.watchlist.assets,
+    planTier: appState.profile.planTier,
+    motionIntensity: appState.profile.motionIntensity,
+    notifications: {
+      inApp: appState.notifications.inApp,
+      email: appState.notifications.email,
+      browserPush: appState.notifications.browserPush
+    },
+    notificationClasses: {
+      biasChanges: appState.notifications.biasChanges,
+      contradictionSpikes: appState.notifications.contradictionSpikes,
+      keyLevelInteractions: appState.notifications.keyLevelInteractions,
+      macroEventWarnings: appState.notifications.macroEventWarnings,
+      postEventRegimeShift: appState.notifications.postEventRegimeShift,
+      journalCoaching: appState.notifications.journalCoaching
+    },
+    ...(appState.profile.onboardingCompletedAt ? { onboardingCompletedAt: appState.profile.onboardingCompletedAt } : {})
+  };
 }

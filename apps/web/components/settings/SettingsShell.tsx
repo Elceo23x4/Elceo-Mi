@@ -1,24 +1,39 @@
 'use client';
 
 import { Surface, Text } from '@elceo/ui';
-import { useEffect, useState } from 'react';
-import { safeParseState, STORAGE_KEY, type ElceoUserState } from '../../lib/mock-state';
+import { useState } from 'react';
+import { STORAGE_KEY, type ElceoUserState } from '../../lib/mock-state';
 
-export function SettingsShell() {
-  const [state, setState] = useState<ElceoUserState | null>(null);
+type SettingsShellProps = {
+  initialState: ElceoUserState;
+};
 
-  useEffect(() => {
-    setState(safeParseState(localStorage.getItem(STORAGE_KEY)));
-  }, []);
+export function SettingsShell({ initialState }: SettingsShellProps) {
+  const [state, setState] = useState<ElceoUserState>(initialState);
+  const [persistError, setPersistError] = useState<string | null>(null);
 
-  const save = (next: ElceoUserState) => {
+  const save = async (next: ElceoUserState) => {
+    setPersistError(null);
+
+    const response = await fetch('/api/app-state/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        motionIntensity: next.motionIntensity,
+        notifications: next.notifications,
+        notificationClasses: next.notificationClasses
+      })
+    });
+
+    if (!response.ok) {
+      const failure = (await response.json().catch(() => ({ error: 'Failed to persist settings' }))) as { error?: string };
+      setPersistError(failure.error ?? 'Failed to persist settings');
+      return;
+    }
+
     setState(next);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   };
-
-  if (!state) {
-    return <Surface style={{ padding: '1rem' }}>Loading settings…</Surface>;
-  }
 
   return (
     <div style={{ display: 'grid', gap: '1rem' }}>
@@ -103,6 +118,7 @@ export function SettingsShell() {
         <p className="elceo-kicker">SETTINGS · PLAN</p>
         <h2 style={{ margin: 0 }}>Plan visibility</h2>
         <Text tone="muted">Current plan: {state.planTier.toUpperCase()}</Text>
+        {persistError ? <Text tone="primary">{persistError}</Text> : null}
       </Surface>
     </div>
   );

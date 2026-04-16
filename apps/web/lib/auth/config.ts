@@ -1,19 +1,43 @@
-import NextAuth from 'next-auth';
+import NextAuth, { type NextAuthConfig, type Session, type User } from 'next-auth';
 import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
+import type { JWT } from 'next-auth/jwt';
 import { ApplicationStateService, getUserStateRepository } from '@elceo/application-state';
 import { logEvent } from '@elceo/config';
 
+type AppRole = 'user' | 'super_admin' | 'analyst_admin' | 'support_admin';
+type AppPlanTier = 'free' | 'premium';
+
+type AppAuthUser = User & {
+  id: string;
+  role: AppRole;
+  planTier: AppPlanTier;
+  onboardingCompletedAt: string | null;
+};
+
+type AppToken = JWT & {
+  role?: AppRole;
+  planTier?: AppPlanTier;
+  onboardingCompletedAt?: string | null;
+};
+
+type AppSessionUser = NonNullable<Session['user']> & {
+  id: string;
+  role: AppRole;
+  planTier: AppPlanTier;
+  onboardingCompletedAt: string | null;
+};
+
 const appStateService = new ApplicationStateService(getUserStateRepository());
 
-const runtimeEnv = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
+const runtimeEnv = process.env;
 const isProduction = runtimeEnv.APP_ENV === 'production';
 
 if (isProduction && !runtimeEnv.AUTH_SECRET) {
   throw new Error('AUTH_SECRET must be configured in production');
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const authConfig = {
   trustHost: true,
   secret: runtimeEnv.AUTH_SECRET,
   session: {
@@ -36,12 +60,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' }
       },
-      async authorize(credentials: any) {
+      async authorize(credentials): Promise<AppAuthUser | null> {
         const email = String(credentials?.email ?? '').trim();
         const password = String(credentials?.password ?? '');
-        if (!email || !password || password.length > 256) return null;
+
+        if (!email || !password || password.length > 256) {
+          return null;
+        }
 
         const profile = await getUserStateRepository().verifyPasswordCredentials(email, password);
+
         if (!profile) {
           logEvent('auth.credentials', 'warn', 'credential authorization failed', { email });
           return null;
@@ -51,16 +79,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           id: profile.id,
           email: profile.email,
           name: profile.name,
-          role: profile.role,
-          planTier: profile.planTier,
+          role: profile.role as AppRole,
+          planTier: profile.planTier as AppPlanTier,
           onboardingCompletedAt: profile.onboardingCompletedAt
         };
       }
     })
   ],
   callbacks: {
-    async signIn({ user }: any) {
-      if (!user.email) return false;
+    async signIn({ user }) {
+      if (!user.email) {
+        return false;
+      }
 
       await appStateService.ensureUserFromIdentity({
         email: user.email,
@@ -70,30 +100,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       return true;
     },
-    async jwt({ token, user }: any) {
-      const email = user?.email ?? token.email;
-      if (!email) return token;
+
+    async jwt({ token, user }) {
+      const appToken = token as AppToken;
+      const authUser = user as AppAuthUser | undefined;
+      const email = authUser?.email ?? appToken.email;
+
+      if (!email) {
+        return appToken;
+      }
 
       const state = await appStateService.ensureUserFromIdentity({
         email,
-        name: user?.name ?? token.name ?? email,
+        name: authUser?.name ?? appToken.name ?? email,
         role: 'user'
       });
 
-      token.sub = state.profile.id;
-      token.role = state.profile.role;
-      token.planTier = state.profile.planTier;
-      token.onboardingCompletedAt = state.profile.onboardingCompletedAt;
+      appToken.sub = state.profile.id;
+      appToken.role = state.profile.role as AppRole;
+      appToken.planTier = state.profile.planTier as AppPlanTier;
+      appToken.onboardingCompletedAt = state.profile.onboardingCompletedAt;
 
-      return token;
+      return appToken;
     },
-    async session({ session, token }: any) {
-      if (!session.user) return session;
 
-      session.user.id = String(token.sub ?? '');
-      session.user.role = (token.role as string | undefined) ?? 'user';
-      session.user.planTier = (token.planTier as string | undefined) ?? 'free';
-      session.user.onboardingCompletedAt = (token.onboardingCompletedAt as string | null | undefined) ?? null;
+    async session({ session, token }) {
+      if (!session.user) {
+        return session;
+      }
+
+      const appToken = token as AppToken;
+      const sessionUser = session.user as AppSessionUser;
+
+      sessionUser.id = String(appToken.sub ?? '');
+      sessionUser.role = appToken.role ?? 'user';
+      sessionUser.planTier = appToken.planTier ?? 'free';
+      sessionUser.onboardingCompletedAt = appToken.onboardingCompletedAt ?? null;
 
       return session;
     }
@@ -101,4 +143,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: '/login'
   }
-});
+} satisfies NextAuthConfig;
+
+export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);

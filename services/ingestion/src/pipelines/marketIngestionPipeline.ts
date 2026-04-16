@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { kafkaTopics } from '@elceo/config';
 import type { InternalNormalizedEvent } from '@elceo/schemas';
 import type { MarketDataProvider } from '@elceo/providers';
@@ -32,3 +33,6 @@ export class MarketIngestionPipeline {
     return normalized;
   }
 }
+=======
+export {};
+>>>>>>> origin/main

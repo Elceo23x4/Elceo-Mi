@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { ensureUtc, type NormalizedExtractedDocument } from '@elceo/schemas';
 import type { CrawlerProvider } from '../interfaces/CrawlerProvider';
 
@@ -16,3 +17,6 @@ export class PlaywrightExtractionFallbackAdapter implements CrawlerProvider {
     });
   }
 }
+=======
+export {};
+>>>>>>> origin/main

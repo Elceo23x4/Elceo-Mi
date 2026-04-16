@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 'use client';
 
 import type { CSSProperties, ReactNode } from 'react';
@@ -37,4 +38,10 @@ export function Reveal({ children, delayMs = 0, style }: RevealProps) {
       {children}
     </div>
   );
+=======
+import type { ReactNode } from 'react';
+
+export function Reveal({ children }: { children: ReactNode }) {
+  return <>{children}</>;
+>>>>>>> origin/main
 }

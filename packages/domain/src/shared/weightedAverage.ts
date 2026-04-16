@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 export type WeightedInput = { value: number; weight: number };
 
 export function weightedAverage(inputs: WeightedInput[]): number {
@@ -5,3 +6,6 @@ export function weightedAverage(inputs: WeightedInput[]): number {
   if (totalWeight <= 0) return 0;
   return inputs.reduce((sum, item) => sum + item.value * item.weight, 0) / totalWeight;
 }
+=======
+export {};
+>>>>>>> origin/main

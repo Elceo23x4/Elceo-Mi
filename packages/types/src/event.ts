@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { ProviderId } from './provider';
 
 export type EventClass =
@@ -26,3 +27,6 @@ export type EvidenceAssembly = {
   supportingEventIds: string[];
   contradictoryEventIds: string[];
 };
+=======
+export {};
+>>>>>>> origin/main

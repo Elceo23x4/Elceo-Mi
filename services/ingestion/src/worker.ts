@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { buildProviderGraph } from './adapters/build-provider-graph';
 import { MarketIngestionPipeline } from './pipelines/marketIngestionPipeline';
 import { MacroIngestionPipeline } from './pipelines/macroIngestionPipeline';
@@ -87,3 +88,6 @@ export async function runIngestionTick(): Promise<void> {
   const output = chart.buildChartIntelligence('XAU/USD', cognition, evidence, candles);
   await persistChartViewModel('XAU/USD', output.dashboardViewModel);
 }
+=======
+export {};
+>>>>>>> origin/main

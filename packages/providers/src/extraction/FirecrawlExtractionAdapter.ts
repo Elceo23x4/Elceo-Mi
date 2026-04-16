@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { ensureUtc, type NormalizedExtractedDocument } from '@elceo/schemas';
 import type { CrawlerProvider } from '../interfaces/CrawlerProvider';
 import { fetchJson } from '../http';
@@ -44,3 +45,6 @@ export class FirecrawlExtractionAdapter implements CrawlerProvider {
     }
   }
 }
+=======
+export {};
+>>>>>>> origin/main

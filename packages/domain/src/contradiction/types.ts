@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { ContradictionState, DirectionalBias } from '../shared/types';
 
 export type ContradictionInputs = {
@@ -13,3 +14,6 @@ export type ContradictionOutput = {
   score: number;
   state: ContradictionState;
 };
+=======
+export {};
+>>>>>>> origin/main

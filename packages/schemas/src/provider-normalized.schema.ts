@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { ProviderId } from '@elceo/types';
 import { toUtcIsoString } from './utc.schema';
 
@@ -90,3 +91,6 @@ export function ensureUtc<T extends { timestampUtc?: string; releaseTimeUtc?: st
   if (clone.extractedAtUtc) clone.extractedAtUtc = toUtcIsoString(clone.extractedAtUtc);
   return clone;
 }
+=======
+export {};
+>>>>>>> origin/main

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 export type ProviderEnv = {
   FINNHUB_API_KEY?: string;
   ALPHAVANTAGE_API_KEY?: string;
@@ -37,3 +38,6 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   if (env.APP_STATE_REPOSITORY === 'postgres' || env.APP_STATE_REPOSITORY === 'memory') out.APP_STATE_REPOSITORY = env.APP_STATE_REPOSITORY;
   return out;
 }
+=======
+export {};
+>>>>>>> origin/main

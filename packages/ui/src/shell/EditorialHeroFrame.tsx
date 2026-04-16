@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { ReactNode } from 'react';
 import { GlowFrame } from '../primitives/GlowFrame';
 import { Surface } from '../primitives/Surface';
@@ -23,3 +24,6 @@ export function EditorialHeroFrame({ children }: EditorialHeroFrameProps) {
     </GlowFrame>
   );
 }
+=======
+export {};
+>>>>>>> origin/main

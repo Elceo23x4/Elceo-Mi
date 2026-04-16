@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -15,3 +16,6 @@ export function useReducedMotionPreference(): boolean {
 
   return reduced;
 }
+=======
+export {};
+>>>>>>> origin/main

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { RiskInput, RiskOutput } from './types';
 
 export function calculateRiskAmount(input: RiskInput): RiskOutput {
@@ -5,3 +6,6 @@ export function calculateRiskAmount(input: RiskInput): RiskOutput {
     riskAmount: input.accountBalance * (input.riskPercent / 100)
   };
 }
+=======
+export {};
+>>>>>>> origin/main

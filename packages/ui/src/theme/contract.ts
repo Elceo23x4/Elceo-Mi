@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 export type ThemeMode = 'dark' | 'light';
 
 export type ThemeTokens = {
@@ -38,3 +39,6 @@ export function themeCssVariables(theme: ThemeTokens): Record<string, string> {
     '--elceo-font-mono': theme.typography.mono
   };
 }
+=======
+export {};
+>>>>>>> origin/main

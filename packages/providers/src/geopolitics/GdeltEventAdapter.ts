@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { ensureUtc, type NormalizedGeopoliticalEvent } from '@elceo/schemas';
 import type { GeopoliticsProvider } from '../interfaces/GeopoliticsProvider';
 import { fetchJson } from '../http';
@@ -38,3 +39,6 @@ export class GdeltEventAdapter implements GeopoliticsProvider {
     }
   }
 }
+=======
+export {};
+>>>>>>> origin/main

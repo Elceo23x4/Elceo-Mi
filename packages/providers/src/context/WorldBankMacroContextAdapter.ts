@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { MacroContextProvider, MacroContextRecord } from '../interfaces/MacroContextProvider';
 
 export class WorldBankMacroContextAdapter implements MacroContextProvider {
@@ -7,3 +8,6 @@ export class WorldBankMacroContextAdapter implements MacroContextProvider {
     return [{ providerId: this.providerId, country: countryCode, metric: 'inflation', value: 0, period: 'latest' }];
   }
 }
+=======
+export {};
+>>>>>>> origin/main

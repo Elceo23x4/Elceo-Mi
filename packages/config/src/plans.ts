@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 export type PlanTier = 'free' | 'premium';
 
 export const trackedAssetLimits: Record<PlanTier, number> = {
@@ -8,3 +9,6 @@ export const trackedAssetLimits: Record<PlanTier, number> = {
 export function getTrackedAssetLimit(plan: PlanTier): number {
   return trackedAssetLimits[plan];
 }
+=======
+export {};
+>>>>>>> origin/main

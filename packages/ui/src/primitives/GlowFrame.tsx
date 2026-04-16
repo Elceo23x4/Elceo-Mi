@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { ReactNode } from 'react';
 
 type GlowFrameProps = {
@@ -18,3 +19,6 @@ export function GlowFrame({ children }: GlowFrameProps) {
     </div>
   );
 }
+=======
+export {};
+>>>>>>> origin/main

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { clamp } from './clamp';
 
 export function linearDecayScore(elapsedMinutes: number, decayWindowMinutes: number): number {
@@ -5,3 +6,6 @@ export function linearDecayScore(elapsedMinutes: number, decayWindowMinutes: num
   const remaining = 1 - elapsedMinutes / decayWindowMinutes;
   return clamp(remaining * 100, 0, 100);
 }
+=======
+export {};
+>>>>>>> origin/main

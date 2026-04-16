@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { CSSProperties, ReactNode } from 'react';
 
 type SurfaceProps = {
@@ -21,3 +22,6 @@ export function Surface({ children, style }: SurfaceProps) {
     </section>
   );
 }
+=======
+export {};
+>>>>>>> origin/main

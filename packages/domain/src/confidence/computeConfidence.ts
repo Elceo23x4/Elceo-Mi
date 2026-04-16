@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { clamp } from '../shared/clamp';
 import { weightedAverage } from '../shared/weightedAverage';
 import type { ConfidenceInputs, ConfidenceOutput } from './types';
@@ -26,3 +27,6 @@ export function computeConfidence(inputs: ConfidenceInputs): ConfidenceOutput {
     }
   };
 }
+=======
+export {};
+>>>>>>> origin/main

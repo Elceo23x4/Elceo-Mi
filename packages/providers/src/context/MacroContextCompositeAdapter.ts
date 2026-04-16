@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { providerPriority } from '@elceo/config';
 import type { MacroContextProvider, MacroContextRecord } from '../interfaces/MacroContextProvider';
 
@@ -21,3 +22,6 @@ export class MacroContextCompositeAdapter {
     return result;
   }
 }
+=======
+export {};
+>>>>>>> origin/main

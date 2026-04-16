@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { CSSProperties, ReactNode } from 'react';
 
 type TextProps = {
@@ -21,3 +22,6 @@ export function Text({ as = 'p', children, tone = 'primary', style }: TextProps)
     </Comp>
   );
 }
+=======
+export {};
+>>>>>>> origin/main

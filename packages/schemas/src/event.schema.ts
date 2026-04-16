@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { NormalizedProviderEvent } from './provider-normalized.schema';
 
 export type InternalNormalizedEvent = {
@@ -8,3 +9,6 @@ export type InternalNormalizedEvent = {
   dedupeKey: string;
   payload: NormalizedProviderEvent;
 };
+=======
+export {};
+>>>>>>> origin/main

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { ContradictionState, DirectionalBias, TimeHorizon } from '@elceo/domain';
 
 type ConfidenceAnatomy = {
@@ -31,3 +32,6 @@ export type AssetCognitionState = {
   deep_explanation?: string;
   ranking_score: number;
 };
+=======
+export {};
+>>>>>>> origin/main

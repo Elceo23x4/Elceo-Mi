@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { ensureUtc, type NormalizedCandle, type NormalizedMarketQuote } from '@elceo/schemas';
 import type { MarketDataProvider } from '../interfaces/MarketDataProvider';
 import { fetchJson } from '../http';
@@ -38,3 +39,6 @@ export class FmpMarketDataAdapter implements MarketDataProvider {
     ];
   }
 }
+=======
+export {};
+>>>>>>> origin/main

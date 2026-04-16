@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { ensureUtc, type NormalizedNewsArticle } from '@elceo/schemas';
 import type { NewsProvider } from '../interfaces/NewsProvider';
 import { fetchJson } from '../http';
@@ -49,3 +50,6 @@ export class MarketauxNewsAdapter implements NewsProvider {
       .filter((item): item is NormalizedNewsArticle => item !== null);
   }
 }
+=======
+export {};
+>>>>>>> origin/main

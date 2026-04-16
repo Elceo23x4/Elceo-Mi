@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 export type ConfidenceInputs = {
   sourceConfidence: number;
   eventStrength: number;
@@ -18,3 +19,6 @@ export type ConfidenceOutput = {
     contradictionPenalty: number;
   };
 };
+=======
+export {};
+>>>>>>> origin/main

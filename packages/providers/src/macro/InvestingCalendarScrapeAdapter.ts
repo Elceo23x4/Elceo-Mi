@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { ensureUtc, type NormalizedMacroEvent } from '@elceo/schemas';
 import type { MacroCalendarProvider } from '../interfaces/MacroCalendarProvider';
 import { FirecrawlExtractionAdapter } from '../extraction/FirecrawlExtractionAdapter';
@@ -23,3 +24,6 @@ export class InvestingCalendarScrapeAdapter implements MacroCalendarProvider {
     ];
   }
 }
+=======
+export {};
+>>>>>>> origin/main

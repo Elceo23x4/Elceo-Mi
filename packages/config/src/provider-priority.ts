@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 export const providerPriority = {
   marketData: ['finnhub', 'alphavantage', 'fmp'],
   macroCalendar: ['finnhub', 'investing-firecrawl', 'fmp'],
@@ -6,3 +7,6 @@ export const providerPriority = {
 } as const;
 
 export type ProviderDomain = keyof typeof providerPriority;
+=======
+export {};
+>>>>>>> origin/main

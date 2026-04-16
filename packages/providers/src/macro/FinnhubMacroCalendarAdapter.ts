@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { ensureUtc, type NormalizedMacroEvent } from '@elceo/schemas';
 import type { MacroCalendarProvider } from '../interfaces/MacroCalendarProvider';
 import { fetchJson } from '../http';
@@ -69,3 +70,6 @@ export class FinnhubMacroCalendarAdapter implements MacroCalendarProvider {
     });
   }
 }
+=======
+export {};
+>>>>>>> origin/main

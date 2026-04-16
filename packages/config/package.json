@@ -10,6 +10,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
     "format": "prettier --check src"
+<<<<<<< HEAD
   },
   "dependencies": {}
+=======
+  }
+>>>>>>> origin/main
 }

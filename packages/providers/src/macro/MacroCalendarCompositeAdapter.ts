@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { providerPriority } from '@elceo/config';
 import type { NormalizedMacroEvent } from '@elceo/schemas';
 import type { MacroCalendarProvider } from '../interfaces/MacroCalendarProvider';
@@ -21,3 +22,6 @@ export class MacroCalendarCompositeAdapter implements MacroCalendarProvider {
     return [];
   }
 }
+=======
+export {};
+>>>>>>> origin/main

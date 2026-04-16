@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 export type ProviderId =
   | 'finnhub'
   | 'alphavantage'
@@ -24,3 +25,6 @@ export type ProviderHealthRecord = {
   lastFailureAt?: string;
   message?: string;
 };
+=======
+export {};
+>>>>>>> origin/main

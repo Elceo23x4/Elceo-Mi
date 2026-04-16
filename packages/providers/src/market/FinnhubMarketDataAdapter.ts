@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { ensureUtc, type NormalizedCandle, type NormalizedMarketQuote } from '@elceo/schemas';
 import type { MarketDataProvider } from '../interfaces/MarketDataProvider';
 import { fetchJson } from '../http';
@@ -90,3 +91,6 @@ export class FinnhubMarketDataAdapter implements MarketDataProvider {
     return output;
   }
 }
+=======
+export {};
+>>>>>>> origin/main

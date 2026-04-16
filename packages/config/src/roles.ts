@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 export type AppRole = 'user' | 'super_admin' | 'analyst_admin' | 'support_admin';
 
 export const adminRoles: AppRole[] = ['super_admin', 'analyst_admin', 'support_admin'];
@@ -5,3 +6,6 @@ export const adminRoles: AppRole[] = ['super_admin', 'analyst_admin', 'support_a
 export function isAdminRole(role: AppRole): boolean {
   return adminRoles.includes(role);
 }
+=======
+export {};
+>>>>>>> origin/main

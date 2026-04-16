@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { MacroContextProvider, MacroContextRecord } from '../interfaces/MacroContextProvider';
 
 export class OecdMacroContextAdapter implements MacroContextProvider {
@@ -7,3 +8,6 @@ export class OecdMacroContextAdapter implements MacroContextProvider {
     return [{ providerId: this.providerId, country: countryCode, metric: 'policy_rate', value: 0, period: 'latest' }];
   }
 }
+=======
+export {};
+>>>>>>> origin/main

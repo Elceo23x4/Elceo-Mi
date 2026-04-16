@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { clamp } from '../shared/clamp';
 import { weightedAverage } from '../shared/weightedAverage';
 import type { ContradictionInputs, ContradictionOutput } from './types';
@@ -22,3 +23,6 @@ export function computeContradiction(inputs: ContradictionInputs): Contradiction
 
   return { score, state };
 }
+=======
+export {};
+>>>>>>> origin/main

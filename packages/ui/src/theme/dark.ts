@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { ThemeTokens } from './contract';
 
 export const darkTheme: ThemeTokens = {
@@ -20,3 +21,6 @@ export const darkTheme: ThemeTokens = {
     mono: '"JetBrains Mono", monospace'
   }
 };
+=======
+export {};
+>>>>>>> origin/main

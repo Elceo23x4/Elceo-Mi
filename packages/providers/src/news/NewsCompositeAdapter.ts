@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { providerPriority } from '@elceo/config';
 import type { NormalizedNewsArticle } from '@elceo/schemas';
 import type { NewsProvider } from '../interfaces/NewsProvider';
@@ -30,3 +31,6 @@ export class NewsCompositeAdapter implements NewsProvider {
     return Array.from(unique.values());
   }
 }
+=======
+export {};
+>>>>>>> origin/main

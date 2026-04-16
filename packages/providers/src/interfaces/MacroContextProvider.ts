@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 export type MacroContextRecord = {
   providerId: string;
   country: string;
@@ -10,3 +11,6 @@ export interface MacroContextProvider {
   readonly providerId: string;
   getContext(countryCode: string): Promise<MacroContextRecord[]>;
 }
+=======
+export {};
+>>>>>>> origin/main

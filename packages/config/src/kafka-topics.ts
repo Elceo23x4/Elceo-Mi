@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 export const kafkaTopics = {
   sourceMarketRaw: 'elceo.source.market.raw',
   sourceMacroRaw: 'elceo.source.macro.raw',
@@ -18,3 +19,6 @@ export const kafkaTopics = {
 } as const;
 
 export type KafkaTopic = (typeof kafkaTopics)[keyof typeof kafkaTopics];
+=======
+export {};
+>>>>>>> origin/main

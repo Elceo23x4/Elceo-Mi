@@ -10,10 +10,13 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
     "format": "prettier --check src"
+<<<<<<< HEAD
   },
   "dependencies": {
     "@elceo/config": "0.1.0",
     "@elceo/schemas": "0.1.0",
     "@elceo/types": "0.1.0"
+=======
+>>>>>>> origin/main
   }
 }

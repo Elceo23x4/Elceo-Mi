@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 export type RiskInput = {
   accountBalance: number;
   riskPercent: number;
@@ -6,3 +7,6 @@ export type RiskInput = {
 export type RiskOutput = {
   riskAmount: number;
 };
+=======
+export {};
+>>>>>>> origin/main

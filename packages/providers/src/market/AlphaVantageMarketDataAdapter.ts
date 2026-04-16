@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { ensureUtc, type NormalizedCandle, type NormalizedMarketQuote } from '@elceo/schemas';
 import type { MarketDataProvider } from '../interfaces/MarketDataProvider';
 import { fetchJson } from '../http';
@@ -40,3 +41,6 @@ export class AlphaVantageMarketDataAdapter implements MarketDataProvider {
     ];
   }
 }
+=======
+export {};
+>>>>>>> origin/main

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { kafkaTopics } from '@elceo/config';
 import type { InternalNormalizedEvent } from '@elceo/schemas';
 import type { NewsProvider } from '@elceo/providers';
@@ -24,3 +25,6 @@ export class NewsIngestionPipeline {
     return normalized;
   }
 }
+=======
+export {};
+>>>>>>> origin/main

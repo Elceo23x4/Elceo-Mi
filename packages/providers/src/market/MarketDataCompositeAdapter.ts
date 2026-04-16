@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { NormalizedCandle, NormalizedMarketQuote } from '@elceo/schemas';
 import { providerPriority } from '@elceo/config';
 import type { MarketDataProvider } from '../interfaces/MarketDataProvider';
@@ -35,3 +36,6 @@ export class MarketDataCompositeAdapter implements MarketDataProvider {
     return [];
   }
 }
+=======
+export {};
+>>>>>>> origin/main

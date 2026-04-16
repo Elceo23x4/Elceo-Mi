@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { AppRole } from '@elceo/config';
 import type { PlanTier } from '@elceo/config';
 
@@ -10,3 +11,6 @@ export type UserSessionIdentity = {
 };
 
 export type AuthProviderType = 'google' | 'credentials';
+=======
+export {};
+>>>>>>> origin/main

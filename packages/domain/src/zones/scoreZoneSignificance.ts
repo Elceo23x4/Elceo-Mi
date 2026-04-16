@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { clamp } from '../shared/clamp';
 import { normalizeToRange } from '../shared/normalize';
 import { weightedAverage } from '../shared/weightedAverage';
@@ -20,3 +21,6 @@ export function scoreZoneSignificance(input: ZoneScoreInput): number {
     100
   );
 }
+=======
+export {};
+>>>>>>> origin/main

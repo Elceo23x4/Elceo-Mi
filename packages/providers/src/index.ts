@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 export * from './interfaces/MarketDataProvider';
 export * from './interfaces/MacroCalendarProvider';
 export * from './interfaces/NewsProvider';
@@ -26,3 +27,6 @@ export * from './context/ImfMacroContextAdapter';
 export * from './context/WorldBankMacroContextAdapter';
 export * from './context/OecdMacroContextAdapter';
 export * from './context/MacroContextCompositeAdapter';
+=======
+export {};
+>>>>>>> origin/main

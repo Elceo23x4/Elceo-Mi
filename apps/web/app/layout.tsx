@@ -1,4 +1,5 @@
 import './globals.css';
+<<<<<<< HEAD
 import type { CSSProperties, ReactNode } from 'react';
 import { darkTheme, lightTheme, themeCssVariables, type ThemeMode } from '@elceo/ui';
 import { ThemeScript } from '../components/theme/ThemeScript';
@@ -15,6 +16,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <ThemeScript />
         {children}
       </body>
+=======
+import type { ReactNode } from 'react';
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+>>>>>>> origin/main
     </html>
   );
 }

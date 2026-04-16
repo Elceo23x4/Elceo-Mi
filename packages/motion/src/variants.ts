@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 export function revealTransition(reducedMotion: boolean) {
   return reducedMotion
     ? { transition: 'none', transform: 'none', opacity: 1 }
@@ -7,3 +8,6 @@ export function revealTransition(reducedMotion: boolean) {
         opacity: 1
       };
 }
+=======
+export {};
+>>>>>>> origin/main

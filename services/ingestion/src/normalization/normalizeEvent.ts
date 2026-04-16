@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { InternalNormalizedEvent, NormalizedProviderEvent } from '@elceo/schemas';
 import { articleDedupeKey, macroEventDedupeKey } from './dedupe';
 
@@ -31,3 +32,6 @@ export function normalizeEvent(event: NormalizedProviderEvent): InternalNormaliz
     payload: event
   };
 }
+=======
+export {};
+>>>>>>> origin/main

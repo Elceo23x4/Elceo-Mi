@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { kafkaTopics } from '@elceo/config';
 import type { InternalNormalizedEvent } from '@elceo/schemas';
 import type { GeopoliticsProvider } from '@elceo/providers';
@@ -21,3 +22,6 @@ export class GeopoliticsIngestionPipeline {
     return normalized;
   }
 }
+=======
+export {};
+>>>>>>> origin/main

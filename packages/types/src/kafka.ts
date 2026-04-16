@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type { KafkaTopic } from '@elceo/config';
 
 export type KafkaEnvelope<T> = {
@@ -7,3 +8,6 @@ export type KafkaEnvelope<T> = {
   payload: T;
   traceId: string;
 };
+=======
+export {};
+>>>>>>> origin/main

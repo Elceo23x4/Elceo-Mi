@@ -17,6 +17,7 @@
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "@elceo/chart-intelligence": "0.1.0",
-    "@elceo/reasoning": "0.1.0"
+    "@elceo/reasoning": "0.1.0",
+    "@elceo/ingestion": "0.1.0"
   }
 }

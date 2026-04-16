@@ -32,7 +32,7 @@ export function buildProviderGraph() {
 
   const macroComposite = new MacroCalendarCompositeAdapter({
     finnhub: new FinnhubMacroCalendarAdapter(env.FINNHUB_API_KEY ?? ''),
-    'investing-firecrawl': new InvestingCalendarScrapeAdapter(),
+    'investing-firecrawl': new InvestingCalendarScrapeAdapter(new FirecrawlExtractionAdapter(env.FIRECRAWL_API_KEY)),
     fmp: new FmpMacroCalendarAdapter(env.FMP_API_KEY ?? '')
   });
 
@@ -52,7 +52,7 @@ export function buildProviderGraph() {
     macroComposite,
     newsComposite,
     geopolitics: new GdeltEventAdapter(),
-    extractionPrimary: new FirecrawlExtractionAdapter(),
+    extractionPrimary: new FirecrawlExtractionAdapter(env.FIRECRAWL_API_KEY),
     extractionFallback: new PlaywrightExtractionFallbackAdapter(),
     macroContextComposite
   };

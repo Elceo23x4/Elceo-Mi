@@ -11,27 +11,30 @@
     "format": "prettier --check ."
   },
   "dependencies": {
-    "@elceo/motion": "0.1.0",
-    "@elceo/ui": "0.1.0",
-    "next": "15.2.0",
-    "react": "19.0.0",
-    "react-dom": "19.0.0",
-    "@elceo/chart-intelligence": "0.1.0",
-    "@elceo/reasoning": "0.1.0",
-    "@elceo/ingestion": "0.1.0",
-    "@elceo/application-state": "0.1.0",
-    "next-auth": "^5.0.0-beta.30",
-    "lightweight-charts": "^5.0.8",
-    "@elceo/notifications": "0.1.0",
     "@elceo/admin-jobs": "0.1.0",
     "@elceo/analytics": "0.1.0",
-    "@elceo/billing": "0.1.0"
+    "@elceo/application-state": "0.1.0",
+    "@elceo/billing": "0.1.0",
+    "@elceo/chart-intelligence": "0.1.0",
+    "@elceo/ingestion": "0.1.0",
+    "@elceo/motion": "0.1.0",
+    "@elceo/notifications": "0.1.0",
+    "@elceo/reasoning": "0.1.0",
+    "@elceo/ui": "0.1.0",
+    "lightweight-charts": "^5.0.8",
+    "next": "15.2.0",
+    "next-auth": "^5.0.0-beta.30",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
   },
-   "devDependencies": {
-    "eslint": "^9.0.0",
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0"
+  "devDependencies": {
+    "@types/node": "^20.19.39",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/eslint-plugin": "^8.58.2",
+    "@typescript-eslint/parser": "^8.58.2",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.4",
+    "typescript": "^5.9.3"
   }
 }

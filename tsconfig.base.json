@@ -43,6 +43,12 @@
       ],
       "@elceo/ingestion": [
         "services/ingestion/src/index.ts"
+      ],
+      "@elceo/chart-intelligence": [
+        "services/chart-intelligence/src/index.ts"
+      ],
+      "@elceo/reasoning": [
+        "services/reasoning/src/index.ts"
       ]
     }
   }

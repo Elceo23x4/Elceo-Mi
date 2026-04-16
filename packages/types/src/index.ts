@@ -6,3 +6,5 @@ export * from './kafka';
 export * from './plan';
 export * from './provider';
 export * from './role';
+
+export * from './chart';

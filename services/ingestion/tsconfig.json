@@ -1,7 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+<<<<<<< HEAD
+=======
     "rootDir": "src",
+>>>>>>> origin/main
     "outDir": "dist"
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"]

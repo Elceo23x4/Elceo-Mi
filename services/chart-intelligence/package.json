@@ -9,6 +9,16 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
+<<<<<<< HEAD
+    "format": "prettier --check src",
+    "test": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@elceo/domain": "0.1.0",
+    "@elceo/types": "0.1.0",
+    "@elceo/schemas": "0.1.0"
+=======
     "format": "prettier --check src"
+>>>>>>> origin/main
   }
 }

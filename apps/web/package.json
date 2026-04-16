@@ -11,8 +11,21 @@
     "format": "prettier --check ."
   },
   "dependencies": {
+<<<<<<< HEAD
+    "@elceo/motion": "0.1.0",
+    "@elceo/ui": "0.1.0",
+    "next": "15.2.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "@elceo/chart-intelligence": "0.1.0",
+    "@elceo/reasoning": "0.1.0",
+    "@elceo/ingestion": "0.1.0",
+    "@elceo/application-state": "0.1.0",
+    "next-auth": "^5.0.0-beta.30"
+=======
     "next": "15.2.0",
     "react": "19.0.0",
     "react-dom": "19.0.0"
+>>>>>>> origin/main
   }
 }

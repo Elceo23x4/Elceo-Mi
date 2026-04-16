@@ -1,21 +1,20 @@
 module.exports = {
   root: true,
+  ignorePatterns: ["**/dist/**", "**/.next/**", "**/coverage/**"],
   parser: "@typescript-eslint/parser",
-  plugins: ["@typescript-eslint"],
-  extends: [
-    "next/core-web-vitals",
-    "next/typescript",
-    "plugin:@typescript-eslint/recommended",
-  ],
   parserOptions: {
     ecmaVersion: "latest",
-    sourceType: "module",
+    sourceType: "module"
   },
-  ignorePatterns: [
-    "node_modules/",
-    ".next/",
-    "dist/",
-    "dist-test/",
-    "coverage/",
-  ],
+  env: {
+    es2022: true,
+    node: true,
+    browser: true
+  },
+  plugins: ["@typescript-eslint"],
+  extends: [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "next/core-web-vitals"
+  ]
 };

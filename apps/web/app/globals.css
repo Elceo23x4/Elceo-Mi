@@ -318,7 +318,7 @@ a {
 }
 
 .elceo-cognition-layout,
-.elceo-shell-rhythm {
+.elceo-shell-rhythm,
 .elceo-cognition-workspace {
   display: grid;
   gap: 1rem;
@@ -327,7 +327,11 @@ a {
 .elceo-cognition-hero,
 .elceo-shell-hero {
   border: 1px solid color-mix(in srgb, var(--elceo-border) 80%, transparent);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--elceo-surface) 92%, transparent), color-mix(in srgb, var(--elceo-surface-soft) 82%, transparent));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--elceo-surface) 92%, transparent),
+    color-mix(in srgb, var(--elceo-surface-soft) 82%, transparent)
+  );
   box-shadow: 0 20px 56px rgba(4, 8, 18, 0.35);
 }
 
@@ -339,16 +343,26 @@ a {
 .elceo-cognition-chart-surface,
 .elceo-shell-panel {
   border: 1px solid color-mix(in srgb, var(--elceo-border) 76%, transparent);
-  background: linear-gradient(150deg, color-mix(in srgb, var(--elceo-surface) 88%, transparent), color-mix(in srgb, var(--elceo-surface-soft) 83%, transparent));
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--elceo-surface) 88%, transparent),
+    color-mix(in srgb, var(--elceo-surface-soft) 83%, transparent)
+  );
 }
 
 .elceo-shell-panel-deep {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--elceo-brand-main) 24%, transparent), 0 16px 44px rgba(3, 8, 20, 0.28);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--elceo-brand-main) 24%, transparent),
+    0 16px 44px rgba(3, 8, 20, 0.28);
 }
 
 .elceo-shell-panel-contrast,
 .elceo-dashboard-panel-alert {
-  background: linear-gradient(145deg, color-mix(in srgb, var(--elceo-surface-soft) 86%, transparent), color-mix(in srgb, var(--elceo-brand-main) 12%, transparent));
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--elceo-surface-soft) 86%, transparent),
+    color-mix(in srgb, var(--elceo-brand-main) 12%, transparent)
+  );
 }
 
 .elceo-cognition-headline-row {
@@ -374,6 +388,7 @@ a {
 
 .elceo-context-panel {
   background: color-mix(in srgb, var(--elceo-surface) 78%, transparent);
+}
 @media (max-width: 980px) {
   .elceo-app-shell {
     grid-template-columns: 1fr;

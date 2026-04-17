@@ -31,15 +31,6 @@ declare module 'lightweight-charts' {
   export function createChart(container: HTMLElement, options: Record<string, unknown>): any;
 }
 
-declare module 'react' {
-  export type ReactNode = any;
-  export type CSSProperties = Record<string, string | number | undefined>;
-  export function useEffect(effect: () => void | (() => void), deps?: readonly unknown[]): void;
-  export function useMemo<T>(factory: () => T, deps: readonly unknown[]): T;
-  export function useRef<T>(initial: T): { current: T };
-  export function useState<T>(initial: T | (() => T)): [T, (next: T | ((prev: T) => T)) => void];
-  export function memo<T>(component: T): T;
-}
 
 declare namespace React {
   type FormEvent<T = Element> = { currentTarget: T; preventDefault(): void };

@@ -1,9 +1,4 @@
-declare module 'react' {
-  export type ReactNode = any;
-  export type CSSProperties = Record<string, string | number | undefined>;
-  export function useEffect(effect: () => void | (() => void), deps?: readonly unknown[]): void;
-  export function useState<T>(initial: T | (() => T)): [T, (next: T | ((prev: T) => T)) => void];
-}
+
 
 declare module 'framer-motion' {
   export const motion: any;

@@ -45,9 +45,9 @@ export function PortfolioShell({ initialState, trackedAssetLimit, subscriptionEl
   const atLimit = state.selectedAssets.length >= limit;
 
   return (
-    <div className="elceo-shell-rhythm">
+    <div style={{ display: 'grid', gap: '1rem' }}>
       <Reveal>
-        <Surface className="elceo-shell-hero elceo-shell-hero-portfolio" style={{ padding: '1rem', display: 'grid', gap: '0.7rem' }}>
+        <Surface style={{ padding: '1rem', display: 'grid', gap: '0.6rem' }}>
           <p className="elceo-kicker">PORTFOLIO MANAGER</p>
           <h1 style={{ margin: 0 }}>Manual tracked-asset control</h1>
           <Text tone="muted">
@@ -57,9 +57,9 @@ export function PortfolioShell({ initialState, trackedAssetLimit, subscriptionEl
         </Surface>
       </Reveal>
 
-      <Surface className="elceo-shell-panel elceo-shell-panel-deep" style={{ padding: '1rem', display: 'grid', gap: '0.85rem' }}>
+      <Surface style={{ padding: '1rem', display: 'grid', gap: '0.8rem' }}>
         <p className="elceo-kicker">LAUNCH ASSETS</p>
-        <div className="elceo-chip-grid elceo-chip-grid-portfolio">
+        <div className="elceo-chip-grid">
           {LAUNCH_ASSET_CLUSTER.map((asset) => {
             const selected = state.selectedAssets.includes(asset);
             const disableNew = !selected && atLimit;
@@ -74,7 +74,7 @@ export function PortfolioShell({ initialState, trackedAssetLimit, subscriptionEl
         {persistError ? <Text tone="primary">{persistError}</Text> : null}
       </Surface>
 
-      <Surface className="elceo-shell-panel" style={{ padding: '1rem' }}>
+      <Surface style={{ padding: '1rem' }}>
         <p className="elceo-kicker">TRACKED ASSET STATE</p>
         <p className="elceo-muted-text">{state.selectedAssets.join(' · ') || 'No assets currently tracked.'}</p>
       </Surface>

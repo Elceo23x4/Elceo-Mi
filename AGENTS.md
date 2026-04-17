@@ -62,6 +62,7 @@ Read these in `/docs` before major implementation work:
 - elceo-master-prompt-v2.md
 - elceo-execution-pack.md
 - elceo-provider-pack.md
+- elceo-math-checklist.md
 - elceo-formula-sheet.md
 - elceo-codex-run-sequence.md
 

@@ -1,4 +1,4 @@
-import NextAuth, { type NextAuthConfig, type Session, type User } from 'next-auth';
+import NextAuth, { type Session, type User } from 'next-auth';
 import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
 import type { JWT } from 'next-auth/jwt';
@@ -27,6 +27,8 @@ type AppSessionUser = NonNullable<Session['user']> & {
   planTier: AppPlanTier;
   onboardingCompletedAt: string | null;
 };
+
+type NextAuthConfig = NonNullable<Parameters<typeof NextAuth>[0]>;
 
 const appStateService = new ApplicationStateService(getUserStateRepository());
 

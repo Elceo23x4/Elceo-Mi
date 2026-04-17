@@ -18,6 +18,7 @@ type AppAuthUser = {
 };
 
 type AppToken = JWT & {
+  sub?: string;
   email?: string | null;
   name?: string | null;
   role?: AppRole;

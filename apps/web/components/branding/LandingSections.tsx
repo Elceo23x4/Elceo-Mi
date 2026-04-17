@@ -13,43 +13,30 @@ const sectionBlocks = [
 
 export function LandingSections() {
   return (
-    <div className="elceo-editorial-stack elceo-landing-rhythm">
+    <div className="elceo-editorial-stack">
       <Reveal>
         <EditorialHeroFrame>
-          <div className="elceo-hero-shell">
-            <p className="elceo-kicker">ELCEO · MARKET COGNITION PLATFORM</p>
-            <h1 className="elceo-hero-title" style={{ fontSize: typographyTokens.displayXL, margin: 0, fontFamily: 'var(--elceo-font-display)' }}>
-              Precision intelligence,
-              <br />
-              cinematic execution.
-            </h1>
-            <Text tone="muted" style={{ maxWidth: '67ch', fontSize: typographyTokens.bodyL }}>
-              ELCEO transforms signal noise into layered cognition with deterministic scoring, contradiction visibility, and narrative clarity built for serious traders.
-            </Text>
-            <div className="elceo-hero-stat-row" aria-label="Platform highlights">
-              <span>12 Launch Assets</span>
-              <span>Deterministic Scoring</span>
-              <span>Event-Native</span>
-            </div>
-          </div>
+          <p className="elceo-kicker">ELCEO · MARKET COGNITION PLATFORM</p>
+          <h1 style={{ fontSize: typographyTokens.displayXL, margin: 0, fontFamily: 'var(--elceo-font-display)' }}>
+            Apple-level polish, futuristic trading-lab clarity.
+          </h1>
+          <Text tone="muted" style={{ maxWidth: '70ch', fontSize: typographyTokens.bodyL }}>
+            ELCEO is a market intelligence and decision-support platform — never financial advice, never signal spam.
+          </Text>
         </EditorialHeroFrame>
       </Reveal>
 
-      <div className="elceo-landing-grid">
-        {sectionBlocks.map((section, index) => (
-          <div key={section.id}>
-            <Reveal delayMs={index * 70}>
-              <Surface id={section.id} className={index % 3 === 0 ? 'elceo-landing-panel elceo-landing-panel-wide' : 'elceo-landing-panel'} style={{ padding: '1.35rem', display: 'grid', gap: '0.7rem' }}>
-              <p className="elceo-kicker">{section.title.toUpperCase()}</p>
-              <h2 className="elceo-landing-heading" style={{ margin: 0, fontFamily: 'var(--elceo-font-heading)' }}>
-                {section.title}
-              </h2>
-              <Text tone="muted">{section.copy}</Text>
-              </Surface>
-            </Reveal>
-          </div>
-        ))}
-      </div>
+      {sectionBlocks.map((section, index) => (
+        <div key={section.id}>
+          <Reveal delayMs={index * 70}>
+            <Surface id={section.id} style={{ padding: '1.4rem', display: 'grid', gap: '0.6rem' }}>
+            <p className="elceo-kicker">{section.title.toUpperCase()}</p>
+            <h2 style={{ margin: 0, fontFamily: 'var(--elceo-font-heading)' }}>{section.title}</h2>
+            <Text tone="muted">{section.copy}</Text>
+            </Surface>
+          </Reveal>
+        </div>
+      ))}
     </div>
   );
 }

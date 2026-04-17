@@ -1,4 +1,4 @@
-import NextAuth, { type Session, type User } from 'next-auth';
+import NextAuth, { type Session } from 'next-auth';
 import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
 import type { JWT } from 'next-auth/jwt';
@@ -8,8 +8,10 @@ import { logEvent } from '@elceo/config';
 type AppRole = 'user' | 'super_admin' | 'analyst_admin' | 'support_admin';
 type AppPlanTier = 'free' | 'premium';
 
-type AppAuthUser = User & {
+type AppAuthUser = {
   id: string;
+  email: string;
+  name?: string | null;
   role: AppRole;
   planTier: AppPlanTier;
   onboardingCompletedAt: string | null;

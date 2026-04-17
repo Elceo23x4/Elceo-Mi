@@ -18,6 +18,8 @@ type AppAuthUser = {
 };
 
 type AppToken = JWT & {
+  email?: string | null;
+  name?: string | null;
   role?: AppRole;
   planTier?: AppPlanTier;
   onboardingCompletedAt?: string | null;
@@ -121,6 +123,7 @@ const authConfig = {
       });
 
       appToken.sub = state.profile.id;
+      appToken.email = email;
       appToken.role = state.profile.role as AppRole;
       appToken.planTier = state.profile.planTier as AppPlanTier;
       appToken.onboardingCompletedAt = state.profile.onboardingCompletedAt;

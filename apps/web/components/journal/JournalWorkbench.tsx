@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import type { TradeJournalCreateInput, TradeJournalEntry } from '@elceo/types';
 import { Surface } from '@elceo/ui';
 
@@ -41,7 +41,7 @@ export function JournalWorkbench({ initialEntries }: { initialEntries: TradeJour
     };
   }, [entries]);
 
-  async function submitEntry(event: React.FormEvent<HTMLFormElement>) {
+  async function submitEntry(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus('Saving trade...');
 
@@ -80,8 +80,8 @@ export function JournalWorkbench({ initialEntries }: { initialEntries: TradeJour
   }
 
   return (
-    <div className="elceo-journal-layout">
-      <Surface style={{ padding: '1rem' }}>
+    <div className="elceo-journal-layout elceo-surface-journal">
+      <Surface className="elceo-shell-hero elceo-shell-hero-journal" style={{ padding: '1rem' }}>
         <p className="elceo-kicker">Trader Journal</p>
         <h2 style={{ marginTop: '0.35rem' }}>Structured trade capture</h2>
         <form className="elceo-journal-form" onSubmit={submitEntry}>
@@ -218,7 +218,7 @@ export function JournalWorkbench({ initialEntries }: { initialEntries: TradeJour
         <p className="elceo-muted-text">{status}</p>
       </Surface>
 
-      <Surface style={{ padding: '1rem' }}>
+      <Surface className="elceo-shell-panel elceo-panel-journal-feed" style={{ padding: '1rem' }}>
         <p className="elceo-kicker">Performance feed</p>
         <h3>Rolling journal stats</h3>
         <div className="elceo-chip-grid" style={{ marginBottom: '1rem' }}>

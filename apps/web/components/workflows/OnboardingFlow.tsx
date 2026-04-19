@@ -41,15 +41,7 @@ export function OnboardingFlow({ initialState, subscriptionEligibleForPremium }:
       default:
         return false;
     }
-  }, [
-    overLimit,
-    state.disclaimerAccepted,
-    state.planTier,
-    state.selectedAssets.length,
-    state.termsAccepted,
-    step,
-    subscriptionEligibleForPremium
-  ]);
+  }, [overLimit, state.disclaimerAccepted, state.planTier, state.selectedAssets.length, state.termsAccepted, step, subscriptionEligibleForPremium]);
 
   const gotoNext = () => {
     const currentIndex = steps.indexOf(step);
@@ -229,4 +221,4 @@ export function OnboardingFlow({ initialState, subscriptionEligibleForPremium }:
       ) : null}
     </div>
   );
-          }
+}

@@ -23,17 +23,17 @@ export default function AdminPage() {
   }, []);
 
   return (
-    <div style={{ display: 'grid', gap: '1rem' }}>
+    <div className="elceo-shell-rhythm elceo-surface-admin">
       <Reveal>
-        <Surface style={{ padding: '1.2rem', minHeight: '20vh' }}>
+        <Surface className="elceo-shell-hero elceo-shell-hero-admin" style={{ padding: '1.2rem', minHeight: '20vh' }}>
           <p className="elceo-kicker">ADMIN · OPERATIONS VISIBILITY</p>
           <h1 style={{ marginTop: '0.4rem' }}>Source health, explainability, freshness, and audit trace</h1>
           <Text tone="muted">Structured operational view for governance and support decisions.</Text>
         </Surface>
       </Reveal>
 
-      <div className="elceo-dashboard-grid">
-        <Surface style={{ padding: '1rem', minHeight: '230px' }}>
+      <div className="elceo-dashboard-grid elceo-dashboard-grid-upgraded">
+        <Surface className="elceo-dashboard-panel elceo-panel-admin-health" style={{ padding: '1rem', minHeight: '230px' }}>
           <p className="elceo-kicker">SOURCE HEALTH</p>
           {(data?.sourceHealth ?? []).map((row) => (
             <p key={`${row.provider}-${row.domain}`} className="elceo-muted-text">
@@ -42,7 +42,7 @@ export default function AdminPage() {
           ))}
         </Surface>
 
-        <Surface style={{ padding: '1rem', minHeight: '230px' }}>
+        <Surface className="elceo-dashboard-panel elceo-panel-admin-freshness" style={{ padding: '1rem', minHeight: '230px' }}>
           <p className="elceo-kicker">FRESHNESS STATUS</p>
           {(data?.freshness ?? []).map((row) => (
             <p key={row.asset_code} className="elceo-muted-text">
@@ -51,7 +51,7 @@ export default function AdminPage() {
           ))}
         </Surface>
 
-        <Surface style={{ padding: '1rem', minHeight: '260px' }}>
+        <Surface className="elceo-dashboard-panel elceo-panel-admin-explain" style={{ padding: '1rem', minHeight: '260px' }}>
           <p className="elceo-kicker">EXPLAINABILITY TRACE</p>
           {(data?.explainability ?? []).slice(0, 3).map((row) => (
             <div key={row.asset_code} style={{ marginBottom: '0.6rem' }}>
@@ -62,7 +62,7 @@ export default function AdminPage() {
           ))}
         </Surface>
 
-        <Surface style={{ padding: '1rem', minHeight: '260px' }}>
+        <Surface className="elceo-dashboard-panel elceo-panel-admin-audit" style={{ padding: '1rem', minHeight: '260px' }}>
           <p className="elceo-kicker">AUDIT LOG</p>
           {(data?.auditLogs ?? []).slice(0, 6).map((log) => (
             <p key={log.log_id} className="elceo-muted-text">

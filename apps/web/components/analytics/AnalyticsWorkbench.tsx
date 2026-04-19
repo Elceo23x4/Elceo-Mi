@@ -3,8 +3,8 @@ import { Surface } from '@elceo/ui';
 
 export function AnalyticsWorkbench({ report, canAccessBehaviorCoaching }: { report: JournalAnalyticsResult; canAccessBehaviorCoaching: boolean }) {
   return (
-    <div className="elceo-journal-layout">
-      <Surface style={{ padding: '1rem' }}>
+    <div className="elceo-journal-layout elceo-surface-analytics">
+      <Surface className="elceo-shell-hero elceo-shell-hero-analytics" style={{ padding: '1rem' }}>
         <p className="elceo-kicker">Analytics</p>
         <h2 style={{ marginTop: '0.35rem' }}>Deterministic performance metrics</h2>
         <div className="elceo-chip-grid" style={{ marginTop: '1rem' }}>
@@ -55,7 +55,7 @@ export function AnalyticsWorkbench({ report, canAccessBehaviorCoaching }: { repo
         </div>
       </Surface>
 
-      <Surface style={{ padding: '1rem' }}>
+      <Surface className="elceo-shell-panel elceo-panel-analytics-coaching" style={{ padding: '1rem' }}>
         <p className="elceo-kicker">Coaching Lab</p>
         <h3>Data-scientist style coaching output</h3>
         <p>{canAccessBehaviorCoaching ? report.coaching.summary.diagnosis : 'Upgrade to premium to unlock structured coaching diagnostics driven by your behavioral patterns.'}</p>

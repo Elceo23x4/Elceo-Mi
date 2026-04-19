@@ -32,21 +32,19 @@ export function DashboardShell({ workspace, dashboardModuleLimit, canAccessPremi
   const evidenceNotes = useMemo(() => buildEvidenceSideNotes(filteredAnnotations).slice(0, 5), [filteredAnnotations]);
 
   return (
-    <div style={{ display: 'grid', gap: '1rem' }}>
+    <div className="elceo-cognition-layout elceo-surface-dashboard">
       <Reveal>
-        <Surface style={{ padding: '1.2rem' }}>
+        <Surface className="elceo-cognition-hero" style={{ padding: '1.3rem' }}>
           <p className="elceo-kicker">DASHBOARD COGNITION WORKSPACE</p>
-          <h1 style={{ margin: '0.4rem 0 0.6rem' }}>
+          <h1 className="elceo-cognition-title" style={{ margin: '0.35rem 0 0.65rem' }}>
             {workspace.dashboard.asset_code} · {workspace.dashboard.directional_bias.toUpperCase()} bias
           </h1>
-          <Text tone="muted">
-            Confidence {workspace.dashboard.confidence_total.toFixed(1)} · Contradiction {workspace.dashboard.contradiction.state}
-          </Text>
+          <Text tone="muted">Confidence {workspace.dashboard.confidence_total.toFixed(1)} · Contradiction {workspace.dashboard.contradiction.state}</Text>
         </Surface>
       </Reveal>
 
-      <Surface style={{ padding: '1rem', display: 'grid', gap: '0.8rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap' }}>
+      <Surface className="elceo-cognition-chart-surface elceo-panel-chart" style={{ padding: '1rem', display: 'grid', gap: '0.95rem' }}>
+        <div className="elceo-cognition-headline-row">
           <div>
             <p className="elceo-kicker">CHART INTELLIGENCE</p>
             <h2 style={{ margin: 0 }}>H4 zones, markers, and evidence-linked side notes</h2>
@@ -54,7 +52,7 @@ export function DashboardShell({ workspace, dashboardModuleLimit, canAccessPremi
           <p className="elceo-muted-text">Annotation density: MODERATE</p>
         </div>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+        <div className="elceo-chip-ribbon">
           {FILTER_LABELS.map((filter) => (
             <button
               key={filter.key}
@@ -69,10 +67,10 @@ export function DashboardShell({ workspace, dashboardModuleLimit, canAccessPremi
           ))}
         </div>
 
-        <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '2.1fr 1fr' }}>
+        <div className="elceo-cognition-chart-grid">
           <CognitionChart candles={workspace.chart.candles} zones={workspace.chart.zones} annotations={filteredAnnotations} />
           <div style={{ display: 'grid', gap: '0.8rem' }}>
-            <Surface style={{ padding: '0.8rem', minHeight: '190px' }}>
+            <Surface className="elceo-context-panel elceo-panel-evidence" style={{ padding: '0.85rem', minHeight: '190px' }}>
               <p className="elceo-kicker">EVIDENCE SIDE NOTES</p>
               {evidenceNotes.length ? (
                 evidenceNotes.map((note) => (
@@ -85,7 +83,7 @@ export function DashboardShell({ workspace, dashboardModuleLimit, canAccessPremi
               )}
             </Surface>
 
-            <Surface style={{ padding: '0.8rem', minHeight: '130px' }}>
+            <Surface className="elceo-context-panel elceo-panel-zones" style={{ padding: '0.85rem', minHeight: '130px' }}>
               <p className="elceo-kicker">ZONE SNAPSHOT</p>
               {workspace.chart.zones.slice(0, 4).map((zone) => (
                 <p key={zone.zone_id} className="elceo-muted-text">
@@ -97,8 +95,8 @@ export function DashboardShell({ workspace, dashboardModuleLimit, canAccessPremi
         </div>
       </Surface>
 
-      <div className="elceo-dashboard-grid">
-        <Surface style={{ padding: '1rem', minHeight: '240px' }}>
+      <div className="elceo-dashboard-grid elceo-dashboard-grid-upgraded">
+        <Surface className="elceo-dashboard-panel elceo-dashboard-panel-primary elceo-panel-intelligence" style={{ padding: '1rem', minHeight: '240px' }}>
           <p className="elceo-kicker">COGNITION MODULE ORDER</p>
           <h3>Ranking-aware module stack</h3>
           {workspace.dashboard.modules.slice(0, dashboardModuleLimit).map((module) => (
@@ -109,7 +107,7 @@ export function DashboardShell({ workspace, dashboardModuleLimit, canAccessPremi
           {!canAccessPremiumDepth ? <p className="elceo-muted-text">Premium unlock extends module depth and contradiction context layers.</p> : null}
         </Surface>
 
-        <Surface style={{ padding: '1rem', minHeight: '220px' }}>
+        <Surface className="elceo-dashboard-panel elceo-panel-confidence" style={{ padding: '1rem', minHeight: '220px' }}>
           <p className="elceo-kicker">CONFIDENCE ANATOMY</p>
           {Object.entries(workspace.dashboard.confidence_anatomy).map(([key, value]) => (
             <p key={key} className="elceo-muted-text">
@@ -118,13 +116,13 @@ export function DashboardShell({ workspace, dashboardModuleLimit, canAccessPremi
           ))}
         </Surface>
 
-        <Surface style={{ padding: '1rem', minHeight: '220px' }}>
+        <Surface className="elceo-dashboard-panel elceo-dashboard-panel-alert elceo-panel-contradiction" style={{ padding: '1rem', minHeight: '220px' }}>
           <p className="elceo-kicker">CONTRADICTION / TENSION</p>
           <h3>{workspace.dashboard.contradiction.state}</h3>
           <p className="elceo-muted-text">Score: {workspace.dashboard.contradiction.score.toFixed(1)}</p>
         </Surface>
 
-        <Surface style={{ padding: '1rem', minHeight: '220px' }}>
+        <Surface className="elceo-dashboard-panel elceo-panel-alerts" style={{ padding: '1rem', minHeight: '220px' }}>
           <p className="elceo-kicker">ANNOTATION FILTER SNAPSHOT</p>
           <p className="elceo-muted-text">
             {filteredAnnotations.length} / {workspace.chart.annotations.length} annotations visible after filters.

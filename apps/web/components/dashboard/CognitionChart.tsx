@@ -92,7 +92,7 @@ export const CognitionChart = memo(function CognitionChart({ candles, zones, ann
         };
       });
 
-      (series as { setMarkers?: (markers: Array<Record<string, unknown>>) => void }).setMarkers?.(markers);
+      (series as { setMarkers?: (_input: Array<Record<string, unknown>>) => void }).setMarkers?.(markers);
 
       const updateZones = () => {
         const next = zones

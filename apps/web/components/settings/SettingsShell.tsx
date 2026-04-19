@@ -74,11 +74,11 @@ export function SettingsShell({ initialState, billing }: SettingsShellProps) {
   }
 
   return (
-    <div style={{ display: 'grid', gap: '1rem' }}>
-      <Surface style={{ padding: '1rem', display: 'grid', gap: '0.6rem' }}>
+    <div className="elceo-shell-rhythm elceo-settings-rhythm elceo-surface-settings">
+      <Surface className="elceo-shell-hero elceo-shell-hero-settings" style={{ padding: '1rem', display: 'grid', gap: '0.7rem' }}>
         <p className="elceo-kicker">SETTINGS · VISUAL</p>
         <h2 style={{ margin: 0 }}>Theme & motion preferences</h2>
-        <Text tone="muted">Theme switching remains available in top navigation; motion intensity is stored here for future orchestration.</Text>
+        <Text tone="muted">Theme switching remains available in top navigation; motion intensity is stored here for orchestration quality.</Text>
         <div className="elceo-plan-grid">
           {(['low', 'medium', 'high'] as const).map((intensity) => (
             <button
@@ -94,7 +94,7 @@ export function SettingsShell({ initialState, billing }: SettingsShellProps) {
         </div>
       </Surface>
 
-      <Surface style={{ padding: '1rem', display: 'grid', gap: '0.6rem' }}>
+      <Surface className="elceo-shell-panel elceo-panel-settings-notifications" style={{ padding: '1rem', display: 'grid', gap: '0.6rem' }}>
         <p className="elceo-kicker">SETTINGS · NOTIFICATIONS</p>
         <h2 style={{ margin: 0 }}>Notification channels</h2>
         <label className="elceo-check-row">
@@ -123,7 +123,7 @@ export function SettingsShell({ initialState, billing }: SettingsShellProps) {
         </label>
       </Surface>
 
-      <Surface style={{ padding: '1rem', display: 'grid', gap: '0.6rem' }}>
+      <Surface className="elceo-shell-panel elceo-shell-panel-contrast elceo-panel-settings-alert-classes" style={{ padding: '1rem', display: 'grid', gap: '0.6rem' }}>
         <p className="elceo-kicker">SETTINGS · ALERT CLASSES</p>
         <h2 style={{ margin: 0 }}>Preference classes</h2>
         {(
@@ -152,7 +152,7 @@ export function SettingsShell({ initialState, billing }: SettingsShellProps) {
         ))}
       </Surface>
 
-      <Surface style={{ padding: '1rem', display: 'grid', gap: '0.6rem' }}>
+      <Surface className="elceo-shell-panel elceo-shell-panel-deep elceo-panel-settings-billing" style={{ padding: '1rem', display: 'grid', gap: '0.6rem' }}>
         <p className="elceo-kicker">SETTINGS · BILLING & PLAN</p>
         <h2 style={{ margin: 0 }}>Subscription lifecycle</h2>
         <Text tone="muted">
@@ -165,7 +165,7 @@ export function SettingsShell({ initialState, billing }: SettingsShellProps) {
         </Text>
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
           {!billing.subscriptionEligibleForPremium ? (
-            <button type="button" className="elceo-pill-button" onClick={runUpgradeFlow}>
+            <button type="button" className="elceo-pill-button elceo-pill-button-hero" onClick={runUpgradeFlow}>
               Upgrade to Premium
             </button>
           ) : null}

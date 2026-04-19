@@ -1,4 +1,7 @@
-
+declare module 'react' {
+  export type ReactNode = any;
+  export type CSSProperties = Record<string, string | number | undefined>;
+}
 
 declare module 'react/jsx-runtime' {
   export const Fragment: any;

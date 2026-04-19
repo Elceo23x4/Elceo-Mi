@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { GsapOrchestrator } from '../motion/GsapOrchestrator';
 import { ThemeToggle } from '../theme/ThemeToggle';
+import { CinematicAtmosphere } from '../visual/CinematicAtmosphere';
 import { InAppAlertsTray } from './InAppAlertsTray';
 
 const appLinks = [
@@ -15,8 +17,13 @@ const appLinks = [
 export function AppShellFrame({ children }: { children: ReactNode }) {
   return (
     <div className="elceo-app-shell">
+      <GsapOrchestrator mode="shell" />
+      <CinematicAtmosphere className="elceo-cinematic-atmosphere-shell" variant="shell" />
       <aside className="elceo-app-sidebar">
-        <div className="elceo-sidebar-brand">ELCEO Terminal</div>
+        <div className="elceo-sidebar-brand-wrap">
+          <div className="elceo-kicker">MARKET COGNITION OS</div>
+          <div className="elceo-sidebar-brand">ELCEO Terminal</div>
+        </div>
         <nav className="elceo-sidebar-nav" aria-label="Application">
           {appLinks.map((link) => (
             <Link key={link.href} href={link.href} className="elceo-sidebar-link">

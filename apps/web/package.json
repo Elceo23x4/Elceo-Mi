@@ -1,0 +1,32 @@
+{
+  "name": "@elceo/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --check ."
+  },
+  "dependencies": {
+    "@elceo/motion": "0.1.0",
+    "@elceo/ui": "0.1.0",
+    "next": "15.2.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "@elceo/chart-intelligence": "0.1.0",
+    "@elceo/reasoning": "0.1.0",
+    "@elceo/ingestion": "0.1.0",
+    "@elceo/application-state": "0.1.0",
+    "next-auth": "^5.0.0-beta.30",
+    "lightweight-charts": "^5.0.8",
+    "gsap": "^3.13.0",
+    "three": "^0.179.1",
+    "@elceo/notifications": "0.1.0",
+    "@elceo/admin-jobs": "0.1.0",
+    "@elceo/analytics": "0.1.0",
+    "@elceo/billing": "0.1.0"
+  }
+}

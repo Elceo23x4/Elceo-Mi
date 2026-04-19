@@ -5,6 +5,12 @@ import { signIn } from 'next-auth/react';
 import { GsapOrchestrator } from '../../../components/motion/GsapOrchestrator';
 import { CinematicAtmosphere } from '../../../components/visual/CinematicAtmosphere';
 
+const trustNotes = [
+  'Signal integrity checks on each cognition update',
+  'Role + plan entitlements verified before sensitive modules',
+  'Session and request context hardened across platform routes'
+] as const;
+
 export default function LoginPage() {
   const [callbackUrl, setCallbackUrl] = useState('/onboarding');
   const [email, setEmail] = useState('');
@@ -26,25 +32,31 @@ export default function LoginPage() {
 
       <section className="elceo-auth-shell" aria-label="ELCEO authentication">
         <aside className="elceo-auth-intel" aria-label="Platform security context">
-          <p className="elceo-kicker">SECURE ENTRY · ELCEO</p>
-          <h1>Enter the cognition operating system</h1>
+          <p className="elceo-kicker">SECURE ENTRY · PRIVATE SYSTEM</p>
+          <h1>Enter ELCEO intelligence control.</h1>
           <p className="elceo-muted-text">
-            Identity verification gates portfolio state, journal telemetry, and premium intelligence modules. Session protection and entitlement checks
-            are enforced after sign-in.
+            Access gates market cognition state, journal telemetry, and premium diagnostics. Every session enforces role scope, plan depth, and route-level integrity.
           </p>
           <div className="elceo-auth-intel-grid" aria-label="Security posture">
             <article>
-              <p className="elceo-kicker">SIGNAL INTEGRITY</p>
-              <p>Deterministic scoring stack with layered explainability.</p>
+              <p className="elceo-kicker">Signal integrity</p>
+              <p>Deterministic scoring and contradiction tracking are versioned and auditable.</p>
             </article>
             <article>
-              <p className="elceo-kicker">ACCESS CONTROL</p>
-              <p>Plan and role entitlements enforced before sensitive surfaces load.</p>
+              <p className="elceo-kicker">Access control</p>
+              <p>Super admin, analyst admin, support admin, and plan boundaries enforced at entry.</p>
             </article>
           </div>
+          <ul className="elceo-auth-trust-list">
+            {trustNotes.map((note) => (
+              <li key={note}>{note}</li>
+            ))}
+          </ul>
         </aside>
 
         <div className="elceo-auth-actions">
+          <p className="elceo-kicker">Authenticate</p>
+          <h2>Secure operator sign-in</h2>
           <button className="elceo-pill-button elceo-pill-button-hero" type="button" onClick={() => signIn('google', { callbackUrl })}>
             Continue with Google
           </button>

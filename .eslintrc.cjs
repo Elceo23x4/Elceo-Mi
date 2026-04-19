@@ -1,26 +1,23 @@
 module.exports = {
   root: true,
-  ignorePatterns: ["**/dist/**", "**/.next/**", "**/coverage/**", "node_modules/**"],
+  ignorePatterns: ["**/dist/**", "**/.next/**", "**/coverage/**"],
   env: {
     es2022: true,
     node: true,
     browser: true
   },
-  extends: ["eslint:recommended"],
+  extends: ["eslint:recommended", "next/core-web-vitals"],
   overrides: [
     {
       files: ["**/*.{ts,tsx}"],
       parser: "@typescript-eslint/parser",
-      plugins: ["@typescript-eslint"],
-      extends: ["plugin:@typescript-eslint/recommended"],
       parserOptions: {
         ecmaVersion: "latest",
         sourceType: "module",
         ecmaFeatures: { jsx: true }
       },
       rules: {
-        "@typescript-eslint/no-explicit-any": "off",
-        "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
+        "no-unused-vars": ["error", { argsIgnorePattern: "^_" }]
       }
     }
   ]

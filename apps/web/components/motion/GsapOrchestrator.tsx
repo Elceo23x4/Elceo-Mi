@@ -14,13 +14,17 @@ type MotionTarget = {
 const QUERY_BY_MODE: Record<GsapOrchestratorProps['mode'], MotionTarget[]> = {
   landing: [
     { selector: '.elceo-topnav', personality: 'stable' },
+    { selector: '.elceo-nav-links a, .elceo-nav-mobile a', personality: 'calm' },
     { selector: '.elceo-hero-lead > *', personality: 'stable' },
-    { selector: '.elceo-hero-rail', personality: 'calm' },
-    { selector: '.elceo-landing-panel', personality: 'default' }
+    { selector: '.elceo-hero-preview', personality: 'calm' },
+    { selector: '.elceo-preview-module', personality: 'default' },
+    { selector: '.elceo-step-card', personality: 'stable' },
+    { selector: '.elceo-section', personality: 'default' }
   ],
   auth: [
     { selector: '.elceo-auth-shell', personality: 'stable' },
     { selector: '.elceo-auth-intel > *', personality: 'calm' },
+    { selector: '.elceo-auth-trust-list li', personality: 'calm' },
     { selector: '.elceo-auth-actions > *', personality: 'stable' }
   ],
   shell: [

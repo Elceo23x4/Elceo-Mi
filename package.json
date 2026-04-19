@@ -2,14 +2,17 @@
   "name": "elceo",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "npm@10.9.0",
+  "packageManager": "npm@11.12.1",
   "workspaces": [
     "apps/*",
     "packages/*",
     "services/*"
   ],
   "scripts": {
-    "build": "npm run --workspaces --if-present build",
+    "build": "npm run --ws --if-present build",
+    "build:web": "npm --workspace apps/web run build",
+    "lint:web": "npm --workspace apps/web run lint",
+    "typecheck:web": "npm --workspace apps/web run typecheck",
     "dev": "npm run dev -w apps/web",
     "lint": "npm run --workspaces --if-present lint",
     "typecheck": "npm run --workspaces --if-present typecheck",
@@ -19,5 +22,10 @@
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "eslint": "^9.39.4",
+    "@types/node": "^20.19.39"
   }
 }

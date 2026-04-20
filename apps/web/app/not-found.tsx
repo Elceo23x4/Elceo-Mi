@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function NotFoundPage() {
   return (
     <main
@@ -25,9 +27,9 @@ export default function NotFoundPage() {
         <p className="elceo-muted-text">
           Return to ELCEO and continue through the public experience.
         </p>
-        <a href="/" className="elceo-pill-button" style={{ display: 'inline-flex', marginTop: '1rem' }}>
+        <Link href="/" className="elceo-pill-button" style={{ display: 'inline-flex', marginTop: '1rem' }}>
           Back to ELCEO
-        </a>
+        </Link>
       </section>
     </main>
   );

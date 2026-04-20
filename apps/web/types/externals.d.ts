@@ -19,7 +19,10 @@ declare module 'next-auth/providers/credentials' {
 }
 
 declare module 'next-auth/react' {
-  export function signIn(provider?: string, options?: Record<string, unknown>): Promise<{ error?: string; url?: string | null } | undefined>;
+  export function signIn(
+    provider?: string,
+    options?: Record<string, unknown>
+  ): Promise<{ error?: string; url?: string | null } | undefined>;
 }
 
 declare module 'next-auth/jwt' {
@@ -88,29 +91,6 @@ declare module 'three' {
   export const AdditiveBlending: number;
 }
 
-declare module 'react' {
-  export type ReactNode = any;
-  export type CSSProperties = Record<string, string | number | undefined>;
-  export type FormEvent<T = Element> = { currentTarget: T; preventDefault(): void };
-  export type ChangeEvent<T = Element> = { currentTarget: T };
-  export function useEffect(effect: () => void | (() => void), deps?: readonly unknown[]): void;
-  export function useMemo<T>(factory: () => T, deps: readonly unknown[]): T;
-  export function useRef<T>(initial: T): { current: T };
-  export function useState<T>(initial: T | (() => T)): [T, (next: T | ((prev: T) => T)) => void];
-  export function memo<T>(component: T): T;
-}
-
-declare namespace React {
-  type FormEvent<T = Element> = { currentTarget: T; preventDefault(): void };
-  type ChangeEvent<T = Element> = { currentTarget: T };
-}
-
-declare module 'react/jsx-runtime' {
-  export const Fragment: any;
-  export function jsx(type: any, props: any, key?: any): any;
-  export function jsxs(type: any, props: any, key?: any): any;
-}
-
 declare module 'pg' {
   export class Pool {
     constructor(config?: Record<string, unknown>);
@@ -157,12 +137,4 @@ declare const Buffer: {
   from(input: string, encoding?: string): Uint8Array & { length: number; toString(encoding?: string): string };
 };
 
-declare namespace JSX {
-  interface Element {}
-  interface ElementChildrenAttribute {
-    children: unknown;
-  }
-  interface IntrinsicElements {
-    [elemName: string]: any;
-  }
-}
+export {};

@@ -19,5 +19,15 @@
   },
   "engines": {
     "node": ">=20.0.0"
-  }
+  },
+  "devDependecies": {
+    "typescript": "^5.9.3",
+    "eslint": "^9.39.4",
+    "@types/node": "^20.19.39",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/parser": "^8.58.2",
+    "@typescript-eslint/eslint-plugin": "^8.58.2",
+    "eslint-config-next": "15.5.15"
+}
 }

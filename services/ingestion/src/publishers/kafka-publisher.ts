@@ -35,8 +35,7 @@ export class InMemoryKafkaBus implements KafkaPublisher, KafkaConsumer {
   }
 }
 
-type KafkaJsModule = { Kafka: new (config: Record<string, unknown>) => { producer: () => any; consumer: (config: Record<string, unknown>) => any } };
-
+type KafkaJsModule = typeof import('kafkajs');
 type RealKafkaClientOptions = {
   brokers: string[];
   clientId: string;
@@ -169,11 +168,13 @@ export type KafkaTransport = {
 
 async function loadKafkaJs(): Promise<KafkaJsModule | null> {
   try {
-    return await import('kafkajs');
+    const mod = await import('kafkajs');
+    return mod;
   } catch {
     return null;
   }
 }
+
 
 export async function createKafkaTransport(env: Record<string, string | undefined>): Promise<KafkaTransport> {
   const brokers = env.KAFKA_BROKERS?.split(',').map((broker) => broker.trim()).filter(Boolean) ?? [];

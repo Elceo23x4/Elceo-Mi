@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 
 type GsapOrchestratorProps = {
-  mode: 'landing' | 'auth' | 'shell';
+  mode: 'landing' | 'auth' | 'shell' | 'demo';
 };
 
 type MotionTarget = {
@@ -27,10 +27,22 @@ const QUERY_BY_MODE: Record<GsapOrchestratorProps['mode'], MotionTarget[]> = {
     { selector: '.elceo-auth-trust-list li', personality: 'calm' },
     { selector: '.elceo-auth-actions > *', personality: 'stable' }
   ],
+  demo: [
+    { selector: '.elceo-demo-shell-chrome', personality: 'stable' },
+    { selector: '.elceo-demo-workspace .elceo-dashboard-zone-a', personality: 'stable' },
+    { selector: '.elceo-demo-workspace .elceo-zone-b-chart', personality: 'stable' },
+    { selector: '.elceo-demo-workspace .elceo-zone-b-intel-strip .elceo-strip-module', personality: 'calm' },
+    { selector: '.elceo-demo-workspace .elceo-context-module-invalidation, .elceo-demo-workspace .elceo-panel-contradiction', personality: 'tense' },
+    { selector: '.elceo-demo-workspace .elceo-panel-alerts', personality: 'urgent' },
+    { selector: '.elceo-demo-workspace .elceo-dashboard-panel, .elceo-demo-conversion-strip', personality: 'default' }
+  ],
   shell: [
-    { selector: '.elceo-shell-hero', personality: 'stable' },
+    { selector: '.elceo-app-sidebar, .elceo-app-topbar', personality: 'stable' },
+    { selector: '.elceo-dashboard-zone-a', personality: 'stable' },
+    { selector: '.elceo-zone-b-chart', personality: 'stable' },
+    { selector: '.elceo-zone-b-intel-strip .elceo-strip-module, .elceo-dashboard-zone-c .elceo-dashboard-panel', personality: 'calm' },
     { selector: '.elceo-panel-confidence', personality: 'stable' },
-    { selector: '.elceo-panel-contradiction', personality: 'tense' },
+    { selector: '.elceo-panel-contradiction, .elceo-context-module-invalidation', personality: 'tense' },
     { selector: '.elceo-panel-alerts', personality: 'urgent' },
     { selector: '.elceo-panel-admin-health, .elceo-panel-admin-freshness, .elceo-panel-admin-explain, .elceo-panel-admin-audit', personality: 'calm' },
     { selector: '.elceo-panel-settings-billing, .elceo-panel-settings-notifications, .elceo-panel-settings-alert-classes', personality: 'calm' },

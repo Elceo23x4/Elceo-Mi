@@ -111,10 +111,8 @@ export function CinematicAtmosphere({ className, variant = 'landing' }: Cinemati
         geometry.dispose();
         material.dispose();
         renderer.dispose();
-
-         if (mountRef.current && mountRef.current.contains(renderer.domElement)) {
-             mountRef.current.removeChild(renderer.domElement);
-          }
+        if (mountRef.current && mountRef.current.contains(renderer.domElement)){
+        mountRef.current.removeChild(renderer.domElement); }
       };
     }
 

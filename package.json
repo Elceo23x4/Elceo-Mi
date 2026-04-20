@@ -9,10 +9,7 @@
     "services/*"
   ],
   "scripts": {
-    "build": "npm run --ws --if-present build",
-    "build:web": "npm --workspace apps/web run build",
-    "lint:web": "npm --workspace apps/web run lint",
-    "typecheck:web": "npm --workspace apps/web run typecheck",
+    "build": "npm run --workspaces --if-present build",
     "dev": "npm run dev -w apps/web",
     "lint": "npm run --workspaces --if-present lint",
     "typecheck": "npm run --workspaces --if-present typecheck",
@@ -23,7 +20,7 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "devDependencies": {
+  "devDependecies": {
     "typescript": "^5.9.3",
     "eslint": "^9.39.4",
     "@types/node": "^20.19.39",

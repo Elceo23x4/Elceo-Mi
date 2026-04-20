@@ -10,5 +10,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
     "format": "prettier --check src"
+  },
+  "peerDependecies": {
+    "react": "^19.2.5"
+    "react-dom": "^19.2.5"
   }
 }

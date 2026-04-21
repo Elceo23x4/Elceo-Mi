@@ -3,6 +3,7 @@
 import { Surface, Text } from '@elceo/ui';
 import { useState } from 'react';
 import { STORAGE_KEY, type ElceoUserState } from '../../lib/mock-state';
+import { PrivateCommandBand, SurfaceHeader, SystemChip } from '../private-workspace/SurfacePrimitives';
 
 type SettingsShellProps = {
   initialState: ElceoUserState;
@@ -13,6 +14,15 @@ type SettingsShellProps = {
     canAccessPremiumDepth: boolean;
   };
 };
+
+const alertClassLabels = [
+  ['biasChanges', 'Bias changes'],
+  ['contradictionSpikes', 'Contradiction spikes'],
+  ['keyLevelInteractions', 'Key-level interactions'],
+  ['macroEventWarnings', 'Major macro events'],
+  ['postEventRegimeShift', 'Post-event regime shifts'],
+  ['journalCoaching', 'Journal coaching reminders']
+] as const;
 
 export function SettingsShell({ initialState, billing }: SettingsShellProps) {
   const [state, setState] = useState<ElceoUserState>(initialState);
@@ -74,108 +84,79 @@ export function SettingsShell({ initialState, billing }: SettingsShellProps) {
   }
 
   return (
-    <div className="elceo-shell-rhythm elceo-settings-rhythm elceo-surface-settings">
-      <Surface className="elceo-shell-hero elceo-shell-hero-settings" style={{ padding: '1rem', display: 'grid', gap: '0.7rem' }}>
-        <p className="elceo-kicker">SETTINGS · VISUAL</p>
-        <h2 style={{ margin: 0 }}>Theme & motion preferences</h2>
-        <Text tone="muted">Theme switching remains available in top navigation; motion intensity is stored here for orchestration quality.</Text>
-        <div className="elceo-plan-grid">
-          {(['low', 'medium', 'high'] as const).map((intensity) => (
-            <button
-              key={intensity}
-              type="button"
-              className={state.motionIntensity === intensity ? 'elceo-plan-card active' : 'elceo-plan-card'}
-              onClick={() => save({ ...state, motionIntensity: intensity })}
-            >
-              <strong>{intensity.toUpperCase()}</strong>
-              <span>Motion intensity profile</span>
-            </button>
-          ))}
-        </div>
-      </Surface>
+    <div className="elceo-private-page elceo-private-page-settings">
+      <PrivateCommandBand
+        kicker="SETTINGS · CONTROL ROOM"
+        title="Environment and plan orchestration"
+        meta={`Plan ${state.planTier.toUpperCase()} · Billing ${billing.status.toUpperCase()} · Provider ${billing.provider.toUpperCase()}`}
+        chips={[
+          { label: `Motion profile: ${state.motionIntensity.toUpperCase()}`, tone: 'neutral' },
+          { label: state.notifications.inApp ? 'In-app alerts active' : 'In-app alerts muted', tone: 'signal' },
+          { label: billing.canAccessPremiumDepth ? 'Premium depth active' : 'Premium depth available', tone: billing.canAccessPremiumDepth ? 'accent' : 'risk' }
+        ]}
+      />
 
-      <Surface className="elceo-shell-panel elceo-panel-settings-notifications" style={{ padding: '1rem', display: 'grid', gap: '0.6rem' }}>
-        <p className="elceo-kicker">SETTINGS · NOTIFICATIONS</p>
-        <h2 style={{ margin: 0 }}>Notification channels</h2>
-        <label className="elceo-check-row">
-          <input
-            type="checkbox"
-            checked={state.notifications.inApp}
-            onChange={(event) => save({ ...state, notifications: { ...state.notifications, inApp: event.target.checked } })}
-          />
-          <span>In-app alerts</span>
-        </label>
-        <label className="elceo-check-row">
-          <input
-            type="checkbox"
-            checked={state.notifications.email}
-            onChange={(event) => save({ ...state, notifications: { ...state.notifications, email: event.target.checked } })}
-          />
-          <span>Email alerts</span>
-        </label>
-        <label className="elceo-check-row">
-          <input
-            type="checkbox"
-            checked={state.notifications.browserPush}
-            onChange={(event) => save({ ...state, notifications: { ...state.notifications, browserPush: event.target.checked } })}
-          />
-          <span>Browser push alerts</span>
-        </label>
-      </Surface>
+      <div className="elceo-private-grid elceo-private-grid-settings">
+        <Surface className="elceo-private-panel elceo-settings-visual-panel" style={{ padding: '1rem' }}>
+          <SurfaceHeader kicker="VISUAL / MOTION" title="Interface tempo and atmosphere" body="Calm personalization controls for display behavior." />
+          <div className="elceo-settings-segmented">
+            {(['low', 'medium', 'high'] as const).map((intensity) => (
+              <button
+                key={intensity}
+                type="button"
+                className={state.motionIntensity === intensity ? 'elceo-settings-segment active' : 'elceo-settings-segment'}
+                onClick={() => save({ ...state, motionIntensity: intensity })}
+              >
+                <strong>{intensity.toUpperCase()}</strong>
+                <span>{intensity === 'low' ? 'minimal motion' : intensity === 'medium' ? 'balanced motion' : 'cinematic motion'}</span>
+              </button>
+            ))}
+          </div>
+        </Surface>
 
-      <Surface className="elceo-shell-panel elceo-shell-panel-contrast elceo-panel-settings-alert-classes" style={{ padding: '1rem', display: 'grid', gap: '0.6rem' }}>
-        <p className="elceo-kicker">SETTINGS · ALERT CLASSES</p>
-        <h2 style={{ margin: 0 }}>Preference classes</h2>
-        {(
-          [
-            ['biasChanges', 'Bias changes'],
-            ['contradictionSpikes', 'Contradiction spikes'],
-            ['keyLevelInteractions', 'Key-level interactions'],
-            ['macroEventWarnings', 'Major macro event incoming'],
-            ['postEventRegimeShift', 'Post-event regime shift'],
-            ['journalCoaching', 'Journal coaching reminders']
-          ] as const
-        ).map(([key, label]) => (
-          <label key={key} className="elceo-check-row">
-            <input
-              type="checkbox"
-              checked={state.notificationClasses[key]}
-              onChange={(event) =>
-                save({
-                  ...state,
-                  notificationClasses: { ...state.notificationClasses, [key]: event.target.checked }
-                })
-              }
-            />
-            <span>{label}</span>
-          </label>
-        ))}
-      </Surface>
+        <Surface className="elceo-private-panel elceo-settings-notify-panel" style={{ padding: '1rem' }}>
+          <SurfaceHeader kicker="NOTIFICATIONS" title="Operational alert channels" />
+          <div className="elceo-settings-toggle-grid">
+            <label className="elceo-check-row"><input type="checkbox" checked={state.notifications.inApp} onChange={(event) => save({ ...state, notifications: { ...state.notifications, inApp: event.target.checked } })} /><span>In-app alerts</span></label>
+            <label className="elceo-check-row"><input type="checkbox" checked={state.notifications.email} onChange={(event) => save({ ...state, notifications: { ...state.notifications, email: event.target.checked } })} /><span>Email alerts</span></label>
+            <label className="elceo-check-row"><input type="checkbox" checked={state.notifications.browserPush} onChange={(event) => save({ ...state, notifications: { ...state.notifications, browserPush: event.target.checked } })} /><span>Browser push alerts</span></label>
+          </div>
 
-      <Surface className="elceo-shell-panel elceo-shell-panel-deep elceo-panel-settings-billing" style={{ padding: '1rem', display: 'grid', gap: '0.6rem' }}>
-        <p className="elceo-kicker">SETTINGS · BILLING & PLAN</p>
-        <h2 style={{ margin: 0 }}>Subscription lifecycle</h2>
-        <Text tone="muted">
-          Current plan: {state.planTier.toUpperCase()} · Status: {billing.status.toUpperCase()} · Provider: {billing.provider.toUpperCase()}
-        </Text>
-        <Text tone="muted">
-          {billing.canAccessPremiumDepth
-            ? 'Premium depth is enabled. Manage your lifecycle in billing workspace.'
-            : 'Free plan active. Upgrade to unlock full tracked-asset depth, coaching and premium dashboard context.'}
-        </Text>
-        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-          {!billing.subscriptionEligibleForPremium ? (
-            <button type="button" className="elceo-pill-button elceo-pill-button-hero" onClick={runUpgradeFlow}>
-              Upgrade to Premium
-            </button>
-          ) : null}
-          <button type="button" className="elceo-pill-button" onClick={openBillingPortal}>
-            Manage Billing
-          </button>
-        </div>
-        {billingStatus ? <Text tone="primary">{billingStatus}</Text> : null}
-        {persistError ? <Text tone="primary">{persistError}</Text> : null}
-      </Surface>
+          <div className="elceo-settings-class-grid">
+            {alertClassLabels.map(([key, label]) => (
+              <label key={key} className="elceo-check-row">
+                <input
+                  type="checkbox"
+                  checked={state.notificationClasses[key]}
+                  onChange={(event) => save({ ...state, notificationClasses: { ...state.notificationClasses, [key]: event.target.checked } })}
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+        </Surface>
+
+        <Surface className="elceo-private-panel elceo-settings-billing-panel" style={{ padding: '1rem' }}>
+          <SurfaceHeader kicker="BILLING / PLAN" title="Premium lifecycle console" body="High-status plan controls and entitlement depth visibility." />
+          <Text tone="muted">Current depth: {billing.canAccessPremiumDepth ? 'Unlocked premium cognition surfaces.' : 'Free depth with constrained intelligence modules.'}</Text>
+          <div className="elceo-private-chip-row">
+            <SystemChip label={`Status ${billing.status}`} tone="neutral" />
+            <SystemChip label={billing.canAccessPremiumDepth ? 'Premium active' : 'Premium available'} tone={billing.canAccessPremiumDepth ? 'accent' : 'risk'} />
+          </div>
+          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            {!billing.subscriptionEligibleForPremium ? <button type="button" className="elceo-pill-button elceo-pill-button-hero" onClick={runUpgradeFlow}>Upgrade to Premium</button> : null}
+            <button type="button" className="elceo-pill-button" onClick={openBillingPortal}>Manage Billing</button>
+          </div>
+          {billingStatus ? <Text tone="primary">{billingStatus}</Text> : null}
+        </Surface>
+
+        <Surface className="elceo-private-panel elceo-settings-system-panel" style={{ padding: '1rem' }}>
+          <SurfaceHeader kicker="SYSTEM BEHAVIOR" title="Environment notes" body="Low-energy technical cues for persistent config behavior." />
+          <p className="elceo-muted-text">Settings persist to profile-level state and remain bounded to existing auth and app-state routes.</p>
+          <p className="elceo-muted-text">Reduced-motion support remains enforced by shell orchestration and motion-intensity profile.</p>
+          {persistError ? <Text tone="primary">{persistError}</Text> : null}
+        </Surface>
+      </div>
     </div>
   );
 }

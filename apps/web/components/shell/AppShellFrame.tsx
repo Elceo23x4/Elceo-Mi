@@ -8,23 +8,12 @@ import { GsapOrchestrator } from '../motion/GsapOrchestrator';
 import { ThemeToggle } from '../theme/ThemeToggle';
 import { CinematicAtmosphere } from '../visual/CinematicAtmosphere';
 import { InAppAlertsTray } from './InAppAlertsTray';
-
-const appLinks = [
-  { href: '/dashboard', label: 'Dashboard', short: 'DB' },
-  { href: '/portfolio', label: 'Portfolio', short: 'PF' },
-  { href: '/journal', label: 'Journal', short: 'JR' },
-  { href: '/analytics', label: 'Analytics', short: 'AN' },
-  { href: '/settings', label: 'Settings', short: 'ST' },
-  { href: '/admin', label: 'Admin', short: 'AD' }
-];
-
-const ASSET_PRESETS = ['XAU/USD', 'NAS100', 'SPX500', 'DE30', 'BTC/USD'];
+import { privateRouteGroups, privateRouteOrder, resolvePrivateRoute } from './privateRouteConfig';
 
 export function AppShellFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
-  const activeLink = useMemo(() => appLinks.find((link) => pathname.startsWith(link.href)) ?? appLinks[0], [pathname]);
-  const activeAsset = activeLink.href === '/dashboard' ? ASSET_PRESETS[0] : 'Workspace';
+  const activeRoute = useMemo(() => resolvePrivateRoute(pathname), [pathname]);
 
   return (
     <div className="elceo-app-shell">
@@ -39,31 +28,47 @@ export function AppShellFrame({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="elceo-sidebar-nav" aria-label="Application">
-          {appLinks.map((link) => {
-            const active = pathname.startsWith(link.href);
-            return (
-              <Link key={link.href} href={link.href} className={active ? 'elceo-sidebar-link is-active' : 'elceo-sidebar-link'} aria-current={active ? 'page' : undefined}>
-                <span className="elceo-sidebar-link-mark" aria-hidden="true">
-                  {link.short}
-                </span>
-                <span>{link.label}</span>
-              </Link>
-            );
-          })}
+          {privateRouteGroups.map((group) => (
+            <div key={group.id} className="elceo-sidebar-group">
+              <p className="elceo-sidebar-group-label">{group.label}</p>
+              <div className="elceo-sidebar-group-links">
+                {privateRouteOrder
+                  .filter((route) => route.group === group.id)
+                  .map((route) => {
+                    const active = pathname.startsWith(route.href);
+                    return (
+                      <Link key={route.href} href={route.href} className={active ? 'elceo-sidebar-link is-active' : 'elceo-sidebar-link'} aria-current={active ? 'page' : undefined}>
+                        <span className="elceo-sidebar-link-mark" aria-hidden="true">
+                          {route.short}
+                        </span>
+                        <span>{route.label}</span>
+                      </Link>
+                    );
+                  })}
+              </div>
+            </div>
+          ))}
         </nav>
       </aside>
 
       <div className="elceo-app-main">
         <header className="elceo-app-topbar">
           <div className="elceo-topbar-context">
-            <p className="elceo-kicker">{activeLink.label.toUpperCase()} SURFACE</p>
-            <strong>{activeLink.label} Workspace</strong>
+            <p className="elceo-kicker">{activeRoute.shellKicker}</p>
+            <strong>{activeRoute.workspaceLabel}</strong>
+            <div className="elceo-topbar-cues" aria-label="Route status cues">
+              {activeRoute.statusCues.map((cue) => (
+                <span key={cue} className="elceo-topbar-cue-chip">
+                  {cue}
+                </span>
+              ))}
+            </div>
           </div>
 
-          <div className="elceo-topbar-asset-strip" role="group" aria-label="Active asset context">
-            <span className="elceo-topbar-chip-label">Watch</span>
+          <div className="elceo-topbar-asset-strip" role="group" aria-label="Active route context">
+            <span className="elceo-topbar-chip-label">{activeRoute.contextPillLabel}</span>
             <button type="button" className="elceo-topbar-asset-button">
-              {activeAsset}
+              {activeRoute.contextPillValue}
             </button>
           </div>
 

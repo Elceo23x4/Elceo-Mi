@@ -9,6 +9,7 @@ export default function LandingPage() {
       <GsapOrchestrator mode="landing" />
       <div className="elceo-atmosphere elceo-atmosphere-a" aria-hidden="true" />
       <div className="elceo-atmosphere elceo-atmosphere-b" aria-hidden="true" />
+      <div className="elceo-atmosphere elceo-atmosphere-c" aria-hidden="true" />
       <CinematicAtmosphere className="elceo-cinematic-atmosphere-landing" variant="landing" />
       <PublicTopNav />
       <LandingSections />

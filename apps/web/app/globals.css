@@ -1824,3 +1824,337 @@ a {
     align-items: start;
   }
 }
+
+.elceo-private-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.elceo-private-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.elceo-private-grid-portfolio,
+.elceo-private-grid-analytics-top,
+.elceo-private-grid-settings,
+.elceo-private-grid-admin,
+.elceo-private-grid-journal {
+  grid-template-columns: 1.45fr 1fr;
+}
+
+.elceo-private-grid-bottom {
+  grid-template-columns: 1.25fr 0.9fr;
+}
+
+.elceo-private-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.elceo-private-panel {
+  border: 1px solid color-mix(in srgb, var(--elceo-border) 78%, transparent);
+  border-radius: 1.1rem;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--elceo-surface) 90%, transparent), color-mix(in srgb, var(--elceo-surface-soft) 83%, transparent));
+}
+
+.elceo-private-command-band {
+  border: 1px solid color-mix(in srgb, var(--elceo-border) 80%, transparent);
+  border-radius: 1.2rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--elceo-surface-soft) 88%, transparent), color-mix(in srgb, var(--elceo-brand-main) 10%, transparent));
+}
+
+.elceo-private-command-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.elceo-private-command-title {
+  margin: 0.3rem 0 0.45rem;
+  font-size: clamp(1.2rem, 1.35rem + 0.35vw, 1.65rem);
+}
+
+.elceo-private-command-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.elceo-private-chip-row {
+  margin-top: 0.7rem;
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.elceo-system-chip {
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--elceo-border) 72%, transparent);
+  padding: 0.28rem 0.65rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.elceo-system-chip-neutral { background: color-mix(in srgb, var(--elceo-surface) 75%, transparent); }
+.elceo-system-chip-signal { background: color-mix(in srgb, var(--elceo-brand-main) 10%, var(--elceo-surface)); }
+.elceo-system-chip-risk { background: color-mix(in srgb, #e2617a 16%, var(--elceo-surface)); }
+.elceo-system-chip-accent { background: color-mix(in srgb, var(--elceo-brand-accent) 15%, var(--elceo-surface)); }
+
+.elceo-private-surface-header h3 {
+  margin: 0.35rem 0;
+}
+
+.elceo-group-board-columns {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr 0.95fr;
+  gap: 0.75rem;
+}
+
+.elceo-group-strip {
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--elceo-border) 72%, transparent);
+  padding: 0.65rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.elceo-group-strip-1 { background: color-mix(in srgb, var(--elceo-surface) 82%, transparent); }
+.elceo-group-strip-2 { background: color-mix(in srgb, var(--elceo-surface-soft) 82%, transparent); }
+.elceo-group-strip-3 { background: color-mix(in srgb, var(--elceo-brand-main) 8%, var(--elceo-surface)); }
+
+.elceo-group-strip header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  opacity: 0.86;
+}
+
+.elceo-asset-row {
+  width: 100%;
+  border-radius: 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--elceo-border) 70%, transparent);
+  background: color-mix(in srgb, var(--elceo-surface) 76%, transparent);
+  color: inherit;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.45rem 0.52rem;
+}
+
+.elceo-cluster-stack,
+.elceo-diagnosis-stack,
+.elceo-admin-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.elceo-cluster-stack article,
+.elceo-diagnosis-stack article,
+.elceo-admin-list article,
+.elceo-journal-rail-item,
+.elceo-media-scaffold-zone {
+  border: 1px solid color-mix(in srgb, var(--elceo-border) 68%, transparent);
+  border-radius: 0.8rem;
+  padding: 0.6rem;
+  background: color-mix(in srgb, var(--elceo-surface) 78%, transparent);
+}
+
+.elceo-next-action-block h3 {
+  margin: 0.3rem 0 0.4rem;
+}
+
+.elceo-next-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.elceo-asset-toggle-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.elceo-journal-pro-form {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.elceo-journal-group {
+  border: 1px solid color-mix(in srgb, var(--elceo-border) 70%, transparent);
+  border-radius: 0.9rem;
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.5rem;
+  background: color-mix(in srgb, var(--elceo-surface) 78%, transparent);
+}
+
+.elceo-journal-group h4 {
+  margin: 0 0 0.2rem;
+}
+
+.elceo-journal-group label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.88rem;
+}
+
+.elceo-journal-group input,
+.elceo-journal-group select,
+.elceo-journal-group textarea {
+  border-radius: 0.58rem;
+  border: 1px solid color-mix(in srgb, var(--elceo-border) 74%, transparent);
+  padding: 0.45rem;
+  background: color-mix(in srgb, var(--elceo-surface-soft) 76%, transparent);
+  color: inherit;
+}
+
+.elceo-journal-group-geometry {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.elceo-journal-group-full {
+  grid-column: 1 / -1;
+}
+
+.elceo-journal-check {
+  display: flex !important;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.elceo-journal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.elceo-performance-hero-metric {
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--elceo-border) 70%, transparent);
+  padding: 0.8rem;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--elceo-surface-soft) 84%, transparent), color-mix(in srgb, var(--elceo-brand-main) 12%, transparent));
+}
+
+.elceo-performance-hero-metric p,
+.elceo-performance-hero-metric span { margin: 0; }
+.elceo-performance-hero-metric h2 { margin: 0.2rem 0; font-size: 2rem; }
+
+.elceo-metric-ribbon-grid {
+  margin-top: 0.65rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.elceo-metric-ribbon-grid article {
+  border: 1px solid color-mix(in srgb, var(--elceo-border) 68%, transparent);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--elceo-surface) 80%, transparent);
+  padding: 0.5rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.elceo-metric-ribbon-grid strong { font-size: 1.1rem; }
+.elceo-metric-ribbon-grid span { font-size: 0.77rem; opacity: 0.8; }
+
+.elceo-asset-strength-ribbon,
+.elceo-admin-split,
+.elceo-coaching-columns {
+  margin-top: 0.7rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.elceo-coaching-columns {
+  grid-template-columns: 1fr 1fr 1.1fr;
+}
+
+.elceo-asset-strength-ribbon > div,
+.elceo-admin-split > div,
+.elceo-coaching-columns > article {
+  border: 1px solid color-mix(in srgb, var(--elceo-border) 70%, transparent);
+  border-radius: 0.78rem;
+  padding: 0.58rem;
+  background: color-mix(in srgb, var(--elceo-surface) 78%, transparent);
+}
+
+.elceo-settings-segmented {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.elceo-settings-segment {
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--elceo-border) 70%, transparent);
+  background: color-mix(in srgb, var(--elceo-surface) 82%, transparent);
+  color: inherit;
+  padding: 0.6rem;
+  display: grid;
+  text-align: left;
+}
+
+.elceo-settings-segment.active {
+  border-color: color-mix(in srgb, var(--elceo-brand-main) 35%, var(--elceo-border));
+  background: color-mix(in srgb, var(--elceo-brand-main) 12%, var(--elceo-surface));
+}
+
+.elceo-settings-segment span {
+  font-size: 0.78rem;
+  opacity: 0.8;
+}
+
+.elceo-settings-toggle-grid,
+.elceo-settings-class-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.elceo-settings-billing-panel {
+  background: linear-gradient(155deg, color-mix(in srgb, var(--elceo-surface-soft) 84%, transparent), color-mix(in srgb, var(--elceo-brand-main) 16%, transparent));
+}
+
+.elceo-settings-system-panel {
+  background: linear-gradient(152deg, color-mix(in srgb, var(--elceo-surface) 88%, transparent), color-mix(in srgb, var(--elceo-border) 6%, transparent));
+}
+
+@media (max-width: 1120px) {
+  .elceo-private-grid-portfolio,
+  .elceo-private-grid-analytics-top,
+  .elceo-private-grid-settings,
+  .elceo-private-grid-admin,
+  .elceo-private-grid-journal,
+  .elceo-private-grid-bottom,
+  .elceo-group-board-columns,
+  .elceo-metric-ribbon-grid,
+  .elceo-settings-segmented,
+  .elceo-settings-toggle-grid,
+  .elceo-settings-class-grid,
+  .elceo-coaching-columns,
+  .elceo-admin-split,
+  .elceo-next-action-grid,
+  .elceo-asset-strength-ribbon {
+    grid-template-columns: 1fr;
+  }
+
+  .elceo-journal-pro-form {
+    grid-template-columns: 1fr;
+  }
+
+  .elceo-journal-group-geometry {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .elceo-private-command-head {
+    flex-direction: column;
+  }
+}

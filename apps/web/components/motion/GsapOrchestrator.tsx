@@ -14,12 +14,16 @@ type MotionTarget = {
 const QUERY_BY_MODE: Record<GsapOrchestratorProps['mode'], MotionTarget[]> = {
   landing: [
     { selector: '.elceo-topnav', personality: 'stable' },
-    { selector: '.elceo-nav-links a, .elceo-nav-mobile a', personality: 'calm' },
-    { selector: '.elceo-hero-lead > *', personality: 'stable' },
-    { selector: '.elceo-hero-preview', personality: 'calm' },
-    { selector: '.elceo-preview-module', personality: 'default' },
-    { selector: '.elceo-step-card', personality: 'stable' },
-    { selector: '.elceo-section', personality: 'default' }
+    { selector: '.elceo-hero-main .elceo-kicker', personality: 'calm' },
+    { selector: '.elceo-hero-title', personality: 'stable' },
+    { selector: '.elceo-hero-support, .elceo-hero-cta-row, .elceo-hero-stat-row', personality: 'calm' },
+    { selector: '.elceo-side-surface-calm', personality: 'calm' },
+    { selector: '.elceo-side-surface-tense', personality: 'tense' },
+    { selector: '.elceo-hero-carousel-wrap', personality: 'default' },
+    { selector: '.elceo-section', personality: 'default' },
+    { selector: '.elceo-workflow-step', personality: 'stable' },
+    { selector: '.elceo-signature-footer', personality: 'calm' },
+    { selector: '.elceo-atmosphere', personality: 'calm' }
   ],
   auth: [
     { selector: '.elceo-auth-shell', personality: 'stable' },
@@ -106,14 +110,28 @@ export function GsapOrchestrator({ mode }: GsapOrchestratorProps) {
           const trigger = ScrollTrigger.create({
             trigger: element,
             start: 'top 88%',
-            end: 'bottom 42%',
-            scrub: mode === 'landing' ? 0.35 : false,
+            end: 'bottom 40%',
+            scrub: mode === 'landing' ? 0.38 : false,
             onUpdate: ({ progress }: { progress: number }) => {
-              const depth = mode === 'landing' ? 1 - progress * 0.08 : 1;
+              if (mode === 'landing') {
+                const parallaxIntensity = target.selector.includes('elceo-atmosphere') ? 26 : 10;
+                const depthScale = 1 - progress * (target.personality === 'calm' ? 0.04 : 0.07);
+                const lift = -progress * parallaxIntensity;
+                const tensionLift = target.personality === 'tense' ? Math.sin(progress * Math.PI * 2) * 1.2 : 0;
+
+                gsap.to(element, {
+                  y: lift + tensionLift,
+                  scale: depthScale,
+                  duration: 0.2,
+                  overwrite: true
+                });
+                return;
+              }
+
               const tensionLift = target.personality === 'tense' ? Math.sin(progress * Math.PI * 2) * 1.4 : 0;
               gsap.to(element, {
-                y: mode === 'landing' ? -progress * 8 : tensionLift,
-                scale: depth,
+                y: tensionLift,
+                scale: 1,
                 duration: 0.2,
                 overwrite: true
               });

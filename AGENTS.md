@@ -1,177 +1,148 @@
+# ELCEO Frontend Execution Rules
 
-# AGENTS.md
+## Mission
+ELCEO is not a generic SaaS product.
+It is a premium market-cognition operating system.
+All frontend work must feel authored, high-budget, technically serious, and visually distinctive.
 
-## ELCEO repository guidance for Codex
+## Non-negotiable product feel
+Every public and private surface must feel:
+- premium
+- editorial
+- futuristic
+- technical
+- cinematic
+- intentionally interactive
+- luxury-grade but restrained
 
-This repository contains the ELCEO platform, a production-minded AI-powered market cognition web application.
+Never produce:
+- generic SaaS layouts
+- template-looking card grids
+- ordinary fintech dashboards
+- repeated rounded dark boxes with weak hierarchy
+- low-effort hero + cards + CTA compositions
+- “clean enough” placeholder UI
 
-You must treat this repository as a serious long-term product codebase, not as a prototype sandbox.
+## Execution model
+For major UI work, only redesign ONE scene or ONE section per batch unless explicitly instructed otherwise.
 
-## What ELCEO is
+Examples:
+- header only
+- hero only
+- chart showcase only
+- footer only
+- dashboard command strip only
 
-ELCEO is:
-- a real-time market cognition and decision-support platform
-- a premium web experience for aspiring serious traders and experienced macro traders
-- a depth-first launch product focused on Gold (XAU/USD), Nasdaq 100, S&P 500, DE30, BTC/USD, and selected USD pairs
-- an event-driven system with deterministic calculations and explainable reasoning
-- a web app with strong mobile responsiveness
-- a dual-mode product with both dark and light themes
-- a premium, cinematic, editorial, futuristic interface merged with a signature interaction language
+Do not redesign whole products in a single pass unless explicitly told to do so.
 
-ELCEO is not:
-- a generic trading dashboard
-- a buy/sell signal spam tool
-- a template reskin
-- a one-off landing page project
-- a product where AI prose replaces real logic
-- financial advice
+## Mandatory batch discipline
+Every UI batch must include:
+1. exact file targets
+2. exact route affected
+3. exact acceptance criteria
+4. a visible proof marker
+5. build/lint validation
+6. explicit summary of what changed
 
-## Non-negotiable engineering rules
+## Visible proof marker rule
+Every substantial homepage/public redesign batch must include one obvious proof marker so deployment can be verified quickly.
 
-1. Keep deterministic logic in code, not in vague prose.
-2. Keep provider integrations behind adapters.
-3. Keep raw provider payloads out of UI logic.
-4. Use typed schemas and clear domain models.
-5. Maintain admin governance and explainability.
-6. Preserve the ELCEO product identity and do not regress to generic fintech UX.
-7. Keep the design language coherent across the landing page and application shell.
-8. Build with maintainability and extension in mind.
-9. Do not hardcode secrets; use environment variables only.
-10. Respect reduced-motion preferences while still preserving the signature interaction language.
-11. Do not compress architecture boundaries for convenience.
-12. If asked to scaffold a package or service boundary, create the explicit files and folders rather than collapsing them into a minimal placeholder structure.
-13. Do not write lockfile-style content into package.json.
-14. Root package.json must be a valid workspace manifest.
-15. Do not move to the next slice until the current slice is explicitly approved.
+Examples:
+- a temporary hero kicker string
+- a temporary section label
+- a temporary footer marker
+- a unique visible nav chip
 
-## Required build approach
+Do not omit this unless explicitly asked.
 
-For any major task:
-1. Read the relevant docs in `/docs`.
-2. Return a plan before coding if the task is broad.
-3. List the files to create or modify before major implementation.
-4. Implement in coherent slices.
-5. Keep tests updated for deterministic logic.
-6. Explain assumptions clearly.
-7. Preserve existing working code unless a refactor is explicitly required.
+## Typography roles
+Use a 3-role type hierarchy:
 
-## Priority documents
+### Hero display role
+Used only for hero headline and rare signature moments.
+Should feel bold, distinctive, memorable, graphic.
 
-Read these in `/docs` before major implementation work:
-- elceo-master-prompt-v1.md
-- elceo-master-prompt-v2.md
-- elceo-execution-pack.md
-- elceo-provider-pack.md
-- elceo-math-checklist.md
-- elceo-formula-sheet.md
-- elceo-codex-run-sequence.md
+### Section display role
+Used for section titles, premium editorial titles, footer signature.
+Should feel sculptural, elegant, high-end.
 
-## Product principles
+### Interface/content role
+Used for body copy, chips, labels, modules, supporting copy.
+Should feel modern, readable, clean, and premium.
 
-- accuracy-first over speed-first in cognition updates
-- event-native architecture
-- layered explanation
-- confidence-weighted hybrid reasoning
-- moderate chart annotation density with filters
-- zones rather than plain lines for key levels
-- deterministic scoring for risk, confidence, contradiction, ranking, and key-level significance
-- free plan plus premium plan entitlements
-- strong disclaimers and terms acceptance
-- role-based admin with super admin, analyst admin, and support admin
+Do not collapse all three roles into one generic font treatment.
 
-## Launch asset focus
+## Layout rules
+Use:
+- asymmetry
+- strong hierarchy
+- varied scale
+- intentional whitespace
+- layered surfaces
+- premium spacing rhythm
+- visual focal points
 
-Deep support at launch for:
-- XAU/USD
-- Nasdaq 100
-- S&P 500
-- DE30
-- BTC/USD
-- EUR/USD
-- GBP/USD
-- USD/JPY
-- USD/CHF
-- AUD/USD
-- NZD/USD
-- USD/CAD
+Avoid:
+- equal-width everything
+- equal-height card rows
+- repetitive box rhythm
+- flat stacked sections
+- overusing the same module shell everywhere
 
-Do not dilute launch depth by expanding asset breadth too early.
+## Motion rules
+Motion must feel authored, not templated.
 
-## When coding UI
+Use:
+- staged reveals
+- premium easing
+- calm/stable/tense differences by content type
+- subtle parallax where appropriate
+- hover richness
+- restrained interaction polish
 
-- respect the premium editorial aesthetic
-- support dark and light mode
-- use soft red as the main color family and green as the accent
-- preserve custom-styled layered typography
-- keep motion authored and state-driven
-- do not make every component look the same
-- make the interface visually rich but still legible and performant
-- keep the landing page and application shell as one unified brand language
-- do not flatten the dashboard into a generic fintech terminal
+Do not:
+- apply one identical fade-up to everything
+- over-animate
+- add motion that reduces clarity
+- ignore reduced-motion support
 
-## When coding motion
+## Header rules
+Public homepage header must feel like a premium floating object.
+Not a normal nav bar.
+Centered composition is preferred when instructed.
+Dropdowns must feel designed, not default.
 
-- motion must communicate system state where relevant
-- confidence changes may affect stability, glow, and coherence
-- contradiction may affect tension, distortion, or controlled flicker
-- volatility may affect pacing and pulse
-- implement reusable motion primitives and variants
-- support reduced-motion properly, not as an afterthought
+## Homepage rules
+Homepage must never read like a generic startup landing page.
+It should feel like an editorial-tech brand experience with product intelligence depth.
 
-## When coding market logic
+## Private shell rules
+Private shell must feel like a cognition OS, not a standard admin shell.
 
-- use deterministic formulas first
-- use AI for interpretation and explanation on top of normalized evidence
-- preserve contradiction instead of forcing false consensus
-- expose score breakdowns, not just opaque totals
-- label horizons explicitly: intraday, swing, and where useful structural
-- keep scoring and formula weights configurable where practical
+## File targeting rule
+When asked to redesign a route, update the ACTUAL rendered files for that route.
+Do not redesign adjacent or unused components and present them as complete.
 
-## When coding providers
+## Build discipline
+When environment allows, always run:
+- npm install
+- npm run -w apps/web lint
+- npm run -w apps/web build
 
-- keep providers domain-separated:
-  - market
-  - macro
-  - news
-  - geopolitics
-  - extraction
-  - context
-- use explicit adapter names
-- create composite adapters where fallback or reconciliation is needed
-- do not leak provider-specific response shapes into the application layer
-- normalize to internal schemas first
+Do not claim success without reporting exact results.
 
-## When coding the domain calculation layer
+## Reporting format
+After each batch, report only:
+1. updated file tree
+2. files changed
+3. exact visible route affected
+4. what changed
+5. proof marker used
+6. validation results
+7. remaining risks
 
-- keep functions pure
-- separate shared math utilities from business formulas
-- add tests for each important rule family
-- include edge-case handling
-- keep formulas readable and documented
-- do not bury calculations inside page components or provider adapters
-
-## Admin and governance expectations
-
-Admin is first-class, not optional.
-Maintain support for:
-- super admin
-- analyst admin
-- support admin
-
-Preserve the ability to answer:
-- why did ELCEO say this?
-- which sources contributed?
-- what confidence components were used?
-- what contradiction signals were present?
-- what changed over time?
-
-## What to avoid
-
-- giant unstructured files
-- leaking provider-specific logic everywhere
-- chatty code comments without useful information
-- coupling UI directly to raw data sources
-- placeholder architecture that cannot scale
-- removing tests from the calculation layer
-- skipping disclaimers, plan logic, or admin governance because they feel secondary
-- using “good enough” generic scaffolding when explicit structure was requested
+## Quality bar
+Assume the UI budget is $80k.
+Design and implementation quality must reflect that expectation.
+Good enough is not acceptable.
+Distinctive, coherent, premium, and technically polished is the minimum bar.

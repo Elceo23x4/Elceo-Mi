@@ -37,7 +37,10 @@ function rewriteRequires(content, targetFile) {
   let updated = content.replace(/require\((['"])(\.{1,2}\/[^'"\)]+)\1\)/g, (_match, quote, spec) => {
     let next = spec;
     if (next.endsWith('.js')) next = next.slice(0, -3) + '.cjs';
-    else if (!path.extname(next)) next = `${next}.cjs`;
+    else {
+      const ext = path.extname(next);
+      if (!ext || ext === '.schema') next = `${next}.cjs`;
+    }
     return `require(${quote}${next}${quote})`;
   });
 

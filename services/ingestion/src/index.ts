@@ -1,3 +1,4 @@
+export * from './core';
 export * from './worker';
 export * from './adapters/build-provider-graph';
 export * from './pipelines/marketIngestionPipeline';

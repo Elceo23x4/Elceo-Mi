@@ -1,148 +1,97 @@
-# ELCEO Frontend Execution Rules
+# ELCEO Frontend Rules
 
-## Mission
-ELCEO is not a generic SaaS product.
-It is a premium market-cognition operating system.
-All frontend work must feel authored, high-budget, technically serious, and visually distinctive.
+## Product identity
+ELCEO is a premium market-cognition operating system.
+Never design it like a generic SaaS product, generic fintech site, or generic dashboard.
 
-## Non-negotiable product feel
-Every public and private surface must feel:
+The UI must feel:
 - premium
 - editorial
 - futuristic
-- technical
 - cinematic
-- intentionally interactive
-- luxury-grade but restrained
+- technical
+- high-budget
+- authored
 
-Never produce:
-- generic SaaS layouts
-- template-looking card grids
-- ordinary fintech dashboards
-- repeated rounded dark boxes with weak hierarchy
-- low-effort hero + cards + CTA compositions
-- “clean enough” placeholder UI
+The UI must not feel:
+- templated
+- repetitive
+- card-grid dependent
+- over-pillified
+- generic startup
+- generic dark theme
 
-## Execution model
-For major UI work, only redesign ONE scene or ONE section per batch unless explicitly instructed otherwise.
+## Execution rule
+For major UI work, redesign one scene only per batch unless explicitly told otherwise.
 
 Examples:
 - header only
 - hero only
+- mechanism section only
 - chart showcase only
 - footer only
-- dashboard command strip only
 
-Do not redesign whole products in a single pass unless explicitly told to do so.
+Do not redesign the whole homepage in one batch.
 
-## Mandatory batch discipline
+## Required batch checklist
 Every UI batch must include:
 1. exact file targets
 2. exact route affected
-3. exact acceptance criteria
-4. a visible proof marker
-5. build/lint validation
-6. explicit summary of what changed
+3. visible proof marker
+4. strict acceptance criteria
+5. npm install
+6. npm run -w apps/web lint
+7. npm run -w apps/web build
 
-## Visible proof marker rule
-Every substantial homepage/public redesign batch must include one obvious proof marker so deployment can be verified quickly.
-
-Examples:
-- a temporary hero kicker string
-- a temporary section label
-- a temporary footer marker
-- a unique visible nav chip
-
-Do not omit this unless explicitly asked.
-
-## Typography roles
-Use a 3-role type hierarchy:
-
-### Hero display role
-Used only for hero headline and rare signature moments.
-Should feel bold, distinctive, memorable, graphic.
-
-### Section display role
-Used for section titles, premium editorial titles, footer signature.
-Should feel sculptural, elegant, high-end.
-
-### Interface/content role
-Used for body copy, chips, labels, modules, supporting copy.
-Should feel modern, readable, clean, and premium.
-
-Do not collapse all three roles into one generic font treatment.
+## Proof marker rule
+Every major visual batch must include one obvious visible proof marker so deployment can be verified immediately.
 
 ## Layout rules
 Use:
-- asymmetry
 - strong hierarchy
+- asymmetry
 - varied scale
 - intentional whitespace
-- layered surfaces
-- premium spacing rhythm
-- visual focal points
+- few focal objects
+- premium restraint
 
 Avoid:
-- equal-width everything
-- equal-height card rows
-- repetitive box rhythm
-- flat stacked sections
-- overusing the same module shell everywhere
+- equal rows of similar cards
+- repeated dark rounded boxes
+- too many controls in one band
+- generic nav bars
+- generic hero layouts
+
+## Header rules
+The public homepage header must feel like a single premium floating object.
+It must not feel like a row of pills in a rounded container.
+Keep utility controls minimal.
+Centered composition is preferred when instructed.
+
+## Typography rules
+Use 3 roles:
+1. hero display
+2. section display
+3. interface/content
+
+Do not collapse all text into one generic treatment.
 
 ## Motion rules
 Motion must feel authored, not templated.
+Avoid repeating one fade-up everywhere.
+Use calm/stable/tense motion differences where relevant.
+Honor reduced-motion support.
 
-Use:
-- staged reveals
-- premium easing
-- calm/stable/tense differences by content type
-- subtle parallax where appropriate
-- hover richness
-- restrained interaction polish
-
-Do not:
-- apply one identical fade-up to everything
-- over-animate
-- add motion that reduces clarity
-- ignore reduced-motion support
-
-## Header rules
-Public homepage header must feel like a premium floating object.
-Not a normal nav bar.
-Centered composition is preferred when instructed.
-Dropdowns must feel designed, not default.
-
-## Homepage rules
-Homepage must never read like a generic startup landing page.
-It should feel like an editorial-tech brand experience with product intelligence depth.
-
-## Private shell rules
-Private shell must feel like a cognition OS, not a standard admin shell.
-
-## File targeting rule
-When asked to redesign a route, update the ACTUAL rendered files for that route.
-Do not redesign adjacent or unused components and present them as complete.
-
-## Build discipline
-When environment allows, always run:
-- npm install
-- npm run -w apps/web lint
-- npm run -w apps/web build
-
-Do not claim success without reporting exact results.
+## Route discipline
+When asked to redesign a route, update the actual rendered files for that route.
+Do not modify unused or adjacent components and present that as complete.
 
 ## Reporting format
 After each batch, report only:
 1. updated file tree
 2. files changed
-3. exact visible route affected
+3. exact route affected
 4. what changed
 5. proof marker used
 6. validation results
 7. remaining risks
-
-## Quality bar
-Assume the UI budget is $80k.
-Design and implementation quality must reflect that expectation.
-Good enough is not acceptable.
-Distinctive, coherent, premium, and technically polished is the minimum bar.

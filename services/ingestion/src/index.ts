@@ -1,3 +1,10 @@
+export * from './runtime/index';
+export * from './scheduler/index';
+export * from './facade/index';
+export * from './core/index';
+export * from './bridges/index';
+
+// Legacy compatibility exports (non-canonical path).
 export * from './worker';
 export * from './adapters/build-provider-graph';
 export * from './pipelines/marketIngestionPipeline';

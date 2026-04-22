@@ -17,6 +17,7 @@ const aliasTargets = {
   '@elceo/types': 'packages/types/src/index.cjs',
   '@elceo/domain': 'packages/domain/src/index.cjs',
   '@elceo/schemas': 'packages/schemas/src/index.cjs',
+  '@elceo/providers': 'packages/providers/src/index.cjs',
   '@elceo/application-state': 'services/application-state/src/index.cjs',
   '@elceo/analytics': 'services/analytics/src/index.cjs',
   '@elceo/billing': 'services/billing/src/index.cjs'
@@ -37,7 +38,10 @@ function rewriteRequires(content, targetFile) {
   let updated = content.replace(/require\((['"])(\.{1,2}\/[^'"\)]+)\1\)/g, (_match, quote, spec) => {
     let next = spec;
     if (next.endsWith('.js')) next = next.slice(0, -3) + '.cjs';
-    else if (!path.extname(next)) next = `${next}.cjs`;
+    else {
+      const ext = path.extname(next);
+      if (!ext || ext === '.schema') next = `${next}.cjs`;
+    }
     return `require(${quote}${next}${quote})`;
   });
 

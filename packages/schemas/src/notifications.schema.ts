@@ -1,0 +1,97 @@
+import type {
+  NotificationChannel,
+  NotificationDecision,
+  NotificationTriggerContext,
+  NotificationTriggerKind,
+  NotificationTriggerRule
+} from '@elceo/types';
+import { validateCanonicalCognitionState } from './cognition.schema';
+import { TIMEFRAMES } from './event.schema';
+import {
+  isBoolean,
+  isEnumValue,
+  isIsoDateString,
+  isNonEmptyString,
+  isObjectRecord,
+  isStringArray,
+  type SchemaValidationResult
+} from './validation-utils';
+
+const NOTIFICATION_CHANNELS: NotificationChannel[] = ['in_app', 'email', 'push', 'sms', 'webhook'];
+const NOTIFICATION_TRIGGER_KINDS: NotificationTriggerKind[] = [
+  'contradiction_spike',
+  'invalidation_breach',
+  'state_flip',
+  'confidence_drop',
+  'macro_event_imminent',
+  'macro_event_live',
+  'evidence_refresh',
+  'freshness_decay',
+  'watchlist_signal',
+  'admin_source_failure',
+  'admin_staleness',
+  'admin_replay_ready'
+];
+
+export function validateNotificationTriggerRule(input: unknown, pathPrefix = ''): SchemaValidationResult<NotificationTriggerRule> {
+  const errors: string[] = [];
+  if (!isObjectRecord(input)) return { ok: false, errors: [`${pathPrefix}NotificationTriggerRule must be object`] };
+
+  if (!isEnumValue(input.triggerKind, NOTIFICATION_TRIGGER_KINDS)) errors.push(`${pathPrefix}triggerKind is invalid`);
+  if (!(input.asset === null || isNonEmptyString(input.asset))) errors.push(`${pathPrefix}asset must be non-empty string or null`);
+  if (!(input.timeframe === null || isEnumValue(input.timeframe, TIMEFRAMES))) errors.push(`${pathPrefix}timeframe must be Timeframe or null`);
+  if (!isBoolean(input.enabled)) errors.push(`${pathPrefix}enabled must be boolean`);
+  if (!(input.threshold === null || (typeof input.threshold === 'number' && Number.isFinite(input.threshold)))) {
+    errors.push(`${pathPrefix}threshold must be finite number or null`);
+  }
+  if (typeof input.cooldownMinutes !== 'number' || input.cooldownMinutes < 0) errors.push(`${pathPrefix}cooldownMinutes must be >= 0`);
+  if (typeof input.suppressionWindowMinutes !== 'number' || input.suppressionWindowMinutes < 0) {
+    errors.push(`${pathPrefix}suppressionWindowMinutes must be >= 0`);
+  }
+  if (!(input.entitlementRequired === null || isNonEmptyString(input.entitlementRequired))) {
+    errors.push(`${pathPrefix}entitlementRequired must be non-empty string or null`);
+  }
+
+  if (!Array.isArray(input.channels) || !input.channels.every((channel) => isEnumValue(channel, NOTIFICATION_CHANNELS))) {
+    errors.push(`${pathPrefix}channels must be NotificationChannel[]`);
+  }
+  if (!isNonEmptyString(input.version)) errors.push(`${pathPrefix}version must be non-empty string`);
+
+  return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as NotificationTriggerRule };
+}
+
+export function validateNotificationTriggerContext(input: unknown, pathPrefix = ''): SchemaValidationResult<NotificationTriggerContext> {
+  const errors: string[] = [];
+  if (!isObjectRecord(input)) return { ok: false, errors: [`${pathPrefix}NotificationTriggerContext must be object`] };
+
+  const cognitionValidation = validateCanonicalCognitionState(input.cognition, `${pathPrefix}cognition.`);
+  if (cognitionValidation.ok === false) errors.push(...cognitionValidation.errors);
+
+  if (!(input.previousCognition === null || validateCanonicalCognitionState(input.previousCognition).ok)) {
+    errors.push(`${pathPrefix}previousCognition must be null or valid CanonicalCognitionState`);
+  }
+  if (!isIsoDateString(input.asOf)) errors.push(`${pathPrefix}asOf must be ISO date`);
+  if (!(input.userId === null || isNonEmptyString(input.userId))) errors.push(`${pathPrefix}userId must be non-empty string or null`);
+  if (!isBoolean(input.watchlistMatch)) errors.push(`${pathPrefix}watchlistMatch must be boolean`);
+  if (!isBoolean(input.adminMode)) errors.push(`${pathPrefix}adminMode must be boolean`);
+
+  return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as NotificationTriggerContext };
+}
+
+export function validateNotificationDecision(input: unknown, pathPrefix = ''): SchemaValidationResult<NotificationDecision> {
+  const errors: string[] = [];
+  if (!isObjectRecord(input)) return { ok: false, errors: [`${pathPrefix}NotificationDecision must be object`] };
+
+  if (!isBoolean(input.shouldFire)) errors.push(`${pathPrefix}shouldFire must be boolean`);
+  if (!isNonEmptyString(input.reason)) errors.push(`${pathPrefix}reason must be non-empty string`);
+  if (!isEnumValue(input.triggerKind, NOTIFICATION_TRIGGER_KINDS)) errors.push(`${pathPrefix}triggerKind is invalid`);
+  if (!Array.isArray(input.channels) || !input.channels.every((channel) => isEnumValue(channel, NOTIFICATION_CHANNELS))) {
+    errors.push(`${pathPrefix}channels must be NotificationChannel[]`);
+  }
+  if (!isBoolean(input.cooldownApplied)) errors.push(`${pathPrefix}cooldownApplied must be boolean`);
+  if (!isBoolean(input.suppressionApplied)) errors.push(`${pathPrefix}suppressionApplied must be boolean`);
+  if (!isStringArray(input.evidenceIds)) errors.push(`${pathPrefix}evidenceIds must be string[]`);
+  if (!isIsoDateString(input.createdAt)) errors.push(`${pathPrefix}createdAt must be ISO date`);
+
+  return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as NotificationDecision };
+}

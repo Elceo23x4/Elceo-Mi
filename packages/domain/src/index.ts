@@ -21,3 +21,5 @@ export * from './contradiction/computeContradiction';
 
 export * from './freshness/computeFreshness';
 export * from './ranking/computeRanking';
+
+export * from './contracts/index';

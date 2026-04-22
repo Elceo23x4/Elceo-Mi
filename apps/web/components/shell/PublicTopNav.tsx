@@ -58,7 +58,7 @@ export function PublicTopNav() {
           <span>ELCEO</span>
           <small>Market Cognition OS</small>
         </Link>
-        <p className="elceo-topnav-tag">H1-HEADER-LIVE</p>
+        <p className="elceo-topnav-tag">H1R-LIVE</p>
       </div>
 
       <nav className="elceo-nav-links" aria-label="Primary">
@@ -94,11 +94,7 @@ export function PublicTopNav() {
       </nav>
 
       <div className="elceo-topnav-actions">
-        <span className="elceo-topnav-status">Signal Rail · Stable</span>
         <ThemeToggle />
-        <Link href="/demo" className="elceo-pill-button elceo-pill-button-secondary">
-          Enter Demo
-        </Link>
         <Link href="/login?callbackUrl=/onboarding" className="elceo-pill-button elceo-pill-button-hero">
           Open Platform
         </Link>

@@ -1,55 +1,100 @@
-# C1 — Canonical Contract Freeze
+# C1/C1-R — Canonical Contract Freeze and Hardening
 
-This document freezes the canonical language used across ingestion, provider adapters, reasoning, notifications, chart projection, admin replay, and analytics.
+This document freezes and hardens the canonical language used across ingestion, provider adapters, reasoning, notifications, chart projection, admin replay, and analytics.
 
 ## Ownership map
 
-- `@elceo/types` owns canonical contracts and enums.
-- `@elceo/schemas` owns runtime validation helpers.
-- `@elceo/domain` owns deterministic scoring and mapping helpers.
-- `@elceo/providers` owns provider adapter interfaces that must emit canonical events.
+- `@elceo/types` owns canonical contracts, enums, legacy markers, and migration bridge helpers.
+- `@elceo/schemas` owns strict runtime validation and deterministic fixtures.
+- `@elceo/domain` owns deterministic scoring/mapping formulas.
+- `@elceo/providers` owns adapter interfaces that return canonical events.
+
+## Canonical-first rule (non-optional)
+
+All **new code** must consume canonical contracts first:
+- `CanonicalEvent`
+- `RankedEvidenceItem`
+- `CanonicalCognitionState`
+- `ReasoningInputFrame`
+- `NotificationTriggerRule`/`NotificationDecision`
+- `ZoneSignificance`/`InvalidationState`
+
+Legacy shapes exist for migration only and are explicitly deprecated.
+
+## Legacy transition policy
+
+Legacy compatibility currently exists for:
+- `AssetCognitionState` (legacy cognition envelope)
+- `InternalNormalizedEvent` (legacy normalized ingestion envelope)
+
+### Guardrails
+
+1. Do not create new producers of legacy shapes.
+2. Existing legacy consumers must use explicit bridge helpers.
+3. Bridge helpers are deterministic and document lossy mapping.
+4. Bridge helpers must never silently invent required canonical semantics.
+
+### Bridge helpers
+
+Use:
+- `mapLegacyAssetCognitionStateToCanonical(...)`
+- `mapInternalNormalizedEventToCanonicalEvent(...)`
+
+These are temporary migration tools and should be removed after full canonical migration.
 
 ## CanonicalEvent
 
-`CanonicalEvent` is the normalized evidence/event envelope. It is the only allowed cross-service event shape.
+`CanonicalEvent` is the normalized event/evidence envelope and the only allowed event payload across service boundaries.
 
 ### Timestamp semantics
-- `occurredAt`: when event happened (or was published by source).
-- `detectedAt`: when ELCEO ingested/detected it.
-- `effectiveUntil`: optional explicit expiry if the source provides it.
+- `occurredAt`: when event happened/published at source.
+- `detectedAt`: when ELCEO observed/ingested it.
+- `effectiveUntil`: optional explicit source expiry window.
 
-### Auditability
-- `rawPayload` keeps upstream payload for replay/audit.
-- `dedupeKey` and `id` are deterministic identities.
-- `attribution` stores provider/publisher/author explicitly.
+### Auditability requirements
+- `rawPayload` preserves source payload for replay/audit.
+- `id` and `dedupeKey` preserve deterministic identity.
+- `attribution` stores provider/publisher/author separately.
 - `audit` stores normalizer/version/ingestion channel.
 
 ## RankedEvidenceItem
 
-`RankedEvidenceItem` is a ranked reasoning input record and is intentionally distinct from `CanonicalEvent`.
-It contains score components, linked zones/price levels/candles/notes, and deterministic ranking outputs.
+`RankedEvidenceItem` is the reasoning-layer ranked evidence record (not identical to `CanonicalEvent`).
+It stores score components and linked chart context (`linkedZoneIds`, `linkedPriceLevels`, `linkedCandleTimes`, `linkedNotes`).
 
 ## CanonicalCognitionState
 
-`CanonicalCognitionState` is the central reasoning output envelope for dashboard, demo, notifications, admin replay, journal linkage, and chart projection.
-It keeps nested sections explicit:
-- confidence anatomy
-- contradiction anatomy and regime
+`CanonicalCognitionState` is the central reasoning output contract for dashboard, notifications, replay, analytics, journaling, and chart projection.
+It must remain deeply structured:
+- confidence (score + anatomy)
+- contradiction (score + regime + anatomy + summary)
 - freshness
-- invalidation state
-- ranked evidence
-- zone significance
-- explanation (concise, expanded, and deterministic reason buckets)
-- support event slices
-- chart projection references
-- audit versions
+- invalidation
+- evidence
+- zones
+- explanation
+- support events
+- chart projection
+- audit
+
+## Strict runtime validator expectations
+
+Validators are required to be field-specific and nested (not shallow):
+- enum correctness
+- string/array/boolean checks
+- score ranges (0..100)
+- ISO date checks
+- nested object requirements
+- relationship checks where applicable (example: invalidation `confirmed` ↔ `confirmedAt`)
+
+Validator failures must emit precise field-level errors.
 
 ## Frozen formulas
 
 All scoring helpers are pure and deterministic in `@elceo/domain/src/contracts/helpers.ts`.
 
 ### Confidence weighted score
-Penalties are subtractive by design: contradiction and staleness reduce conviction.
+Penalties are subtractive by design because contradiction/staleness reduce conviction.
 
 ```text
 score = clampTo100(
@@ -73,12 +118,15 @@ score = clampTo100(
 )
 ```
 
-Regime thresholds:
-- `[0, 15)` => `none`
-- `[15, 35)` => `low`
-- `[35, 60)` => `moderate`
-- `[60, 80)` => `high`
-- `[80, 100]` => `critical`
+### Contradiction regime boundary table
+
+| Score range | Regime |
+|---|---|
+| 0 <= score < 15 | none |
+| 15 <= score < 35 | low |
+| 35 <= score < 60 | moderate |
+| 60 <= score < 80 | high |
+| 80 <= score <= 100 | critical |
 
 ### Freshness
 
@@ -101,13 +149,10 @@ Default stale thresholds (hours):
 - D1: 168
 
 ### Zone significance
-Touch normalization:
 
 ```text
 touchCountScore = clampTo100(min(touchCount, 5)/5*100)
 ```
-
-Final strength:
 
 ```text
 finalStrengthScore = clampTo100(
@@ -119,23 +164,36 @@ finalStrengthScore = clampTo100(
 )
 ```
 
-Reaction magnitude has highest weight because zone importance is primarily proven by rejection/acceptance impulse.
-Recency matters but is capped to avoid overfitting one recent touch.
+Reaction magnitude has the highest weight because structural validity is most strongly evidenced by reaction magnitude.
+Recency matters but does not dominate.
 
-### Invalidation risk label
-From primary invalidation severity:
-- no primary or `<25`: `guarded`
-- `25..49`: `warning`
-- `50..74`: `fragile`
-- `75..100`: `broken`
+### Invalidation risk labels
 
-## Runtime schema coverage
+| Primary severity | Risk label |
+|---|---|
+| null / 0..24 | guarded |
+| 25..49 | warning |
+| 50..74 | fragile |
+| 75..100 | broken |
 
-Runtime validators exist for events, cognition states, providers, reasoning frames, zones/invalidation states, and notification rules/context/decisions.
+## Runtime test expectations
 
-## Future batch consumption
+Contract hardening requires runtime-executed tests (not compile-only):
+- formula outputs and boundaries
+- validator accept/reject behavior
+- canonical fixture validity
+- malformed nested structure rejection
 
-- Ingestion adapters must output `CanonicalEvent` and never raw provider models across service boundaries.
-- Reasoning engines must accept `ReasoningInputFrame` and return `CanonicalCognitionState`.
-- Notification evaluation must use `NotificationTriggerRule`, `NotificationTriggerContext`, and emit `NotificationDecision`.
-- New features must reuse these contracts and formulas rather than introducing alternate score meanings.
+## What new code should import
+
+- Canonical contracts from `@elceo/types`
+- Validators/fixtures from `@elceo/schemas`
+- Formula helpers/constants from `@elceo/domain`
+- Adapter contracts from `@elceo/providers/contracts`
+
+## What old code may still use temporarily
+
+- Legacy types (`AssetCognitionState`, `InternalNormalizedEvent`) only behind bridge boundaries.
+- Migration bridge helpers in `@elceo/types/legacy-bridges` for transition periods.
+
+No new feature should introduce additional legacy shapes.

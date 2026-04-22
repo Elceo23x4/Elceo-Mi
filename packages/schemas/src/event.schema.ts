@@ -1,8 +1,32 @@
-import type { CanonicalEvent, EventImpactLevel, EventStatus, EvidenceKind, SourceCategory } from '@elceo/types';
+import type {
+  BiasState,
+  CanonicalEvent,
+  ContradictionAnatomy,
+  ContradictionRegime,
+  EventImpactLevel,
+  EventStatus,
+  EvidenceKind,
+  FreshnessState,
+  RankedEvidenceItem,
+  SourceCategory,
+  Timeframe
+} from '@elceo/types';
 import type { NormalizedProviderEvent } from './provider-normalized.schema';
+import {
+  isBoolean,
+  isEnumValue,
+  isIsoDateString,
+  isNonEmptyString,
+  isNullableIsoDateString,
+  isObjectRecord,
+  isScore0to100,
+  isStringArray,
+  validateRequiredFields,
+  type SchemaValidationResult
+} from './validation-utils';
 
-const SOURCE_CATEGORIES: SourceCategory[] = ['market_data', 'macro_calendar', 'news', 'geopolitics', 'macro_context', 'internal', 'user'];
-const EVIDENCE_KINDS: EvidenceKind[] = [
+export const SOURCE_CATEGORIES: SourceCategory[] = ['market_data', 'macro_calendar', 'news', 'geopolitics', 'macro_context', 'internal', 'user'];
+export const EVIDENCE_KINDS: EvidenceKind[] = [
   'market_structure',
   'price_action',
   'macro_calendar',
@@ -17,65 +41,156 @@ const EVIDENCE_KINDS: EvidenceKind[] = [
   'journal_behavior',
   'system'
 ];
-const EVENT_STATUSES: EventStatus[] = ['scheduled', 'live', 'published', 'revised', 'stale', 'cancelled', 'resolved'];
-const EVENT_IMPACTS: EventImpactLevel[] = ['low', 'medium', 'high', 'critical'];
+export const EVENT_STATUSES: EventStatus[] = ['scheduled', 'live', 'published', 'revised', 'stale', 'cancelled', 'resolved'];
+export const EVENT_IMPACTS: EventImpactLevel[] = ['low', 'medium', 'high', 'critical'];
+export const TIMEFRAMES: Timeframe[] = ['M5', 'M15', 'H1', 'H4', 'D1'];
+export const BIAS_STATES: BiasState[] = ['bullish', 'bearish', 'neutral'];
+export const CONTRADICTION_REGIMES: ContradictionRegime[] = ['none', 'low', 'moderate', 'high', 'critical'];
 
-export type SchemaValidationResult<T> = { ok: true; value: T } | { ok: false; errors: string[] };
+const EVIDENCE_DIRECTION_HINTS: Array<BiasState | 'mixed'> = ['bullish', 'bearish', 'neutral', 'mixed'];
 
-function isIso(value: string): boolean {
-  return !Number.isNaN(Date.parse(value));
-}
-
-function isScore(value: number): boolean {
-  return Number.isFinite(value) && value >= 0 && value <= 100;
-}
-
-export function validateCanonicalEvent(input: unknown): SchemaValidationResult<CanonicalEvent> {
+export function validateCanonicalEvent(input: unknown, pathPrefix = ''): SchemaValidationResult<CanonicalEvent> {
   const errors: string[] = [];
-  if (!input || typeof input !== 'object') {
-    return { ok: false, errors: ['CanonicalEvent must be an object'] };
+  if (!isObjectRecord(input)) {
+    return { ok: false, errors: [`${pathPrefix}CanonicalEvent must be an object`] };
   }
 
-  const e = input as Record<string, unknown>;
-  const requiredStrings = ['id', 'sourceId', 'sourceName', 'title', 'summary', 'normalizedNarrative', 'occurredAt', 'detectedAt', 'dedupeKey'];
-  for (const key of requiredStrings) {
-    if (typeof e[key] !== 'string' || (e[key] as string).length === 0) errors.push(`${key} must be a non-empty string`);
+  validateRequiredFields(
+    input,
+    ['id', 'sourceId', 'sourceName', 'title', 'summary', 'normalizedNarrative', 'occurredAt', 'detectedAt', 'dedupeKey'],
+    errors,
+    pathPrefix
+  );
+
+  if (!isEnumValue(input.sourceCategory, SOURCE_CATEGORIES)) errors.push(`${pathPrefix}sourceCategory is invalid`);
+  if (!isEnumValue(input.eventKind, EVIDENCE_KINDS)) errors.push(`${pathPrefix}eventKind is invalid`);
+  if (!isEnumValue(input.status, EVENT_STATUSES)) errors.push(`${pathPrefix}status is invalid`);
+  if (!isEnumValue(input.impact, EVENT_IMPACTS)) errors.push(`${pathPrefix}impact is invalid`);
+
+  if (!isIsoDateString(input.occurredAt)) errors.push(`${pathPrefix}occurredAt must be a valid ISO date`);
+  if (!isIsoDateString(input.detectedAt)) errors.push(`${pathPrefix}detectedAt must be a valid ISO date`);
+  if (!isNullableIsoDateString(input.effectiveUntil)) errors.push(`${pathPrefix}effectiveUntil must be ISO date or null`);
+
+  if (!(input.region === null || isNonEmptyString(input.region))) errors.push(`${pathPrefix}region must be non-empty string or null`);
+  if (!(input.country === null || isNonEmptyString(input.country))) errors.push(`${pathPrefix}country must be non-empty string or null`);
+  if (!(input.currency === null || isNonEmptyString(input.currency))) errors.push(`${pathPrefix}currency must be non-empty string or null`);
+
+  if (!isStringArray(input.relatedAssets)) errors.push(`${pathPrefix}relatedAssets must be string[]`);
+  if (!Array.isArray(input.relatedTimeframes) || !input.relatedTimeframes.every((item) => isEnumValue(item, TIMEFRAMES))) {
+    errors.push(`${pathPrefix}relatedTimeframes must be Timeframe[]`);
   }
 
-  if (!SOURCE_CATEGORIES.includes(e.sourceCategory as SourceCategory)) errors.push('sourceCategory is invalid');
-  if (!EVIDENCE_KINDS.includes(e.eventKind as EvidenceKind)) errors.push('eventKind is invalid');
-  if (!EVENT_STATUSES.includes(e.status as EventStatus)) errors.push('status is invalid');
-  if (!EVENT_IMPACTS.includes(e.impact as EventImpactLevel)) errors.push('impact is invalid');
+  if (!isScore0to100(input.relevanceScore)) errors.push(`${pathPrefix}relevanceScore must be in 0..100`);
+  if (!isScore0to100(input.sourceReliabilityScore)) errors.push(`${pathPrefix}sourceReliabilityScore must be in 0..100`);
+  if (!isScore0to100(input.recencyScore)) errors.push(`${pathPrefix}recencyScore must be in 0..100`);
 
-  if (typeof e.occurredAt === 'string' && !isIso(e.occurredAt)) errors.push('occurredAt must be ISO date');
-  if (typeof e.detectedAt === 'string' && !isIso(e.detectedAt)) errors.push('detectedAt must be ISO date');
-  if (e.effectiveUntil !== null && (typeof e.effectiveUntil !== 'string' || !isIso(e.effectiveUntil))) errors.push('effectiveUntil must be ISO date or null');
-
-  const scoreFields: Array<keyof CanonicalEvent> = ['relevanceScore', 'sourceReliabilityScore', 'recencyScore'];
-  for (const field of scoreFields) {
-    const value = e[field];
-    if (typeof value !== 'number' || !isScore(value)) errors.push(`${field} must be number in 0..100`);
+  if (typeof input.confirmationCount !== 'number' || !Number.isInteger(input.confirmationCount) || input.confirmationCount < 0) {
+    errors.push(`${pathPrefix}confirmationCount must be an integer >= 0`);
   }
 
-  if (typeof e.confirmationCount !== 'number' || e.confirmationCount < 0) errors.push('confirmationCount must be >= 0');
-  if (!Array.isArray(e.relatedAssets) || !e.relatedAssets.every((v) => typeof v === 'string')) errors.push('relatedAssets must be string[]');
-  if (!Array.isArray(e.relatedTimeframes) || !e.relatedTimeframes.every((v) => typeof v === 'string')) errors.push('relatedTimeframes must be timeframe[]');
-  if (!Array.isArray(e.tags) || !e.tags.every((v) => typeof v === 'string')) errors.push('tags must be string[]');
+  if (!isStringArray(input.tags)) errors.push(`${pathPrefix}tags must be string[]`);
+  if (!(input.rawUrl === null || isNonEmptyString(input.rawUrl))) errors.push(`${pathPrefix}rawUrl must be non-empty string or null`);
+  if (!(input.revisionOfEventId === null || isNonEmptyString(input.revisionOfEventId))) errors.push(`${pathPrefix}revisionOfEventId must be non-empty string or null`);
+  if (!isBoolean(input.stale)) errors.push(`${pathPrefix}stale must be boolean`);
+  if (typeof input.freshnessHours !== 'number' || !Number.isFinite(input.freshnessHours) || input.freshnessHours < 0) {
+    errors.push(`${pathPrefix}freshnessHours must be a number >= 0`);
+  }
 
-  if (e.rawUrl !== null && typeof e.rawUrl !== 'string') errors.push('rawUrl must be string|null');
-  if (e.revisionOfEventId !== null && typeof e.revisionOfEventId !== 'string') errors.push('revisionOfEventId must be string|null');
-  if (typeof e.stale !== 'boolean') errors.push('stale must be boolean');
-  if (typeof e.freshnessHours !== 'number' || e.freshnessHours < 0) errors.push('freshnessHours must be >= 0');
+  if (!isObjectRecord(input.attribution)) {
+    errors.push(`${pathPrefix}attribution must be an object`);
+  } else {
+    if (!isNonEmptyString(input.attribution.provider)) errors.push(`${pathPrefix}attribution.provider must be non-empty string`);
+    if (!(input.attribution.publisher === null || isNonEmptyString(input.attribution.publisher))) {
+      errors.push(`${pathPrefix}attribution.publisher must be non-empty string or null`);
+    }
+    if (!(input.attribution.author === null || isNonEmptyString(input.attribution.author))) {
+      errors.push(`${pathPrefix}attribution.author must be non-empty string or null`);
+    }
+  }
 
-  const attribution = e.attribution;
-  if (!attribution || typeof attribution !== 'object') errors.push('attribution must be object');
-  const audit = e.audit;
-  if (!audit || typeof audit !== 'object') errors.push('audit must be object');
+  if (!isObjectRecord(input.audit)) {
+    errors.push(`${pathPrefix}audit must be an object`);
+  } else {
+    validateRequiredFields(input.audit, ['normalizedBy', 'normalizationVersion', 'ingestedVia'], errors, `${pathPrefix}audit.`);
+  }
 
-  if (errors.length > 0) return { ok: false, errors };
-  return { ok: true, value: input as CanonicalEvent };
+  return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as CanonicalEvent };
 }
 
+export function validateRankedEvidenceItem(input: unknown, pathPrefix = ''): SchemaValidationResult<RankedEvidenceItem> {
+  const errors: string[] = [];
+  if (!isObjectRecord(input)) return { ok: false, errors: [`${pathPrefix}RankedEvidenceItem must be an object`] };
+
+  validateRequiredFields(input, ['evidenceId', 'label', 'explanation', 'asset', 'occurredAt'], errors, pathPrefix);
+
+  if (!(input.eventId === null || isNonEmptyString(input.eventId))) errors.push(`${pathPrefix}eventId must be non-empty string or null`);
+  if (!isEnumValue(input.kind, EVIDENCE_KINDS)) errors.push(`${pathPrefix}kind is invalid`);
+  if (!isEnumValue(input.timeframe, TIMEFRAMES)) errors.push(`${pathPrefix}timeframe is invalid`);
+  if (!isEnumValue(input.directionHint, EVIDENCE_DIRECTION_HINTS)) errors.push(`${pathPrefix}directionHint is invalid`);
+
+  const scoreFields = [
+    'impactScore',
+    'recencyScore',
+    'sourceReliabilityScore',
+    'priceProximityScore',
+    'confirmationScore',
+    'contradictionContributionScore',
+    'confidenceContributionScore',
+    'finalRankScore'
+  ] as const;
+  for (const scoreField of scoreFields) {
+    if (!isScore0to100(input[scoreField])) errors.push(`${pathPrefix}${scoreField} must be in 0..100`);
+  }
+
+  if (!isStringArray(input.linkedZoneIds)) errors.push(`${pathPrefix}linkedZoneIds must be string[]`);
+  if (!Array.isArray(input.linkedPriceLevels) || !input.linkedPriceLevels.every((item) => typeof item === 'number' && Number.isFinite(item))) {
+    errors.push(`${pathPrefix}linkedPriceLevels must be number[]`);
+  }
+  if (!isStringArray(input.linkedCandleTimes) || !input.linkedCandleTimes.every((value) => isIsoDateString(value))) {
+    errors.push(`${pathPrefix}linkedCandleTimes must be ISO string[]`);
+  }
+  if (!isStringArray(input.linkedNotes)) errors.push(`${pathPrefix}linkedNotes must be string[]`);
+  if (!isBoolean(input.stale)) errors.push(`${pathPrefix}stale must be boolean`);
+  if (!isIsoDateString(input.occurredAt)) errors.push(`${pathPrefix}occurredAt must be ISO date`);
+  if (!isStringArray(input.tags)) errors.push(`${pathPrefix}tags must be string[]`);
+
+  return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as RankedEvidenceItem };
+}
+
+export function validateContradictionAnatomy(input: unknown, pathPrefix = ''): SchemaValidationResult<ContradictionAnatomy> {
+  const errors: string[] = [];
+  if (!isObjectRecord(input)) return { ok: false, errors: [`${pathPrefix}ContradictionAnatomy must be object`] };
+
+  const componentFields = ['narrativeConflict', 'priceConflict', 'eventConflict', 'macroConflict', 'timeframeConflict', 'weightedScore'] as const;
+  for (const field of componentFields) {
+    if (!isScore0to100(input[field])) errors.push(`${pathPrefix}${field} must be in 0..100`);
+  }
+  if (!isEnumValue(input.regime, CONTRADICTION_REGIMES)) errors.push(`${pathPrefix}regime is invalid`);
+  if (!isNonEmptyString(input.componentsVersion)) errors.push(`${pathPrefix}componentsVersion must be non-empty string`);
+
+  return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as ContradictionAnatomy };
+}
+
+export function validateFreshnessState(input: unknown, pathPrefix = ''): SchemaValidationResult<FreshnessState> {
+  const errors: string[] = [];
+  if (!isObjectRecord(input)) return { ok: false, errors: [`${pathPrefix}FreshnessState must be object`] };
+
+  if (!isScore0to100(input.freshnessScore)) errors.push(`${pathPrefix}freshnessScore must be in 0..100`);
+  if (typeof input.hoursSinceLastMaterialUpdate !== 'number' || input.hoursSinceLastMaterialUpdate < 0) {
+    errors.push(`${pathPrefix}hoursSinceLastMaterialUpdate must be >= 0`);
+  }
+  if (!isIsoDateString(input.lastMaterialUpdateAt)) errors.push(`${pathPrefix}lastMaterialUpdateAt must be ISO date`);
+  if (typeof input.decayRatePerHour !== 'number' || input.decayRatePerHour < 0) errors.push(`${pathPrefix}decayRatePerHour must be >= 0`);
+  if (!isBoolean(input.stale)) errors.push(`${pathPrefix}stale must be boolean`);
+  if (typeof input.staleThresholdHours !== 'number' || input.staleThresholdHours < 0) errors.push(`${pathPrefix}staleThresholdHours must be >= 0`);
+  if (!isNonEmptyString(input.componentsVersion)) errors.push(`${pathPrefix}componentsVersion must be non-empty string`);
+
+  return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as FreshnessState };
+}
+
+/**
+ * @deprecated Legacy compatibility type. New code must use CanonicalEvent.
+ */
 export type InternalNormalizedEvent = {
   eventId: string;
   eventType: NormalizedProviderEvent['type'];

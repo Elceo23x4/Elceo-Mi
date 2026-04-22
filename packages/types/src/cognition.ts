@@ -1,3 +1,7 @@
+/**
+ * Canonical cognition contracts.
+ * Canonical-first rule: all new ingestion/reasoning/notification/chart/admin code must consume these contracts.
+ */
 import type {
   BiasState,
   CanonicalAssetSymbol,
@@ -136,6 +140,11 @@ export type DirectionalPressureComponent = {
   value: number;
 };
 
+/**
+ * @deprecated Legacy compatibility shape.
+ * Canonical replacement: CanonicalCognitionState.
+ * Migration target: map legacy readers/writers via legacy-bridges.ts and stop emitting this in new code.
+ */
 export type AssetCognitionState = {
   asset_code: string;
   time_horizon: 'intraday' | 'swing';

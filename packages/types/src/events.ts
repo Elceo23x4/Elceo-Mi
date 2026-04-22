@@ -1,3 +1,7 @@
+/**
+ * Canonical event and evidence contracts.
+ * Canonical-first rule: new code must depend on CanonicalEvent and RankedEvidenceItem.
+ */
 export type CanonicalAssetSymbol = string;
 export type AssetSymbol = CanonicalAssetSymbol;
 

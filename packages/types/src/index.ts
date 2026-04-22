@@ -4,6 +4,7 @@ export * from './cognition';
 export * from './event';
 export * from './events';
 export * from './notifications';
+export * from './legacy-bridges';
 export * from './providers';
 export * from './reasoning';
 export * from './zones';

@@ -10,6 +10,7 @@
     "src/**/*.tsx",
     "../../packages/types/src/**/*.ts",
     "../../packages/domain/src/**/*.ts",
-    "../../packages/schemas/src/**/*.ts"
+    "../../packages/schemas/src/**/*.ts",
+    "../../packages/providers/src/**/*.ts"
   ]
 }

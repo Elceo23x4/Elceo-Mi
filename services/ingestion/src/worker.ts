@@ -1,3 +1,4 @@
+import type { CanonicalAssetSymbol, Timeframe } from '@elceo/types';
 import { buildProviderGraph } from './adapters/build-provider-graph';
 import { MarketIngestionPipeline } from './pipelines/marketIngestionPipeline';
 import { MacroIngestionPipeline } from './pipelines/macroIngestionPipeline';
@@ -11,12 +12,59 @@ import { assembleEvidence } from './assembly/evidence-assembly';
 import { ReasoningService } from '@elceo/reasoning';
 import { ChartIntelligenceService } from '@elceo/chart-intelligence';
 import type { InternalNormalizedEvent } from '@elceo/schemas';
+import { createCanonicalWorkerBoundaryService } from './runtime/canonical-worker-boundary';
+import { getIngestionRuntimeConfig } from './runtime/runtime-config';
+import { IngestionSchedulerTickService } from './scheduler/scheduler-tick-service';
+import { createIngestionPersistenceRepository } from './persistence';
+import { createIngestionRuntimeLeaseRepository } from './scheduler/lease-repository';
 
 function runtimeEnv(): Record<string, string | undefined> {
   return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
 }
 
-export async function runIngestionTick(): Promise<void> {
+export async function executeIngestionRun(params: {
+  asset: CanonicalAssetSymbol;
+  timeframe: Timeframe;
+  asOf: string;
+  fromIso: string;
+  toIso: string;
+}): Promise<Awaited<ReturnType<ReturnType<typeof createCanonicalWorkerBoundaryService>['executeAssetWindow']>>> {
+  const env = runtimeEnv();
+  const runtimeConfig = getIngestionRuntimeConfig(env);
+  const boundary = createCanonicalWorkerBoundaryService(env);
+
+  return boundary.executeAssetWindow({
+    ...params,
+    config: runtimeConfig
+  });
+}
+
+export async function runIngestionTick(): Promise<Awaited<ReturnType<typeof executeIngestionRun>>> {
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const tenMinutesAgo = new Date(now.getTime() - 10 * 60_000).toISOString();
+
+  return executeIngestionRun({
+    asset: 'XAU/USD',
+    timeframe: 'H1',
+    asOf: nowIso,
+    fromIso: tenMinutesAgo,
+    toIso: nowIso
+  });
+}
+
+export async function runScheduledIngestionTick(): Promise<Awaited<ReturnType<IngestionSchedulerTickService['runTick']>>> {
+  const env = runtimeEnv();
+  const scheduler = new IngestionSchedulerTickService(
+    createCanonicalWorkerBoundaryService(env),
+    createIngestionPersistenceRepository(env),
+    createIngestionRuntimeLeaseRepository(env)
+  );
+  return scheduler.runTick({ nowIso: new Date().toISOString(), runtimeConfig: getIngestionRuntimeConfig(env) });
+}
+
+// Legacy compatibility path. Use only explicit legacy mode/fallback workflows.
+export async function runLegacyCompatibilityTick(): Promise<void> {
   const providers = buildProviderGraph();
   const transport = await createKafkaTransport(runtimeEnv());
 

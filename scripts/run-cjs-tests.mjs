@@ -17,6 +17,7 @@ const aliasTargets = {
   '@elceo/types': 'packages/types/src/index.cjs',
   '@elceo/domain': 'packages/domain/src/index.cjs',
   '@elceo/schemas': 'packages/schemas/src/index.cjs',
+  '@elceo/providers': 'packages/providers/src/index.cjs',
   '@elceo/application-state': 'services/application-state/src/index.cjs',
   '@elceo/analytics': 'services/analytics/src/index.cjs',
   '@elceo/billing': 'services/billing/src/index.cjs'

@@ -3,6 +3,23 @@ import { runEventRecencyTests } from './event-recency.test.js';
 import { runEventRelevanceTests } from './event-relevance.test.js';
 import { runEventDedupeTests, runEventMergeTests } from './event-dedupe.test.js';
 import { runCompositeEventIngestionTests } from './composite-event-ingestion.test.js';
+import { runProviderSuiteBuilderTests } from './provider-suite-builder.test.js';
+import { runCanonicalIngestionFacadeTests } from './canonical-ingestion-facade.test.js';
+import { runLegacyBridgeTests } from './legacy-bridge.test.js';
+import { runActiveBoundaryTests } from './active-boundary.test.js';
+import { runRuntimeConfigTests } from './runtime-config.test.js';
+import { runRunReportHelperTests } from './run-report-helpers.test.js';
+import { runCanonicalWorkerBoundaryTests } from './canonical-worker-boundary.test.js';
+import { runWorkerRuntimeAdoptionTests } from './worker-runtime-adoption.test.js';
+import { runPersistenceRepositoryTests } from './persistence-repository.test.js';
+import { runReplayQueryTests } from './replay-query.test.js';
+import { runRuntimePersistenceIntegrationTests } from './runtime-persistence-integration.test.js';
+import { runSchedulerFrequencyTests } from './scheduler-frequency.test.js';
+import { runSchedulerRequestKeyTests } from './scheduler-request-key.test.js';
+import { runSchedulerLeaseRepositoryTests } from './scheduler-lease-repository.test.js';
+import { runSchedulerDuePlannerTests } from './scheduler-due-planner.test.js';
+import { runSchedulerTickServiceTests } from './scheduler-tick-service.test.js';
+import { runTriggerContextPersistenceTests } from './trigger-context-persistence.test.js';
 
 async function run(): Promise<void> {
   runSourceReliabilityTests();
@@ -11,6 +28,23 @@ async function run(): Promise<void> {
   runEventDedupeTests();
   runEventMergeTests();
   await runCompositeEventIngestionTests();
+  runProviderSuiteBuilderTests();
+  await runCanonicalIngestionFacadeTests();
+  await runLegacyBridgeTests();
+  runActiveBoundaryTests();
+  runRuntimeConfigTests();
+  runRunReportHelperTests();
+  await runCanonicalWorkerBoundaryTests();
+  runWorkerRuntimeAdoptionTests();
+  await runPersistenceRepositoryTests();
+  await runReplayQueryTests();
+  await runRuntimePersistenceIntegrationTests();
+  runSchedulerFrequencyTests();
+  runSchedulerRequestKeyTests();
+  await runSchedulerLeaseRepositoryTests();
+  await runSchedulerDuePlannerTests();
+  await runSchedulerTickServiceTests();
+  await runTriggerContextPersistenceTests();
   console.log('ingestion tests passed');
 }
 

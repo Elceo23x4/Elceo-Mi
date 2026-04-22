@@ -243,3 +243,9 @@ Final events are sorted by:
 ## Core Batch 2B (later)
 
 Core Batch 2B should handle orchestration/scheduling, persistent storage, replay tooling integration, transport publishing, and operational controls layered on this deterministic core.
+
+## Active Boundary
+
+From Core Batch 2B onward, the preferred ingestion entrypoint for new code is `createCanonicalIngestionFacade(...).collectAssetWindow(...)`, which composes providers, applies bridge wrappers, and then delegates to this deterministic core pipeline.
+
+Legacy pipelines remain only for migration compatibility and are not the canonical-first boundary.

@@ -25,6 +25,9 @@ async function run(): Promise<void> {
   runFreshnessComposerTests();
   runInvalidationComposerTests();
   runExplanationBuilderTests();
+  runZoneAnchoringTests();
+  runPriceLevelProjectionTests();
+  runChartProjectionBuilderTests();
   runDeterministicReasoningEngineTests();
   runEvidenceDeltaTests();
   runInvalidationDeltaTests();

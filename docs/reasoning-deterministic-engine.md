@@ -136,14 +136,22 @@ Shared behavior:
 - contradictory reasons: deterministic opposing/mixed selection by bias
 - what would change state includes primary invalidation, contradiction escalation, freshness decay, optional zone-quality degradation
 
-## Chart projection placeholder behavior
+## Chart projection enrichment behavior (C3-C)
 
-Deterministic conservative placeholder output:
+Chart projection now uses deterministic enrichment modules:
 
-- `annotationIds`: top 5 evidence ids
-- `markerLabels`: top 5 evidence labels
-- `emphasisPriceLevels`: unique primary + secondary invalidation prices
+- `zone-anchoring.ts` for evidence-to-zone anchoring
+- `price-level-projection.ts` for ordered emphasis levels
+- `chart-projection-builder.ts` for annotation/marker assembly
+
+Behavior:
+
+- `annotationIds`: up to 8 deterministic ids using either anchored zone form (`annotation|evidence|zone|zoneId`) or standalone form
+- `markerLabels`: up to 8 labels using explicit anchored/standalone suffixes
+- `emphasisPriceLevels`: deterministic ordered merge of invalidation levels, primary zone midpoints, top-evidence linked levels, and recent close/low/high with exact dedupe and cap of 10
 - `contradictionMarkerVisible`: true when contradiction score >= 35
+
+This is deterministic and replayable; no fuzzy linkage is introduced.
 
 ## Deterministic guarantees
 
@@ -152,11 +160,10 @@ Deterministic conservative placeholder output:
 - Same `ReasoningInputFrame` produces byte-stable cognition JSON
 - Output validated before boundary returns/persists
 
-## C3-C next scope
+## C3-D next scope
 
-C3-C should focus on:
+C3-D should focus on:
 
-- richer zone/price linkage across evidence and chart context
 - deeper multi-timeframe thesis transitions and regime carryover
 - notification decision integration using deterministic cognition snapshots
-- stronger chart intelligence bindings beyond placeholders
+- progressive downstream consumption of enriched chart-linkage outputs

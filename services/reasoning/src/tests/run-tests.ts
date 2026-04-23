@@ -15,6 +15,9 @@ import { runEvidenceDeltaTests } from './evidence-delta.test.js';
 import { runInvalidationDeltaTests } from './invalidation-delta.test.js';
 import { runChartProjectionDeltaTests } from './chart-projection-delta.test.js';
 import { runCognitionDriftTests } from './cognition-drift.test.js';
+import { runZoneAnchoringTests } from './zone-anchoring.test.js';
+import { runPriceLevelProjectionTests } from './price-level-projection.test.js';
+import { runChartProjectionBuilderTests } from './chart-projection-builder.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();

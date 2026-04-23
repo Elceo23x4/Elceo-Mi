@@ -1,6 +1,9 @@
 import type {
   NotificationChannel,
   NotificationDecision,
+  NotificationMaterialityBand,
+  NotificationPolicyRuleKey,
+  NotificationSuppressionReason,
   NotificationTriggerContext,
   NotificationTriggerKind,
   NotificationTriggerRule
@@ -30,8 +33,30 @@ const NOTIFICATION_TRIGGER_KINDS: NotificationTriggerKind[] = [
   'watchlist_signal',
   'admin_source_failure',
   'admin_staleness',
-  'admin_replay_ready'
+  'admin_replay_ready',
+  'reasoning_failure',
+  'reasoning_degraded',
+  'cognition_initialized',
+  'bias_flip',
+  'critical_drift',
+  'major_drift',
+  'invalidation_risk_upgrade',
+  'confidence_breakdown'
 ];
+const POLICY_RULE_KEYS: NotificationPolicyRuleKey[] = [
+  'reasoning_failure',
+  'reasoning_degraded',
+  'cognition_initialized',
+  'bias_flip',
+  'critical_drift',
+  'major_drift',
+  'invalidation_risk_upgrade',
+  'contradiction_spike',
+  'confidence_breakdown',
+  'freshness_decay'
+];
+const MATERIALITY_BANDS: NotificationMaterialityBand[] = ['low', 'medium', 'high', 'critical'];
+const SUPPRESSION_REASONS: NotificationSuppressionReason[] = ['condition_not_met', 'below_materiality_threshold', 'cooldown_active', 'missing_required_context'];
 
 export function validateNotificationTriggerRule(input: unknown, pathPrefix = ''): SchemaValidationResult<NotificationTriggerRule> {
   const errors: string[] = [];
@@ -56,6 +81,10 @@ export function validateNotificationTriggerRule(input: unknown, pathPrefix = '')
     errors.push(`${pathPrefix}channels must be NotificationChannel[]`);
   }
   if (!isNonEmptyString(input.version)) errors.push(`${pathPrefix}version must be non-empty string`);
+  if (!(input.ruleKey === undefined || isEnumValue(input.ruleKey, POLICY_RULE_KEYS))) errors.push(`${pathPrefix}ruleKey is invalid`);
+  if (!(input.minMaterialityScore === undefined || (typeof input.minMaterialityScore === 'number' && Number.isFinite(input.minMaterialityScore)))) {
+    errors.push(`${pathPrefix}minMaterialityScore must be finite number`);
+  }
 
   return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as NotificationTriggerRule };
 }
@@ -92,6 +121,19 @@ export function validateNotificationDecision(input: unknown, pathPrefix = ''): S
   if (!isBoolean(input.suppressionApplied)) errors.push(`${pathPrefix}suppressionApplied must be boolean`);
   if (!isStringArray(input.evidenceIds)) errors.push(`${pathPrefix}evidenceIds must be string[]`);
   if (!isIsoDateString(input.createdAt)) errors.push(`${pathPrefix}createdAt must be ISO date`);
+
+  if (!(input.shouldNotify === undefined || isBoolean(input.shouldNotify))) errors.push(`${pathPrefix}shouldNotify must be boolean`);
+  if (!(input.materialityScore === undefined || (typeof input.materialityScore === 'number' && Number.isFinite(input.materialityScore)))) {
+    errors.push(`${pathPrefix}materialityScore must be finite number`);
+  }
+  if (!(input.materialityBand === undefined || isEnumValue(input.materialityBand, MATERIALITY_BANDS))) errors.push(`${pathPrefix}materialityBand is invalid`);
+  if (!(input.ruleKey === undefined || isEnumValue(input.ruleKey, POLICY_RULE_KEYS))) errors.push(`${pathPrefix}ruleKey is invalid`);
+  if (!(input.suppressionReason === undefined || input.suppressionReason === null || isEnumValue(input.suppressionReason, SUPPRESSION_REASONS))) {
+    errors.push(`${pathPrefix}suppressionReason is invalid`);
+  }
+  if (!(input.cooldownUntil === undefined || input.cooldownUntil === null || isIsoDateString(input.cooldownUntil))) {
+    errors.push(`${pathPrefix}cooldownUntil must be ISO date or null`);
+  }
 
   return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as NotificationDecision };
 }

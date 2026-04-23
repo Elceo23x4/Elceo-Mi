@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "outDir": "dist-test",
+    "rootDir": "../../"
+  },
+  "include": [
+    "src/tests/**/*.ts",
+    "src/policy/**/*.ts",
+    "src/persistence/**/*.ts",
+    "src/runtime/**/*.ts",
+    "../../packages/schemas/src/**/*.ts",
+    "../../packages/types/src/**/*.ts",
+    "../../services/reasoning/src/**/*.ts"
+  ],
+  "exclude": [
+    "src/tests/alerts-admin.test.ts",
+    "src/alerts/**/*.ts",
+    "src/admin/**/*.ts",
+    "src/delivery/**/*.ts",
+    "src/notification-service.ts"
+  ]
+}

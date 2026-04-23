@@ -11,6 +11,9 @@ import { runFreshnessComposerTests } from './freshness-composer.test.js';
 import { runInvalidationComposerTests } from './invalidation-composer.test.js';
 import { runExplanationBuilderTests } from './explanation-builder.test.js';
 import { runDeterministicReasoningEngineTests } from './deterministic-reasoning-engine.test.js';
+import { runZoneAnchoringTests } from './zone-anchoring.test.js';
+import { runPriceLevelProjectionTests } from './price-level-projection.test.js';
+import { runChartProjectionBuilderTests } from './chart-projection-builder.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -21,6 +24,9 @@ async function run(): Promise<void> {
   runFreshnessComposerTests();
   runInvalidationComposerTests();
   runExplanationBuilderTests();
+  runZoneAnchoringTests();
+  runPriceLevelProjectionTests();
+  runChartProjectionBuilderTests();
   runDeterministicReasoningEngineTests();
   await runSourceSelectorTests();
   await runInputAssemblerTests();

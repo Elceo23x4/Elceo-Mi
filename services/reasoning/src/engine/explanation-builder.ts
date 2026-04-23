@@ -1,4 +1,5 @@
 import type { BiasState, ContradictionRegime, InvalidationState, RankedEvidenceItem, ZoneSignificance } from '@elceo/types';
+import type { ZoneConfluenceSummary } from './zone-anchoring';
 import { sortEvidenceByRank } from './utils';
 
 function topLabels(evidence: RankedEvidenceItem[], count: number): string[] {
@@ -13,6 +14,10 @@ function topExplanations(evidence: RankedEvidenceItem[], count: number): string[
     .map((item) => item.explanation);
 }
 
+function explanationsFromOrdered(evidence: RankedEvidenceItem[], count: number): string[] {
+  return evidence.slice(0, count).map((item) => item.explanation);
+}
+
 function freshnessBucket(score: number): 'fresh' | 'aging' | 'stale' {
   if (score >= 75) return 'fresh';
   if (score >= 40) return 'aging';
@@ -25,6 +30,17 @@ function nextRegime(regime: ContradictionRegime): ContradictionRegime {
   if (regime === 'moderate') return 'high';
   if (regime === 'high') return 'critical';
   return 'critical';
+}
+
+function anchoredFirst(evidence: RankedEvidenceItem[]): RankedEvidenceItem[] {
+  return [...evidence].sort((a, b) => {
+    const aAnchored = a.linkedZoneIds.length > 0 ? 1 : 0;
+    const bAnchored = b.linkedZoneIds.length > 0 ? 1 : 0;
+    if (bAnchored !== aAnchored) return bAnchored - aAnchored;
+    if (b.finalRankScore !== a.finalRankScore) return b.finalRankScore - a.finalRankScore;
+    if (b.impactScore !== a.impactScore) return b.impactScore - a.impactScore;
+    return a.evidenceId.localeCompare(b.evidenceId);
+  });
 }
 
 export function buildThesis(bias: BiasState, primaryInvalidationPrice: number): string {
@@ -57,9 +73,11 @@ export function buildExplanation(params: {
   contradictionRegime: ContradictionRegime;
   freshnessScore: number;
   evidence: RankedEvidenceItem[];
+  enrichedEvidence?: RankedEvidenceItem[];
   invalidation: InvalidationState;
   zones: ZoneSignificance[];
   recentPriceRange: { high: number; low: number; close: number };
+  zoneConfluenceSummary?: ZoneConfluenceSummary;
 }): {
   concise: string;
   expanded: string;
@@ -68,7 +86,8 @@ export function buildExplanation(params: {
   contradictoryReasons: string[];
   whatWouldChangeState: string[];
 } {
-  const rankedEvidence = sortEvidenceByRank(params.evidence);
+  const evidenceInput = params.enrichedEvidence ?? params.evidence;
+  const rankedEvidence = sortEvidenceByRank(evidenceInput);
   const primaryInvalidationPrice = params.invalidation.primary?.price ?? params.recentPriceRange.close;
   const topTwoLabels = topLabels(rankedEvidence, 2);
   const topTwoSummary = topTwoLabels.length > 0 ? topTwoLabels.join(' and ') : 'limited ranked evidence';
@@ -78,7 +97,9 @@ export function buildExplanation(params: {
   const supportingPool = params.bias === 'neutral'
     ? rankedEvidence
     : rankedEvidence.filter((item) => item.directionHint === params.bias);
-  const supportingReasons = topExplanations(supportingPool, 5);
+  const supportingReasons = params.bias === 'neutral'
+    ? topExplanations(supportingPool, 5)
+    : explanationsFromOrdered(anchoredFirst(supportingPool), 5);
 
   let contradictoryPool: RankedEvidenceItem[] = [];
   if (params.bias === 'bullish') {
@@ -94,7 +115,7 @@ export function buildExplanation(params: {
     }
   }
 
-  const contradictoryReasons = topExplanations(contradictoryPool, 3);
+  const contradictoryReasons = explanationsFromOrdered(anchoredFirst(contradictoryPool), 3);
 
   const whatWouldChangeState = [
     `Primary invalidation triggers at ${primaryInvalidationPrice}.`,
@@ -106,9 +127,17 @@ export function buildExplanation(params: {
     whatWouldChangeState.push('Loss of reaction quality around primary zones would weaken the current thesis.');
   }
 
+  if (params.zoneConfluenceSummary?.strongestAnchoredZoneId) {
+    whatWouldChangeState.push(`Failure to hold confluence around ${params.zoneConfluenceSummary.strongestAnchoredZoneId} would weaken the current thesis.`);
+  }
+
+  const strongestConfluenceSentence = params.zoneConfluenceSummary?.strongestAnchoredZoneId
+    ? ` The strongest current zone confluence is ${params.zoneConfluenceSummary.strongestAnchoredZoneId}.`
+    : '';
+
   return {
-    concise: `${params.biasLabel} with ${params.confidenceScore} confidence, ${params.contradictionRegime} contradiction, and ${params.evidence.length} ranked evidence items.`,
-    expanded: `${params.biasLabel} state is supported by ${topTwoSummary}. Confidence is ${params.confidenceScore}, contradiction is ${params.contradictionScore} (${params.contradictionRegime}), freshness is ${params.freshnessScore}, and the primary invalidation level sits at ${primaryInvalidationPrice}.`,
+    concise: `${params.biasLabel} with ${params.confidenceScore} confidence, ${params.contradictionRegime} contradiction, and ${evidenceInput.length} ranked evidence items.`,
+    expanded: `${params.biasLabel} state is supported by ${topTwoSummary}. Confidence is ${params.confidenceScore}, contradiction is ${params.contradictionScore} (${params.contradictionRegime}), freshness is ${params.freshnessScore}, and the primary invalidation level sits at ${primaryInvalidationPrice}.${strongestConfluenceSentence}`,
     bulletReasons: bulletReasons.length > 0 ? bulletReasons : ['No ranked evidence available.'],
     supportingReasons: supportingReasons.length > 0 ? supportingReasons : ['Support is limited; state relies on weak or balanced evidence.'],
     contradictoryReasons: contradictoryReasons.length > 0 ? contradictoryReasons : ['No material contradictory evidence is currently ranked near the top.'],

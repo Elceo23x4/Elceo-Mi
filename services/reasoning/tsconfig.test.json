@@ -11,6 +11,7 @@
     "../../packages/domain/src/**/*.ts",
     "../../packages/schemas/src/**/*.ts",
     "../../packages/types/src/**/*.ts",
-    "../../packages/providers/src/**/*.ts"
+    "../../packages/providers/src/**/*.ts",
+    "../../services/ingestion/src/**/*.ts"
   ]
 }

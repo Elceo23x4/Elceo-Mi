@@ -4,6 +4,12 @@ import type { PersistedCognitionSnapshot, PersistedReasoningRun, ReasoningPersis
 import { serializeCanonicalCognitionState } from '../persistence/serialization';
 import type { ReasoningInputAssemblyResult, ReasoningInputAssembler } from '../input/reasoning-input-assembler';
 import type { ReasoningRunReport } from './reasoning-run-report';
+import {
+  DETERMINISTIC_REASONING_ENGINE_NAME,
+  DETERMINISTIC_REASONING_VERSION,
+  DETERMINISTIC_SCORING_VERSION
+} from '../engine/constants';
+import { DeterministicReasoningEngine } from '../engine/deterministic-reasoning-engine';
 
 export type CanonicalReasoningBoundaryExecuteParams = {
   asset: CanonicalAssetSymbol;
@@ -204,9 +210,15 @@ export class CanonicalReasoningBoundaryService {
 
 export function createCanonicalReasoningBoundaryService(params: {
   assembler: ReasoningInputAssembler;
-  engine: ReasoningEngineContract;
-  metadata: ReasoningEngineMetadata;
+  engine?: ReasoningEngineContract;
+  metadata?: ReasoningEngineMetadata;
   persistence: ReasoningPersistenceRepository;
 }): CanonicalReasoningBoundaryService {
-  return new CanonicalReasoningBoundaryService(params.assembler, params.engine, params.metadata, params.persistence);
+  const engine = params.engine ?? new DeterministicReasoningEngine();
+  const metadata = params.metadata ?? {
+    engineName: DETERMINISTIC_REASONING_ENGINE_NAME,
+    reasoningVersion: DETERMINISTIC_REASONING_VERSION,
+    scoringVersion: DETERMINISTIC_SCORING_VERSION
+  };
+  return new CanonicalReasoningBoundaryService(params.assembler, engine, metadata, params.persistence);
 }

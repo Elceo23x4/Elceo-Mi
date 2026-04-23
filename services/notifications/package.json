@@ -9,10 +9,12 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
-    "format": "prettier --check src"
+    "format": "prettier --check src",
+    "test": "tsc -p tsconfig.test.json && node ../../scripts/run-cjs-tests.mjs dist-test dist-test/services/notifications/src/tests/run-tests.js"
   },
   "dependencies": {
     "@elceo/application-state": "0.1.0",
-    "@elceo/types": "0.1.0"
+    "@elceo/types": "0.1.0",
+    "@elceo/schemas": "0.1.0"
   }
 }

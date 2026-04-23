@@ -10,6 +10,7 @@
     "src/tests/**/*.ts",
     "src/policy/**/*.ts",
     "src/persistence/**/*.ts",
+    "src/delivery/**/*.ts",
     "src/runtime/**/*.ts",
     "../../packages/schemas/src/**/*.ts",
     "../../packages/types/src/**/*.ts",
@@ -19,7 +20,6 @@
     "src/tests/alerts-admin.test.ts",
     "src/alerts/**/*.ts",
     "src/admin/**/*.ts",
-    "src/delivery/**/*.ts",
     "src/notification-service.ts"
   ]
 }

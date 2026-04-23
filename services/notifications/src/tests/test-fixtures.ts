@@ -1,6 +1,8 @@
 import { buildCanonicalCognitionStateFixture } from '../../../../packages/schemas/src/test-fixtures.js';
 import { buildCognitionDriftReport } from '../../../reasoning/src/delta/cognition-drift.js';
 import type { PersistedCognitionDriftRecord, PersistedCognitionSnapshot, PersistedReasoningRun } from '../../../reasoning/src/persistence/contracts.js';
+import type { NotificationDecision } from '@elceo/types';
+import type { PersistedNotificationDecisionRecord } from '../persistence/contracts.js';
 
 export function buildReasoningRun(overrides: Partial<PersistedReasoningRun> = {}): PersistedReasoningRun {
   return {
@@ -29,12 +31,7 @@ export function buildReasoningRun(overrides: Partial<PersistedReasoningRun> = {}
 }
 
 export function buildSnapshot(snapshotId: string, runId: string, evaluatedAt: string, overrides: Parameters<typeof buildCanonicalCognitionStateFixture>[0] = {}): PersistedCognitionSnapshot {
-  const cognition = buildCanonicalCognitionStateFixture({
-    asset: 'XAU/USD',
-    timeframe: 'H1',
-    evaluatedAt,
-    ...overrides
-  });
+  const cognition = buildCanonicalCognitionStateFixture({ asset: 'XAU/USD', timeframe: 'H1', evaluatedAt, ...overrides });
 
   return {
     snapshotId,
@@ -90,5 +87,61 @@ export function buildDriftRecord(previous: PersistedCognitionSnapshot, current: 
     invalidationPriceDelta: report.invalidationDelta.absolutePriceDelta,
     createdAt: report.createdAt,
     driftJson: JSON.stringify(report)
+  };
+}
+
+export function buildDecision(overrides: Partial<NotificationDecision> = {}): NotificationDecision {
+  return {
+    decisionId: 'decision-1',
+    decisionKey: 'decision|critical_drift|drift|drift-1',
+    shouldFire: true,
+    shouldNotify: true,
+    reason: 'notify',
+    triggerKind: 'critical_drift',
+    channels: ['in_app', 'push', 'email'],
+    cooldownApplied: false,
+    suppressionApplied: false,
+    evidenceIds: ['e1'],
+    createdAt: '2026-01-15T10:05:00.000Z',
+    asset: 'XAU/USD',
+    timeframe: 'H1',
+    ruleKey: 'critical_drift',
+    reasoningRunId: 'run-1',
+    snapshotId: 'snap-cur',
+    driftId: 'drift-1',
+    materialityScore: 90,
+    materialityBand: 'critical',
+    minMaterialityScore: 70,
+    suppressionReason: null,
+    cooldownUntil: '2026-01-15T10:35:00.000Z',
+    headline: 'XAU/USD H1: critical cognition drift',
+    body: 'drift summary',
+    evaluatedAt: '2026-01-15T10:05:00.000Z',
+    ...overrides
+  };
+}
+
+export function buildDecisionRecord(overrides: Partial<PersistedNotificationDecisionRecord> = {}): PersistedNotificationDecisionRecord {
+  const decision = buildDecision();
+  return {
+    decisionId: decision.decisionId!,
+    decisionKey: decision.decisionKey!,
+    asset: decision.asset!,
+    timeframe: decision.timeframe!,
+    ruleKey: decision.ruleKey!,
+    triggerKind: decision.triggerKind,
+    reasoningRunId: decision.reasoningRunId ?? null,
+    snapshotId: decision.snapshotId ?? null,
+    driftId: decision.driftId ?? null,
+    materialityScore: decision.materialityScore!,
+    shouldNotify: true,
+    suppressionReason: null,
+    channelsJson: JSON.stringify(decision.channels),
+    cooldownUntil: decision.cooldownUntil ?? null,
+    headline: decision.headline!,
+    body: decision.body!,
+    createdAt: decision.createdAt,
+    decisionJson: JSON.stringify(decision),
+    ...overrides
   };
 }

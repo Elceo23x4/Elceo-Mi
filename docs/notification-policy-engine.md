@@ -179,3 +179,8 @@ C3-F should add transport orchestration on top of durable decisions:
 - delivery status persistence + retries/dead-letter
 - entitlement/user preference filtering at delivery layer
 - operations/admin replay controls for delivery attempts
+
+
+## C3-F integration note
+
+Persisted notification decisions are now stageable into durable channel-specific outbox rows (`app_notification_outbox`) with attempt history (`app_notification_outbox_attempts`) via the C3-F delivery runtime boundary.

@@ -6,4 +6,6 @@ export * from './freshness-composer';
 export * from './invalidation-composer';
 export * from './explanation-builder';
 export * from './chart-projection-builder';
+export * from './zone-anchoring';
+export * from './price-level-projection';
 export * from './deterministic-reasoning-engine';

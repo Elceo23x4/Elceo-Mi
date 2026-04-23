@@ -14,6 +14,7 @@ function buildInput(kind: 'bullish' | 'bearish' | 'neutral') {
   if (kind === 'bullish') {
     return buildReasoningInputFrameFixture({
       asOf: '2026-01-15T14:05:00.000Z',
+      recentPriceRange: { high: 110, low: 100, close: 106 },
       evidenceCandidates: [
         {
           ...buildReasoningInputFrameFixture().evidenceCandidates[0],
@@ -21,7 +22,8 @@ function buildInput(kind: 'bullish' | 'bearish' | 'neutral') {
           directionHint: 'bullish',
           finalRankScore: 80,
           label: 'Bull Driver 1',
-          explanation: 'Bull support 1'
+          explanation: 'Bull support 1',
+          kind: 'price_action'
         },
         {
           ...buildReasoningInputFrameFixture().evidenceCandidates[0],
@@ -30,7 +32,8 @@ function buildInput(kind: 'bullish' | 'bearish' | 'neutral') {
           directionHint: 'bullish',
           finalRankScore: 55,
           label: 'Bull Driver 2',
-          explanation: 'Bull support 2'
+          explanation: 'Bull support 2',
+          kind: 'zone_reaction'
         },
         {
           ...buildReasoningInputFrameFixture().evidenceCandidates[0],
@@ -42,19 +45,24 @@ function buildInput(kind: 'bullish' | 'bearish' | 'neutral') {
           explanation: 'Bear pressure'
         }
       ],
-      zones: [buildZoneSignificanceFixture(), buildZoneSignificanceFixture({ zoneId: 'zone-2' })],
+      zones: [
+        buildZoneSignificanceFixture({ zoneId: 'zone-1', side: 'demand', midpoint: 106, finalStrengthScore: 86 }),
+        buildZoneSignificanceFixture({ zoneId: 'zone-2', side: 'supply', midpoint: 108, finalStrengthScore: 80 })
+      ],
       events: [buildCanonicalEventFixture({ id: 'evt-b1' }), buildCanonicalEventFixture({ id: 'evt-b2', eventKind: 'news' })]
     });
   }
 
   if (kind === 'bearish') {
     return buildReasoningInputFrameFixture({
+      recentPriceRange: { high: 110, low: 100, close: 106 },
       evidenceCandidates: [
         {
           ...buildReasoningInputFrameFixture().evidenceCandidates[0],
           evidenceId: 's1',
           directionHint: 'bearish',
-          finalRankScore: 85
+          finalRankScore: 85,
+          kind: 'price_action'
         },
         {
           ...buildReasoningInputFrameFixture().evidenceCandidates[0],
@@ -75,6 +83,7 @@ function buildInput(kind: 'bullish' | 'bearish' | 'neutral') {
   }
 
   return buildReasoningInputFrameFixture({
+    recentPriceRange: { high: 110, low: 100, close: 106 },
     evidenceCandidates: [
       {
         ...buildReasoningInputFrameFixture().evidenceCandidates[0],
@@ -116,6 +125,9 @@ export function runDeterministicReasoningEngineTests(): void {
   assert(bullish.evidence.topEvidenceIds.length <= 5, 'topEvidenceIds must respect TOP_EVIDENCE_LIMIT');
   assert(Array.isArray(bullish.supportEvents.linkedEventIds), 'supportEvents should be populated');
   assert(Array.isArray(bullish.chartProjection.annotationIds), 'chartProjection should be populated');
+  assert(bullish.evidence.ranked.some((item) => item.linkedZoneIds.length > 0), 'enriched evidence should contain linked zones');
+  assert(bullish.evidence.ranked.some((item) => item.linkedPriceLevels.length > 0), 'enriched evidence should contain linked price levels');
+  assert(bullish.chartProjection.emphasisPriceLevels.length > 0, 'chart projection should include emphasis price levels');
 
   assert(bullish.audit.evaluatedBy === DETERMINISTIC_REASONING_ENGINE_NAME, 'audit evaluatedBy must use engine constant');
   assert(bullish.audit.reasoningVersion === DETERMINISTIC_REASONING_VERSION, 'audit reasoningVersion must use central constant');

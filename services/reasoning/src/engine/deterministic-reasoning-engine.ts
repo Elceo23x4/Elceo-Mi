@@ -21,6 +21,7 @@ import { buildBiasLabel, computeDirectionalSupport, selectBiasFromDirectionalSup
 import { buildExplanation, buildNarrativeSummary, buildThesis } from './explanation-builder';
 import { composeFreshnessState } from './freshness-composer';
 import { composeInvalidationState } from './invalidation-composer';
+import { buildZoneConfluenceSummary, enrichEvidenceWithZoneAnchors } from './zone-anchoring';
 import { sortEvidenceByRank, uniqueStrings } from './utils';
 
 function buildCognitionId(input: ReasoningInputFrame): string {
@@ -114,21 +115,30 @@ export class DeterministicReasoningEngine implements ReasoningEngineContract {
       zones: [...zones.primary, ...zones.secondary]
     });
 
+    const enrichedEvidence = enrichEvidenceWithZoneAnchors({
+      evidence: ranked,
+      zones: [...zones.primary, ...zones.secondary],
+      recentPriceRange: input.recentPriceRange,
+      targetTimeframe: input.timeframe
+    });
+
+    const zoneConfluenceSummary = buildZoneConfluenceSummary(enrichedEvidence, [...zones.primary, ...zones.secondary]);
+
     const thesis = buildThesis(finalBias, invalidation.primary?.price ?? input.recentPriceRange.close);
     const narrativeSummary = buildNarrativeSummary({
       biasLabel,
-      evidence: ranked,
+      evidence: enrichedEvidence,
       contradictionRegime: contradictionAnatomy.regime,
       freshnessScore: freshnessState.freshnessScore
     });
 
     const evidence = {
-      ranked,
-      topEvidenceIds: ranked.slice(0, TOP_EVIDENCE_LIMIT).map((item) => item.evidenceId),
-      evidenceCount: ranked.length
+      ranked: enrichedEvidence,
+      topEvidenceIds: enrichedEvidence.slice(0, TOP_EVIDENCE_LIMIT).map((item) => item.evidenceId),
+      evidenceCount: enrichedEvidence.length
     };
 
-    const supportEvents = buildSupportEvents(input);
+    const supportEvents = buildSupportEvents({ ...input, evidenceCandidates: enrichedEvidence });
 
     const explanation = buildExplanation({
       bias: finalBias,
@@ -137,16 +147,20 @@ export class DeterministicReasoningEngine implements ReasoningEngineContract {
       contradictionScore: contradictionAnatomy.weightedScore,
       contradictionRegime: contradictionAnatomy.regime,
       freshnessScore: freshnessState.freshnessScore,
-      evidence: ranked,
+      evidence: enrichedEvidence,
+      enrichedEvidence,
       invalidation,
       zones: zones.primary,
-      recentPriceRange: input.recentPriceRange
+      recentPriceRange: input.recentPriceRange,
+      zoneConfluenceSummary
     });
 
     const chartProjection = buildChartProjection({
-      evidence: ranked,
+      enrichedEvidence,
       invalidation,
-      contradictionScore: contradictionAnatomy.weightedScore
+      contradictionScore: contradictionAnatomy.weightedScore,
+      zonesSection: zones,
+      recentPriceRange: input.recentPriceRange
     });
 
     const output: CanonicalCognitionState = {

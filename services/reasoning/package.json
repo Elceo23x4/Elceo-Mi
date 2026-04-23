@@ -10,7 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
     "format": "prettier --check src",
-    "test": "tsc -p tsconfig.test.json && node -e \"require('node:fs').writeFileSync('dist-test/package.json', JSON.stringify({type:'commonjs'}))\" && node dist-test/services/reasoning/src/tests/run-tests.js"
+    "test": "tsc -p tsconfig.test.json && node ../../scripts/run-cjs-tests.mjs dist-test dist-test/services/reasoning/src/tests/run-tests.js"
   },
   "dependencies": {
     "@elceo/config": "0.1.0",

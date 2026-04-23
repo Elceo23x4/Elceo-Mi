@@ -59,7 +59,7 @@ export async function runRuntimeOutboxIntegrationTests(): Promise<void> {
   });
 
   assert(result.report.status === 'success', 'successful run should remain success when outbox staging succeeds');
-  const outboxItems = await outboxRepo.listDueOutboxItems(10, '2026-04-22T23:59:59.000Z');
+  const outboxItems = await outboxRepo.listDueOutboxItems(10, '9999-12-31T23:59:59.000Z');
   assert(outboxItems.length === 2, 'canonical run should stage run_completed and event_snapshot outbox items');
 
   const failingService = new CanonicalWorkerBoundaryService(

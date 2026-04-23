@@ -1,7 +1,8 @@
 import { buildCanonicalCognitionStateFixture, buildCanonicalEventFixture, buildReasoningInputFrameFixture } from '../../../../packages/schemas/src/test-fixtures.js';
-import { CanonicalReasoningBoundaryService } from '../runtime/canonical-reasoning-boundary.js';
+import { CanonicalReasoningBoundaryService, createCanonicalReasoningBoundaryService } from '../runtime/canonical-reasoning-boundary.js';
 import { MemoryReasoningPersistenceRepository } from '../persistence/memory-reasoning-repository.js';
 import type { ReasoningInputAssemblyResult } from '../input/reasoning-input-assembler.js';
+import { DETERMINISTIC_REASONING_ENGINE_NAME } from '../engine/constants.js';
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(`Assertion failed: ${message}`);
@@ -79,4 +80,23 @@ export async function runCanonicalReasoningBoundaryTests(): Promise<void> {
   );
   const partial = await partialService.executeAssetWindow({ asset: 'XAU/USD', timeframe: 'H1', asOf: '2026-04-22T11:00:00.000Z' });
   assert(partial.report.status === 'partial_success' && partial.cognition !== null, 'snapshot persistence failure returns partial_success with cognition');
+
+  const defaultEngineRepo = new MemoryReasoningPersistenceRepository();
+  const defaultEngineService = createCanonicalReasoningBoundaryService({
+    assembler: new StubAssembler(assemblyResult) as never,
+    persistence: defaultEngineRepo
+  });
+  const defaultExecution = await defaultEngineService.executeAssetWindow({ asset: 'XAU/USD', timeframe: 'H1', asOf: '2026-04-22T11:00:00.000Z' });
+  assert(defaultExecution.cognition !== null, 'default boundary factory should execute with deterministic engine');
+  assert(defaultExecution.report.engineName === DETERMINISTIC_REASONING_ENGINE_NAME, 'boundary should use deterministic engine metadata by default');
+
+  const stableRepo = new MemoryReasoningPersistenceRepository();
+  const stableService = createCanonicalReasoningBoundaryService({
+    assembler: new StubAssembler(assemblyResult) as never,
+    persistence: stableRepo
+  });
+  const stableRun1 = await stableService.executeAssetWindow({ asset: 'XAU/USD', timeframe: 'H1', asOf: '2026-04-22T11:00:00.000Z' });
+  const stableRun2 = await stableService.executeAssetWindow({ asset: 'XAU/USD', timeframe: 'H1', asOf: '2026-04-22T11:00:00.000Z' });
+  assert(stableRun1.cognition !== null && stableRun2.cognition !== null, 'stable payload test requires cognition output');
+  assert(JSON.stringify(stableRun1.cognition) === JSON.stringify(stableRun2.cognition), 'same assembled input should persist stable cognition payload');
 }

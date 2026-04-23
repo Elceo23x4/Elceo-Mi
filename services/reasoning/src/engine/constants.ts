@@ -1,0 +1,9 @@
+export const DETERMINISTIC_REASONING_ENGINE_NAME = 'elceo.deterministic.reasoning';
+export const DETERMINISTIC_REASONING_VERSION = 'c3b.v1';
+export const DETERMINISTIC_SCORING_VERSION = 'c3b.scoring.v1';
+
+export const TOP_EVIDENCE_LIMIT = 5;
+export const PRIMARY_ZONE_LIMIT = 3;
+export const SECONDARY_ZONE_LIMIT = 5;
+
+export const REASONING_COMPONENTS_VERSION = DETERMINISTIC_SCORING_VERSION;

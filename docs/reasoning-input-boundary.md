@@ -226,6 +226,11 @@ Malformed payload fails deterministically.
 C3-A establishes operational intake and durability first.
 Without this boundary, advanced reasoning logic has no stable replay/audit substrate.
 
+## C3-B default engine adoption
+
+From C3-B onward, `createCanonicalReasoningBoundaryService(...)` defaults to `DeterministicReasoningEngine` when no engine is injected.
+The default engine is deterministic, replayable, and emits fully-populated canonical cognition anatomy (bias/confidence/contradiction/freshness/invalidation/explanation/chart placeholders) using frozen C3-B formulas.
+
 ## What C3-B should cover next
 
 C3-B should focus on:

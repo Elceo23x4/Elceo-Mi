@@ -4,10 +4,24 @@ import { runSourceSelectorTests } from './source-selector.test.js';
 import { runInputAssemblerTests } from './input-assembler.test.js';
 import { runPersistenceReplayTests } from './persistence-replay.test.js';
 import { runCanonicalReasoningBoundaryTests } from './canonical-reasoning-boundary.test.js';
+import { runDirectionalSupportTests } from './directional-support.test.js';
+import { runContradictionComposerTests } from './contradiction-composer.test.js';
+import { runConfidenceComposerTests } from './confidence-composer.test.js';
+import { runFreshnessComposerTests } from './freshness-composer.test.js';
+import { runInvalidationComposerTests } from './invalidation-composer.test.js';
+import { runExplanationBuilderTests } from './explanation-builder.test.js';
+import { runDeterministicReasoningEngineTests } from './deterministic-reasoning-engine.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
   runEvidenceProjectionTests();
+  runDirectionalSupportTests();
+  runContradictionComposerTests();
+  runConfidenceComposerTests();
+  runFreshnessComposerTests();
+  runInvalidationComposerTests();
+  runExplanationBuilderTests();
+  runDeterministicReasoningEngineTests();
   await runSourceSelectorTests();
   await runInputAssemblerTests();
   await runPersistenceReplayTests();

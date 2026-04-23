@@ -4,5 +4,6 @@ export * from './ranking/prioritize-cognition';
 export * from './reasoning-service';
 
 export * from './input/index';
+export * from './engine/index';
 export * from './persistence/index';
 export * from './runtime/index';

@@ -1,5 +1,6 @@
 export * from './runtime/index';
 export * from './scheduler/index';
+export * from './publish/index';
 export * from './facade/index';
 export * from './core/index';
 export * from './bridges/index';

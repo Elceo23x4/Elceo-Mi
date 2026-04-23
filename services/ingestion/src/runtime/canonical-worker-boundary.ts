@@ -9,6 +9,8 @@ import { buildComparisonFromCanonicalAndLegacy, computeRunStatus, createIngestio
 import { createIngestionPersistenceRepository } from '../persistence/index';
 import type { IngestionPersistenceRepository, IngestionRunRecordInput } from '../persistence/contracts';
 import { assertValidTriggerContext, createDefaultTriggerContext, type IngestionTriggerContext } from '../scheduler/trigger-context';
+import { createOutboxRepository } from '../publish/outbox-repository';
+import { IngestionPublicationStagingService } from '../publish/staging-service';
 
 export type RuntimeExecuteParams = {
   asset: CanonicalAssetSymbol;
@@ -60,7 +62,8 @@ export class CanonicalWorkerBoundaryService {
   constructor(
     private readonly canonicalFacade: CanonicalFacadeLike,
     private readonly legacyRuntimeAdapter: LegacyRuntimeAdapter = new LegacyRuntimeAdapter(),
-    private readonly persistenceRepository: IngestionPersistenceRepository | null = null
+    private readonly persistenceRepository: IngestionPersistenceRepository | null = null,
+    private readonly publicationStagingService: IngestionPublicationStagingService | null = null
   ) {}
 
   async executeAssetWindow(params: RuntimeExecuteParams): Promise<{
@@ -186,7 +189,7 @@ export class CanonicalWorkerBoundaryService {
       providerCapabilities: diagnostics.providerCapabilities
     };
 
-    if (this.persistenceRepository && report.status !== 'failed') {
+    if (this.persistenceRepository) {
       try {
         const persistRecord: IngestionRunRecordInput = {
           runId: report.runId,
@@ -215,12 +218,20 @@ export class CanonicalWorkerBoundaryService {
         };
 
         await this.persistenceRepository.persistRunWithEvents(persistRecord, outputEvents);
+
+        if (this.publicationStagingService) {
+          const persistedRun = await this.persistenceRepository.runRepository.getRunById(report.runId);
+          if (!persistedRun) {
+            throw new Error('persisted_run_not_found_for_publication_staging');
+          }
+          await this.publicationStagingService.stageRunPublications(persistedRun, outputEvents, endedAt);
+        }
       } catch (error) {
         report = {
           ...report,
           status: 'partial_success',
           fallbackApplied: true,
-          fallbackReason: `persistence_failure:${error instanceof Error ? error.message : 'unknown'}`
+          fallbackReason: `persistence_or_publication_failure:${error instanceof Error ? error.message : 'unknown'}`
         };
       }
     }
@@ -234,5 +245,7 @@ export class CanonicalWorkerBoundaryService {
 }
 
 export function createCanonicalWorkerBoundaryService(env: Record<string, string | undefined> = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {}): CanonicalWorkerBoundaryService {
-  return new CanonicalWorkerBoundaryService(createCanonicalIngestionFacade(env), new LegacyRuntimeAdapter(), createIngestionPersistenceRepository(env));
+  const persistenceRepository = createIngestionPersistenceRepository(env);
+  const publicationStagingService = new IngestionPublicationStagingService(createOutboxRepository(env));
+  return new CanonicalWorkerBoundaryService(createCanonicalIngestionFacade(env), new LegacyRuntimeAdapter(), persistenceRepository, publicationStagingService);
 }

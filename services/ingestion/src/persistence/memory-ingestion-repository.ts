@@ -49,18 +49,26 @@ export class MemoryIngestionRunRepository implements IngestionRunRepository {
     return this.runs.get(runId) ?? null;
   }
 
+  async getRunByRequestKey(requestKey: string): Promise<PersistedIngestionRun | null> {
+    for (const row of this.runs.values()) {
+      if (row.requestKey === requestKey) return row;
+    }
+    return null;
+  }
+
   async getLatestRunForAssetTimeframe(asset: CanonicalAssetSymbol, timeframe: Timeframe): Promise<PersistedIngestionRun | null> {
     const rows = [...this.runs.values()].filter((item) => item.asset === asset && item.timeframe === timeframe);
     rows.sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt) || left.runId.localeCompare(right.runId));
     return rows[0] ?? null;
   }
 
-  async listRecentRuns(params: { limit: number; asset?: CanonicalAssetSymbol; timeframe?: Timeframe; triggerKind?: PersistedIngestionRun['triggerKind']; slotStartAt?: string }): Promise<PersistedIngestionRun[]> {
+  async listRecentRuns(params: { limit: number; asset?: CanonicalAssetSymbol; timeframe?: Timeframe; triggerKind?: PersistedIngestionRun['triggerKind']; slotStartAt?: string; requestKey?: string }): Promise<PersistedIngestionRun[]> {
     let rows = [...this.runs.values()];
     if (params.asset) rows = rows.filter((item) => item.asset === params.asset);
     if (params.timeframe) rows = rows.filter((item) => item.timeframe === params.timeframe);
     if (params.triggerKind) rows = rows.filter((item) => item.triggerKind === params.triggerKind);
     if (params.slotStartAt) rows = rows.filter((item) => item.slotStartAt === params.slotStartAt);
+    if (params.requestKey) rows = rows.filter((item) => item.requestKey === params.requestKey);
     rows.sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt) || left.runId.localeCompare(right.runId));
     return rows.slice(0, params.limit);
   }

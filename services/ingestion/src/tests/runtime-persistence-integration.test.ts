@@ -79,5 +79,5 @@ export async function runRuntimePersistenceIntegrationTests(): Promise<void> {
     asset: 'XAU/USD', timeframe: 'H1', asOf: '2026-01-01T00:00:00.000Z', fromIso: '2025-12-31T23:00:00.000Z', toIso: '2026-01-01T00:00:00.000Z', config: { mode: 'canonical' }
   });
   assert(persistFailureResult.report.status === 'partial_success', 'persistence failure should downgrade to partial_success');
-  assert((persistFailureResult.report.fallbackReason ?? '').startsWith('persistence_failure:'), 'persistence failure note should be explicit');
+  assert((persistFailureResult.report.fallbackReason ?? '').startsWith('persistence_or_publication_failure:'), 'persistence failure note should be explicit');
 }

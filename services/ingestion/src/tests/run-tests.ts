@@ -20,6 +20,12 @@ import { runSchedulerLeaseRepositoryTests } from './scheduler-lease-repository.t
 import { runSchedulerDuePlannerTests } from './scheduler-due-planner.test.js';
 import { runSchedulerTickServiceTests } from './scheduler-tick-service.test.js';
 import { runTriggerContextPersistenceTests } from './trigger-context-persistence.test.js';
+import { runOutboxStagingTests } from './outbox-staging.test.js';
+import { runOutboxRepositoryTests } from './outbox-repository.test.js';
+import { runOutboxPublisherTests } from './outbox-publisher.test.js';
+import { runReplayPublishTests } from './replay-publish.test.js';
+import { runRuntimeOutboxIntegrationTests } from './runtime-outbox-integration.test.js';
+import { runPublishTransportTests } from './publish-transport.test.js';
 
 async function run(): Promise<void> {
   runSourceReliabilityTests();
@@ -45,6 +51,12 @@ async function run(): Promise<void> {
   await runSchedulerDuePlannerTests();
   await runSchedulerTickServiceTests();
   await runTriggerContextPersistenceTests();
+  await runOutboxStagingTests();
+  await runOutboxRepositoryTests();
+  await runOutboxPublisherTests();
+  await runReplayPublishTests();
+  await runRuntimeOutboxIntegrationTests();
+  await runPublishTransportTests();
   console.log('ingestion tests passed');
 }
 

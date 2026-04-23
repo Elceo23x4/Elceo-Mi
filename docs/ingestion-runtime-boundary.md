@@ -5,6 +5,7 @@
 Runtime ingestion now flows through `CanonicalWorkerBoundaryService.executeAssetWindow(...)`.
 The worker default path (`runIngestionTick`) resolves runtime config and executes this boundary.
 This canonical boundary now persists run reports and canonical output event snapshots via the configured ingestion persistence repository.
+After persistence, the boundary stages durable outbox publication intent for downstream publish attempts.
 
 ## Execution modes
 

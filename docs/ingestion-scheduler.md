@@ -159,10 +159,10 @@ Deterministic order:
 - success / partial / failed counts
 - per-dispatch records with request key, slot, lease and run status
 
-## Kafka status
+## Kafka status after C2-F
 
-Kafka dispatch is still out of scope in C2-E.
-This batch covers scheduling correctness only.
+Scheduler still does not publish directly to Kafka.
+Outbox publisher can use a Kafka transport adapter, but only from durable staged outbox intent.
 
 ## What C2-F should cover next
 

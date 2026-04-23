@@ -7,6 +7,7 @@ Canonical runtime persistence stores:
 - run-level execution reports (`app_ingestion_runs`)
 - output canonical event snapshots (`app_ingestion_event_snapshots`)
 - scheduler leases (`app_ingestion_runtime_leases`)
+- publish outbox records + attempts (`app_ingestion_outbox`, `app_ingestion_outbox_attempts`)
 
 ## Persisted run identity fields
 
@@ -53,4 +54,5 @@ Rules:
 
 ## Out of scope
 
-Kafka publishing, notifications dispatch, and reasoning orchestration are still out of scope for persistence in this batch.
+Notifications dispatch and reasoning orchestration remain out of scope.
+Durable publish intent/outbox persistence is now in scope, while downstream workflows are handled in later batches.

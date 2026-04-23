@@ -86,8 +86,9 @@ export type IngestionRunRecordInput = {
 export type IngestionRunRepository = {
   saveRunRecord(record: IngestionRunRecordInput): Promise<void>;
   getRunById(runId: string): Promise<PersistedIngestionRun | null>;
+  getRunByRequestKey(requestKey: string): Promise<PersistedIngestionRun | null>;
   getLatestRunForAssetTimeframe(asset: CanonicalAssetSymbol, timeframe: Timeframe): Promise<PersistedIngestionRun | null>;
-  listRecentRuns(params: { limit: number; asset?: CanonicalAssetSymbol; timeframe?: Timeframe; triggerKind?: IngestionTriggerKind; slotStartAt?: string }): Promise<PersistedIngestionRun[]>;
+  listRecentRuns(params: { limit: number; asset?: CanonicalAssetSymbol; timeframe?: Timeframe; triggerKind?: IngestionTriggerKind; slotStartAt?: string; requestKey?: string }): Promise<PersistedIngestionRun[]>;
 };
 
 export type IngestionEventSnapshotRepository = {

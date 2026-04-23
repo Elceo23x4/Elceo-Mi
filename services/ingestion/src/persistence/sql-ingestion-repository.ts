@@ -190,6 +190,28 @@ export class SqlIngestionRunRepository implements IngestionRunRepository {
     return rows[0] ? mapRunRow(rows[0]) : null;
   }
 
+  async getRunByRequestKey(requestKey: string): Promise<PersistedIngestionRun | null> {
+    const rows = await queryDb<PersistedRunRow>(
+      `SELECT
+        run_id, asset, timeframe, mode, active_boundary, status,
+        started_at, ended_at, duration_ms, canonical_event_count,
+        legacy_event_count, output_event_count, fallback_applied,
+        fallback_reason, boundary_version, trigger_kind, request_key,
+        slot_start_at, slot_end_at, scheduler_tick_id, overlap_ratio,
+        comparison_json::text AS comparison_json,
+        diagnostics_summary_json::text AS diagnostics_summary_json,
+        provider_capabilities_json::text AS provider_capabilities_json,
+        created_at
+       FROM app_ingestion_runs
+       WHERE request_key = $1
+       ORDER BY created_at DESC, run_id ASC
+       LIMIT 1`,
+      [requestKey]
+    );
+
+    return rows[0] ? mapRunRow(rows[0]) : null;
+  }
+
   async getLatestRunForAssetTimeframe(asset: CanonicalAssetSymbol, timeframe: Timeframe): Promise<PersistedIngestionRun | null> {
     const rows = await queryDb<PersistedRunRow>(
       `SELECT
@@ -212,7 +234,7 @@ export class SqlIngestionRunRepository implements IngestionRunRepository {
     return rows[0] ? mapRunRow(rows[0]) : null;
   }
 
-  async listRecentRuns(params: { limit: number; asset?: CanonicalAssetSymbol; timeframe?: Timeframe; triggerKind?: IngestionTriggerKind; slotStartAt?: string }): Promise<PersistedIngestionRun[]> {
+  async listRecentRuns(params: { limit: number; asset?: CanonicalAssetSymbol; timeframe?: Timeframe; triggerKind?: IngestionTriggerKind; slotStartAt?: string; requestKey?: string }): Promise<PersistedIngestionRun[]> {
     const conditions: string[] = [];
     const values: unknown[] = [];
 
@@ -234,6 +256,11 @@ export class SqlIngestionRunRepository implements IngestionRunRepository {
     if (params.slotStartAt) {
       values.push(params.slotStartAt);
       conditions.push(`slot_start_at = $${values.length}`);
+    }
+
+    if (params.requestKey) {
+      values.push(params.requestKey);
+      conditions.push(`request_key = $${values.length}`);
     }
 
     values.push(params.limit);

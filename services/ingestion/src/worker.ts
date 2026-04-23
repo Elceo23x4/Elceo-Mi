@@ -17,6 +17,7 @@ import { getIngestionRuntimeConfig } from './runtime/runtime-config';
 import { IngestionSchedulerTickService } from './scheduler/scheduler-tick-service';
 import { createIngestionPersistenceRepository } from './persistence';
 import { createIngestionRuntimeLeaseRepository } from './scheduler/lease-repository';
+import { createOutboxRepository, createIngestionPublishTransport, IngestionPublicationStagingService, OutboxPublisherService, ReplayPublicationService } from './publish';
 
 function runtimeEnv(): Record<string, string | undefined> {
   return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
@@ -61,6 +62,43 @@ export async function runScheduledIngestionTick(): Promise<Awaited<ReturnType<In
     createIngestionRuntimeLeaseRepository(env)
   );
   return scheduler.runTick({ nowIso: new Date().toISOString(), runtimeConfig: getIngestionRuntimeConfig(env) });
+}
+
+export async function publishDueIngestionOutbox(params: { nowIso?: string; limit?: number; maxAttemptsBeforeDead?: number } = {}): Promise<Awaited<ReturnType<OutboxPublisherService['publishDueOutbox']>>> {
+  const env = runtimeEnv();
+  const outboxRepository = createOutboxRepository(env);
+  const transport = await createIngestionPublishTransport(env);
+  const publisher = new OutboxPublisherService(outboxRepository, transport);
+
+  return publisher.publishDueOutbox({
+    nowIso: params.nowIso ?? new Date().toISOString(),
+    ...(params.limit !== undefined ? { limit: params.limit } : {}),
+    ...(params.maxAttemptsBeforeDead !== undefined ? { maxAttemptsBeforeDead: params.maxAttemptsBeforeDead } : {})
+  });
+}
+
+export async function replayPublishForRunId(runId: string, nowIso: string = new Date().toISOString()): Promise<void> {
+  const env = runtimeEnv();
+  const persistence = createIngestionPersistenceRepository(env);
+  const staging = new IngestionPublicationStagingService(createOutboxRepository(env));
+  const replay = new ReplayPublicationService(persistence, staging);
+  await replay.stagePublicationsForRunId(runId, nowIso);
+}
+
+export async function replayPublishForRequestKey(requestKey: string, nowIso: string = new Date().toISOString()): Promise<void> {
+  const env = runtimeEnv();
+  const persistence = createIngestionPersistenceRepository(env);
+  const staging = new IngestionPublicationStagingService(createOutboxRepository(env));
+  const replay = new ReplayPublicationService(persistence, staging);
+  await replay.stagePublicationsForRequestKey(requestKey, nowIso);
+}
+
+export async function replayPublishForSlot(asset: CanonicalAssetSymbol, timeframe: Timeframe, slotStartAt: string, nowIso: string = new Date().toISOString()): Promise<void> {
+  const env = runtimeEnv();
+  const persistence = createIngestionPersistenceRepository(env);
+  const staging = new IngestionPublicationStagingService(createOutboxRepository(env));
+  const replay = new ReplayPublicationService(persistence, staging);
+  await replay.stagePublicationsForSlot(asset, timeframe, slotStartAt, nowIso);
 }
 
 // Legacy compatibility path. Use only explicit legacy mode/fallback workflows.

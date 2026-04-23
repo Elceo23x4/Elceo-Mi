@@ -1,5 +1,13 @@
 import type { CanonicalAssetSymbol, Timeframe } from '@elceo/types';
-import type { CognitionSnapshotRepository, PersistedCognitionSnapshot, PersistedReasoningRun, ReasoningPersistenceRepository, ReasoningRunRepository } from './contracts';
+import type {
+  CognitionDriftRepository,
+  CognitionSnapshotRepository,
+  PersistedCognitionDriftRecord,
+  PersistedCognitionSnapshot,
+  PersistedReasoningRun,
+  ReasoningPersistenceRepository,
+  ReasoningRunRepository
+} from './contracts';
 
 function runtimeEnv(): Record<string, string | undefined> {
   return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
@@ -109,6 +117,48 @@ function mapSnapshotRow(row: SnapshotRow): PersistedCognitionSnapshot {
     scoringVersion: row.scoring_version,
     cognitionJson: row.cognition_json,
     createdAt: row.created_at
+  };
+}
+
+type DriftRow = {
+  drift_id: string;
+  asset: string;
+  timeframe: string;
+  previous_snapshot_id: string;
+  current_snapshot_id: string;
+  previous_reasoning_run_id: string;
+  current_reasoning_run_id: string;
+  compared_at: string;
+  severity: PersistedCognitionDriftRecord['severity'];
+  summary: string;
+  key_changes_json: string;
+  confidence_delta: number;
+  contradiction_delta: number;
+  freshness_delta: number;
+  invalidation_price_delta: number;
+  created_at: string;
+  drift_json: string;
+};
+
+function mapDriftRow(row: DriftRow): PersistedCognitionDriftRecord {
+  return {
+    driftId: row.drift_id,
+    asset: row.asset,
+    timeframe: row.timeframe as Timeframe,
+    previousSnapshotId: row.previous_snapshot_id,
+    currentSnapshotId: row.current_snapshot_id,
+    previousReasoningRunId: row.previous_reasoning_run_id,
+    currentReasoningRunId: row.current_reasoning_run_id,
+    comparedAt: row.compared_at,
+    severity: row.severity,
+    summary: row.summary,
+    keyChangesJson: row.key_changes_json,
+    confidenceDelta: row.confidence_delta,
+    contradictionDelta: row.contradiction_delta,
+    freshnessDelta: row.freshness_delta,
+    invalidationPriceDelta: row.invalidation_price_delta,
+    createdAt: row.created_at,
+    driftJson: row.drift_json
   };
 }
 
@@ -287,15 +337,140 @@ export class SqlCognitionSnapshotRepository implements CognitionSnapshotReposito
   }
 }
 
+export class SqlCognitionDriftRepository implements CognitionDriftRepository {
+  async saveDriftRecord(record: PersistedCognitionDriftRecord): Promise<void> {
+    await queryDb(
+      `INSERT INTO app_cognition_deltas (
+        drift_id, asset, timeframe, previous_snapshot_id, current_snapshot_id,
+        previous_reasoning_run_id, current_reasoning_run_id, compared_at, severity, summary,
+        key_changes_json, confidence_delta, contradiction_delta, freshness_delta,
+        invalidation_price_delta, created_at, drift_json
+      ) VALUES (
+        $1,$2,$3,$4,$5,
+        $6,$7,$8,$9,$10,
+        $11,$12,$13,$14,
+        $15,$16,$17
+      )
+      ON CONFLICT (drift_id) DO UPDATE SET
+        asset=EXCLUDED.asset,
+        timeframe=EXCLUDED.timeframe,
+        previous_snapshot_id=EXCLUDED.previous_snapshot_id,
+        current_snapshot_id=EXCLUDED.current_snapshot_id,
+        previous_reasoning_run_id=EXCLUDED.previous_reasoning_run_id,
+        current_reasoning_run_id=EXCLUDED.current_reasoning_run_id,
+        compared_at=EXCLUDED.compared_at,
+        severity=EXCLUDED.severity,
+        summary=EXCLUDED.summary,
+        key_changes_json=EXCLUDED.key_changes_json,
+        confidence_delta=EXCLUDED.confidence_delta,
+        contradiction_delta=EXCLUDED.contradiction_delta,
+        freshness_delta=EXCLUDED.freshness_delta,
+        invalidation_price_delta=EXCLUDED.invalidation_price_delta,
+        created_at=EXCLUDED.created_at,
+        drift_json=EXCLUDED.drift_json`,
+      [
+        record.driftId,
+        record.asset,
+        record.timeframe,
+        record.previousSnapshotId,
+        record.currentSnapshotId,
+        record.previousReasoningRunId,
+        record.currentReasoningRunId,
+        record.comparedAt,
+        record.severity,
+        record.summary,
+        record.keyChangesJson,
+        record.confidenceDelta,
+        record.contradictionDelta,
+        record.freshnessDelta,
+        record.invalidationPriceDelta,
+        record.createdAt,
+        record.driftJson
+      ]
+    );
+  }
+
+  async getDriftById(driftId: string): Promise<PersistedCognitionDriftRecord | null> {
+    const rows = await queryDb<DriftRow>(
+      `SELECT drift_id, asset, timeframe, previous_snapshot_id, current_snapshot_id,
+        previous_reasoning_run_id, current_reasoning_run_id, compared_at, severity, summary,
+        key_changes_json::text as key_changes_json, confidence_delta, contradiction_delta,
+        freshness_delta, invalidation_price_delta, created_at, drift_json::text as drift_json
+       FROM app_cognition_deltas
+       WHERE drift_id = $1`,
+      [driftId]
+    );
+
+    return rows[0] ? mapDriftRow(rows[0]) : null;
+  }
+
+  async getLatestDriftForAssetTimeframe(asset: CanonicalAssetSymbol, timeframe: Timeframe): Promise<PersistedCognitionDriftRecord | null> {
+    const rows = await queryDb<DriftRow>(
+      `SELECT drift_id, asset, timeframe, previous_snapshot_id, current_snapshot_id,
+        previous_reasoning_run_id, current_reasoning_run_id, compared_at, severity, summary,
+        key_changes_json::text as key_changes_json, confidence_delta, contradiction_delta,
+        freshness_delta, invalidation_price_delta, created_at, drift_json::text as drift_json
+       FROM app_cognition_deltas
+       WHERE asset = $1 AND timeframe = $2
+       ORDER BY compared_at DESC, drift_id ASC
+       LIMIT 1`,
+      [asset, timeframe]
+    );
+
+    return rows[0] ? mapDriftRow(rows[0]) : null;
+  }
+
+  async listRecentDrifts(params: {
+    limit: number;
+    asset?: CanonicalAssetSymbol;
+    timeframe?: Timeframe;
+    severity?: PersistedCognitionDriftRecord['severity'];
+  }): Promise<PersistedCognitionDriftRecord[]> {
+    const clauses: string[] = [];
+    const values: unknown[] = [];
+    if (params.asset) {
+      values.push(params.asset);
+      clauses.push(`asset = $${values.length}`);
+    }
+    if (params.timeframe) {
+      values.push(params.timeframe);
+      clauses.push(`timeframe = $${values.length}`);
+    }
+    if (params.severity) {
+      values.push(params.severity);
+      clauses.push(`severity = $${values.length}`);
+    }
+    values.push(params.limit);
+    const whereSql = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
+
+    const rows = await queryDb<DriftRow>(
+      `SELECT drift_id, asset, timeframe, previous_snapshot_id, current_snapshot_id,
+        previous_reasoning_run_id, current_reasoning_run_id, compared_at, severity, summary,
+        key_changes_json::text as key_changes_json, confidence_delta, contradiction_delta,
+        freshness_delta, invalidation_price_delta, created_at, drift_json::text as drift_json
+       FROM app_cognition_deltas
+       ${whereSql}
+       ORDER BY compared_at DESC, drift_id ASC
+       LIMIT $${values.length}`,
+      values
+    );
+
+    return rows.map(mapDriftRow);
+  }
+}
+
 export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRepository {
   readonly runRepository: ReasoningRunRepository;
   readonly snapshotRepository: CognitionSnapshotRepository;
+  readonly driftRepository: CognitionDriftRepository;
 
   constructor(
     runRepository: ReasoningRunRepository = new SqlReasoningRunRepository(),
-    snapshotRepository: CognitionSnapshotRepository = new SqlCognitionSnapshotRepository()
+    snapshotRepository: CognitionSnapshotRepository = new SqlCognitionSnapshotRepository(),
+    driftRepository: CognitionDriftRepository = new SqlCognitionDriftRepository()
   ) {
     this.runRepository = runRepository;
     this.snapshotRepository = snapshotRepository;
+    this.driftRepository = driftRepository;
   }
 }

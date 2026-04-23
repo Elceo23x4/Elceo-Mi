@@ -5,5 +5,6 @@ export * from './reasoning-service';
 
 export * from './input/index';
 export * from './engine/index';
+export * from './delta/index';
 export * from './persistence/index';
 export * from './runtime/index';

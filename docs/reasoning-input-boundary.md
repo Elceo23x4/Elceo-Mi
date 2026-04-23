@@ -231,6 +231,19 @@ Without this boundary, advanced reasoning logic has no stable replay/audit subst
 From C3-B onward, `createCanonicalReasoningBoundaryService(...)` defaults to `DeterministicReasoningEngine` when no engine is injected.
 The default engine is deterministic, replayable, and emits fully-populated canonical cognition anatomy (bias/confidence/contradiction/freshness/invalidation/explanation/chart placeholders) using frozen C3-B formulas.
 
+## C3-D drift persistence integration
+
+From C3-D onward, successful reasoning executions can persist deterministic cognition drift reports by comparing:
+
+- latest prior persisted snapshot for same asset/timeframe (`evaluatedAt < current`), and
+- current persisted snapshot.
+
+Drift persistence is additive:
+
+- no prior snapshot => drift is null,
+- prior snapshot present => deterministic drift report is built/persisted,
+- drift persistence failure after cognition snapshot persistence => run may downgrade to `partial_success` with explicit drift failure reason.
+
 ## What C3-B should cover next
 
 C3-B should focus on:

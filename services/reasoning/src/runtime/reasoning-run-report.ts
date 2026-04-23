@@ -1,4 +1,5 @@
 import type { CanonicalAssetSymbol, Timeframe } from '@elceo/types';
+import type { CognitionDriftReport } from '../delta/contracts';
 
 export type ReasoningRunReport = {
   reasoningRunId: string;
@@ -20,4 +21,5 @@ export type ReasoningRunReport = {
   engineName: string;
   reasoningVersion: string;
   scoringVersion: string;
+  drift: CognitionDriftReport | null;
 };

@@ -1,5 +1,13 @@
 import type { CanonicalAssetSymbol, Timeframe } from '@elceo/types';
-import type { CognitionSnapshotRepository, PersistedCognitionSnapshot, PersistedReasoningRun, ReasoningPersistenceRepository, ReasoningRunRepository } from './contracts';
+import type {
+  CognitionDriftRepository,
+  CognitionSnapshotRepository,
+  PersistedCognitionDriftRecord,
+  PersistedCognitionSnapshot,
+  PersistedReasoningRun,
+  ReasoningPersistenceRepository,
+  ReasoningRunRepository
+} from './contracts';
 
 export class MemoryReasoningRunRepository implements ReasoningRunRepository {
   private readonly rows = new Map<string, PersistedReasoningRun>();
@@ -50,15 +58,48 @@ export class MemoryCognitionSnapshotRepository implements CognitionSnapshotRepos
   }
 }
 
+export class MemoryCognitionDriftRepository implements CognitionDriftRepository {
+  private readonly byId = new Map<string, PersistedCognitionDriftRecord>();
+
+  async saveDriftRecord(record: PersistedCognitionDriftRecord): Promise<void> {
+    this.byId.set(record.driftId, record);
+  }
+
+  async getDriftById(driftId: string): Promise<PersistedCognitionDriftRecord | null> {
+    return this.byId.get(driftId) ?? null;
+  }
+
+  async getLatestDriftForAssetTimeframe(asset: CanonicalAssetSymbol, timeframe: Timeframe): Promise<PersistedCognitionDriftRecord | null> {
+    return (await this.listRecentDrifts({ limit: 1, asset, timeframe }))[0] ?? null;
+  }
+
+  async listRecentDrifts(params: {
+    limit: number;
+    asset?: CanonicalAssetSymbol;
+    timeframe?: Timeframe;
+    severity?: PersistedCognitionDriftRecord['severity'];
+  }): Promise<PersistedCognitionDriftRecord[]> {
+    let values = [...this.byId.values()];
+    if (params.asset) values = values.filter((row) => row.asset === params.asset);
+    if (params.timeframe) values = values.filter((row) => row.timeframe === params.timeframe);
+    if (params.severity) values = values.filter((row) => row.severity === params.severity);
+    values.sort((left, right) => Date.parse(right.comparedAt) - Date.parse(left.comparedAt) || left.driftId.localeCompare(right.driftId));
+    return values.slice(0, params.limit);
+  }
+}
+
 export class MemoryReasoningPersistenceRepository implements ReasoningPersistenceRepository {
   readonly runRepository: ReasoningRunRepository;
   readonly snapshotRepository: CognitionSnapshotRepository;
+  readonly driftRepository: CognitionDriftRepository;
 
   constructor(
     runRepository: ReasoningRunRepository = new MemoryReasoningRunRepository(),
-    snapshotRepository: CognitionSnapshotRepository = new MemoryCognitionSnapshotRepository()
+    snapshotRepository: CognitionSnapshotRepository = new MemoryCognitionSnapshotRepository(),
+    driftRepository: CognitionDriftRepository = new MemoryCognitionDriftRepository()
   ) {
     this.runRepository = runRepository;
     this.snapshotRepository = snapshotRepository;
+    this.driftRepository = driftRepository;
   }
 }

@@ -11,6 +11,10 @@ import { runFreshnessComposerTests } from './freshness-composer.test.js';
 import { runInvalidationComposerTests } from './invalidation-composer.test.js';
 import { runExplanationBuilderTests } from './explanation-builder.test.js';
 import { runDeterministicReasoningEngineTests } from './deterministic-reasoning-engine.test.js';
+import { runEvidenceDeltaTests } from './evidence-delta.test.js';
+import { runInvalidationDeltaTests } from './invalidation-delta.test.js';
+import { runChartProjectionDeltaTests } from './chart-projection-delta.test.js';
+import { runCognitionDriftTests } from './cognition-drift.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -22,6 +26,10 @@ async function run(): Promise<void> {
   runInvalidationComposerTests();
   runExplanationBuilderTests();
   runDeterministicReasoningEngineTests();
+  runEvidenceDeltaTests();
+  runInvalidationDeltaTests();
+  runChartProjectionDeltaTests();
+  runCognitionDriftTests();
   await runSourceSelectorTests();
   await runInputAssemblerTests();
   await runPersistenceReplayTests();

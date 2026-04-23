@@ -1,10 +1,22 @@
 import type { CanonicalAssetSymbol, CanonicalCognitionState, Timeframe } from '@elceo/types';
-import type { CognitionSnapshotRepository, PersistedReasoningRun, ReasoningRunRepository } from './contracts';
-import { deserializeCanonicalCognitionState } from './serialization';
+import type {
+  CognitionDriftRepository,
+  CognitionSnapshotRepository,
+  PersistedCognitionDriftRecord,
+  PersistedReasoningRun,
+  ReasoningRunRepository
+} from './contracts';
+import { deserializeCanonicalCognitionState, deserializeCognitionDriftReport } from './serialization';
+import type { CognitionDriftReport } from '../delta/contracts';
 
 export type CognitionReplayBundle = {
   run: PersistedReasoningRun;
   snapshot: CanonicalCognitionState;
+};
+
+export type CognitionDriftReplayBundle = {
+  record: PersistedCognitionDriftRecord;
+  report: CognitionDriftReport;
 };
 
 export async function getCognitionReplayBundleByReasoningRunId(
@@ -32,4 +44,25 @@ export async function getLatestCognitionReplayBundle(
   if (!persisted) return null;
   const snapshot = deserializeCanonicalCognitionState(persisted.cognitionJson);
   return { run, snapshot };
+}
+
+export async function getDriftReplayBundleById(
+  driftId: string,
+  driftRepository: CognitionDriftRepository
+): Promise<CognitionDriftReplayBundle | null> {
+  const record = await driftRepository.getDriftById(driftId);
+  if (!record) return null;
+  const report = deserializeCognitionDriftReport(record.driftJson);
+  return { record, report };
+}
+
+export async function getLatestDriftReplayBundle(
+  asset: CanonicalAssetSymbol,
+  timeframe: Timeframe,
+  driftRepository: CognitionDriftRepository
+): Promise<CognitionDriftReplayBundle | null> {
+  const record = await driftRepository.getLatestDriftForAssetTimeframe(asset, timeframe);
+  if (!record) return null;
+  const report = deserializeCognitionDriftReport(record.driftJson);
+  return { record, report };
 }

@@ -58,4 +58,37 @@ export type CognitionSnapshotRepository = {
 export type ReasoningPersistenceRepository = {
   runRepository: ReasoningRunRepository;
   snapshotRepository: CognitionSnapshotRepository;
+  driftRepository: CognitionDriftRepository;
+};
+
+export type PersistedCognitionDriftRecord = {
+  driftId: string;
+  asset: CanonicalAssetSymbol;
+  timeframe: Timeframe;
+  previousSnapshotId: string;
+  currentSnapshotId: string;
+  previousReasoningRunId: string;
+  currentReasoningRunId: string;
+  comparedAt: string;
+  severity: 'none' | 'minor' | 'moderate' | 'major' | 'critical';
+  summary: string;
+  keyChangesJson: string;
+  confidenceDelta: number;
+  contradictionDelta: number;
+  freshnessDelta: number;
+  invalidationPriceDelta: number;
+  createdAt: string;
+  driftJson: string;
+};
+
+export type CognitionDriftRepository = {
+  saveDriftRecord(record: PersistedCognitionDriftRecord): Promise<void>;
+  getDriftById(driftId: string): Promise<PersistedCognitionDriftRecord | null>;
+  getLatestDriftForAssetTimeframe(asset: CanonicalAssetSymbol, timeframe: Timeframe): Promise<PersistedCognitionDriftRecord | null>;
+  listRecentDrifts(params: {
+    limit: number;
+    asset?: CanonicalAssetSymbol;
+    timeframe?: Timeframe;
+    severity?: PersistedCognitionDriftRecord['severity'];
+  }): Promise<PersistedCognitionDriftRecord[]>;
 };

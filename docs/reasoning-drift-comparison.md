@@ -147,3 +147,8 @@ C3-E should layer deterministic notification policy on top of drift reports:
 - trigger conditions based on severity and key deltas
 - cooldown/suppression with replay-safe rules
 - durable dispatch audit trail using drift ids and reasoning run ids
+
+
+## C3-E link
+
+C3-E consumes persisted drift reports as deterministic notification-policy inputs and persists durable decision audit rows in app_notification_decisions.

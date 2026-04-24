@@ -1,413 +1,82 @@
-import type { CanonicalAssetSymbol, Timeframe } from '@elceo/types';
+import type { CanonicalAssetSymbol, NotificationChannel, NotificationInboxRecord, NotificationSubscriptionRecord, NotificationTargetRecord, Timeframe } from '@elceo/types';
 import type {
   NotificationDecisionRepository,
+  NotificationInboxRepository,
   NotificationOutboxAttemptRepository,
   NotificationOutboxRepository,
+  NotificationSubscriptionRepository,
+  NotificationTargetRepository,
   PersistedNotificationDecisionRecord
 } from './contracts';
 import type { NotificationOutboxAttemptRecord, NotificationOutboxRecord } from '../delivery/outbox-contracts';
 
-function runtimeEnv(): Record<string, string | undefined> {
-  return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
-}
-
+function runtimeEnv(): Record<string, string | undefined> { return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {}; }
 type QueryRow = Record<string, unknown>;
 type PoolLike = { query: (sql: string, params?: unknown[]) => Promise<{ rows: QueryRow[] }> };
 let poolPromise: Promise<PoolLike> | null = null;
+async function getPool(): Promise<PoolLike> { if (!poolPromise) poolPromise = (async () => { const module = await import('pg'); return new module.Pool({ connectionString: runtimeEnv().DATABASE_URL }) as unknown as PoolLike; })(); return poolPromise; }
+async function queryDb<T extends QueryRow = QueryRow>(sql: string, params: unknown[] = []): Promise<T[]> { const pool = await getPool(); const result = await pool.query(sql, params); return result.rows as T[]; }
 
-async function getPool(): Promise<PoolLike> {
-  if (!poolPromise) {
-    poolPromise = (async () => {
-      const module = await import('pg');
-      return new module.Pool({ connectionString: runtimeEnv().DATABASE_URL }) as unknown as PoolLike;
-    })();
-  }
-  return poolPromise;
+type DecisionRow = { decision_id: string; decision_key: string; asset: string; timeframe: string; rule_key: string; trigger_kind: string; reasoning_run_id: string | null; snapshot_id: string | null; drift_id: string | null; materiality_score: number; should_notify: boolean; suppression_reason: string | null; channels_json: string; cooldown_until: string | null; headline: string; body: string; created_at: string; decision_json: string };
+type OutboxRow = { outbox_id: string; outbox_key: string; decision_id: string; decision_key: string; asset: string; timeframe: string; rule_key: string; channel: string; target_id: string; subject_kind: 'user' | 'workspace' | 'ops'; subject_id: string; target_key: string; delivery_address_json: string; status: NotificationOutboxRecord['status']; available_at: string; last_attempt_at: string | null; delivered_at: string | null; dead_at: string | null; attempt_count: number; last_error_code: string | null; last_error_message: string | null; payload_json: string; created_at: string; updated_at: string };
+type OutboxAttemptRow = { attempt_id: string; outbox_id: string; channel: string; attempted_at: string; status: NotificationOutboxAttemptRecord['status']; error_code: string | null; error_message: string | null; response_meta_json: string | null };
+type TargetRow = { target_id: string; subject_kind: 'user' | 'workspace' | 'ops'; subject_id: string; channel: NotificationChannel; target_kind: NotificationTargetRecord['targetKind']; status: NotificationTargetRecord['status']; label: string | null; address_json: string; created_at: string; updated_at: string; verified_at: string | null };
+type SubscriptionRow = { subscription_id: string; subject_kind: 'user' | 'workspace' | 'ops'; subject_id: string; channel: NotificationChannel; asset_scope: string; timeframe_scope: string; rule_key_scope: string; enabled: boolean; min_materiality_score: number | null; created_at: string; updated_at: string };
+type InboxRow = { inbox_id: string; target_id: string; decision_id: string; decision_key: string; asset: string; timeframe: string; rule_key: string; headline: string; body: string; created_at: string; read_at: string | null; archived_at: string | null; payload_json: string };
+
+const mapDecisionRow = (row: DecisionRow): PersistedNotificationDecisionRecord => ({ decisionId: row.decision_id, decisionKey: row.decision_key, asset: row.asset, timeframe: row.timeframe as Timeframe, ruleKey: row.rule_key, triggerKind: row.trigger_kind, reasoningRunId: row.reasoning_run_id, snapshotId: row.snapshot_id, driftId: row.drift_id, materialityScore: row.materiality_score, shouldNotify: row.should_notify, suppressionReason: row.suppression_reason, channelsJson: row.channels_json, cooldownUntil: row.cooldown_until, headline: row.headline, body: row.body, createdAt: row.created_at, decisionJson: row.decision_json });
+const mapOutboxRow = (row: OutboxRow): NotificationOutboxRecord => ({ outboxId: row.outbox_id, outboxKey: row.outbox_key, decisionId: row.decision_id, decisionKey: row.decision_key, asset: row.asset, timeframe: row.timeframe as Timeframe, ruleKey: row.rule_key, channel: row.channel as NotificationChannel, targetId: row.target_id, subjectKind: row.subject_kind, subjectId: row.subject_id, targetKey: row.target_key, deliveryAddressJson: row.delivery_address_json, status: row.status, availableAt: row.available_at, lastAttemptAt: row.last_attempt_at, deliveredAt: row.delivered_at, deadAt: row.dead_at, attemptCount: row.attempt_count, lastErrorCode: row.last_error_code, lastErrorMessage: row.last_error_message, payloadJson: row.payload_json, createdAt: row.created_at, updatedAt: row.updated_at });
+const mapOutboxAttemptRow = (row: OutboxAttemptRow): NotificationOutboxAttemptRecord => ({ attemptId: row.attempt_id, outboxId: row.outbox_id, channel: row.channel as NotificationChannel, attemptedAt: row.attempted_at, status: row.status, errorCode: row.error_code, errorMessage: row.error_message, responseMetaJson: row.response_meta_json });
+const mapTargetRow = (row: TargetRow): NotificationTargetRecord => ({ targetId: row.target_id, subjectKind: row.subject_kind, subjectId: row.subject_id, channel: row.channel, targetKind: row.target_kind, status: row.status, label: row.label, addressJson: row.address_json, createdAt: row.created_at, updatedAt: row.updated_at, verifiedAt: row.verified_at });
+const mapSubscriptionRow = (row: SubscriptionRow): NotificationSubscriptionRecord => ({ subscriptionId: row.subscription_id, subjectKind: row.subject_kind, subjectId: row.subject_id, channel: row.channel, asset: row.asset_scope as NotificationSubscriptionRecord['asset'], timeframe: row.timeframe_scope as NotificationSubscriptionRecord['timeframe'], ruleKey: row.rule_key_scope, enabled: row.enabled, minMaterialityScore: row.min_materiality_score, createdAt: row.created_at, updatedAt: row.updated_at });
+const mapInboxRow = (row: InboxRow): NotificationInboxRecord => ({ inboxId: row.inbox_id, targetId: row.target_id, decisionId: row.decision_id, decisionKey: row.decision_key, asset: row.asset as CanonicalAssetSymbol, timeframe: row.timeframe as Timeframe, ruleKey: row.rule_key, headline: row.headline, body: row.body, createdAt: row.created_at, readAt: row.read_at, archivedAt: row.archived_at, payloadJson: row.payload_json });
+
+export class SqlNotificationDecisionRepository implements NotificationDecisionRepository { /* unchanged behavior */
+  async saveDecision(record: PersistedNotificationDecisionRecord): Promise<void> { await queryDb(`INSERT INTO app_notification_decisions (decision_id, decision_key, asset, timeframe, rule_key, trigger_kind, reasoning_run_id, snapshot_id, drift_id, materiality_score, should_notify, suppression_reason, channels_json, cooldown_until, headline, body, created_at, decision_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) ON CONFLICT (decision_key) DO UPDATE SET decision_id=EXCLUDED.decision_id, asset=EXCLUDED.asset, timeframe=EXCLUDED.timeframe, rule_key=EXCLUDED.rule_key, trigger_kind=EXCLUDED.trigger_kind, reasoning_run_id=EXCLUDED.reasoning_run_id, snapshot_id=EXCLUDED.snapshot_id, drift_id=EXCLUDED.drift_id, materiality_score=EXCLUDED.materiality_score, should_notify=EXCLUDED.should_notify, suppression_reason=EXCLUDED.suppression_reason, channels_json=EXCLUDED.channels_json, cooldown_until=EXCLUDED.cooldown_until, headline=EXCLUDED.headline, body=EXCLUDED.body, created_at=EXCLUDED.created_at, decision_json=EXCLUDED.decision_json`, [record.decisionId, record.decisionKey, record.asset, record.timeframe, record.ruleKey, record.triggerKind, record.reasoningRunId, record.snapshotId, record.driftId, record.materialityScore, record.shouldNotify, record.suppressionReason, record.channelsJson, record.cooldownUntil, record.headline, record.body, record.createdAt, record.decisionJson]); }
+  async getDecisionById(decisionId: string): Promise<PersistedNotificationDecisionRecord | null> { const rows = await queryDb<DecisionRow>(`SELECT decision_id, decision_key, asset, timeframe, rule_key, trigger_kind, reasoning_run_id, snapshot_id, drift_id, materiality_score, should_notify, suppression_reason, channels_json::text as channels_json, cooldown_until, headline, body, created_at, decision_json::text as decision_json FROM app_notification_decisions WHERE decision_id = $1`, [decisionId]); return rows[0] ? mapDecisionRow(rows[0]) : null; }
+  async getDecisionByKey(decisionKey: string): Promise<PersistedNotificationDecisionRecord | null> { const rows = await queryDb<DecisionRow>(`SELECT decision_id, decision_key, asset, timeframe, rule_key, trigger_kind, reasoning_run_id, snapshot_id, drift_id, materiality_score, should_notify, suppression_reason, channels_json::text as channels_json, cooldown_until, headline, body, created_at, decision_json::text as decision_json FROM app_notification_decisions WHERE decision_key = $1`, [decisionKey]); return rows[0] ? mapDecisionRow(rows[0]) : null; }
+  async getLatestDecisionForRule(asset: CanonicalAssetSymbol, timeframe: Timeframe, ruleKey: string): Promise<PersistedNotificationDecisionRecord | null> { const rows = await queryDb<DecisionRow>(`SELECT decision_id, decision_key, asset, timeframe, rule_key, trigger_kind, reasoning_run_id, snapshot_id, drift_id, materiality_score, should_notify, suppression_reason, channels_json::text as channels_json, cooldown_until, headline, body, created_at, decision_json::text as decision_json FROM app_notification_decisions WHERE asset = $1 AND timeframe = $2 AND rule_key = $3 ORDER BY created_at DESC, decision_id ASC LIMIT 1`, [asset, timeframe, ruleKey]); return rows[0] ? mapDecisionRow(rows[0]) : null; }
+  async listRecentDecisions(params: { limit: number; asset?: CanonicalAssetSymbol; timeframe?: Timeframe; shouldNotify?: boolean; ruleKey?: string }): Promise<PersistedNotificationDecisionRecord[]> { const clauses: string[] = []; const values: unknown[] = []; if (params.asset) { values.push(params.asset); clauses.push(`asset = $${values.length}`); } if (params.timeframe) { values.push(params.timeframe); clauses.push(`timeframe = $${values.length}`); } if (params.shouldNotify !== undefined) { values.push(params.shouldNotify); clauses.push(`should_notify = $${values.length}`); } if (params.ruleKey) { values.push(params.ruleKey); clauses.push(`rule_key = $${values.length}`); } values.push(params.limit); const whereSql = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''; const rows = await queryDb<DecisionRow>(`SELECT decision_id, decision_key, asset, timeframe, rule_key, trigger_kind, reasoning_run_id, snapshot_id, drift_id, materiality_score, should_notify, suppression_reason, channels_json::text as channels_json, cooldown_until, headline, body, created_at, decision_json::text as decision_json FROM app_notification_decisions ${whereSql} ORDER BY created_at DESC, decision_id ASC LIMIT $${values.length}`, values); return rows.map(mapDecisionRow); }
+  async listDecisionsForReasoningRun(reasoningRunId: string): Promise<PersistedNotificationDecisionRecord[]> { const rows = await queryDb<DecisionRow>(`SELECT decision_id, decision_key, asset, timeframe, rule_key, trigger_kind, reasoning_run_id, snapshot_id, drift_id, materiality_score, should_notify, suppression_reason, channels_json::text as channels_json, cooldown_until, headline, body, created_at, decision_json::text as decision_json FROM app_notification_decisions WHERE reasoning_run_id = $1 ORDER BY created_at DESC, decision_id ASC`, [reasoningRunId]); return rows.map(mapDecisionRow); }
 }
 
-async function queryDb<T extends QueryRow = QueryRow>(sql: string, params: unknown[] = []): Promise<T[]> {
-  const pool = await getPool();
-  const result = await pool.query(sql, params);
-  return result.rows as T[];
+export class SqlNotificationTargetRepository implements NotificationTargetRepository {
+  async saveTarget(record: NotificationTargetRecord): Promise<void> { await queryDb(`INSERT INTO app_notification_targets (target_id, subject_kind, subject_id, channel, target_kind, status, label, address_json, created_at, updated_at, verified_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (target_id) DO UPDATE SET subject_kind=EXCLUDED.subject_kind, subject_id=EXCLUDED.subject_id, channel=EXCLUDED.channel, target_kind=EXCLUDED.target_kind, status=EXCLUDED.status, label=EXCLUDED.label, address_json=EXCLUDED.address_json, created_at=EXCLUDED.created_at, updated_at=EXCLUDED.updated_at, verified_at=EXCLUDED.verified_at`, [record.targetId, record.subjectKind, record.subjectId, record.channel, record.targetKind, record.status, record.label, record.addressJson, record.createdAt, record.updatedAt, record.verifiedAt]); }
+  async getTargetById(targetId: string): Promise<NotificationTargetRecord | null> { const rows = await queryDb<TargetRow>(`SELECT target_id, subject_kind, subject_id, channel, target_kind, status, label, address_json::text as address_json, created_at, updated_at, verified_at FROM app_notification_targets WHERE target_id=$1`, [targetId]); return rows[0] ? mapTargetRow(rows[0]) : null; }
+  async listTargetsForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string): Promise<NotificationTargetRecord[]> { const rows = await queryDb<TargetRow>(`SELECT target_id, subject_kind, subject_id, channel, target_kind, status, label, address_json::text as address_json, created_at, updated_at, verified_at FROM app_notification_targets WHERE subject_kind=$1 AND subject_id=$2 ORDER BY created_at ASC, target_id ASC`, [subjectKind, subjectId]); return rows.map(mapTargetRow); }
+  async listActiveTargetsForChannel(channel: NotificationChannel): Promise<NotificationTargetRecord[]> { const rows = await queryDb<TargetRow>(`SELECT target_id, subject_kind, subject_id, channel, target_kind, status, label, address_json::text as address_json, created_at, updated_at, verified_at FROM app_notification_targets WHERE channel=$1 AND status='active' ORDER BY created_at ASC, target_id ASC`, [channel]); return rows.map(mapTargetRow); }
+  async listTargetsByIds(targetIds: string[]): Promise<NotificationTargetRecord[]> { if (targetIds.length === 0) return []; const rows = await queryDb<TargetRow>(`SELECT target_id, subject_kind, subject_id, channel, target_kind, status, label, address_json::text as address_json, created_at, updated_at, verified_at FROM app_notification_targets WHERE target_id = ANY($1) ORDER BY created_at ASC, target_id ASC`, [targetIds]); return rows.map(mapTargetRow); }
 }
 
-type DecisionRow = {
-  decision_id: string;
-  decision_key: string;
-  asset: string;
-  timeframe: string;
-  rule_key: string;
-  trigger_kind: string;
-  reasoning_run_id: string | null;
-  snapshot_id: string | null;
-  drift_id: string | null;
-  materiality_score: number;
-  should_notify: boolean;
-  suppression_reason: string | null;
-  channels_json: string;
-  cooldown_until: string | null;
-  headline: string;
-  body: string;
-  created_at: string;
-  decision_json: string;
-};
-
-type OutboxRow = {
-  outbox_id: string;
-  outbox_key: string;
-  decision_id: string;
-  decision_key: string;
-  asset: string;
-  timeframe: string;
-  rule_key: string;
-  channel: string;
-  status: NotificationOutboxRecord['status'];
-  available_at: string;
-  last_attempt_at: string | null;
-  delivered_at: string | null;
-  dead_at: string | null;
-  attempt_count: number;
-  last_error_code: string | null;
-  last_error_message: string | null;
-  payload_json: string;
-  created_at: string;
-  updated_at: string;
-};
-
-type OutboxAttemptRow = {
-  attempt_id: string;
-  outbox_id: string;
-  channel: string;
-  attempted_at: string;
-  status: NotificationOutboxAttemptRecord['status'];
-  error_code: string | null;
-  error_message: string | null;
-  response_meta_json: string | null;
-};
-
-function mapDecisionRow(row: DecisionRow): PersistedNotificationDecisionRecord {
-  return {
-    decisionId: row.decision_id,
-    decisionKey: row.decision_key,
-    asset: row.asset,
-    timeframe: row.timeframe as Timeframe,
-    ruleKey: row.rule_key,
-    triggerKind: row.trigger_kind,
-    reasoningRunId: row.reasoning_run_id,
-    snapshotId: row.snapshot_id,
-    driftId: row.drift_id,
-    materialityScore: row.materiality_score,
-    shouldNotify: row.should_notify,
-    suppressionReason: row.suppression_reason,
-    channelsJson: row.channels_json,
-    cooldownUntil: row.cooldown_until,
-    headline: row.headline,
-    body: row.body,
-    createdAt: row.created_at,
-    decisionJson: row.decision_json
-  };
+export class SqlNotificationSubscriptionRepository implements NotificationSubscriptionRepository {
+  async saveSubscription(record: NotificationSubscriptionRecord): Promise<void> { await queryDb(`INSERT INTO app_notification_subscriptions (subscription_id, subject_kind, subject_id, channel, asset_scope, timeframe_scope, rule_key_scope, enabled, min_materiality_score, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (subscription_id) DO UPDATE SET subject_kind=EXCLUDED.subject_kind, subject_id=EXCLUDED.subject_id, channel=EXCLUDED.channel, asset_scope=EXCLUDED.asset_scope, timeframe_scope=EXCLUDED.timeframe_scope, rule_key_scope=EXCLUDED.rule_key_scope, enabled=EXCLUDED.enabled, min_materiality_score=EXCLUDED.min_materiality_score, created_at=EXCLUDED.created_at, updated_at=EXCLUDED.updated_at`, [record.subscriptionId, record.subjectKind, record.subjectId, record.channel, record.asset, record.timeframe, record.ruleKey, record.enabled, record.minMaterialityScore, record.createdAt, record.updatedAt]); }
+  async getSubscriptionById(subscriptionId: string): Promise<NotificationSubscriptionRecord | null> { const rows = await queryDb<SubscriptionRow>(`SELECT subscription_id, subject_kind, subject_id, channel, asset_scope, timeframe_scope, rule_key_scope, enabled, min_materiality_score, created_at, updated_at FROM app_notification_subscriptions WHERE subscription_id=$1`, [subscriptionId]); return rows[0] ? mapSubscriptionRow(rows[0]) : null; }
+  async listSubscriptionsForSubject(subjectKind: NotificationSubscriptionRecord['subjectKind'], subjectId: string): Promise<NotificationSubscriptionRecord[]> { const rows = await queryDb<SubscriptionRow>(`SELECT subscription_id, subject_kind, subject_id, channel, asset_scope, timeframe_scope, rule_key_scope, enabled, min_materiality_score, created_at, updated_at FROM app_notification_subscriptions WHERE subject_kind=$1 AND subject_id=$2 ORDER BY created_at ASC, subscription_id ASC`, [subjectKind, subjectId]); return rows.map(mapSubscriptionRow); }
+  async listEnabledSubscriptionsForChannel(channel: NotificationChannel): Promise<NotificationSubscriptionRecord[]> { const rows = await queryDb<SubscriptionRow>(`SELECT subscription_id, subject_kind, subject_id, channel, asset_scope, timeframe_scope, rule_key_scope, enabled, min_materiality_score, created_at, updated_at FROM app_notification_subscriptions WHERE channel=$1 AND enabled=true ORDER BY created_at ASC, subscription_id ASC`, [channel]); return rows.map(mapSubscriptionRow); }
 }
 
-function mapOutboxRow(row: OutboxRow): NotificationOutboxRecord {
-  return {
-    outboxId: row.outbox_id,
-    outboxKey: row.outbox_key,
-    decisionId: row.decision_id,
-    decisionKey: row.decision_key,
-    asset: row.asset,
-    timeframe: row.timeframe as Timeframe,
-    ruleKey: row.rule_key,
-    channel: row.channel as NotificationOutboxRecord['channel'],
-    status: row.status,
-    availableAt: row.available_at,
-    lastAttemptAt: row.last_attempt_at,
-    deliveredAt: row.delivered_at,
-    deadAt: row.dead_at,
-    attemptCount: row.attempt_count,
-    lastErrorCode: row.last_error_code,
-    lastErrorMessage: row.last_error_message,
-    payloadJson: row.payload_json,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
-  };
-}
-
-function mapOutboxAttemptRow(row: OutboxAttemptRow): NotificationOutboxAttemptRecord {
-  return {
-    attemptId: row.attempt_id,
-    outboxId: row.outbox_id,
-    channel: row.channel as NotificationOutboxAttemptRecord['channel'],
-    attemptedAt: row.attempted_at,
-    status: row.status,
-    errorCode: row.error_code,
-    errorMessage: row.error_message,
-    responseMetaJson: row.response_meta_json
-  };
-}
-
-export class SqlNotificationDecisionRepository implements NotificationDecisionRepository {
-  async saveDecision(record: PersistedNotificationDecisionRecord): Promise<void> {
-    await queryDb(
-      `INSERT INTO app_notification_decisions (
-        decision_id, decision_key, asset, timeframe, rule_key, trigger_kind,
-        reasoning_run_id, snapshot_id, drift_id, materiality_score, should_notify,
-        suppression_reason, channels_json, cooldown_until, headline, body, created_at, decision_json
-      ) VALUES (
-        $1,$2,$3,$4,$5,$6,
-        $7,$8,$9,$10,$11,
-        $12,$13,$14,$15,$16,$17,$18
-      )
-      ON CONFLICT (decision_key) DO UPDATE SET
-        decision_id=EXCLUDED.decision_id,
-        asset=EXCLUDED.asset,
-        timeframe=EXCLUDED.timeframe,
-        rule_key=EXCLUDED.rule_key,
-        trigger_kind=EXCLUDED.trigger_kind,
-        reasoning_run_id=EXCLUDED.reasoning_run_id,
-        snapshot_id=EXCLUDED.snapshot_id,
-        drift_id=EXCLUDED.drift_id,
-        materiality_score=EXCLUDED.materiality_score,
-        should_notify=EXCLUDED.should_notify,
-        suppression_reason=EXCLUDED.suppression_reason,
-        channels_json=EXCLUDED.channels_json,
-        cooldown_until=EXCLUDED.cooldown_until,
-        headline=EXCLUDED.headline,
-        body=EXCLUDED.body,
-        created_at=EXCLUDED.created_at,
-        decision_json=EXCLUDED.decision_json`,
-      [
-        record.decisionId, record.decisionKey, record.asset, record.timeframe, record.ruleKey, record.triggerKind,
-        record.reasoningRunId, record.snapshotId, record.driftId, record.materialityScore, record.shouldNotify,
-        record.suppressionReason, record.channelsJson, record.cooldownUntil, record.headline, record.body, record.createdAt, record.decisionJson
-      ]
-    );
-  }
-
-  async getDecisionById(decisionId: string): Promise<PersistedNotificationDecisionRecord | null> {
-    const rows = await queryDb<DecisionRow>(
-      `SELECT decision_id, decision_key, asset, timeframe, rule_key, trigger_kind,
-        reasoning_run_id, snapshot_id, drift_id, materiality_score, should_notify,
-        suppression_reason, channels_json::text as channels_json, cooldown_until, headline, body, created_at, decision_json::text as decision_json
-       FROM app_notification_decisions WHERE decision_id = $1`,
-      [decisionId]
-    );
-    return rows[0] ? mapDecisionRow(rows[0]) : null;
-  }
-
-  async getDecisionByKey(decisionKey: string): Promise<PersistedNotificationDecisionRecord | null> {
-    const rows = await queryDb<DecisionRow>(
-      `SELECT decision_id, decision_key, asset, timeframe, rule_key, trigger_kind,
-        reasoning_run_id, snapshot_id, drift_id, materiality_score, should_notify,
-        suppression_reason, channels_json::text as channels_json, cooldown_until, headline, body, created_at, decision_json::text as decision_json
-       FROM app_notification_decisions WHERE decision_key = $1`,
-      [decisionKey]
-    );
-    return rows[0] ? mapDecisionRow(rows[0]) : null;
-  }
-
-  async getLatestDecisionForRule(asset: CanonicalAssetSymbol, timeframe: Timeframe, ruleKey: string): Promise<PersistedNotificationDecisionRecord | null> {
-    const rows = await queryDb<DecisionRow>(
-      `SELECT decision_id, decision_key, asset, timeframe, rule_key, trigger_kind,
-        reasoning_run_id, snapshot_id, drift_id, materiality_score, should_notify,
-        suppression_reason, channels_json::text as channels_json, cooldown_until, headline, body, created_at, decision_json::text as decision_json
-       FROM app_notification_decisions
-       WHERE asset = $1 AND timeframe = $2 AND rule_key = $3
-       ORDER BY created_at DESC, decision_id ASC LIMIT 1`,
-      [asset, timeframe, ruleKey]
-    );
-    return rows[0] ? mapDecisionRow(rows[0]) : null;
-  }
-
-  async listRecentDecisions(params: { limit: number; asset?: CanonicalAssetSymbol; timeframe?: Timeframe; shouldNotify?: boolean; ruleKey?: string }): Promise<PersistedNotificationDecisionRecord[]> {
-    const clauses: string[] = [];
-    const values: unknown[] = [];
-    if (params.asset) {
-      values.push(params.asset);
-      clauses.push(`asset = $${values.length}`);
-    }
-    if (params.timeframe) {
-      values.push(params.timeframe);
-      clauses.push(`timeframe = $${values.length}`);
-    }
-    if (params.shouldNotify !== undefined) {
-      values.push(params.shouldNotify);
-      clauses.push(`should_notify = $${values.length}`);
-    }
-    if (params.ruleKey) {
-      values.push(params.ruleKey);
-      clauses.push(`rule_key = $${values.length}`);
-    }
-    values.push(params.limit);
-    const whereSql = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
-
-    const rows = await queryDb<DecisionRow>(
-      `SELECT decision_id, decision_key, asset, timeframe, rule_key, trigger_kind,
-        reasoning_run_id, snapshot_id, drift_id, materiality_score, should_notify,
-        suppression_reason, channels_json::text as channels_json, cooldown_until, headline, body, created_at, decision_json::text as decision_json
-       FROM app_notification_decisions ${whereSql}
-       ORDER BY created_at DESC, decision_id ASC LIMIT $${values.length}`,
-      values
-    );
-    return rows.map(mapDecisionRow);
-  }
-
-  async listDecisionsForReasoningRun(reasoningRunId: string): Promise<PersistedNotificationDecisionRecord[]> {
-    const rows = await queryDb<DecisionRow>(
-      `SELECT decision_id, decision_key, asset, timeframe, rule_key, trigger_kind,
-        reasoning_run_id, snapshot_id, drift_id, materiality_score, should_notify,
-        suppression_reason, channels_json::text as channels_json, cooldown_until, headline, body, created_at, decision_json::text as decision_json
-       FROM app_notification_decisions
-       WHERE reasoning_run_id = $1
-       ORDER BY created_at DESC, decision_id ASC`,
-      [reasoningRunId]
-    );
-    return rows.map(mapDecisionRow);
-  }
+export class SqlNotificationInboxRepository implements NotificationInboxRepository {
+  async saveInboxRecord(record: NotificationInboxRecord): Promise<void> { await queryDb(`INSERT INTO app_notification_inbox (inbox_id, target_id, decision_id, decision_key, asset, timeframe, rule_key, headline, body, created_at, read_at, archived_at, payload_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) ON CONFLICT (inbox_id) DO NOTHING`, [record.inboxId, record.targetId, record.decisionId, record.decisionKey, record.asset, record.timeframe, record.ruleKey, record.headline, record.body, record.createdAt, record.readAt, record.archivedAt, record.payloadJson]); }
+  async getInboxById(inboxId: string): Promise<NotificationInboxRecord | null> { const rows = await queryDb<InboxRow>(`SELECT inbox_id, target_id, decision_id, decision_key, asset, timeframe, rule_key, headline, body, created_at, read_at, archived_at, payload_json::text as payload_json FROM app_notification_inbox WHERE inbox_id = $1`, [inboxId]); return rows[0] ? mapInboxRow(rows[0]) : null; }
+  async listInboxForTarget(targetId: string, limit = 100): Promise<NotificationInboxRecord[]> { const rows = await queryDb<InboxRow>(`SELECT inbox_id, target_id, decision_id, decision_key, asset, timeframe, rule_key, headline, body, created_at, read_at, archived_at, payload_json::text as payload_json FROM app_notification_inbox WHERE target_id = $1 ORDER BY created_at DESC, inbox_id ASC LIMIT $2`, [targetId, limit]); return rows.map(mapInboxRow); }
+  async markRead(inboxId: string, readAt: string): Promise<void> { await queryDb(`UPDATE app_notification_inbox SET read_at=$2 WHERE inbox_id=$1`, [inboxId, readAt]); }
+  async markArchived(inboxId: string, archivedAt: string): Promise<void> { await queryDb(`UPDATE app_notification_inbox SET archived_at=$2 WHERE inbox_id=$1`, [inboxId, archivedAt]); }
+  async listInboxForDecision(decisionId: string): Promise<NotificationInboxRecord[]> { const rows = await queryDb<InboxRow>(`SELECT inbox_id, target_id, decision_id, decision_key, asset, timeframe, rule_key, headline, body, created_at, read_at, archived_at, payload_json::text as payload_json FROM app_notification_inbox WHERE decision_id = $1 ORDER BY created_at DESC, inbox_id ASC`, [decisionId]); return rows.map(mapInboxRow); }
 }
 
 export class SqlNotificationOutboxRepository implements NotificationOutboxRepository {
-  async stageOutbox(record: NotificationOutboxRecord): Promise<void> {
-    await queryDb(
-      `INSERT INTO app_notification_outbox (
-        outbox_id, outbox_key, decision_id, decision_key, asset, timeframe, rule_key, channel,
-        status, available_at, last_attempt_at, delivered_at, dead_at, attempt_count,
-        last_error_code, last_error_message, payload_json, created_at, updated_at
-      ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,
-        $9,$10,$11,$12,$13,$14,
-        $15,$16,$17,$18,$19
-      )
-      ON CONFLICT (outbox_key) DO NOTHING`,
-      [
-        record.outboxId, record.outboxKey, record.decisionId, record.decisionKey, record.asset, record.timeframe, record.ruleKey, record.channel,
-        record.status, record.availableAt, record.lastAttemptAt, record.deliveredAt, record.deadAt, record.attemptCount,
-        record.lastErrorCode, record.lastErrorMessage, record.payloadJson, record.createdAt, record.updatedAt
-      ]
-    );
-  }
-
-  async getOutboxById(outboxId: string): Promise<NotificationOutboxRecord | null> {
-    const rows = await queryDb<OutboxRow>(
-      `SELECT outbox_id, outbox_key, decision_id, decision_key, asset, timeframe, rule_key, channel,
-        status, available_at, last_attempt_at, delivered_at, dead_at, attempt_count,
-        last_error_code, last_error_message, payload_json::text as payload_json, created_at, updated_at
-       FROM app_notification_outbox
-       WHERE outbox_id = $1`,
-      [outboxId]
-    );
-    return rows[0] ? mapOutboxRow(rows[0]) : null;
-  }
-
-  async getOutboxByKey(outboxKey: string): Promise<NotificationOutboxRecord | null> {
-    const rows = await queryDb<OutboxRow>(
-      `SELECT outbox_id, outbox_key, decision_id, decision_key, asset, timeframe, rule_key, channel,
-        status, available_at, last_attempt_at, delivered_at, dead_at, attempt_count,
-        last_error_code, last_error_message, payload_json::text as payload_json, created_at, updated_at
-       FROM app_notification_outbox
-       WHERE outbox_key = $1`,
-      [outboxKey]
-    );
-    return rows[0] ? mapOutboxRow(rows[0]) : null;
-  }
-
-  async listDueOutboxItems(asOfIso: string, limit: number): Promise<NotificationOutboxRecord[]> {
-    const rows = await queryDb<OutboxRow>(
-      `SELECT outbox_id, outbox_key, decision_id, decision_key, asset, timeframe, rule_key, channel,
-        status, available_at, last_attempt_at, delivered_at, dead_at, attempt_count,
-        last_error_code, last_error_message, payload_json::text as payload_json, created_at, updated_at
-       FROM app_notification_outbox
-       WHERE status IN ('staged', 'failed') AND available_at <= $1
-       ORDER BY available_at ASC, created_at ASC, outbox_id ASC
-       LIMIT $2`,
-      [asOfIso, limit]
-    );
-    return rows.map(mapOutboxRow);
-  }
-
-  async markDispatching(outboxId: string, attemptedAt: string): Promise<void> {
-    await queryDb(
-      `UPDATE app_notification_outbox
-       SET status='dispatching', last_attempt_at=$2, updated_at=$2
-       WHERE outbox_id = $1`,
-      [outboxId, attemptedAt]
-    );
-  }
-
-  async markDelivered(outboxId: string, deliveredAt: string): Promise<void> {
-    await queryDb(
-      `UPDATE app_notification_outbox
-       SET status='delivered', delivered_at=$2, last_attempt_at=$2, attempt_count=attempt_count+1,
-           last_error_code=NULL, last_error_message=NULL, updated_at=$2
-       WHERE outbox_id = $1`,
-      [outboxId, deliveredAt]
-    );
-  }
-
-  async markFailed(outboxId: string, failedAt: string, nextAvailableAt: string, errorCode: string | null, errorMessage: string | null): Promise<void> {
-    await queryDb(
-      `UPDATE app_notification_outbox
-       SET status='failed', last_attempt_at=$2, available_at=$3, attempt_count=attempt_count+1,
-           last_error_code=$4, last_error_message=$5, updated_at=$2
-       WHERE outbox_id = $1`,
-      [outboxId, failedAt, nextAvailableAt, errorCode, errorMessage]
-    );
-  }
-
-  async markDead(outboxId: string, deadAt: string, errorCode: string | null, errorMessage: string | null): Promise<void> {
-    await queryDb(
-      `UPDATE app_notification_outbox
-       SET status='dead', dead_at=$2, last_attempt_at=$2, attempt_count=attempt_count+1,
-           last_error_code=$3, last_error_message=$4, updated_at=$2
-       WHERE outbox_id = $1`,
-      [outboxId, deadAt, errorCode, errorMessage]
-    );
-  }
-
-  async listOutboxForDecision(decisionId: string): Promise<NotificationOutboxRecord[]> {
-    const rows = await queryDb<OutboxRow>(
-      `SELECT outbox_id, outbox_key, decision_id, decision_key, asset, timeframe, rule_key, channel,
-        status, available_at, last_attempt_at, delivered_at, dead_at, attempt_count,
-        last_error_code, last_error_message, payload_json::text as payload_json, created_at, updated_at
-       FROM app_notification_outbox
-       WHERE decision_id = $1
-       ORDER BY created_at ASC, outbox_id ASC`,
-      [decisionId]
-    );
-    return rows.map(mapOutboxRow);
-  }
+  async stageOutbox(record: NotificationOutboxRecord): Promise<void> { await queryDb(`INSERT INTO app_notification_outbox (outbox_id, outbox_key, decision_id, decision_key, asset, timeframe, rule_key, channel, target_id, subject_kind, subject_id, target_key, delivery_address_json, status, available_at, last_attempt_at, delivered_at, dead_at, attempt_count, last_error_code, last_error_message, payload_json, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24) ON CONFLICT (outbox_key) DO NOTHING`, [record.outboxId, record.outboxKey, record.decisionId, record.decisionKey, record.asset, record.timeframe, record.ruleKey, record.channel, record.targetId, record.subjectKind, record.subjectId, record.targetKey, record.deliveryAddressJson, record.status, record.availableAt, record.lastAttemptAt, record.deliveredAt, record.deadAt, record.attemptCount, record.lastErrorCode, record.lastErrorMessage, record.payloadJson, record.createdAt, record.updatedAt]); }
+  async getOutboxById(outboxId: string): Promise<NotificationOutboxRecord | null> { const rows = await queryDb<OutboxRow>(`SELECT outbox_id, outbox_key, decision_id, decision_key, asset, timeframe, rule_key, channel, target_id, subject_kind, subject_id, target_key, delivery_address_json::text as delivery_address_json, status, available_at, last_attempt_at, delivered_at, dead_at, attempt_count, last_error_code, last_error_message, payload_json::text as payload_json, created_at, updated_at FROM app_notification_outbox WHERE outbox_id=$1`, [outboxId]); return rows[0] ? mapOutboxRow(rows[0]) : null; }
+  async getOutboxByKey(outboxKey: string): Promise<NotificationOutboxRecord | null> { const rows = await queryDb<OutboxRow>(`SELECT outbox_id, outbox_key, decision_id, decision_key, asset, timeframe, rule_key, channel, target_id, subject_kind, subject_id, target_key, delivery_address_json::text as delivery_address_json, status, available_at, last_attempt_at, delivered_at, dead_at, attempt_count, last_error_code, last_error_message, payload_json::text as payload_json, created_at, updated_at FROM app_notification_outbox WHERE outbox_key=$1`, [outboxKey]); return rows[0] ? mapOutboxRow(rows[0]) : null; }
+  async listDueOutboxItems(asOfIso: string, limit: number): Promise<NotificationOutboxRecord[]> { const rows = await queryDb<OutboxRow>(`SELECT outbox_id, outbox_key, decision_id, decision_key, asset, timeframe, rule_key, channel, target_id, subject_kind, subject_id, target_key, delivery_address_json::text as delivery_address_json, status, available_at, last_attempt_at, delivered_at, dead_at, attempt_count, last_error_code, last_error_message, payload_json::text as payload_json, created_at, updated_at FROM app_notification_outbox WHERE status IN ('staged','failed') AND available_at <= $1 ORDER BY available_at ASC, created_at ASC, outbox_id ASC LIMIT $2`, [asOfIso, limit]); return rows.map(mapOutboxRow); }
+  async markDispatching(outboxId: string, attemptedAt: string): Promise<void> { await queryDb(`UPDATE app_notification_outbox SET status='dispatching', last_attempt_at=$2, updated_at=$2 WHERE outbox_id=$1`, [outboxId, attemptedAt]); }
+  async markDelivered(outboxId: string, deliveredAt: string): Promise<void> { await queryDb(`UPDATE app_notification_outbox SET status='delivered', delivered_at=$2, last_attempt_at=$2, attempt_count=attempt_count+1, last_error_code=NULL, last_error_message=NULL, updated_at=$2 WHERE outbox_id=$1`, [outboxId, deliveredAt]); }
+  async markFailed(outboxId: string, failedAt: string, nextAvailableAt: string, errorCode: string | null, errorMessage: string | null): Promise<void> { await queryDb(`UPDATE app_notification_outbox SET status='failed', last_attempt_at=$2, available_at=$3, attempt_count=attempt_count+1, last_error_code=$4, last_error_message=$5, updated_at=$2 WHERE outbox_id=$1`, [outboxId, failedAt, nextAvailableAt, errorCode, errorMessage]); }
+  async markDead(outboxId: string, deadAt: string, errorCode: string | null, errorMessage: string | null): Promise<void> { await queryDb(`UPDATE app_notification_outbox SET status='dead', dead_at=$2, last_attempt_at=$2, attempt_count=attempt_count+1, last_error_code=$3, last_error_message=$4, updated_at=$2 WHERE outbox_id=$1`, [outboxId, deadAt, errorCode, errorMessage]); }
+  async listOutboxForDecision(decisionId: string): Promise<NotificationOutboxRecord[]> { const rows = await queryDb<OutboxRow>(`SELECT outbox_id, outbox_key, decision_id, decision_key, asset, timeframe, rule_key, channel, target_id, subject_kind, subject_id, target_key, delivery_address_json::text as delivery_address_json, status, available_at, last_attempt_at, delivered_at, dead_at, attempt_count, last_error_code, last_error_message, payload_json::text as payload_json, created_at, updated_at FROM app_notification_outbox WHERE decision_id=$1 ORDER BY created_at ASC, outbox_id ASC`, [decisionId]); return rows.map(mapOutboxRow); }
 }
 
 export class SqlNotificationOutboxAttemptRepository implements NotificationOutboxAttemptRepository {
-  async saveAttempt(record: NotificationOutboxAttemptRecord): Promise<void> {
-    await queryDb(
-      `INSERT INTO app_notification_outbox_attempts (
-        attempt_id, outbox_id, channel, attempted_at, status, error_code, error_message, response_meta_json
-      ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8
-      )
-      ON CONFLICT (attempt_id) DO UPDATE SET
-        outbox_id=EXCLUDED.outbox_id,
-        channel=EXCLUDED.channel,
-        attempted_at=EXCLUDED.attempted_at,
-        status=EXCLUDED.status,
-        error_code=EXCLUDED.error_code,
-        error_message=EXCLUDED.error_message,
-        response_meta_json=EXCLUDED.response_meta_json`,
-      [
-        record.attemptId, record.outboxId, record.channel, record.attemptedAt, record.status, record.errorCode, record.errorMessage, record.responseMetaJson
-      ]
-    );
-  }
-
-  async listAttemptsForOutbox(outboxId: string): Promise<NotificationOutboxAttemptRecord[]> {
-    const rows = await queryDb<OutboxAttemptRow>(
-      `SELECT attempt_id, outbox_id, channel, attempted_at, status,
-        error_code, error_message, response_meta_json::text as response_meta_json
-       FROM app_notification_outbox_attempts
-       WHERE outbox_id = $1
-       ORDER BY attempted_at DESC, attempt_id ASC`,
-      [outboxId]
-    );
-    return rows.map(mapOutboxAttemptRow);
-  }
+  async saveAttempt(record: NotificationOutboxAttemptRecord): Promise<void> { await queryDb(`INSERT INTO app_notification_outbox_attempts (attempt_id, outbox_id, channel, attempted_at, status, error_code, error_message, response_meta_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (attempt_id) DO UPDATE SET outbox_id=EXCLUDED.outbox_id, channel=EXCLUDED.channel, attempted_at=EXCLUDED.attempted_at, status=EXCLUDED.status, error_code=EXCLUDED.error_code, error_message=EXCLUDED.error_message, response_meta_json=EXCLUDED.response_meta_json`, [record.attemptId, record.outboxId, record.channel, record.attemptedAt, record.status, record.errorCode, record.errorMessage, record.responseMetaJson]); }
+  async listAttemptsForOutbox(outboxId: string): Promise<NotificationOutboxAttemptRecord[]> { const rows = await queryDb<OutboxAttemptRow>(`SELECT attempt_id, outbox_id, channel, attempted_at, status, error_code, error_message, response_meta_json::text as response_meta_json FROM app_notification_outbox_attempts WHERE outbox_id=$1 ORDER BY attempted_at DESC, attempt_id ASC`, [outboxId]); return rows.map(mapOutboxAttemptRow); }
 }

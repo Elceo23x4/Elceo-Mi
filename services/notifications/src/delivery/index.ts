@@ -6,3 +6,6 @@ export * from './staging-service';
 export * from './transport';
 export * from './outbox-dispatcher';
 export * from './replay-delivery';
+export * from './subscription-matcher';
+export * from './target-resolver';
+export * from './in-app-delivery';

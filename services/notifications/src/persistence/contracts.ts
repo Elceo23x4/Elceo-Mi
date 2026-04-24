@@ -1,4 +1,12 @@
-import type { CanonicalAssetSymbol, NotificationDecision, NotificationChannel, Timeframe } from '@elceo/types';
+import type {
+  CanonicalAssetSymbol,
+  NotificationChannel,
+  NotificationDecision,
+  NotificationInboxRecord,
+  NotificationSubscriptionRecord,
+  NotificationTargetRecord,
+  Timeframe
+} from '@elceo/types';
 import type {
   CognitionDriftRepository,
   CognitionSnapshotRepository,
@@ -39,6 +47,30 @@ export type NotificationDecisionRepository = {
   listDecisionsForReasoningRun(reasoningRunId: string): Promise<PersistedNotificationDecisionRecord[]>;
 };
 
+export type NotificationTargetRepository = {
+  saveTarget(record: NotificationTargetRecord): Promise<void>;
+  getTargetById(targetId: string): Promise<NotificationTargetRecord | null>;
+  listTargetsForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string): Promise<NotificationTargetRecord[]>;
+  listActiveTargetsForChannel(channel: NotificationChannel): Promise<NotificationTargetRecord[]>;
+  listTargetsByIds(targetIds: string[]): Promise<NotificationTargetRecord[]>;
+};
+
+export type NotificationSubscriptionRepository = {
+  saveSubscription(record: NotificationSubscriptionRecord): Promise<void>;
+  getSubscriptionById(subscriptionId: string): Promise<NotificationSubscriptionRecord | null>;
+  listSubscriptionsForSubject(subjectKind: NotificationSubscriptionRecord['subjectKind'], subjectId: string): Promise<NotificationSubscriptionRecord[]>;
+  listEnabledSubscriptionsForChannel(channel: NotificationChannel): Promise<NotificationSubscriptionRecord[]>;
+};
+
+export type NotificationInboxRepository = {
+  saveInboxRecord(record: NotificationInboxRecord): Promise<void>;
+  getInboxById(inboxId: string): Promise<NotificationInboxRecord | null>;
+  listInboxForTarget(targetId: string, limit?: number): Promise<NotificationInboxRecord[]>;
+  markRead(inboxId: string, readAt: string): Promise<void>;
+  markArchived(inboxId: string, archivedAt: string): Promise<void>;
+  listInboxForDecision(decisionId: string): Promise<NotificationInboxRecord[]>;
+};
+
 export type NotificationOutboxRepository = {
   stageOutbox(record: NotificationOutboxRecord): Promise<void>;
   getOutboxById(outboxId: string): Promise<NotificationOutboxRecord | null>;
@@ -68,6 +100,9 @@ export type NotificationPolicyEvaluationRepositories = NotificationPolicyLoadRep
 export type NotificationDeliveryRuntimeRepositories = NotificationPolicyLoadRepositories & {
   outboxRepository: NotificationOutboxRepository;
   outboxAttemptRepository: NotificationOutboxAttemptRepository;
+  targetRepository: NotificationTargetRepository;
+  subscriptionRepository: NotificationSubscriptionRepository;
+  inboxRepository: NotificationInboxRepository;
 };
 
 export type NotificationDecisionReplayBundle = {

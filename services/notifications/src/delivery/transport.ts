@@ -1,51 +1,56 @@
 import type { NotificationChannel } from '@elceo/types';
-import type { NotificationDeliveryChannelPayload } from './channel-contracts';
+import type { NotificationInboxRepository } from '../persistence/contracts';
+import { deliverInAppToInbox } from './in-app-delivery';
+import type { NotificationDeliveryEnvelope } from './channel-contracts';
+import type { NotificationOutboxRecord } from './outbox-contracts';
 
-export type NotificationTransportResult = {
-  success: boolean;
-  providerMessageId: string | null;
-  errorCode: string | null;
-  errorMessage: string | null;
-  responseMeta: Record<string, unknown> | null;
-};
+export type NotificationTransportResult = { success: boolean; providerMessageId: string | null; errorCode: string | null; errorMessage: string | null; responseMeta: Record<string, unknown> | null };
+export type ChannelDeliveryTransport = { send(outbox: NotificationOutboxRecord, envelope: NotificationDeliveryEnvelope, deliveredAt: string): Promise<NotificationTransportResult> };
+export type NotificationDeliveryTransport = { send(outbox: NotificationOutboxRecord, envelope: NotificationDeliveryEnvelope, deliveredAt: string): Promise<NotificationTransportResult> };
 
-export type NotificationDeliveryTransport = {
-  send(channel: NotificationChannel, payload: NotificationDeliveryChannelPayload): Promise<NotificationTransportResult>;
-};
+export class InAppInboxDeliveryTransport implements ChannelDeliveryTransport {
+  constructor(private readonly repositories: { inboxRepository: NotificationInboxRepository }) {}
+  async send(outbox: NotificationOutboxRecord, envelope: NotificationDeliveryEnvelope, deliveredAt: string): Promise<NotificationTransportResult> {
+    const inbox = await deliverInAppToInbox(outbox, envelope, this.repositories, deliveredAt);
+    return { success: true, providerMessageId: inbox.inboxId, errorCode: null, errorMessage: null, responseMeta: { inboxId: inbox.inboxId } };
+  }
+}
 
-export type MemorySentMessage = {
-  channel: NotificationChannel;
-  payload: NotificationDeliveryChannelPayload;
-  sentAt: string;
-};
+export class MemoryEmailDeliveryTransport implements ChannelDeliveryTransport {
+  readonly sent: NotificationDeliveryEnvelope[] = [];
+  constructor(private readonly failure?: { errorCode: string; errorMessage: string }) {}
+  async send(_outbox: NotificationOutboxRecord, envelope: NotificationDeliveryEnvelope): Promise<NotificationTransportResult> {
+    if (this.failure) return { success: false, providerMessageId: null, errorCode: this.failure.errorCode, errorMessage: this.failure.errorMessage, responseMeta: null };
+    this.sent.push(envelope);
+    return { success: true, providerMessageId: `memory|email|${this.sent.length}`, errorCode: null, errorMessage: null, responseMeta: { channel: 'email' } };
+  }
+}
 
-export class MemoryNotificationDeliveryTransport implements NotificationDeliveryTransport {
-  readonly sentMessages: MemorySentMessage[] = [];
-  constructor(private readonly failureByChannel: Partial<Record<NotificationChannel, { errorCode: string; errorMessage: string }>> = {}) {}
+export class MemoryPushDeliveryTransport implements ChannelDeliveryTransport {
+  readonly sent: NotificationDeliveryEnvelope[] = [];
+  constructor(private readonly failure?: { errorCode: string; errorMessage: string }) {}
+  async send(_outbox: NotificationOutboxRecord, envelope: NotificationDeliveryEnvelope): Promise<NotificationTransportResult> {
+    if (this.failure) return { success: false, providerMessageId: null, errorCode: this.failure.errorCode, errorMessage: this.failure.errorMessage, responseMeta: null };
+    this.sent.push(envelope);
+    return { success: true, providerMessageId: `memory|push|${this.sent.length}`, errorCode: null, errorMessage: null, responseMeta: { channel: 'push' } };
+  }
+}
 
-  async send(channel: NotificationChannel, payload: NotificationDeliveryChannelPayload): Promise<NotificationTransportResult> {
-    const failure = this.failureByChannel[channel];
-    if (failure) {
-      return { success: false, providerMessageId: null, errorCode: failure.errorCode, errorMessage: failure.errorMessage, responseMeta: { channel } };
-    }
-
-    this.sentMessages.push({ channel, payload, sentAt: new Date().toISOString() });
-    return {
-      success: true,
-      providerMessageId: `memory|${channel}|${this.sentMessages.length}`,
-      errorCode: null,
-      errorMessage: null,
-      responseMeta: { channel, sentCount: this.sentMessages.length }
-    };
+class RoutedNotificationDeliveryTransport implements NotificationDeliveryTransport {
+  constructor(private readonly routes: Record<'in_app' | 'email' | 'push', ChannelDeliveryTransport>) {}
+  async send(outbox: NotificationOutboxRecord, envelope: NotificationDeliveryEnvelope, deliveredAt: string): Promise<NotificationTransportResult> {
+    const channel = outbox.channel as 'in_app' | 'email' | 'push';
+    return this.routes[channel].send(outbox, envelope, deliveredAt);
   }
 }
 
 export function createNotificationDeliveryTransport(
-  env: Record<string, string | undefined>,
-  deps?: { memoryFailureByChannel?: Partial<Record<NotificationChannel, { errorCode: string; errorMessage: string }>> }
+  _env: Record<string, string | undefined>,
+  deps: { inboxRepository: NotificationInboxRepository; memoryFailureByChannel?: Partial<Record<NotificationChannel, { errorCode: string; errorMessage: string }>> }
 ): NotificationDeliveryTransport {
-  if (env.NOTIFICATION_DELIVERY_TRANSPORT === 'memory' || !env.NOTIFICATION_DELIVERY_TRANSPORT) {
-    return new MemoryNotificationDeliveryTransport(deps?.memoryFailureByChannel);
-  }
-  return new MemoryNotificationDeliveryTransport(deps?.memoryFailureByChannel);
+  return new RoutedNotificationDeliveryTransport({
+    in_app: new InAppInboxDeliveryTransport({ inboxRepository: deps.inboxRepository }),
+    email: new MemoryEmailDeliveryTransport(deps.memoryFailureByChannel?.email),
+    push: new MemoryPushDeliveryTransport(deps.memoryFailureByChannel?.push)
+  });
 }

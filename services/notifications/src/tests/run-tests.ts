@@ -10,6 +10,9 @@ import { runOutboxRepositoryTests } from './outbox-repository.test.js';
 import { runOutboxDispatcherTests } from './outbox-dispatcher.test.js';
 import { runReplayDeliveryTests } from './replay-delivery.test.js';
 import { runCanonicalNotificationDeliveryBoundaryTests } from './canonical-notification-delivery-boundary.test.js';
+import { runSubscriptionMatcherTests } from './subscription-matcher.test.js';
+import { runTargetResolverTests } from './target-resolver.test.js';
+import { runInAppDeliveryTests } from './in-app-delivery.test.js';
 
 async function run(): Promise<void> {
   runMaterialChangeTests();
@@ -24,6 +27,9 @@ async function run(): Promise<void> {
   await runOutboxDispatcherTests();
   await runReplayDeliveryTests();
   await runCanonicalNotificationDeliveryBoundaryTests();
+  await runSubscriptionMatcherTests();
+  await runTargetResolverTests();
+  await runInAppDeliveryTests();
   console.log('notifications runtime contract tests passed');
 }
 

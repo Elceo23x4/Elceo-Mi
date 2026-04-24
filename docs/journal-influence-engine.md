@@ -141,3 +141,7 @@ C4-C should focus on:
 - background snapshot cadence policy (if required)
 - tighter historical diff/replay comparison tools for influence drift
 - guardrails around overfitting signals across thin sample sets
+
+## Relationship to Analytics Core (C4-C)
+
+Journal influence remains a separate deterministic signal layer. The new analytics core builds broader performance/setup/execution/behavior snapshots from canonical journal cases and can be consumed alongside influence summaries by later coaching/admin/UI surfaces.

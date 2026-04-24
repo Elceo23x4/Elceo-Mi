@@ -1,4 +1,10 @@
-import { runAnalyticsCoachingTests } from './analytics-coaching.test.js';
+import { runAnalyticsCoreTests } from './analytics-core.test.js';
 
-runAnalyticsCoachingTests();
-console.log('analytics tests passed');
+runAnalyticsCoreTests()
+  .then(() => {
+    console.log('analytics tests passed');
+  })
+  .catch((error: unknown) => {
+    console.error(error);
+    process.exit(1);
+  });

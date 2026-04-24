@@ -18,3 +18,5 @@ export * from './journal';
 export * from './billing';
 
 export * from './journal-influence';
+
+export * from './analytics';

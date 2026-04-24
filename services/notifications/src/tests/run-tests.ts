@@ -13,6 +13,9 @@ import { runCanonicalNotificationDeliveryBoundaryTests } from './canonical-notif
 import { runSubscriptionMatcherTests } from './subscription-matcher.test.js';
 import { runTargetResolverTests } from './target-resolver.test.js';
 import { runInAppDeliveryTests } from './in-app-delivery.test.js';
+import { runNotificationManagementKeyTests } from './notification-management-keys.test.js';
+import { runNotificationManagementServiceTests } from './notification-management-services.test.js';
+import { runCanonicalNotificationManagementBoundaryTests } from './canonical-notification-management-boundary.test.js';
 
 async function run(): Promise<void> {
   runMaterialChangeTests();
@@ -30,6 +33,9 @@ async function run(): Promise<void> {
   await runSubscriptionMatcherTests();
   await runTargetResolverTests();
   await runInAppDeliveryTests();
+  runNotificationManagementKeyTests();
+  await runNotificationManagementServiceTests();
+  await runCanonicalNotificationManagementBoundaryTests();
   console.log('notifications runtime contract tests passed');
 }
 

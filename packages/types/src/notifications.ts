@@ -108,6 +108,7 @@ export type NotificationTargetKind = 'in_app_user' | 'email_address' | 'push_end
 
 export type NotificationTargetRecord = {
   targetId: string;
+  targetKey?: string;
   subjectKind: NotificationSubjectKind;
   subjectId: string;
   channel: NotificationChannel;
@@ -122,6 +123,7 @@ export type NotificationTargetRecord = {
 
 export type NotificationSubscriptionRecord = {
   subscriptionId: string;
+  subscriptionKey?: string;
   subjectKind: NotificationSubjectKind;
   subjectId: string;
   channel: NotificationChannel;

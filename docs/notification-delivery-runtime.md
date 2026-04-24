@@ -137,3 +137,9 @@ Delivery now stages one outbox row per decision/channel/target, not per channel 
 `app_notification_targets` and `app_notification_subscriptions` drive deterministic recipient resolution.
 `app_notification_inbox` persists durable in-app delivery artifacts with deterministic `inbox|{decisionId}|{targetId}` IDs.
 Replay APIs now deserialize target-aware envelopes and support inbox replay by target and by decision.
+
+
+## C3-H management compatibility
+
+Delivery runtime now coexists with a canonical management boundary that owns target/subscription lifecycle and inbox management semantics.
+Operational delivery health read surfaces (delivered/failed/dead/staged/dispatching) can be queried through the management summary service without changing dispatch retry rules.

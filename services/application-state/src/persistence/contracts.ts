@@ -85,3 +85,37 @@ export type JournalCaseRepository = {
   listRevisionsForCase(caseId: string): Promise<PersistedJournalCaseRevisionRecord[]>;
   getLatestCaseForReasoningRun(reasoningRunId: string): Promise<PersistedJournalCaseRecord | null>;
 };
+
+
+export type PersistedJournalInfluenceSnapshotRecord = {
+  snapshotId: string;
+  subjectKind: 'user' | 'workspace' | 'ops';
+  subjectId: string;
+  assetScope: CanonicalAssetSymbol | '*';
+  timeframeScope: Timeframe | '*';
+  generatedAt: string;
+  reviewedCaseCount: number;
+  closedCaseCount: number;
+  recentCaseCount: number;
+  supportingCaseIdsJson: string;
+  summaryJson: string;
+  createdAt: string;
+};
+
+export type JournalInfluenceRepository = {
+  saveInfluenceSnapshot(record: PersistedJournalInfluenceSnapshotRecord): Promise<void>;
+  getInfluenceSnapshotById(snapshotId: string): Promise<PersistedJournalInfluenceSnapshotRecord | null>;
+  getLatestInfluenceSnapshot(
+    subjectKind: 'user' | 'workspace' | 'ops',
+    subjectId: string,
+    assetScope: CanonicalAssetSymbol | '*',
+    timeframeScope: Timeframe | '*'
+  ): Promise<PersistedJournalInfluenceSnapshotRecord | null>;
+  listInfluenceSnapshots(
+    subjectKind: 'user' | 'workspace' | 'ops',
+    subjectId: string,
+    assetScope?: CanonicalAssetSymbol | '*',
+    timeframeScope?: Timeframe | '*',
+    limit?: number
+  ): Promise<PersistedJournalInfluenceSnapshotRecord[]>;
+};

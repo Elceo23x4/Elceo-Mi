@@ -12,3 +12,5 @@ export * from './env.schema';
 export * from './utc.schema';
 
 export * from './journal.schema';
+
+export * from './journal-influence.schema';

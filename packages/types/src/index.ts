@@ -16,3 +16,5 @@ export * from './chart';
 export * from './alerts';
 export * from './journal';
 export * from './billing';
+
+export * from './journal-influence';

@@ -257,3 +257,15 @@ C3-B should focus on:
 From Core Batch C4-A onward, a durable canonical journal case domain exists in application-state.
 Reasoning input currently remains conservative and does not automatically ingest journal lifecycle history.
 Future batches can add explicit journal influence policies using the new replayable/queryable journal boundary without coupling reasoning execution to journal storage internals.
+
+## C4-B journal influence adoption
+
+Reasoning input assembly now accepts structured journal influence summaries from a provider contract instead of placeholder-only flags.
+
+Adoption semantics:
+- assembler requests scoped influence (`subject + asset + timeframe + asOf`),
+- influence payload includes deterministic summary and supporting case IDs,
+- provider failure or unavailable influence is non-fatal and emitted as deterministic warning,
+- fallback remains disabled influence state with empty linked IDs.
+
+This keeps reasoning input resilient while enabling deterministic use of journal history without importing journal internals directly.

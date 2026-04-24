@@ -135,3 +135,15 @@ C4-B should focus on non-UI journal intelligence and integration layers, for exa
 - operational replay/reporting endpoints for journal cohorts.
 
 C4-B should still avoid broad UI redesign unless explicitly requested.
+
+## C4-B journal influence extension
+
+C4-B adds a deterministic journal influence engine on top of C4-A case memory:
+- canonical `JournalInfluence*` contracts,
+- strict runtime validation,
+- recency-aware case selection and weighted aggregation,
+- durable influence snapshots + replay helpers,
+- canonical query/boundary surfaces,
+- reasoning input adoption through structured influence payloads.
+
+This preserves C4-A lifecycle boundaries while making durable journal history computationally useful for reasoning.

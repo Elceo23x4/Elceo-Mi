@@ -11,6 +11,7 @@ import type {
   RankedEvidenceItem,
   Timeframe
 } from './events';
+import type { JournalInfluenceSummary } from './journal-influence';
 import type { InvalidationState, ZoneSignificance } from './zones';
 
 export type ConfidenceAnatomy = {
@@ -124,6 +125,7 @@ export type ReasoningInputFrame = {
     enabled: boolean;
     influenceFlag: JournalInfluenceFlag;
     linkedEntryIds: string[];
+    summary: JournalInfluenceSummary | null;
   };
   config: {
     scoringVersion: string;

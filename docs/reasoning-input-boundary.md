@@ -251,3 +251,9 @@ C3-B should focus on:
 - deeper contradiction/confidence anatomy enrichment,
 - advanced multi-timeframe reasoning policies,
 - downstream notification decision integration using durable snapshots.
+
+## C4-A journal domain availability note
+
+From Core Batch C4-A onward, a durable canonical journal case domain exists in application-state.
+Reasoning input currently remains conservative and does not automatically ingest journal lifecycle history.
+Future batches can add explicit journal influence policies using the new replayable/queryable journal boundary without coupling reasoning execution to journal storage internals.

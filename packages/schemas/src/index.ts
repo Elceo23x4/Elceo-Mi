@@ -10,3 +10,5 @@ export * from './risk.schema';
 export * from './provider-normalized.schema';
 export * from './env.schema';
 export * from './utc.schema';
+
+export * from './journal.schema';

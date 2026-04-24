@@ -8,12 +8,14 @@ async function main(): Promise<void> {
   const { runJournalPersistenceTests } = await import('./journal-persistence.test.js');
   const { runEntitlementEnforcementTests } = await import('./entitlement-enforcement.test.js');
   const { runSubscriptionMappingTests } = await import('./subscription-mapping.test.js');
+  const { runJournalDomainCoreTests } = await import('./journal-domain-core.test.js');
 
   await runApplicationStateTests();
   await runUserStateAccessTests();
   await runJournalPersistenceTests();
   await runEntitlementEnforcementTests();
   await runSubscriptionMappingTests();
+  await runJournalDomainCoreTests();
   console.log('application-state tests passed');
 }
 

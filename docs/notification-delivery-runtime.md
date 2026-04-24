@@ -153,3 +153,8 @@ This boundary now includes provider capability and operational delivery summary 
 
 C3-J adds a canonical orchestration runtime boundary that coordinates policy evaluation, staging, dispatch jobs, and verification expiry jobs while persisting durable orchestration run reports.
 Delivery dispatch remains an independent runtime stage and is now executed via dedicated orchestration job services rather than implicit policy side effects.
+
+## C3-K feedback-loop extension
+
+Delivery runtime now persists provider-facing attempt identifiers (`providerKind`, `providerMessageId`, `receiptStatus`) on outbox attempts.
+These identifiers are used by the canonical feedback boundary to correlate provider events back to decision/outbox/target context and to persist delivery receipts plus target health degradation state.

@@ -3,8 +3,11 @@ import type {
   NotificationChannel,
   NotificationDecision,
   NotificationInboxRecord,
+  NotificationProviderEventKind,
+  NotificationReceiptSeverity,
   NotificationSubscriptionRecord,
   NotificationTargetChannelStatus,
+  NotificationTargetHealthRecord,
   NotificationTargetRecord,
   NotificationVerificationKind,
   NotificationVerificationRecord,
@@ -42,6 +45,50 @@ export type PersistedNotificationDecisionRecord = {
   createdAt: string;
   decisionJson: string;
 };
+
+export type PersistedNotificationProviderEventRecord = {
+  providerEventId: string;
+  providerKind: string;
+  channel: NotificationChannel;
+  providerMessageId: string | null;
+  eventKind: NotificationProviderEventKind;
+  occurredAt: string;
+  targetId: string | null;
+  outboxId: string | null;
+  attemptId: string | null;
+  decisionId: string | null;
+  decisionKey: string | null;
+  reasonCode: string | null;
+  reasonMessage: string | null;
+  rawEventJson: string;
+  normalizedMetaJson: string | null;
+  createdAt: string;
+};
+
+export type PersistedNotificationDeliveryReceiptRecord = {
+  receiptId: string;
+  providerEventId: string | null;
+  providerKind: string;
+  channel: NotificationChannel;
+  decisionId: string | null;
+  decisionKey: string | null;
+  outboxId: string | null;
+  attemptId: string | null;
+  targetId: string | null;
+  subjectKind: 'user' | 'workspace' | 'ops' | null;
+  subjectId: string | null;
+  providerMessageId: string | null;
+  eventKind: NotificationProviderEventKind;
+  severity: NotificationReceiptSeverity;
+  occurredAt: string;
+  reasonCode: string | null;
+  reasonMessage: string | null;
+  rawEventJson: string;
+  normalizedMetaJson: string | null;
+  createdAt: string;
+};
+
+export type PersistedNotificationTargetHealthRecord = NotificationTargetHealthRecord;
 
 export type NotificationDecisionRepository = {
   saveDecision(record: PersistedNotificationDecisionRecord): Promise<void>;
@@ -147,6 +194,29 @@ export type NotificationVerificationRepository = {
 export type NotificationOutboxAttemptRepository = {
   saveAttempt(record: NotificationOutboxAttemptRecord): Promise<void>;
   listAttemptsForOutbox(outboxId: string): Promise<NotificationOutboxAttemptRecord[]>;
+  getLatestAttemptByProviderMessageId(providerMessageId: string): Promise<NotificationOutboxAttemptRecord | null>;
+};
+
+export type NotificationProviderEventRepository = {
+  saveProviderEvent(record: PersistedNotificationProviderEventRecord): Promise<void>;
+  getProviderEventById(providerEventId: string): Promise<PersistedNotificationProviderEventRecord | null>;
+  listProviderEventsForTarget(targetId: string, limit?: number): Promise<PersistedNotificationProviderEventRecord[]>;
+  listRecentProviderEvents(providerKind?: string, limit?: number): Promise<PersistedNotificationProviderEventRecord[]>;
+};
+
+export type NotificationDeliveryReceiptRepository = {
+  saveReceipt(record: PersistedNotificationDeliveryReceiptRecord): Promise<void>;
+  getReceiptById(receiptId: string): Promise<PersistedNotificationDeliveryReceiptRecord | null>;
+  listReceiptsForTarget(targetId: string, limit?: number): Promise<PersistedNotificationDeliveryReceiptRecord[]>;
+  listReceiptsForDecision(decisionId: string, limit?: number): Promise<PersistedNotificationDeliveryReceiptRecord[]>;
+  listReceiptsForOutbox(outboxId: string, limit?: number): Promise<PersistedNotificationDeliveryReceiptRecord[]>;
+  listRecentReceipts(eventKind?: NotificationProviderEventKind, limit?: number): Promise<PersistedNotificationDeliveryReceiptRecord[]>;
+};
+
+export type NotificationTargetHealthRepository = {
+  saveTargetHealth(record: PersistedNotificationTargetHealthRecord): Promise<void>;
+  getTargetHealth(targetId: string): Promise<PersistedNotificationTargetHealthRecord | null>;
+  listTargetHealthForSubject(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string): Promise<PersistedNotificationTargetHealthRecord[]>;
 };
 
 export type NotificationPolicyLoadRepositories = {
@@ -166,6 +236,9 @@ export type NotificationDeliveryRuntimeRepositories = NotificationPolicyLoadRepo
   inboxRepository: NotificationInboxRepository;
   verificationRepository: NotificationVerificationRepository;
   orchestrationRunRepository: NotificationOrchestrationRunRepository;
+  providerEventRepository?: NotificationProviderEventRepository;
+  receiptRepository?: NotificationDeliveryReceiptRepository;
+  targetHealthRepository?: NotificationTargetHealthRepository;
 };
 
 export type NotificationDecisionReplayBundle = {

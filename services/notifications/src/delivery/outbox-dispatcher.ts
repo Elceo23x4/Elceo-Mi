@@ -39,6 +39,9 @@ export async function dispatchDueNotificationOutbox(asOfIso: string, limit: numb
       status: sendResult.success ? 'success' : 'failure',
       errorCode: sendResult.errorCode,
       errorMessage: sendResult.errorMessage,
+      providerKind: sendResult.responseMeta && typeof sendResult.responseMeta.providerKind === 'string' ? sendResult.responseMeta.providerKind : null,
+      providerMessageId: sendResult.providerMessageId,
+      receiptStatus: sendResult.success ? 'accepted' : 'provider_failed',
       responseMetaJson: sendResult.responseMeta ? JSON.stringify(sendResult.responseMeta) : null
     };
     await repositories.outboxAttemptRepository.saveAttempt(attemptRecord);

@@ -98,3 +98,8 @@ This boundary now includes provider capability and operational delivery summary 
 
 Notification runtime orchestration now persists stage-level automation reports and exposes replay/list surfaces through the canonical orchestration boundary.
 Management operational summaries remain complementary read views, while orchestration maintenance helpers provide additional runtime health checks (stuck dispatching and near-expiry verification visibility) without changing management lifecycle semantics.
+
+## C3-K feedback compatibility
+
+Management summary surfaces now include feedback-derived health views (degraded/disabled targets and recent critical delivery receipts) without changing target/subscription lifecycle APIs.
+Provider feedback remains in the dedicated canonical feedback boundary to keep management and delivery concerns separated.

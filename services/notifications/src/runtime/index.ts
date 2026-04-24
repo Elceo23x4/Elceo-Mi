@@ -5,3 +5,4 @@ export * from './canonical-notification-management-boundary';
 
 export * from './canonical-notification-verification-boundary';
 export * from './canonical-notification-orchestration-boundary';
+export * from './canonical-notification-feedback-boundary';

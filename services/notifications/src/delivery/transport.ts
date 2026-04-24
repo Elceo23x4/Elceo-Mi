@@ -26,7 +26,7 @@ export class InAppInboxDeliveryTransport implements ChannelDeliveryTransport {
   constructor(private readonly repositories: { inboxRepository: NotificationInboxRepository }) {}
   async send(outbox: NotificationOutboxRecord, envelope: NotificationDeliveryEnvelope, deliveredAt: string): Promise<NotificationTransportResult> {
     const inbox = await deliverInAppToInbox(outbox, envelope, this.repositories, deliveredAt);
-    return { success: true, providerMessageId: inbox.inboxId, errorCode: null, errorMessage: null, responseMeta: { inboxId: inbox.inboxId } };
+    return { success: true, providerMessageId: inbox.inboxId, errorCode: null, errorMessage: null, responseMeta: { inboxId: inbox.inboxId, providerKind: 'in_app' } };
   }
 }
 
@@ -36,7 +36,7 @@ export class MemoryEmailDeliveryTransport implements ChannelDeliveryTransport {
   async send(_outbox: NotificationOutboxRecord, envelope: NotificationDeliveryEnvelope): Promise<NotificationTransportResult> {
     if (this.failure) return { success: false, providerMessageId: null, errorCode: this.failure.errorCode, errorMessage: this.failure.errorMessage, responseMeta: null };
     this.sent.push(envelope);
-    return { success: true, providerMessageId: `memory|email|${this.sent.length}`, errorCode: null, errorMessage: null, responseMeta: { channel: 'email' } };
+    return { success: true, providerMessageId: `memory|email|${this.sent.length}`, errorCode: null, errorMessage: null, responseMeta: { channel: 'email', providerKind: 'memory' } };
   }
 }
 
@@ -64,7 +64,7 @@ class HttpEmailDeliveryTransport implements ChannelDeliveryTransport {
       if (response.status === 401 || response.status === 403) return { success: false, providerMessageId: null, errorCode: 'provider_auth_failed', errorMessage: `http_${response.status}`, responseMeta: { body: bodyText } };
       if (!response.ok) return { success: false, providerMessageId: null, errorCode: 'provider_rejected', errorMessage: `http_${response.status}`, responseMeta: { body: bodyText } };
       const messageId = response.headers.get('x-message-id') ?? response.headers.get('x-request-id');
-      return { success: true, providerMessageId: messageId, errorCode: null, errorMessage: null, responseMeta: { status: response.status } };
+      return { success: true, providerMessageId: messageId, errorCode: null, errorMessage: null, responseMeta: { status: response.status, providerKind: 'http_email' } };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown_error';
       return { success: false, providerMessageId: null, errorCode: 'provider_network_error', errorMessage: message, responseMeta: null };

@@ -1,5 +1,5 @@
 import type { NotificationSubjectKind, NotificationTargetRecord } from '@elceo/types';
-import type { NotificationDecisionRepository, NotificationInboxRepository, NotificationOutboxRepository, NotificationSubscriptionRepository, NotificationTargetRepository } from '../persistence/contracts';
+import type { NotificationDecisionRepository, NotificationDeliveryReceiptRepository, NotificationInboxRepository, NotificationOutboxRepository, NotificationProviderEventRepository, NotificationSubscriptionRepository, NotificationTargetHealthRepository, NotificationTargetRepository } from '../persistence/contracts';
 import type { NotificationDeliveryHealthSummary, NotificationOperationalSummary, NotificationSubjectDecisionView } from './contracts';
 import { getNotificationDeliveryOperationalSummary, getNotificationProviderCapabilitiesFromEnv } from '../providers/diagnostics';
 
@@ -9,6 +9,9 @@ type SummaryDeps = {
   inboxRepository: NotificationInboxRepository;
   outboxRepository: NotificationOutboxRepository;
   decisionRepository: NotificationDecisionRepository;
+  providerEventRepository?: NotificationProviderEventRepository;
+  receiptRepository?: NotificationDeliveryReceiptRepository;
+  targetHealthRepository?: NotificationTargetHealthRepository;
 };
 
 export class NotificationOperationalSummaryService {
@@ -95,6 +98,42 @@ export class NotificationOperationalSummaryService {
       });
     }
     return views.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || a.decisionId.localeCompare(b.decisionId)).slice(0, limit);
+  }
+
+  async getNotificationFeedbackSummary(asOfIso = new Date().toISOString(), lookbackHours = 24) {
+    const allReceipts = this.deps.receiptRepository ? await this.deps.receiptRepository.listRecentReceipts(undefined, 5000) : [];
+    const asOfMs = Date.parse(asOfIso);
+    const minMs = asOfMs - lookbackHours * 60 * 60 * 1000;
+    const inWindow = allReceipts.filter((row) => {
+      const occurredMs = Date.parse(row.occurredAt);
+      return occurredMs <= asOfMs && occurredMs >= minMs;
+    });
+    const degraded = await this.listTargetsWithDegradedHealth(5000);
+    return {
+      acceptedCount: inWindow.filter((row) => row.eventKind === 'accepted').length,
+      deliveredCount: inWindow.filter((row) => row.eventKind === 'delivered').length,
+      bouncedCount: inWindow.filter((row) => row.eventKind === 'bounced').length,
+      complainedCount: inWindow.filter((row) => row.eventKind === 'complained').length,
+      unsubscribedCount: inWindow.filter((row) => row.eventKind === 'unsubscribed').length,
+      invalidTargetCount: inWindow.filter((row) => row.eventKind === 'invalid_target').length,
+      providerFailedCount: inWindow.filter((row) => row.eventKind === 'provider_failed').length,
+      unknownCount: inWindow.filter((row) => row.eventKind === 'unknown').length,
+      disabledTargetCount: degraded.filter((row) => row.healthState === 'disabled').length,
+      degradedTargetCount: degraded.filter((row) => row.healthState === 'degraded').length
+    };
+  }
+
+  async listTargetsWithDegradedHealth(limit = 100) {
+    if (!this.deps.targetHealthRepository) return [];
+    const targets = await this.deps.targetRepository.listActiveTargetsForChannel('email');
+    const rows = await Promise.all(targets.map((target) => this.deps.targetHealthRepository?.getTargetHealth(target.targetId)));
+    return rows.filter((row): row is NonNullable<typeof row> => Boolean(row)).filter((row) => row.healthState === 'degraded' || row.healthState === 'disabled').sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt) || a.targetId.localeCompare(b.targetId)).slice(0, limit);
+  }
+
+  async listRecentCriticalReceipts(limit = 100) {
+    if (!this.deps.receiptRepository) return [];
+    const rows = await this.deps.receiptRepository.listRecentReceipts(undefined, 1000);
+    return rows.filter((row) => row.severity === 'critical').sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt) || a.receiptId.localeCompare(b.receiptId)).slice(0, limit);
   }
 
   private async listSubjectInboxAcrossTargets(targetIds: string[]) {

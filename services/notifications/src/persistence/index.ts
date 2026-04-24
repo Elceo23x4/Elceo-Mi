@@ -3,12 +3,15 @@ import type {
   NotificationInboxRepository,
   NotificationOutboxAttemptRepository,
   NotificationOutboxRepository,
+  NotificationProviderEventRepository,
+  NotificationDeliveryReceiptRepository,
   NotificationOrchestrationRunRepository,
   NotificationSubscriptionRepository,
+  NotificationTargetHealthRepository,
   NotificationTargetRepository,
   NotificationVerificationRepository
 } from './contracts';
-import { MemoryNotificationDecisionRepository, MemoryNotificationOrchestrationRunRepository, MemoryNotificationOutboxAttemptRepository, MemoryNotificationOutboxRepository, MemoryNotificationVerificationRepository } from './memory-notification-repository';
+import { MemoryNotificationDecisionRepository, MemoryNotificationOrchestrationRunRepository, MemoryNotificationOutboxAttemptRepository, MemoryNotificationOutboxRepository, MemoryNotificationVerificationRepository, MemoryNotificationProviderEventRepository, MemoryNotificationDeliveryReceiptRepository, MemoryNotificationTargetHealthRepository } from './memory-notification-repository';
 import {
   MemoryNotificationInboxRepository,
   MemoryNotificationSubscriptionRepository,
@@ -20,7 +23,10 @@ import {
   SqlNotificationOrchestrationRunRepository,
   SqlNotificationOutboxAttemptRepository,
   SqlNotificationOutboxRepository,
+  SqlNotificationProviderEventRepository,
+  SqlNotificationDeliveryReceiptRepository,
   SqlNotificationSubscriptionRepository,
+  SqlNotificationTargetHealthRepository,
   SqlNotificationTargetRepository,
   SqlNotificationVerificationRepository
 } from './sql-notification-repository';
@@ -58,6 +64,21 @@ export function createNotificationInboxRepository(env: Record<string, string | u
 export function createNotificationOrchestrationRunRepository(env: Record<string, string | undefined>): NotificationOrchestrationRunRepository {
   if (env.NOTIFICATIONS_PERSISTENCE_BACKEND === 'sql') return new SqlNotificationOrchestrationRunRepository();
   return new MemoryNotificationOrchestrationRunRepository();
+}
+
+export function createNotificationProviderEventRepository(env: Record<string, string | undefined>): NotificationProviderEventRepository {
+  if (env.NOTIFICATIONS_PERSISTENCE_BACKEND === 'sql') return new SqlNotificationProviderEventRepository() as NotificationProviderEventRepository;
+  return new MemoryNotificationProviderEventRepository();
+}
+
+export function createNotificationDeliveryReceiptRepository(env: Record<string, string | undefined>): NotificationDeliveryReceiptRepository {
+  if (env.NOTIFICATIONS_PERSISTENCE_BACKEND === 'sql') return new SqlNotificationDeliveryReceiptRepository() as NotificationDeliveryReceiptRepository;
+  return new MemoryNotificationDeliveryReceiptRepository();
+}
+
+export function createNotificationTargetHealthRepository(env: Record<string, string | undefined>, targetRepository?: NotificationTargetRepository): NotificationTargetHealthRepository {
+  if (env.NOTIFICATIONS_PERSISTENCE_BACKEND === 'sql') return new SqlNotificationTargetHealthRepository() as NotificationTargetHealthRepository;
+  return new MemoryNotificationTargetHealthRepository(targetRepository ?? createNotificationTargetRepository(env));
 }
 
 export * from './contracts';

@@ -14,3 +14,5 @@ export * from './utc.schema';
 export * from './journal.schema';
 
 export * from './journal-influence.schema';
+
+export * from './analytics.schema';

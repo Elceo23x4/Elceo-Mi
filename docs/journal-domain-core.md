@@ -147,3 +147,7 @@ C4-B adds a deterministic journal influence engine on top of C4-A case memory:
 - reasoning input adoption through structured influence payloads.
 
 This preserves C4-A lifecycle boundaries while making durable journal history computationally useful for reasoning.
+
+## Analytics Core Linkage (C4-C)
+
+Journal case history now feeds the canonical analytics core snapshot engine (`@elceo/analytics`) for deterministic, persisted, replayable performance aggregation. This keeps journal lifecycle semantics unchanged while enabling downstream analytics/coaching consumers to read stable snapshots instead of recomputing from mutable views.

@@ -1,5 +1,5 @@
-import { validateNotificationDecision } from '@elceo/schemas';
-import type { NotificationDecision } from '@elceo/types';
+import { validateNotificationDecision, validateNotificationDeliveryReceipt, validateNotificationTargetHealthRecord } from '@elceo/schemas';
+import type { NotificationDecision, NotificationDeliveryReceipt, NotificationTargetHealthRecord } from '@elceo/types';
 import type { NotificationOrchestrationRunReport } from '../orchestration/contracts';
 
 function parseJson(value: string): unknown {
@@ -80,4 +80,18 @@ export function deserializeNotificationOrchestrationRunReport(json: string): Not
     warnings,
     createdAt: requiredString('createdAt')
   };
+}
+
+export function deserializeNotificationDeliveryReceipt(json: string): NotificationDeliveryReceipt {
+  const parsed = parseJson(json);
+  const validated = validateNotificationDeliveryReceipt(parsed);
+  if (!validated.ok) throw new Error(`invalid_notification_delivery_receipt:${('errors' in validated ? validated.errors : []).join('; ')}`);
+  return validated.value;
+}
+
+export function deserializeNotificationTargetHealthRecord(json: string): NotificationTargetHealthRecord {
+  const parsed = parseJson(json);
+  const validated = validateNotificationTargetHealthRecord(parsed);
+  if (!validated.ok) throw new Error(`invalid_notification_target_health:${('errors' in validated ? validated.errors : []).join('; ')}`);
+  return validated.value;
 }

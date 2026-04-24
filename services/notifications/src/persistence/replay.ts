@@ -1,9 +1,12 @@
 import type { CanonicalAssetSymbol, Timeframe } from '@elceo/types';
 import type {
+  NotificationDeliveryReceiptRepository,
   NotificationDecisionReplayBundle,
   NotificationDecisionRepository,
+  NotificationProviderEventRepository,
   NotificationOrchestrationRunRepository,
-  NotificationOrchestrationReplayBundle
+  NotificationOrchestrationReplayBundle,
+  NotificationTargetHealthRepository
 } from './contracts';
 import type { NotificationOrchestrationStage } from '../orchestration/contracts';
 import { deserializeNotificationDecision, deserializeNotificationOrchestrationRunReport } from './serialization';
@@ -57,3 +60,9 @@ export async function listRecentNotificationOrchestrationReplays(
   const rows = await repository.listRecentRuns(stage, limit);
   return rows.map((record) => ({ record, report: deserializeNotificationOrchestrationRunReport(record.reportJson) }));
 }
+
+export const getProviderEventReplayById = (providerEventId: string, repository: NotificationProviderEventRepository) => repository.getProviderEventById(providerEventId);
+export const getDeliveryReceiptReplayById = (receiptId: string, repository: NotificationDeliveryReceiptRepository) => repository.getReceiptById(receiptId);
+export const listReceiptReplayForTarget = (targetId: string, repository: NotificationDeliveryReceiptRepository, limit?: number) => repository.listReceiptsForTarget(targetId, limit);
+export const listProviderEventReplayForTarget = (targetId: string, repository: NotificationProviderEventRepository, limit?: number) => repository.listProviderEventsForTarget(targetId, limit);
+export const getTargetHealthReplay = (targetId: string, repository: NotificationTargetHealthRepository) => repository.getTargetHealth(targetId);

@@ -40,6 +40,9 @@ export type NotificationOutboxAttemptRecord = {
   status: NotificationOutboxAttemptStatus;
   errorCode: string | null;
   errorMessage: string | null;
+  providerKind?: string | null;
+  providerMessageId?: string | null;
+  receiptStatus?: string | null;
   responseMetaJson: string | null;
 };
 

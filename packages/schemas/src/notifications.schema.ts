@@ -1,6 +1,7 @@
 import type {
   NotificationChannel,
   NotificationDecision,
+  NotificationDeliveryReceipt,
   NotificationInboxRecord,
   NotificationMaterialityBand,
   NotificationPolicyRuleKey,
@@ -10,6 +11,10 @@ import type {
   NotificationTargetChannelStatus,
   NotificationTargetKind,
   NotificationTargetRecord,
+  NotificationTargetHealthRecord,
+  NotificationTargetHealthState,
+  NotificationProviderEventKind,
+  NotificationReceiptSeverity,
   NotificationTargetVerificationStatus,
   NotificationVerificationKind,
   NotificationVerificationRecord,
@@ -71,6 +76,9 @@ const TARGET_STATUSES: NotificationTargetChannelStatus[] = ['active', 'disabled'
 const TARGET_KINDS: NotificationTargetKind[] = ['in_app_user', 'email_address', 'push_endpoint'];
 const VERIFICATION_STATUSES: NotificationTargetVerificationStatus[] = ['pending', 'verified', 'expired', 'consumed', 'canceled'];
 const VERIFICATION_KINDS: NotificationVerificationKind[] = ['email_verification', 'push_verification'];
+const PROVIDER_EVENT_KINDS: NotificationProviderEventKind[] = ['accepted', 'delivered', 'bounced', 'complained', 'unsubscribed', 'invalid_target', 'provider_failed', 'unknown'];
+const RECEIPT_SEVERITIES: NotificationReceiptSeverity[] = ['info', 'warning', 'critical'];
+const TARGET_HEALTH_STATES: NotificationTargetHealthState[] = ['healthy', 'warning', 'degraded', 'disabled'];
 
 export function validateNotificationTriggerRule(input: unknown, pathPrefix = ''): SchemaValidationResult<NotificationTriggerRule> {
   const errors: string[] = [];
@@ -231,4 +239,45 @@ export function validateNotificationVerificationRecord(input: unknown, pathPrefi
   if (!isIsoDateString(input.createdAt)) errors.push(`${pathPrefix}createdAt must be ISO date`);
   if (!isIsoDateString(input.updatedAt)) errors.push(`${pathPrefix}updatedAt must be ISO date`);
   return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as NotificationVerificationRecord };
+}
+
+export function validateNotificationDeliveryReceipt(input: unknown, pathPrefix = ''): SchemaValidationResult<NotificationDeliveryReceipt> {
+  const errors: string[] = [];
+  if (!isObjectRecord(input)) return { ok: false, errors: [`${pathPrefix}NotificationDeliveryReceipt must be object`] };
+  if (!isNonEmptyString(input.receiptId)) errors.push(`${pathPrefix}receiptId must be non-empty string`);
+  if (!(input.providerEventId === null || isNonEmptyString(input.providerEventId))) errors.push(`${pathPrefix}providerEventId must be non-empty string or null`);
+  if (!isNonEmptyString(input.providerKind)) errors.push(`${pathPrefix}providerKind must be non-empty string`);
+  if (!isEnumValue(input.channel, NOTIFICATION_CHANNELS)) errors.push(`${pathPrefix}channel is invalid`);
+  if (!(input.decisionId === null || isNonEmptyString(input.decisionId))) errors.push(`${pathPrefix}decisionId must be non-empty string or null`);
+  if (!(input.decisionKey === null || isNonEmptyString(input.decisionKey))) errors.push(`${pathPrefix}decisionKey must be non-empty string or null`);
+  if (!(input.outboxId === null || isNonEmptyString(input.outboxId))) errors.push(`${pathPrefix}outboxId must be non-empty string or null`);
+  if (!(input.attemptId === null || isNonEmptyString(input.attemptId))) errors.push(`${pathPrefix}attemptId must be non-empty string or null`);
+  if (!(input.targetId === null || isNonEmptyString(input.targetId))) errors.push(`${pathPrefix}targetId must be non-empty string or null`);
+  if (!(input.subjectKind === null || isEnumValue(input.subjectKind, SUBJECT_KINDS))) errors.push(`${pathPrefix}subjectKind is invalid`);
+  if (!(input.subjectId === null || isNonEmptyString(input.subjectId))) errors.push(`${pathPrefix}subjectId must be non-empty string or null`);
+  if (!(input.providerMessageId === null || isNonEmptyString(input.providerMessageId))) errors.push(`${pathPrefix}providerMessageId must be non-empty string or null`);
+  if (!isEnumValue(input.eventKind, PROVIDER_EVENT_KINDS)) errors.push(`${pathPrefix}eventKind is invalid`);
+  if (!isEnumValue(input.severity, RECEIPT_SEVERITIES)) errors.push(`${pathPrefix}severity is invalid`);
+  if (!isIsoDateString(input.occurredAt)) errors.push(`${pathPrefix}occurredAt must be ISO date`);
+  if (!(input.reasonCode === null || isNonEmptyString(input.reasonCode))) errors.push(`${pathPrefix}reasonCode must be non-empty string or null`);
+  if (!(input.reasonMessage === null || isNonEmptyString(input.reasonMessage))) errors.push(`${pathPrefix}reasonMessage must be non-empty string or null`);
+  if (!isNonEmptyString(input.rawEventJson)) errors.push(`${pathPrefix}rawEventJson must be non-empty string`);
+  if (!(input.normalizedMetaJson === null || isNonEmptyString(input.normalizedMetaJson))) errors.push(`${pathPrefix}normalizedMetaJson must be non-empty string or null`);
+  if (!isIsoDateString(input.createdAt)) errors.push(`${pathPrefix}createdAt must be ISO date`);
+  return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as NotificationDeliveryReceipt };
+}
+
+export function validateNotificationTargetHealthRecord(input: unknown, pathPrefix = ''): SchemaValidationResult<NotificationTargetHealthRecord> {
+  const errors: string[] = [];
+  if (!isObjectRecord(input)) return { ok: false, errors: [`${pathPrefix}NotificationTargetHealthRecord must be object`] };
+  if (!isNonEmptyString(input.targetId)) errors.push(`${pathPrefix}targetId must be non-empty string`);
+  if (!isEnumValue(input.healthState, TARGET_HEALTH_STATES)) errors.push(`${pathPrefix}healthState is invalid`);
+  if (!(input.lastReceiptKind === null || isEnumValue(input.lastReceiptKind, PROVIDER_EVENT_KINDS))) errors.push(`${pathPrefix}lastReceiptKind is invalid`);
+  if (!(input.lastReceiptAt === null || isIsoDateString(input.lastReceiptAt))) errors.push(`${pathPrefix}lastReceiptAt must be ISO date or null`);
+  for (const key of ['softFailureCount', 'hardFailureCount', 'complaintCount', 'unsubscribeCount', 'invalidTargetCount'] as const) {
+    const value = input[key];
+    if (!(typeof value === 'number' && Number.isInteger(value) && value >= 0)) errors.push(`${pathPrefix}${key} must be integer >= 0`);
+  }
+  if (!isIsoDateString(input.updatedAt)) errors.push(`${pathPrefix}updatedAt must be ISO date`);
+  return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as NotificationTargetHealthRecord };
 }

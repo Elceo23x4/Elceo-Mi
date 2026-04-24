@@ -18,6 +18,12 @@ import type {
   NotificationTargetRepository,
   NotificationVerificationRepository,
   NotificationOrchestrationRunRepository,
+  NotificationProviderEventRepository,
+  NotificationDeliveryReceiptRepository,
+  NotificationTargetHealthRepository,
+  PersistedNotificationDeliveryReceiptRecord,
+  PersistedNotificationProviderEventRecord,
+  PersistedNotificationTargetHealthRecord,
   PersistedNotificationOrchestrationRunRecord,
   PersistedNotificationDecisionRecord
 } from './contracts';
@@ -169,6 +175,12 @@ export class MemoryNotificationOutboxAttemptRepository implements NotificationOu
   private readonly byId = new Map<string, NotificationOutboxAttemptRecord>();
   async saveAttempt(record: NotificationOutboxAttemptRecord): Promise<void> { this.byId.set(record.attemptId, record); }
   async listAttemptsForOutbox(outboxId: string): Promise<NotificationOutboxAttemptRecord[]> { return [...this.byId.values()].filter((item) => item.outboxId === outboxId).sort((a, b) => Date.parse(b.attemptedAt) - Date.parse(a.attemptedAt) || a.attemptId.localeCompare(b.attemptId)); }
+  async getLatestAttemptByProviderMessageId(providerMessageId: string): Promise<NotificationOutboxAttemptRecord | null> {
+    const rows = [...this.byId.values()]
+      .filter((item) => item.providerMessageId === providerMessageId)
+      .sort((a, b) => Date.parse(b.attemptedAt) - Date.parse(a.attemptedAt) || a.attemptId.localeCompare(b.attemptId));
+    return rows[0] ?? null;
+  }
 }
 
 
@@ -240,5 +252,49 @@ export class MemoryNotificationOrchestrationRunRepository implements Notificatio
       .filter((row) => row.reasoningRunId === reasoningRunId)
       .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt) || left.orchestrationRunId.localeCompare(right.orchestrationRunId));
     return rows[0] ?? null;
+  }
+}
+
+export class MemoryNotificationProviderEventRepository implements NotificationProviderEventRepository {
+  private readonly byId = new Map<string, PersistedNotificationProviderEventRecord>();
+  async saveProviderEvent(record: PersistedNotificationProviderEventRecord): Promise<void> { this.byId.set(record.providerEventId, record); }
+  async getProviderEventById(providerEventId: string): Promise<PersistedNotificationProviderEventRecord | null> { return this.byId.get(providerEventId) ?? null; }
+  async listProviderEventsForTarget(targetId: string, limit = 100): Promise<PersistedNotificationProviderEventRecord[]> {
+    return [...this.byId.values()].filter((row) => row.targetId === targetId).sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt) || a.providerEventId.localeCompare(b.providerEventId)).slice(0, limit);
+  }
+  async listRecentProviderEvents(providerKind?: string, limit = 100): Promise<PersistedNotificationProviderEventRecord[]> {
+    return [...this.byId.values()].filter((row) => (providerKind ? row.providerKind === providerKind : true)).sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt) || a.providerEventId.localeCompare(b.providerEventId)).slice(0, limit);
+  }
+}
+
+export class MemoryNotificationDeliveryReceiptRepository implements NotificationDeliveryReceiptRepository {
+  private readonly byId = new Map<string, PersistedNotificationDeliveryReceiptRecord>();
+  async saveReceipt(record: PersistedNotificationDeliveryReceiptRecord): Promise<void> { this.byId.set(record.receiptId, record); }
+  async getReceiptById(receiptId: string): Promise<PersistedNotificationDeliveryReceiptRecord | null> { return this.byId.get(receiptId) ?? null; }
+  async listReceiptsForTarget(targetId: string, limit = 100): Promise<PersistedNotificationDeliveryReceiptRecord[]> { return this.filter({ targetId }, limit); }
+  async listReceiptsForDecision(decisionId: string, limit = 100): Promise<PersistedNotificationDeliveryReceiptRecord[]> { return this.filter({ decisionId }, limit); }
+  async listReceiptsForOutbox(outboxId: string, limit = 100): Promise<PersistedNotificationDeliveryReceiptRecord[]> { return this.filter({ outboxId }, limit); }
+  async listRecentReceipts(eventKind?: import('@elceo/types').NotificationProviderEventKind, limit = 100): Promise<PersistedNotificationDeliveryReceiptRecord[]> { return this.filter(eventKind ? { eventKind } : {}, limit); }
+  private async filter(params: { targetId?: string; decisionId?: string; outboxId?: string; eventKind?: import('@elceo/types').NotificationProviderEventKind }, limit: number): Promise<PersistedNotificationDeliveryReceiptRecord[]> {
+    return [...this.byId.values()]
+      .filter((row) => (params.targetId ? row.targetId === params.targetId : true))
+      .filter((row) => (params.decisionId ? row.decisionId === params.decisionId : true))
+      .filter((row) => (params.outboxId ? row.outboxId === params.outboxId : true))
+      .filter((row) => (params.eventKind ? row.eventKind === params.eventKind : true))
+      .sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt) || a.receiptId.localeCompare(b.receiptId))
+      .slice(0, limit);
+  }
+}
+
+export class MemoryNotificationTargetHealthRepository implements NotificationTargetHealthRepository {
+  private readonly byTargetId = new Map<string, PersistedNotificationTargetHealthRecord>();
+  private readonly targetRepository: NotificationTargetRepository;
+  constructor(targetRepository: NotificationTargetRepository) { this.targetRepository = targetRepository; }
+  async saveTargetHealth(record: PersistedNotificationTargetHealthRecord): Promise<void> { this.byTargetId.set(record.targetId, record); }
+  async getTargetHealth(targetId: string): Promise<PersistedNotificationTargetHealthRecord | null> { return this.byTargetId.get(targetId) ?? null; }
+  async listTargetHealthForSubject(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string): Promise<PersistedNotificationTargetHealthRecord[]> {
+    const targets = await this.targetRepository.listTargetsForSubject(subjectKind, subjectId);
+    const ids = new Set(targets.map((row) => row.targetId));
+    return [...this.byTargetId.values()].filter((row) => ids.has(row.targetId)).sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt) || a.targetId.localeCompare(b.targetId));
   }
 }

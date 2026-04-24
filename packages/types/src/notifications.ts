@@ -192,3 +192,53 @@ export type NotificationVerificationConsumeResult = {
   verified: boolean;
   reason: string | null;
 };
+
+export type NotificationProviderEventKind =
+  | 'accepted'
+  | 'delivered'
+  | 'bounced'
+  | 'complained'
+  | 'unsubscribed'
+  | 'invalid_target'
+  | 'provider_failed'
+  | 'unknown';
+
+export type NotificationReceiptSeverity = 'info' | 'warning' | 'critical';
+
+export type NotificationDeliveryReceipt = {
+  receiptId: string;
+  providerEventId: string | null;
+  providerKind: string;
+  channel: NotificationChannel;
+  decisionId: string | null;
+  decisionKey: string | null;
+  outboxId: string | null;
+  attemptId: string | null;
+  targetId: string | null;
+  subjectKind: NotificationSubjectKind | null;
+  subjectId: string | null;
+  providerMessageId: string | null;
+  eventKind: NotificationProviderEventKind;
+  severity: NotificationReceiptSeverity;
+  occurredAt: string;
+  reasonCode: string | null;
+  reasonMessage: string | null;
+  rawEventJson: string;
+  normalizedMetaJson: string | null;
+  createdAt: string;
+};
+
+export type NotificationTargetHealthState = 'healthy' | 'warning' | 'degraded' | 'disabled';
+
+export type NotificationTargetHealthRecord = {
+  targetId: string;
+  healthState: NotificationTargetHealthState;
+  lastReceiptKind: NotificationProviderEventKind | null;
+  lastReceiptAt: string | null;
+  softFailureCount: number;
+  hardFailureCount: number;
+  complaintCount: number;
+  unsubscribeCount: number;
+  invalidTargetCount: number;
+  updatedAt: string;
+};

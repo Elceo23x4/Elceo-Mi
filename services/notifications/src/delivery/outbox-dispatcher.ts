@@ -1,5 +1,5 @@
 import type { NotificationChannel } from '@elceo/types';
-import type { NotificationOutboxAttemptRepository, NotificationOutboxRepository } from '../persistence/contracts';
+import type { NotificationOutboxAttemptRepository, NotificationOutboxRepository, NotificationTargetRepository } from '../persistence/contracts';
 import type { NotificationOutboxAttemptRecord } from './outbox-contracts';
 import type { NotificationDeliveryTransport } from './transport';
 import { deserializeTargetAwareNotificationPayload } from './replay-delivery';
@@ -8,7 +8,7 @@ export type NotificationOutboxDispatchItemReport = { outboxId: string; channel: 
 export type NotificationOutboxDispatchReport = { asOf: string; examinedCount: number; dispatchedCount: number; deliveredCount: number; failedCount: number; deadCount: number; reports: NotificationOutboxDispatchItemReport[] };
 const buildNextAvailableAt = (attemptedAt: string, attemptCountAfterFailure: number): string => new Date(Date.parse(attemptedAt) + attemptCountAfterFailure * 5 * 60_000).toISOString();
 
-export async function dispatchDueNotificationOutbox(asOfIso: string, limit: number, repositories: { outboxRepository: NotificationOutboxRepository; outboxAttemptRepository: NotificationOutboxAttemptRepository }, transport: NotificationDeliveryTransport): Promise<NotificationOutboxDispatchReport> {
+export async function dispatchDueNotificationOutbox(asOfIso: string, limit: number, repositories: { outboxRepository: NotificationOutboxRepository; outboxAttemptRepository: NotificationOutboxAttemptRepository; targetRepository: NotificationTargetRepository }, transport: NotificationDeliveryTransport): Promise<NotificationOutboxDispatchReport> {
   const due = await repositories.outboxRepository.listDueOutboxItems(asOfIso, limit);
   const reports: NotificationOutboxDispatchItemReport[] = [];
 
@@ -17,10 +17,18 @@ export async function dispatchDueNotificationOutbox(asOfIso: string, limit: numb
     let sendResult: { success: boolean; providerMessageId: string | null; errorCode: string | null; errorMessage: string | null; responseMeta: Record<string, unknown> | null };
     try {
       const envelope = deserializeTargetAwareNotificationPayload(item.payloadJson);
-      if (envelope.channel !== item.channel || envelope.targetId !== item.targetId) throw new Error('channel_target_mismatch');
-      sendResult = await transport.send(item, envelope, asOfIso);
+      if (envelope.channel !== item.channel || envelope.targetId !== item.targetId) {
+        sendResult = { success: false, providerMessageId: null, errorCode: 'target_channel_mismatch', errorMessage: 'target_channel_mismatch', responseMeta: null };
+      } else {
+        const target = await repositories.targetRepository.getTargetById(item.targetId);
+        if (!target || target.status !== 'active') {
+          sendResult = { success: false, providerMessageId: null, errorCode: 'target_not_active', errorMessage: 'target_not_active', responseMeta: null };
+        } else {
+          sendResult = await transport.send(item, envelope, asOfIso);
+        }
+      }
     } catch {
-      sendResult = { success: false, providerMessageId: null, errorCode: 'payload_deserialize_failed', errorMessage: 'payload_deserialize_failed', responseMeta: null };
+      sendResult = { success: false, providerMessageId: null, errorCode: 'payload_deserialization_failed', errorMessage: 'payload_deserialization_failed', responseMeta: null };
     }
 
     const attemptRecord: NotificationOutboxAttemptRecord = {

@@ -5,7 +5,8 @@ import {
   MemoryNotificationOutboxRepository,
   MemoryNotificationSubscriptionRepository,
   MemoryNotificationTargetRepository,
-  MemoryNotificationInboxRepository
+  MemoryNotificationInboxRepository,
+  MemoryNotificationVerificationRepository
 } from '../persistence/memory-notification-repository.js';
 import { stageNotificationDeliveryForDecision } from '../delivery/staging-service.js';
 import { deserializeTargetAwareNotificationPayload, getNotificationOutboxReplayById, getNotificationOutboxReplayByKey, listInboxReplayForDecision, listNotificationOutboxReplayForDecision } from '../delivery/replay-delivery.js';
@@ -19,7 +20,8 @@ export async function runReplayDeliveryTests(): Promise<void> {
     outboxAttemptRepository: new MemoryNotificationOutboxAttemptRepository(),
     subscriptionRepository: new MemoryNotificationSubscriptionRepository(),
     targetRepository: new MemoryNotificationTargetRepository(),
-    inboxRepository: new MemoryNotificationInboxRepository()
+    inboxRepository: new MemoryNotificationInboxRepository(),
+    verificationRepository: new MemoryNotificationVerificationRepository()
   };
   await repos.subscriptionRepository.saveSubscription({ subscriptionId: 'sub-1', subjectKind: 'user', subjectId: 'u-1', channel: 'in_app', asset: '*', timeframe: '*', ruleKey: '*', enabled: true, minMaterialityScore: null, createdAt: '2026-01-15T10:00:00.000Z', updatedAt: '2026-01-15T10:00:00.000Z' });
   await repos.targetRepository.saveTarget({ targetId: 'target-1', subjectKind: 'user', subjectId: 'u-1', channel: 'in_app', targetKind: 'in_app_user', status: 'active', label: null, addressJson: '{}', createdAt: '2026-01-15T10:00:00.000Z', updatedAt: '2026-01-15T10:00:00.000Z', verifiedAt: null });

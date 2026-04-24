@@ -5,7 +5,8 @@ import {
   MemoryNotificationOutboxAttemptRepository,
   MemoryNotificationOutboxRepository,
   MemoryNotificationSubscriptionRepository,
-  MemoryNotificationTargetRepository
+  MemoryNotificationTargetRepository,
+  MemoryNotificationVerificationRepository
 } from '../persistence/memory-notification-repository.js';
 import { createNotificationDeliveryTransport } from '../delivery/transport.js';
 import { buildDecision, buildDecisionRecord, buildReasoningRun } from './test-fixtures.js';
@@ -19,6 +20,7 @@ export async function runCanonicalNotificationDeliveryBoundaryTests(): Promise<v
   const targetRepository = new MemoryNotificationTargetRepository();
   const subscriptionRepository = new MemoryNotificationSubscriptionRepository();
   const inboxRepository = new MemoryNotificationInboxRepository();
+  const verificationRepository = new MemoryNotificationVerificationRepository();
 
   await subscriptionRepository.saveSubscription({ subscriptionId: 'sub-1', subjectKind: 'user', subjectId: 'u-1', channel: 'in_app', asset: '*', timeframe: '*', ruleKey: '*', enabled: true, minMaterialityScore: null, createdAt: '2026-01-15T10:00:00.000Z', updatedAt: '2026-01-15T10:00:00.000Z' });
   await targetRepository.saveTarget({ targetId: 'target-1', subjectKind: 'user', subjectId: 'u-1', channel: 'in_app', targetKind: 'in_app_user', status: 'active', label: null, addressJson: '{}', createdAt: '2026-01-15T10:00:00.000Z', updatedAt: '2026-01-15T10:00:00.000Z', verifiedAt: null });
@@ -30,6 +32,7 @@ export async function runCanonicalNotificationDeliveryBoundaryTests(): Promise<v
     targetRepository,
     subscriptionRepository,
     inboxRepository,
+    verificationRepository,
     runRepository: { getLatestReasoningRunForAssetTimeframe: async () => buildReasoningRun(), getReasoningRunById: async () => buildReasoningRun(), listRecentReasoningRuns: async () => [], saveReasoningRun: async () => {} },
     snapshotRepository: { getLatestSnapshotForAssetTimeframe: async () => null, getSnapshotById: async () => null, getSnapshotByReasoningRunId: async () => null, saveCognitionSnapshot: async () => {} },
     driftRepository: { getDriftById: async () => null, getLatestDriftForAssetTimeframe: async () => null, listRecentDrifts: async () => [], saveDriftRecord: async () => {} }

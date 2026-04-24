@@ -92,3 +92,60 @@ export class SqlNotificationOutboxAttemptRepository implements NotificationOutbo
   async saveAttempt(record: NotificationOutboxAttemptRecord): Promise<void> { await queryDb(`INSERT INTO app_notification_outbox_attempts (attempt_id, outbox_id, channel, attempted_at, status, error_code, error_message, response_meta_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (attempt_id) DO UPDATE SET outbox_id=EXCLUDED.outbox_id, channel=EXCLUDED.channel, attempted_at=EXCLUDED.attempted_at, status=EXCLUDED.status, error_code=EXCLUDED.error_code, error_message=EXCLUDED.error_message, response_meta_json=EXCLUDED.response_meta_json`, [record.attemptId, record.outboxId, record.channel, record.attemptedAt, record.status, record.errorCode, record.errorMessage, record.responseMetaJson]); }
   async listAttemptsForOutbox(outboxId: string): Promise<NotificationOutboxAttemptRecord[]> { const rows = await queryDb<OutboxAttemptRow>(`SELECT attempt_id, outbox_id, channel, attempted_at, status, error_code, error_message, response_meta_json::text as response_meta_json FROM app_notification_outbox_attempts WHERE outbox_id=$1 ORDER BY attempted_at DESC, attempt_id ASC`, [outboxId]); return rows.map(mapOutboxAttemptRow); }
 }
+
+type VerificationRow = {
+  verification_id: string;
+  verification_key: string;
+  target_id: string;
+  subject_kind: 'user' | 'workspace' | 'ops';
+  subject_id: string;
+  channel: NotificationChannel;
+  verification_kind: 'email_verification' | 'push_verification';
+  token_hash: string;
+  issued_at: string;
+  expires_at: string;
+  consumed_at: string | null;
+  status: 'pending' | 'verified' | 'expired' | 'consumed' | 'canceled';
+  attempt_count: number;
+  last_attempt_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+const mapVerificationRow = (row: VerificationRow) => ({
+  verificationId: row.verification_id,
+  verificationKey: row.verification_key,
+  targetId: row.target_id,
+  subjectKind: row.subject_kind,
+  subjectId: row.subject_id,
+  channel: row.channel,
+  verificationKind: row.verification_kind,
+  tokenHash: row.token_hash,
+  issuedAt: row.issued_at,
+  expiresAt: row.expires_at,
+  consumedAt: row.consumed_at,
+  status: row.status,
+  attemptCount: row.attempt_count,
+  lastAttemptAt: row.last_attempt_at,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at
+});
+
+export class SqlNotificationVerificationRepository {
+  async saveVerification(record: import('@elceo/types').NotificationVerificationRecord): Promise<void> {
+    await queryDb(`INSERT INTO app_notification_verifications (verification_id, verification_key, target_id, subject_kind, subject_id, channel, verification_kind, token_hash, issued_at, expires_at, consumed_at, status, attempt_count, last_attempt_at, created_at, updated_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+      ON CONFLICT (verification_id) DO UPDATE SET verification_key=EXCLUDED.verification_key, target_id=EXCLUDED.target_id, subject_kind=EXCLUDED.subject_kind, subject_id=EXCLUDED.subject_id, channel=EXCLUDED.channel, verification_kind=EXCLUDED.verification_kind, token_hash=EXCLUDED.token_hash, issued_at=EXCLUDED.issued_at, expires_at=EXCLUDED.expires_at, consumed_at=EXCLUDED.consumed_at, status=EXCLUDED.status, attempt_count=EXCLUDED.attempt_count, last_attempt_at=EXCLUDED.last_attempt_at, created_at=EXCLUDED.created_at, updated_at=EXCLUDED.updated_at`,
+      [record.verificationId, record.verificationKey, record.targetId, record.subjectKind, record.subjectId, record.channel, record.verificationKind, record.tokenHash, record.issuedAt, record.expiresAt, record.consumedAt, record.status, record.attemptCount, record.lastAttemptAt, record.createdAt, record.updatedAt]);
+  }
+
+  async getVerificationById(verificationId: string) { const rows = await queryDb<VerificationRow>(`SELECT verification_id, verification_key, target_id, subject_kind, subject_id, channel, verification_kind, token_hash, issued_at, expires_at, consumed_at, status, attempt_count, last_attempt_at, created_at, updated_at FROM app_notification_verifications WHERE verification_id=$1`, [verificationId]); return rows[0] ? mapVerificationRow(rows[0]) : null; }
+  async getVerificationByKey(verificationKey: string) { const rows = await queryDb<VerificationRow>(`SELECT verification_id, verification_key, target_id, subject_kind, subject_id, channel, verification_kind, token_hash, issued_at, expires_at, consumed_at, status, attempt_count, last_attempt_at, created_at, updated_at FROM app_notification_verifications WHERE verification_key=$1`, [verificationKey]); return rows[0] ? mapVerificationRow(rows[0]) : null; }
+  async getLatestActiveVerificationForTarget(targetId: string, verificationKind: 'email_verification' | 'push_verification') { const rows = await queryDb<VerificationRow>(`SELECT verification_id, verification_key, target_id, subject_kind, subject_id, channel, verification_kind, token_hash, issued_at, expires_at, consumed_at, status, attempt_count, last_attempt_at, created_at, updated_at FROM app_notification_verifications WHERE target_id=$1 AND verification_kind=$2 AND status='pending' ORDER BY created_at DESC, verification_id ASC LIMIT 1`, [targetId, verificationKind]); return rows[0] ? mapVerificationRow(rows[0]) : null; }
+  async listVerificationsForTarget(targetId: string) { const rows = await queryDb<VerificationRow>(`SELECT verification_id, verification_key, target_id, subject_kind, subject_id, channel, verification_kind, token_hash, issued_at, expires_at, consumed_at, status, attempt_count, last_attempt_at, created_at, updated_at FROM app_notification_verifications WHERE target_id=$1 ORDER BY created_at DESC, verification_id ASC`, [targetId]); return rows.map(mapVerificationRow); }
+  async listPendingVerificationsExpiringBefore(asOfIso: string) { const rows = await queryDb<VerificationRow>(`SELECT verification_id, verification_key, target_id, subject_kind, subject_id, channel, verification_kind, token_hash, issued_at, expires_at, consumed_at, status, attempt_count, last_attempt_at, created_at, updated_at FROM app_notification_verifications WHERE status='pending' AND expires_at < $1 ORDER BY expires_at ASC, verification_id ASC`, [asOfIso]); return rows.map(mapVerificationRow); }
+  async markVerificationConsumed(verificationId: string, consumedAt: string): Promise<void> { await queryDb(`UPDATE app_notification_verifications SET status='consumed', consumed_at=$2, updated_at=$2 WHERE verification_id=$1`, [verificationId, consumedAt]); }
+  async markVerificationExpired(verificationId: string, updatedAt: string): Promise<void> { await queryDb(`UPDATE app_notification_verifications SET status='expired', updated_at=$2 WHERE verification_id=$1`, [verificationId, updatedAt]); }
+  async markVerificationCanceled(verificationId: string, updatedAt: string): Promise<void> { await queryDb(`UPDATE app_notification_verifications SET status='canceled', updated_at=$2 WHERE verification_id=$1`, [verificationId, updatedAt]); }
+  async incrementVerificationAttempt(verificationId: string, attemptedAt: string): Promise<void> { await queryDb(`UPDATE app_notification_verifications SET attempt_count=attempt_count+1, last_attempt_at=$2, updated_at=$2 WHERE verification_id=$1`, [verificationId, attemptedAt]); }
+}

@@ -7,7 +7,7 @@ import { runCanonicalNotificationPolicyBoundaryTests } from './canonical-notific
 import { runTransportTests } from './transport.test.js';
 import { runOutboxStagingTests } from './outbox-staging.test.js';
 import { runOutboxRepositoryTests } from './outbox-repository.test.js';
-import { runOutboxDispatcherTests } from './outbox-dispatcher.test.js';
+import { runOutboxDispatcherHardeningTests, runOutboxDispatcherTests } from './outbox-dispatcher.test.js';
 import { runReplayDeliveryTests } from './replay-delivery.test.js';
 import { runCanonicalNotificationDeliveryBoundaryTests } from './canonical-notification-delivery-boundary.test.js';
 import { runSubscriptionMatcherTests } from './subscription-matcher.test.js';
@@ -16,6 +16,8 @@ import { runInAppDeliveryTests } from './in-app-delivery.test.js';
 import { runNotificationManagementKeyTests } from './notification-management-keys.test.js';
 import { runNotificationManagementServiceTests } from './notification-management-services.test.js';
 import { runCanonicalNotificationManagementBoundaryTests } from './canonical-notification-management-boundary.test.js';
+import { runCanonicalNotificationVerificationBoundaryTests } from './canonical-notification-verification-boundary.test.js';
+import { runVerificationProviderTests } from './verification-provider.test.js';
 
 async function run(): Promise<void> {
   runMaterialChangeTests();
@@ -28,6 +30,7 @@ async function run(): Promise<void> {
   await runOutboxStagingTests();
   await runOutboxRepositoryTests();
   await runOutboxDispatcherTests();
+  await runOutboxDispatcherHardeningTests();
   await runReplayDeliveryTests();
   await runCanonicalNotificationDeliveryBoundaryTests();
   await runSubscriptionMatcherTests();
@@ -36,6 +39,8 @@ async function run(): Promise<void> {
   runNotificationManagementKeyTests();
   await runNotificationManagementServiceTests();
   await runCanonicalNotificationManagementBoundaryTests();
+  await runCanonicalNotificationVerificationBoundaryTests();
+  await runVerificationProviderTests();
   console.log('notifications runtime contract tests passed');
 }
 

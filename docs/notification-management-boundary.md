@@ -88,3 +88,8 @@ C3-I should add:
 - authz policy for operator/admin/subject access
 - pagination envelopes for operational read APIs
 - explicit re-drive tooling for failed/dead deliveries
+
+
+## C3-I extension
+
+This boundary now includes provider capability and operational delivery summary calls, plus verification runtime integration via the canonical verification boundary.

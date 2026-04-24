@@ -5,6 +5,8 @@ import type {
   NotificationSubscriptionRecord,
   NotificationTargetChannelStatus,
   NotificationTargetRecord,
+  NotificationVerificationKind,
+  NotificationVerificationRecord,
   Timeframe
 } from '@elceo/types';
 import type {
@@ -14,6 +16,7 @@ import type {
   NotificationOutboxRepository,
   NotificationSubscriptionRepository,
   NotificationTargetRepository,
+  NotificationVerificationRepository,
   PersistedNotificationDecisionRecord
 } from './contracts';
 import type { NotificationOutboxAttemptRecord, NotificationOutboxRecord } from '../delivery/outbox-contracts';
@@ -163,4 +166,49 @@ export class MemoryNotificationOutboxAttemptRepository implements NotificationOu
   private readonly byId = new Map<string, NotificationOutboxAttemptRecord>();
   async saveAttempt(record: NotificationOutboxAttemptRecord): Promise<void> { this.byId.set(record.attemptId, record); }
   async listAttemptsForOutbox(outboxId: string): Promise<NotificationOutboxAttemptRecord[]> { return [...this.byId.values()].filter((item) => item.outboxId === outboxId).sort((a, b) => Date.parse(b.attemptedAt) - Date.parse(a.attemptedAt) || a.attemptId.localeCompare(b.attemptId)); }
+}
+
+
+export class MemoryNotificationVerificationRepository implements NotificationVerificationRepository {
+  private readonly byId = new Map<string, NotificationVerificationRecord>();
+  private readonly idByKey = new Map<string, string>();
+
+  async saveVerification(record: NotificationVerificationRecord): Promise<void> {
+    this.byId.set(record.verificationId, record);
+    this.idByKey.set(record.verificationKey, record.verificationId);
+  }
+
+  async getVerificationById(verificationId: string): Promise<NotificationVerificationRecord | null> { return this.byId.get(verificationId) ?? null; }
+  async getVerificationByKey(verificationKey: string): Promise<NotificationVerificationRecord | null> { const id = this.idByKey.get(verificationKey); return id ? this.byId.get(id) ?? null : null; }
+
+  async getLatestActiveVerificationForTarget(targetId: string, verificationKind: NotificationVerificationKind): Promise<NotificationVerificationRecord | null> {
+    return [...this.byId.values()]
+      .filter((row) => row.targetId === targetId && row.verificationKind === verificationKind && row.status === 'pending')
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || a.verificationId.localeCompare(b.verificationId))[0] ?? null;
+  }
+
+  async listVerificationsForTarget(targetId: string): Promise<NotificationVerificationRecord[]> {
+    return [...this.byId.values()].filter((row) => row.targetId === targetId).sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt)||a.verificationId.localeCompare(b.verificationId));
+  }
+  async listPendingVerificationsExpiringBefore(asOfIso: string): Promise<NotificationVerificationRecord[]> {
+    const cutoff = Date.parse(asOfIso);
+    return [...this.byId.values()].filter((row) => row.status === 'pending' && Date.parse(row.expiresAt) < cutoff).sort((a,b)=>Date.parse(a.expiresAt)-Date.parse(b.expiresAt)||a.verificationId.localeCompare(b.verificationId));
+  }
+
+  async markVerificationConsumed(verificationId: string, consumedAt: string): Promise<void> {
+    const current = this.byId.get(verificationId); if (!current) return;
+    this.byId.set(verificationId, { ...current, status: 'consumed', consumedAt, updatedAt: consumedAt });
+  }
+  async markVerificationExpired(verificationId: string, updatedAt: string): Promise<void> {
+    const current = this.byId.get(verificationId); if (!current) return;
+    this.byId.set(verificationId, { ...current, status: 'expired', updatedAt });
+  }
+  async markVerificationCanceled(verificationId: string, updatedAt: string): Promise<void> {
+    const current = this.byId.get(verificationId); if (!current) return;
+    this.byId.set(verificationId, { ...current, status: 'canceled', updatedAt });
+  }
+  async incrementVerificationAttempt(verificationId: string, attemptedAt: string): Promise<void> {
+    const current = this.byId.get(verificationId); if (!current) return;
+    this.byId.set(verificationId, { ...current, attemptCount: current.attemptCount + 1, lastAttemptAt: attemptedAt, updatedAt: attemptedAt });
+  }
 }

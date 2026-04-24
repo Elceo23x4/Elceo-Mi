@@ -15,7 +15,7 @@ export async function runTransportTests(): Promise<void> {
   const success = await transport.send(outbox, { channel: 'in_app', targetId: 't1', targetKind: 'in_app_user', addressJson: '{}', payload: { title: 't', body: 'b', decisionId: 'd1', ruleKey: 'critical_drift', asset: 'XAU/USD', timeframe: 'H1', createdAt: '2026-01-15T10:00:00.000Z' } }, '2026-01-15T10:01:00.000Z');
   assert(success.success === true, 'in_app transport should persist inbox');
 
-  const failing = createNotificationDeliveryTransport({}, { inboxRepository, memoryFailureByChannel: { email: { errorCode: 'forced_failure', errorMessage: 'forced_failure' } } });
+  const failing = createNotificationDeliveryTransport({}, { inboxRepository, memoryFailureByChannel: { email: { errorCode: 'provider_not_configured', errorMessage: 'forced_failure' } } });
   const failure = await failing.send({ ...outbox, channel: 'email', targetId: 't2' }, { channel: 'email', targetId: 't2', targetKind: 'email_address', addressJson: '{}', payload: { subject: 's', body: 'b', decisionId: 'd1', ruleKey: 'critical_drift', asset: 'XAU/USD', timeframe: 'H1', createdAt: '2026-01-15T10:00:00.000Z' } }, '2026-01-15T10:01:00.000Z');
-  assert(failure.success === false && failure.errorCode === 'forced_failure', 'memory email transport supports deterministic failure injection');
+  assert(failure.success === false && failure.errorCode === 'provider_not_configured', 'memory email transport supports deterministic failure injection');
 }

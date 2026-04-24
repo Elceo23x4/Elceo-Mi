@@ -99,3 +99,53 @@ export type NotificationDecision = {
   body?: string;
   evaluatedAt?: string;
 };
+
+export type NotificationSubjectKind = 'user' | 'workspace' | 'ops';
+
+export type NotificationTargetChannelStatus = 'active' | 'disabled' | 'unverified';
+
+export type NotificationTargetKind = 'in_app_user' | 'email_address' | 'push_endpoint';
+
+export type NotificationTargetRecord = {
+  targetId: string;
+  subjectKind: NotificationSubjectKind;
+  subjectId: string;
+  channel: NotificationChannel;
+  targetKind: NotificationTargetKind;
+  status: NotificationTargetChannelStatus;
+  label: string | null;
+  addressJson: string;
+  createdAt: string;
+  updatedAt: string;
+  verifiedAt: string | null;
+};
+
+export type NotificationSubscriptionRecord = {
+  subscriptionId: string;
+  subjectKind: NotificationSubjectKind;
+  subjectId: string;
+  channel: NotificationChannel;
+  asset: CanonicalAssetSymbol | '*';
+  timeframe: Timeframe | '*';
+  ruleKey: string | '*';
+  enabled: boolean;
+  minMaterialityScore: number | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type NotificationInboxRecord = {
+  inboxId: string;
+  targetId: string;
+  decisionId: string;
+  decisionKey: string;
+  asset: CanonicalAssetSymbol;
+  timeframe: Timeframe;
+  ruleKey: string;
+  headline: string;
+  body: string;
+  createdAt: string;
+  readAt: string | null;
+  archivedAt: string | null;
+  payloadJson: string;
+};

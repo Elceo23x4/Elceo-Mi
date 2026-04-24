@@ -1,9 +1,15 @@
 import type {
   NotificationChannel,
   NotificationDecision,
+  NotificationInboxRecord,
   NotificationMaterialityBand,
   NotificationPolicyRuleKey,
+  NotificationSubscriptionRecord,
   NotificationSuppressionReason,
+  NotificationSubjectKind,
+  NotificationTargetChannelStatus,
+  NotificationTargetKind,
+  NotificationTargetRecord,
   NotificationTriggerContext,
   NotificationTriggerKind,
   NotificationTriggerRule
@@ -57,6 +63,9 @@ const POLICY_RULE_KEYS: NotificationPolicyRuleKey[] = [
 ];
 const MATERIALITY_BANDS: NotificationMaterialityBand[] = ['low', 'medium', 'high', 'critical'];
 const SUPPRESSION_REASONS: NotificationSuppressionReason[] = ['condition_not_met', 'below_materiality_threshold', 'cooldown_active', 'missing_required_context'];
+const SUBJECT_KINDS: NotificationSubjectKind[] = ['user', 'workspace', 'ops'];
+const TARGET_STATUSES: NotificationTargetChannelStatus[] = ['active', 'disabled', 'unverified'];
+const TARGET_KINDS: NotificationTargetKind[] = ['in_app_user', 'email_address', 'push_endpoint'];
 
 export function validateNotificationTriggerRule(input: unknown, pathPrefix = ''): SchemaValidationResult<NotificationTriggerRule> {
   const errors: string[] = [];
@@ -136,4 +145,59 @@ export function validateNotificationDecision(input: unknown, pathPrefix = ''): S
   }
 
   return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as NotificationDecision };
+}
+
+export function validateNotificationTargetRecord(input: unknown, pathPrefix = ''): SchemaValidationResult<NotificationTargetRecord> {
+  const errors: string[] = [];
+  if (!isObjectRecord(input)) return { ok: false, errors: [`${pathPrefix}NotificationTargetRecord must be object`] };
+  if (!isNonEmptyString(input.targetId)) errors.push(`${pathPrefix}targetId must be non-empty string`);
+  if (!isEnumValue(input.subjectKind, SUBJECT_KINDS)) errors.push(`${pathPrefix}subjectKind is invalid`);
+  if (!isNonEmptyString(input.subjectId)) errors.push(`${pathPrefix}subjectId must be non-empty string`);
+  if (!isEnumValue(input.channel, NOTIFICATION_CHANNELS)) errors.push(`${pathPrefix}channel is invalid`);
+  if (!isEnumValue(input.targetKind, TARGET_KINDS)) errors.push(`${pathPrefix}targetKind is invalid`);
+  if (!isEnumValue(input.status, TARGET_STATUSES)) errors.push(`${pathPrefix}status is invalid`);
+  if (!(input.label === null || input.label === undefined || isNonEmptyString(input.label))) errors.push(`${pathPrefix}label must be non-empty string or null`);
+  if (!isNonEmptyString(input.addressJson)) errors.push(`${pathPrefix}addressJson must be non-empty string`);
+  if (!isIsoDateString(input.createdAt)) errors.push(`${pathPrefix}createdAt must be ISO date`);
+  if (!isIsoDateString(input.updatedAt)) errors.push(`${pathPrefix}updatedAt must be ISO date`);
+  if (!(input.verifiedAt === null || input.verifiedAt === undefined || isIsoDateString(input.verifiedAt))) errors.push(`${pathPrefix}verifiedAt must be ISO date or null`);
+  return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as NotificationTargetRecord };
+}
+
+export function validateNotificationSubscriptionRecord(input: unknown, pathPrefix = ''): SchemaValidationResult<NotificationSubscriptionRecord> {
+  const errors: string[] = [];
+  if (!isObjectRecord(input)) return { ok: false, errors: [`${pathPrefix}NotificationSubscriptionRecord must be object`] };
+  if (!isNonEmptyString(input.subscriptionId)) errors.push(`${pathPrefix}subscriptionId must be non-empty string`);
+  if (!isEnumValue(input.subjectKind, SUBJECT_KINDS)) errors.push(`${pathPrefix}subjectKind is invalid`);
+  if (!isNonEmptyString(input.subjectId)) errors.push(`${pathPrefix}subjectId must be non-empty string`);
+  if (!isEnumValue(input.channel, NOTIFICATION_CHANNELS)) errors.push(`${pathPrefix}channel is invalid`);
+  if (!(input.asset === '*' || isNonEmptyString(input.asset))) errors.push(`${pathPrefix}asset must be non-empty string or *`);
+  if (!(input.timeframe === '*' || isEnumValue(input.timeframe, TIMEFRAMES))) errors.push(`${pathPrefix}timeframe must be Timeframe or *`);
+  if (!(input.ruleKey === '*' || isNonEmptyString(input.ruleKey))) errors.push(`${pathPrefix}ruleKey must be non-empty string or *`);
+  if (!isBoolean(input.enabled)) errors.push(`${pathPrefix}enabled must be boolean`);
+  if (!(input.minMaterialityScore === null || input.minMaterialityScore === undefined || (typeof input.minMaterialityScore === 'number' && Number.isFinite(input.minMaterialityScore)))) {
+    errors.push(`${pathPrefix}minMaterialityScore must be finite number or null`);
+  }
+  if (!isIsoDateString(input.createdAt)) errors.push(`${pathPrefix}createdAt must be ISO date`);
+  if (!isIsoDateString(input.updatedAt)) errors.push(`${pathPrefix}updatedAt must be ISO date`);
+  return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as NotificationSubscriptionRecord };
+}
+
+export function validateNotificationInboxRecord(input: unknown, pathPrefix = ''): SchemaValidationResult<NotificationInboxRecord> {
+  const errors: string[] = [];
+  if (!isObjectRecord(input)) return { ok: false, errors: [`${pathPrefix}NotificationInboxRecord must be object`] };
+  if (!isNonEmptyString(input.inboxId)) errors.push(`${pathPrefix}inboxId must be non-empty string`);
+  if (!isNonEmptyString(input.targetId)) errors.push(`${pathPrefix}targetId must be non-empty string`);
+  if (!isNonEmptyString(input.decisionId)) errors.push(`${pathPrefix}decisionId must be non-empty string`);
+  if (!isNonEmptyString(input.decisionKey)) errors.push(`${pathPrefix}decisionKey must be non-empty string`);
+  if (!isNonEmptyString(input.asset)) errors.push(`${pathPrefix}asset must be non-empty string`);
+  if (!isEnumValue(input.timeframe, TIMEFRAMES)) errors.push(`${pathPrefix}timeframe must be valid timeframe`);
+  if (!isNonEmptyString(input.ruleKey)) errors.push(`${pathPrefix}ruleKey must be non-empty string`);
+  if (!isNonEmptyString(input.headline)) errors.push(`${pathPrefix}headline must be non-empty string`);
+  if (!isNonEmptyString(input.body)) errors.push(`${pathPrefix}body must be non-empty string`);
+  if (!isIsoDateString(input.createdAt)) errors.push(`${pathPrefix}createdAt must be ISO date`);
+  if (!(input.readAt === null || input.readAt === undefined || isIsoDateString(input.readAt))) errors.push(`${pathPrefix}readAt must be ISO date or null`);
+  if (!(input.archivedAt === null || input.archivedAt === undefined || isIsoDateString(input.archivedAt))) errors.push(`${pathPrefix}archivedAt must be ISO date or null`);
+  if (!isNonEmptyString(input.payloadJson)) errors.push(`${pathPrefix}payloadJson must be non-empty string`);
+  return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as NotificationInboxRecord };
 }

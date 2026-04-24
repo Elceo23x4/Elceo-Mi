@@ -129,3 +129,11 @@ C3-G should focus on operational controls and production adapters:
 - dead-letter operational tooling and re-drive controls
 - delivery SLO/metrics dashboards and failure alerting
 - optional entitlement and preference enforcement at dispatch gate (not UI)
+
+
+## C3-G target-aware delivery extension
+
+Delivery now stages one outbox row per decision/channel/target, not per channel alone.
+`app_notification_targets` and `app_notification_subscriptions` drive deterministic recipient resolution.
+`app_notification_inbox` persists durable in-app delivery artifacts with deterministic `inbox|{decisionId}|{targetId}` IDs.
+Replay APIs now deserialize target-aware envelopes and support inbox replay by target and by decision.

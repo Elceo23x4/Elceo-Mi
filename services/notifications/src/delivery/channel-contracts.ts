@@ -34,6 +34,14 @@ export type EmailDeliveryPayload = {
 
 export type NotificationDeliveryChannelPayload = InAppDeliveryPayload | PushDeliveryPayload | EmailDeliveryPayload;
 
+export type NotificationDeliveryEnvelope = {
+  channel: DeliverySupportedChannel;
+  targetId: string;
+  targetKind: 'in_app_user' | 'email_address' | 'push_endpoint';
+  addressJson: string;
+  payload: NotificationDeliveryChannelPayload;
+};
+
 export type NotificationDeliveryChannelContract =
   | { channel: 'in_app'; payload: InAppDeliveryPayload; dedupeKey: string; deliveryKey: string }
   | { channel: 'push'; payload: PushDeliveryPayload; dedupeKey: string; deliveryKey: string }

@@ -1,5 +1,5 @@
 import type { CanonicalAssetSymbol, NotificationChannel, Timeframe } from '@elceo/types';
-import type { NotificationDeliveryChannelPayload } from './channel-contracts';
+import type { NotificationDeliveryEnvelope } from './channel-contracts';
 
 export type NotificationOutboxStatus = 'staged' | 'dispatching' | 'delivered' | 'failed' | 'dead';
 
@@ -14,6 +14,11 @@ export type NotificationOutboxRecord = {
   timeframe: Timeframe;
   ruleKey: string;
   channel: NotificationChannel;
+  targetId: string;
+  subjectKind: 'user' | 'workspace' | 'ops';
+  subjectId: string;
+  targetKey: string;
+  deliveryAddressJson: string;
   status: NotificationOutboxStatus;
   availableAt: string;
   lastAttemptAt: string | null;
@@ -41,5 +46,5 @@ export type NotificationOutboxAttemptRecord = {
 export type NotificationOutboxReplayBundle = {
   outbox: NotificationOutboxRecord;
   attempts: NotificationOutboxAttemptRecord[];
-  payload: NotificationDeliveryChannelPayload;
+  payload: NotificationDeliveryEnvelope;
 };

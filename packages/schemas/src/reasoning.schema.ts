@@ -2,6 +2,7 @@ import type { ReasoningInputFrame } from '@elceo/types';
 import { validateCanonicalCognitionState } from './cognition.schema';
 import { validateCanonicalEvent, validateRankedEvidenceItem, TIMEFRAMES } from './event.schema';
 import { validateZoneSignificance } from './zones.schema';
+import { validateJournalInfluenceSummary } from './journal-influence.schema';
 import {
   isBoolean,
   isEnumValue,
@@ -72,6 +73,12 @@ export function validateReasoningInputFrame(input: unknown, pathPrefix = ''): Sc
     }
     if (!isStringArray(input.userJournalInfluence.linkedEntryIds)) {
       errors.push(`${pathPrefix}userJournalInfluence.linkedEntryIds must be string[]`);
+    }
+    if (!(input.userJournalInfluence.summary === null || isObjectRecord(input.userJournalInfluence.summary))) {
+      errors.push(`${pathPrefix}userJournalInfluence.summary must be object or null`);
+    } else if (input.userJournalInfluence.summary !== null) {
+      const summaryValidation = validateJournalInfluenceSummary(input.userJournalInfluence.summary, `${pathPrefix}userJournalInfluence.summary.`);
+      if (summaryValidation.ok === false) errors.push(...summaryValidation.errors);
     }
   }
 

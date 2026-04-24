@@ -277,7 +277,8 @@ export function buildReasoningInputFrameFixture(overrides?: DeepPartial<Reasonin
       userJournalInfluence: {
         enabled: true,
         influenceFlag: 'weak',
-        linkedEntryIds: ['journal-1']
+        linkedEntryIds: ['journal-1'],
+        summary: null
       },
       config: {
         scoringVersion: 'c1r.0.0',

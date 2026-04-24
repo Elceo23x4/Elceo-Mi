@@ -65,7 +65,7 @@ export async function runInputAssemblerTests(): Promise<void> {
     marketLoader,
     snapshotRepo,
     { loadZones: async () => [buildZoneSignificanceFixture()] },
-    { loadJournalInfluence: async () => ({ enabled: true, influenceFlag: 'weak', linkedEntryIds: ['j1'] }) }
+    { loadJournalInfluence: async () => ({ enabled: true, influenceFlag: 'weak', linkedEntryIds: ['j1'], summary: null }) }
   );
   const assembled = await assembler.assembleReasoningInput({ asset: 'XAU/USD', timeframe: 'H1', asOf: '2026-04-22T11:00:00.000Z' });
   assert(assembled.input.latestPrice === 2001, 'successful full assembly should include market context');

@@ -1,4 +1,12 @@
-import type { CanonicalAssetSymbol, NotificationChannel, NotificationInboxRecord, NotificationSubscriptionRecord, NotificationTargetRecord, Timeframe } from '@elceo/types';
+import type {
+  CanonicalAssetSymbol,
+  NotificationChannel,
+  NotificationInboxRecord,
+  NotificationSubscriptionRecord,
+  NotificationTargetChannelStatus,
+  NotificationTargetRecord,
+  Timeframe
+} from '@elceo/types';
 import type {
   NotificationDecisionRepository,
   NotificationInboxRepository,
@@ -9,6 +17,7 @@ import type {
   PersistedNotificationDecisionRecord
 } from './contracts';
 import type { NotificationOutboxAttemptRecord, NotificationOutboxRecord } from '../delivery/outbox-contracts';
+import type { InboxListQuery } from '../management/contracts';
 
 export class MemoryNotificationDecisionRepository implements NotificationDecisionRepository {
   private readonly byId = new Map<string, PersistedNotificationDecisionRecord>();
@@ -33,8 +42,26 @@ export class MemoryNotificationDecisionRepository implements NotificationDecisio
 
 export class MemoryNotificationTargetRepository implements NotificationTargetRepository {
   private readonly byId = new Map<string, NotificationTargetRecord>();
-  async saveTarget(record: NotificationTargetRecord): Promise<void> { this.byId.set(record.targetId, record); }
+  private readonly idByKey = new Map<string, string>();
+
+  async saveTarget(record: NotificationTargetRecord): Promise<void> { this.byId.set(record.targetId, record); if (record.targetKey) this.idByKey.set(record.targetKey, record.targetId); }
   async getTargetById(targetId: string): Promise<NotificationTargetRecord | null> { return this.byId.get(targetId) ?? null; }
+  async getTargetByKey(targetKey: string): Promise<NotificationTargetRecord | null> { const id = this.idByKey.get(targetKey); return id ? this.byId.get(id) ?? null : null; }
+  async upsertTargetByKey(record: NotificationTargetRecord): Promise<void> {
+    const byKey = record.targetKey ? await this.getTargetByKey(record.targetKey) : null;
+    if (byKey) {
+      this.byId.set(byKey.targetId, { ...record, targetId: byKey.targetId, createdAt: byKey.createdAt });
+      if (record.targetKey) this.idByKey.set(record.targetKey, byKey.targetId);
+      return;
+    }
+    this.byId.set(record.targetId, record);
+    if (record.targetKey) this.idByKey.set(record.targetKey, record.targetId);
+  }
+  async updateTargetStatus(targetId: string, status: NotificationTargetChannelStatus, updatedAt: string, verifiedAt?: string): Promise<void> {
+    const current = this.byId.get(targetId);
+    if (!current) return;
+    this.byId.set(targetId, { ...current, status, updatedAt, verifiedAt: verifiedAt ?? current.verifiedAt });
+  }
   async listTargetsForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string): Promise<NotificationTargetRecord[]> {
     return [...this.byId.values()].filter((row) => row.subjectKind === subjectKind && row.subjectId === subjectId).sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || a.targetId.localeCompare(b.targetId));
   }
@@ -49,8 +76,31 @@ export class MemoryNotificationTargetRepository implements NotificationTargetRep
 
 export class MemoryNotificationSubscriptionRepository implements NotificationSubscriptionRepository {
   private readonly byId = new Map<string, NotificationSubscriptionRecord>();
-  async saveSubscription(record: NotificationSubscriptionRecord): Promise<void> { this.byId.set(record.subscriptionId, record); }
+  private readonly idByKey = new Map<string, string>();
+
+  async saveSubscription(record: NotificationSubscriptionRecord): Promise<void> { this.byId.set(record.subscriptionId, record); if (record.subscriptionKey) this.idByKey.set(record.subscriptionKey, record.subscriptionId); }
   async getSubscriptionById(subscriptionId: string): Promise<NotificationSubscriptionRecord | null> { return this.byId.get(subscriptionId) ?? null; }
+  async getSubscriptionByKey(subscriptionKey: string): Promise<NotificationSubscriptionRecord | null> { const id = this.idByKey.get(subscriptionKey); return id ? this.byId.get(id) ?? null : null; }
+  async upsertSubscriptionByKey(record: NotificationSubscriptionRecord): Promise<void> {
+    const existing = record.subscriptionKey ? await this.getSubscriptionByKey(record.subscriptionKey) : null;
+    if (existing) {
+      this.byId.set(existing.subscriptionId, { ...record, subscriptionId: existing.subscriptionId, createdAt: existing.createdAt });
+      if (record.subscriptionKey) this.idByKey.set(record.subscriptionKey, existing.subscriptionId);
+      return;
+    }
+    this.byId.set(record.subscriptionId, record);
+    if (record.subscriptionKey) this.idByKey.set(record.subscriptionKey, record.subscriptionId);
+  }
+  async updateSubscriptionEnabled(subscriptionId: string, enabled: boolean, updatedAt: string): Promise<void> {
+    const current = this.byId.get(subscriptionId);
+    if (!current) return;
+    this.byId.set(subscriptionId, { ...current, enabled, updatedAt });
+  }
+  async updateSubscriptionThreshold(subscriptionId: string, minMaterialityScore: number | null, updatedAt: string): Promise<void> {
+    const current = this.byId.get(subscriptionId);
+    if (!current) return;
+    this.byId.set(subscriptionId, { ...current, minMaterialityScore, updatedAt });
+  }
   async listSubscriptionsForSubject(subjectKind: NotificationSubscriptionRecord['subjectKind'], subjectId: string): Promise<NotificationSubscriptionRecord[]> {
     return [...this.byId.values()].filter((row) => row.subjectKind === subjectKind && row.subjectId === subjectId).sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || a.subscriptionId.localeCompare(b.subscriptionId));
   }
@@ -63,11 +113,19 @@ export class MemoryNotificationInboxRepository implements NotificationInboxRepos
   private readonly byId = new Map<string, NotificationInboxRecord>();
   async saveInboxRecord(record: NotificationInboxRecord): Promise<void> { if (!this.byId.has(record.inboxId)) this.byId.set(record.inboxId, record); }
   async getInboxById(inboxId: string): Promise<NotificationInboxRecord | null> { return this.byId.get(inboxId) ?? null; }
-  async listInboxForTarget(targetId: string, limit = 100): Promise<NotificationInboxRecord[]> {
-    return [...this.byId.values()].filter((row) => row.targetId === targetId).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || a.inboxId.localeCompare(b.inboxId)).slice(0, limit);
+  async listInboxForTarget(targetId: string, limit = 100): Promise<NotificationInboxRecord[]> { return this.listInbox({ targetId, includeArchived: true, limit }); }
+  async listInbox(query: InboxListQuery): Promise<NotificationInboxRecord[]> {
+    let rows = [...this.byId.values()];
+    if (query.targetId) rows = rows.filter((row) => row.targetId === query.targetId);
+    if (query.unreadOnly) rows = rows.filter((row) => row.readAt === null);
+    if (!(query.includeArchived ?? false)) rows = rows.filter((row) => row.archivedAt === null);
+    rows.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || a.inboxId.localeCompare(b.inboxId));
+    return rows.slice(0, query.limit ?? 100);
   }
   async markRead(inboxId: string, readAt: string): Promise<void> { const current = this.byId.get(inboxId); if (current) this.byId.set(inboxId, { ...current, readAt }); }
+  async markUnread(inboxId: string): Promise<void> { const current = this.byId.get(inboxId); if (current) this.byId.set(inboxId, { ...current, readAt: null }); }
   async markArchived(inboxId: string, archivedAt: string): Promise<void> { const current = this.byId.get(inboxId); if (current) this.byId.set(inboxId, { ...current, archivedAt }); }
+  async markUnarchived(inboxId: string): Promise<void> { const current = this.byId.get(inboxId); if (current) this.byId.set(inboxId, { ...current, archivedAt: null }); }
   async listInboxForDecision(decisionId: string): Promise<NotificationInboxRecord[]> {
     return [...this.byId.values()].filter((row) => row.decisionId === decisionId).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || a.inboxId.localeCompare(b.inboxId));
   }
@@ -82,6 +140,17 @@ export class MemoryNotificationOutboxRepository implements NotificationOutboxRep
   async listDueOutboxItems(asOfIso: string, limit: number): Promise<NotificationOutboxRecord[]> {
     const asOf = Date.parse(asOfIso);
     return [...this.byId.values()].filter((item) => (item.status === 'staged' || item.status === 'failed') && Date.parse(item.availableAt) <= asOf).sort((a, b) => Date.parse(a.availableAt) - Date.parse(b.availableAt) || Date.parse(a.createdAt) - Date.parse(b.createdAt) || a.outboxId.localeCompare(b.outboxId)).slice(0, limit);
+  }
+  async listRecentOutboxItems(asOfIso: string, lookbackHours: number | null, limit: number): Promise<NotificationOutboxRecord[]> {
+    const asOfMs = Date.parse(asOfIso);
+    const minMs = lookbackHours === null ? Number.NEGATIVE_INFINITY : asOfMs - lookbackHours * 60 * 60 * 1000;
+    return [...this.byId.values()]
+      .filter((row) => {
+        const createdMs = Date.parse(row.createdAt);
+        return createdMs <= asOfMs && createdMs >= minMs;
+      })
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || a.outboxId.localeCompare(b.outboxId))
+      .slice(0, limit);
   }
   async markDispatching(outboxId: string, attemptedAt: string): Promise<void> { const c = this.byId.get(outboxId); if (!c) return; const n = { ...c, status: 'dispatching', lastAttemptAt: attemptedAt, updatedAt: attemptedAt } as NotificationOutboxRecord; this.byId.set(outboxId, n); this.byKey.set(n.outboxKey, n); }
   async markDelivered(outboxId: string, deliveredAt: string): Promise<void> { const c = this.byId.get(outboxId); if (!c) return; const n = { ...c, status: 'delivered', attemptCount: c.attemptCount + 1, deliveredAt, lastAttemptAt: deliveredAt, updatedAt: deliveredAt, lastErrorCode: null, lastErrorMessage: null } as NotificationOutboxRecord; this.byId.set(outboxId, n); this.byKey.set(n.outboxKey, n); }

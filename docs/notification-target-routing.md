@@ -66,3 +66,10 @@ C3-H should cover:
 - provider-backed email/push adapters
 - dead-letter re-drive controls
 - inbox read/archive mutation boundary APIs
+
+
+## C3-H management boundary integration
+
+C3-H introduces deterministic backend registration/upsert and lifecycle controls for targets and subscriptions via the canonical management boundary.
+Target identity now uses canonical `targetKey` and subscription identity uses canonical `subscriptionKey` for durable idempotent upserts.
+Subject-level inbox aggregation and operational summary read surfaces are backend-ready for later API/UI exposure.

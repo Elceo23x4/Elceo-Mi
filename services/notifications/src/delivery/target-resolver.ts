@@ -29,7 +29,7 @@ export async function resolveTargetsForSubscriptionMatches(
       dedupe.add(dedupeKey);
       resolved.push({
         targetId: target.targetId,
-        targetKey: `target|${target.targetId}`,
+        targetKey: target.targetKey ?? `target|${target.targetId}`,
         subjectKind: target.subjectKind,
         subjectId: target.subjectId,
         channel: target.channel,

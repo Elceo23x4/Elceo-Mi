@@ -7,3 +7,5 @@ export * from './admin/source-health-shaping';
 export * from './policy';
 export * from './persistence';
 export * from './runtime';
+
+export * from './management';

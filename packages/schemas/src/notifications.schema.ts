@@ -151,6 +151,7 @@ export function validateNotificationTargetRecord(input: unknown, pathPrefix = ''
   const errors: string[] = [];
   if (!isObjectRecord(input)) return { ok: false, errors: [`${pathPrefix}NotificationTargetRecord must be object`] };
   if (!isNonEmptyString(input.targetId)) errors.push(`${pathPrefix}targetId must be non-empty string`);
+  if (!(input.targetKey === undefined || isNonEmptyString(input.targetKey))) errors.push(`${pathPrefix}targetKey must be non-empty string`);
   if (!isEnumValue(input.subjectKind, SUBJECT_KINDS)) errors.push(`${pathPrefix}subjectKind is invalid`);
   if (!isNonEmptyString(input.subjectId)) errors.push(`${pathPrefix}subjectId must be non-empty string`);
   if (!isEnumValue(input.channel, NOTIFICATION_CHANNELS)) errors.push(`${pathPrefix}channel is invalid`);
@@ -168,6 +169,7 @@ export function validateNotificationSubscriptionRecord(input: unknown, pathPrefi
   const errors: string[] = [];
   if (!isObjectRecord(input)) return { ok: false, errors: [`${pathPrefix}NotificationSubscriptionRecord must be object`] };
   if (!isNonEmptyString(input.subscriptionId)) errors.push(`${pathPrefix}subscriptionId must be non-empty string`);
+  if (!(input.subscriptionKey === undefined || isNonEmptyString(input.subscriptionKey))) errors.push(`${pathPrefix}subscriptionKey must be non-empty string`);
   if (!isEnumValue(input.subjectKind, SUBJECT_KINDS)) errors.push(`${pathPrefix}subjectKind is invalid`);
   if (!isNonEmptyString(input.subjectId)) errors.push(`${pathPrefix}subjectId must be non-empty string`);
   if (!isEnumValue(input.channel, NOTIFICATION_CHANNELS)) errors.push(`${pathPrefix}channel is invalid`);
@@ -188,6 +190,7 @@ export function validateNotificationInboxRecord(input: unknown, pathPrefix = '')
   if (!isObjectRecord(input)) return { ok: false, errors: [`${pathPrefix}NotificationInboxRecord must be object`] };
   if (!isNonEmptyString(input.inboxId)) errors.push(`${pathPrefix}inboxId must be non-empty string`);
   if (!isNonEmptyString(input.targetId)) errors.push(`${pathPrefix}targetId must be non-empty string`);
+  if (!(input.targetKey === undefined || isNonEmptyString(input.targetKey))) errors.push(`${pathPrefix}targetKey must be non-empty string`);
   if (!isNonEmptyString(input.decisionId)) errors.push(`${pathPrefix}decisionId must be non-empty string`);
   if (!isNonEmptyString(input.decisionKey)) errors.push(`${pathPrefix}decisionKey must be non-empty string`);
   if (!isNonEmptyString(input.asset)) errors.push(`${pathPrefix}asset must be non-empty string`);

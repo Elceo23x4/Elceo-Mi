@@ -20,6 +20,7 @@ import type {
 } from '../../../reasoning/src/persistence/contracts';
 import type { NotificationOutboxAttemptRecord, NotificationOutboxRecord, NotificationOutboxReplayBundle } from '../delivery/outbox-contracts';
 import type { InboxListQuery } from '../management/contracts';
+import type { NotificationOrchestrationRunReport, NotificationOrchestrationStage } from '../orchestration/contracts';
 
 export type PersistedNotificationDecisionRecord = {
   decisionId: string;
@@ -98,6 +99,36 @@ export type NotificationOutboxRepository = {
   listOutboxForDecision(decisionId: string): Promise<NotificationOutboxRecord[]>;
 };
 
+export type PersistedNotificationOrchestrationRunRecord = {
+  orchestrationRunId: string;
+  stage: NotificationOrchestrationStage;
+  startedAt: string;
+  endedAt: string;
+  durationMs: number;
+  status: 'success' | 'partial_success' | 'failed';
+  reasoningRunId: string | null;
+  policyEvaluationId: string | null;
+  evaluatedDecisionCount: number;
+  notifyingDecisionCount: number;
+  stagedOutboxCount: number;
+  dispatchedOutboxCount: number;
+  deliveredCount: number;
+  failedCount: number;
+  deadCount: number;
+  expiredVerificationCount: number;
+  failureReason: string | null;
+  warningsJson: string;
+  createdAt: string;
+  reportJson: string;
+};
+
+export type NotificationOrchestrationRunRepository = {
+  saveRun(record: PersistedNotificationOrchestrationRunRecord): Promise<void>;
+  getRunById(orchestrationRunId: string): Promise<PersistedNotificationOrchestrationRunRecord | null>;
+  listRecentRuns(stage?: NotificationOrchestrationStage, limit?: number): Promise<PersistedNotificationOrchestrationRunRecord[]>;
+  getLatestRunForReasoningRun(reasoningRunId: string): Promise<PersistedNotificationOrchestrationRunRecord | null>;
+};
+
 
 
 export type NotificationVerificationRepository = {
@@ -134,6 +165,7 @@ export type NotificationDeliveryRuntimeRepositories = NotificationPolicyLoadRepo
   subscriptionRepository: NotificationSubscriptionRepository;
   inboxRepository: NotificationInboxRepository;
   verificationRepository: NotificationVerificationRepository;
+  orchestrationRunRepository: NotificationOrchestrationRunRepository;
 };
 
 export type NotificationDecisionReplayBundle = {
@@ -148,12 +180,7 @@ export type NotificationPolicySourceArtifacts = {
 };
 
 export type NotificationDeliveryReplayBundle = NotificationOutboxReplayBundle;
-
-export type NotificationDeliveryStagingAggregateReport = {
-  reasoningRunId: string;
-  stagedAt: string;
-  decisionCount: number;
-  notifyingDecisionCount: number;
-  stagedOutboxCount: number;
-  stagedChannels: NotificationChannel[];
+export type NotificationOrchestrationReplayBundle = {
+  record: PersistedNotificationOrchestrationRunRecord;
+  report: NotificationOrchestrationRunReport;
 };

@@ -13,3 +13,4 @@ export * from './management';
 export * from './verification';
 
 export * from './providers';
+export * from './orchestration';

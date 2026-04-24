@@ -1,27 +1,19 @@
 import { deserializeNotificationDecision } from '../persistence/serialization';
-import type { NotificationDeliveryRuntimeRepositories, NotificationDeliveryStagingAggregateReport, NotificationDecisionReplayBundle, PersistedNotificationDecisionRecord } from '../persistence/contracts';
+import type { NotificationDeliveryRuntimeRepositories, NotificationDecisionReplayBundle, PersistedNotificationDecisionRecord } from '../persistence/contracts';
 import { dispatchDueNotificationOutbox, type NotificationOutboxDispatchReport } from '../delivery/outbox-dispatcher';
 import { getNotificationOutboxReplayById, listInboxReplayForDecision, listNotificationOutboxReplayForDecision } from '../delivery/replay-delivery';
 import { stageNotificationDeliveryForDecision } from '../delivery/staging-service';
 import type { NotificationDeliveryTransport } from '../delivery/transport';
 import type { NotificationOutboxReplayBundle } from '../delivery/outbox-contracts';
 import type { NotificationInboxRecord } from '@elceo/types';
+import type { NotificationDeliveryStagingAggregateReport } from '../orchestration/contracts';
+import { stageDeliveriesForReasoningRun } from '../orchestration/staging-aggregator';
 
 export class CanonicalNotificationDeliveryBoundaryService {
   constructor(private readonly repositories: NotificationDeliveryRuntimeRepositories, private readonly transport: NotificationDeliveryTransport) {}
 
   async stageForReasoningRun(reasoningRunId: string, stagedAt?: string): Promise<NotificationDeliveryStagingAggregateReport> {
-    const now = stagedAt ?? new Date().toISOString();
-    const decisions = await this.repositories.decisionRepository.listDecisionsForReasoningRun(reasoningRunId);
-    const notifying = decisions.filter((record) => record.shouldNotify);
-    const stagedChannels: NotificationDeliveryStagingAggregateReport['stagedChannels'] = [];
-    let stagedOutboxCount = 0;
-    for (const record of notifying) {
-      const report = await stageNotificationDeliveryForDecision(record, deserializeNotificationDecision(record.decisionJson), this.repositories, now);
-      stagedOutboxCount += report.stagedOutboxCount;
-      stagedChannels.push(...report.channels);
-    }
-    return { reasoningRunId, stagedAt: now, decisionCount: decisions.length, notifyingDecisionCount: notifying.length, stagedOutboxCount, stagedChannels };
+    return stageDeliveriesForReasoningRun(this.repositories, reasoningRunId, stagedAt);
   }
 
   async stageForDecision(decisionId: string, stagedAt?: string): Promise<NotificationDecisionReplayBundle | null> {

@@ -6,7 +6,7 @@ import {
   MemoryNotificationOutboxRepository,
   MemoryNotificationSubscriptionRepository,
   MemoryNotificationTargetRepository,
-  MemoryNotificationVerificationRepository
+  MemoryNotificationOrchestrationRunRepository, MemoryNotificationVerificationRepository
 } from '../persistence/memory-notification-repository.js';
 
 const assert = (condition: boolean, message: string): void => { if (!condition) throw new Error(message); };
@@ -22,7 +22,8 @@ export async function runCanonicalNotificationManagementBoundaryTests(): Promise
     targetRepository: new MemoryNotificationTargetRepository(),
     subscriptionRepository: new MemoryNotificationSubscriptionRepository(),
     inboxRepository: new MemoryNotificationInboxRepository(),
-    verificationRepository: new MemoryNotificationVerificationRepository()
+    verificationRepository: new MemoryNotificationVerificationRepository(),
+    orchestrationRunRepository: new MemoryNotificationOrchestrationRunRepository()
   });
 
   const target = await boundary.registerOrUpdateTarget({ subjectKind: 'user', subjectId: 'u-b', channel: 'in_app', targetKind: 'in_app_user', addressJson: '{"userId":"u-b"}' }, '2026-01-15T10:00:00.000Z');

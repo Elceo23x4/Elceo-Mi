@@ -1,5 +1,5 @@
 import { CanonicalNotificationVerificationBoundaryService } from '../runtime/canonical-notification-verification-boundary.js';
-import { MemoryNotificationDecisionRepository, MemoryNotificationInboxRepository, MemoryNotificationOutboxAttemptRepository, MemoryNotificationOutboxRepository, MemoryNotificationSubscriptionRepository, MemoryNotificationTargetRepository, MemoryNotificationVerificationRepository } from '../persistence/memory-notification-repository.js';
+import { MemoryNotificationDecisionRepository, MemoryNotificationInboxRepository, MemoryNotificationOutboxAttemptRepository, MemoryNotificationOutboxRepository, MemoryNotificationSubscriptionRepository, MemoryNotificationTargetRepository, MemoryNotificationOrchestrationRunRepository, MemoryNotificationVerificationRepository } from '../persistence/memory-notification-repository.js';
 
 const assert = (condition: boolean, message: string): void => { if (!condition) throw new Error(message); };
 
@@ -12,6 +12,7 @@ export async function runCanonicalNotificationVerificationBoundaryTests(): Promi
     targetRepository: new MemoryNotificationTargetRepository(),
     inboxRepository: new MemoryNotificationInboxRepository(),
     verificationRepository: new MemoryNotificationVerificationRepository(),
+    orchestrationRunRepository: new MemoryNotificationOrchestrationRunRepository(),
     runRepository: { getLatestReasoningRunForAssetTimeframe: async () => null, getReasoningRunById: async () => null, listRecentReasoningRuns: async () => [], saveReasoningRun: async () => {} },
     snapshotRepository: { getLatestSnapshotForAssetTimeframe: async () => null, getSnapshotById: async () => null, getSnapshotByReasoningRunId: async () => null, saveCognitionSnapshot: async () => {} },
     driftRepository: { getDriftById: async () => null, getLatestDriftForAssetTimeframe: async () => null, listRecentDrifts: async () => [], saveDriftRecord: async () => {} }

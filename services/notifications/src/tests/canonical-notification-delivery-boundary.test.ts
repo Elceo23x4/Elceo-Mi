@@ -2,6 +2,7 @@ import { CanonicalNotificationDeliveryBoundaryService } from '../runtime/canonic
 import {
   MemoryNotificationDecisionRepository,
   MemoryNotificationInboxRepository,
+  MemoryNotificationOrchestrationRunRepository,
   MemoryNotificationOutboxAttemptRepository,
   MemoryNotificationOutboxRepository,
   MemoryNotificationSubscriptionRepository,
@@ -33,6 +34,7 @@ export async function runCanonicalNotificationDeliveryBoundaryTests(): Promise<v
     subscriptionRepository,
     inboxRepository,
     verificationRepository,
+    orchestrationRunRepository: new MemoryNotificationOrchestrationRunRepository(),
     runRepository: { getLatestReasoningRunForAssetTimeframe: async () => buildReasoningRun(), getReasoningRunById: async () => buildReasoningRun(), listRecentReasoningRuns: async () => [], saveReasoningRun: async () => {} },
     snapshotRepository: { getLatestSnapshotForAssetTimeframe: async () => null, getSnapshotById: async () => null, getSnapshotByReasoningRunId: async () => null, saveCognitionSnapshot: async () => {} },
     driftRepository: { getDriftById: async () => null, getLatestDriftForAssetTimeframe: async () => null, listRecentDrifts: async () => [], saveDriftRecord: async () => {} }

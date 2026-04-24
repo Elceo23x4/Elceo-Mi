@@ -93,3 +93,8 @@ C3-I should add:
 ## C3-I extension
 
 This boundary now includes provider capability and operational delivery summary calls, plus verification runtime integration via the canonical verification boundary.
+
+## C3-J runtime operations compatibility
+
+Notification runtime orchestration now persists stage-level automation reports and exposes replay/list surfaces through the canonical orchestration boundary.
+Management operational summaries remain complementary read views, while orchestration maintenance helpers provide additional runtime health checks (stuck dispatching and near-expiry verification visibility) without changing management lifecycle semantics.

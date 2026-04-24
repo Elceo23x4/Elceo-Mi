@@ -17,8 +17,11 @@ import type {
   NotificationSubscriptionRepository,
   NotificationTargetRepository,
   NotificationVerificationRepository,
+  NotificationOrchestrationRunRepository,
+  PersistedNotificationOrchestrationRunRecord,
   PersistedNotificationDecisionRecord
 } from './contracts';
+import type { NotificationOrchestrationStage } from '../orchestration/contracts';
 import type { NotificationOutboxAttemptRecord, NotificationOutboxRecord } from '../delivery/outbox-contracts';
 import type { InboxListQuery } from '../management/contracts';
 
@@ -210,5 +213,32 @@ export class MemoryNotificationVerificationRepository implements NotificationVer
   async incrementVerificationAttempt(verificationId: string, attemptedAt: string): Promise<void> {
     const current = this.byId.get(verificationId); if (!current) return;
     this.byId.set(verificationId, { ...current, attemptCount: current.attemptCount + 1, lastAttemptAt: attemptedAt, updatedAt: attemptedAt });
+  }
+}
+
+export class MemoryNotificationOrchestrationRunRepository implements NotificationOrchestrationRunRepository {
+  private readonly byId = new Map<string, PersistedNotificationOrchestrationRunRecord>();
+
+  async saveRun(record: PersistedNotificationOrchestrationRunRecord): Promise<void> {
+    this.byId.set(record.orchestrationRunId, record);
+  }
+
+  async getRunById(orchestrationRunId: string): Promise<PersistedNotificationOrchestrationRunRecord | null> {
+    return this.byId.get(orchestrationRunId) ?? null;
+  }
+
+  async listRecentRuns(stage?: NotificationOrchestrationStage, limit = 20): Promise<PersistedNotificationOrchestrationRunRecord[]> {
+    const rows = [...this.byId.values()];
+    const filtered = stage ? rows.filter((row) => row.stage === stage) : rows;
+    return filtered
+      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt) || left.orchestrationRunId.localeCompare(right.orchestrationRunId))
+      .slice(0, limit);
+  }
+
+  async getLatestRunForReasoningRun(reasoningRunId: string): Promise<PersistedNotificationOrchestrationRunRecord | null> {
+    const rows = [...this.byId.values()]
+      .filter((row) => row.reasoningRunId === reasoningRunId)
+      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt) || left.orchestrationRunId.localeCompare(right.orchestrationRunId));
+    return rows[0] ?? null;
   }
 }

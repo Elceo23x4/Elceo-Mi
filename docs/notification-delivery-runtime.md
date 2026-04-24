@@ -148,3 +148,8 @@ Operational delivery health read surfaces (delivered/failed/dead/staged/dispatch
 ## C3-I extension
 
 This boundary now includes provider capability and operational delivery summary calls, plus verification runtime integration via the canonical verification boundary.
+
+## C3-J orchestration runtime linkage
+
+C3-J adds a canonical orchestration runtime boundary that coordinates policy evaluation, staging, dispatch jobs, and verification expiry jobs while persisting durable orchestration run reports.
+Delivery dispatch remains an independent runtime stage and is now executed via dedicated orchestration job services rather than implicit policy side effects.

@@ -6,6 +6,8 @@ import type {
   NotificationSubscriptionRecord,
   NotificationTargetChannelStatus,
   NotificationTargetRecord,
+  NotificationVerificationKind,
+  NotificationVerificationRecord,
   Timeframe
 } from '@elceo/types';
 import type {
@@ -96,6 +98,21 @@ export type NotificationOutboxRepository = {
   listOutboxForDecision(decisionId: string): Promise<NotificationOutboxRecord[]>;
 };
 
+
+
+export type NotificationVerificationRepository = {
+  saveVerification(record: NotificationVerificationRecord): Promise<void>;
+  getVerificationById(verificationId: string): Promise<NotificationVerificationRecord | null>;
+  getVerificationByKey(verificationKey: string): Promise<NotificationVerificationRecord | null>;
+  getLatestActiveVerificationForTarget(targetId: string, verificationKind: NotificationVerificationKind): Promise<NotificationVerificationRecord | null>;
+  listVerificationsForTarget(targetId: string): Promise<NotificationVerificationRecord[]>;
+  listPendingVerificationsExpiringBefore(asOfIso: string): Promise<NotificationVerificationRecord[]>;
+  markVerificationConsumed(verificationId: string, consumedAt: string): Promise<void>;
+  markVerificationExpired(verificationId: string, updatedAt: string): Promise<void>;
+  markVerificationCanceled(verificationId: string, updatedAt: string): Promise<void>;
+  incrementVerificationAttempt(verificationId: string, attemptedAt: string): Promise<void>;
+};
+
 export type NotificationOutboxAttemptRepository = {
   saveAttempt(record: NotificationOutboxAttemptRecord): Promise<void>;
   listAttemptsForOutbox(outboxId: string): Promise<NotificationOutboxAttemptRecord[]>;
@@ -116,6 +133,7 @@ export type NotificationDeliveryRuntimeRepositories = NotificationPolicyLoadRepo
   targetRepository: NotificationTargetRepository;
   subscriptionRepository: NotificationSubscriptionRepository;
   inboxRepository: NotificationInboxRepository;
+  verificationRepository: NotificationVerificationRepository;
 };
 
 export type NotificationDecisionReplayBundle = {

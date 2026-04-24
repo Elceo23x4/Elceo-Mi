@@ -1,6 +1,7 @@
 import type { NotificationSubjectKind, NotificationTargetRecord } from '@elceo/types';
 import type { NotificationDecisionRepository, NotificationInboxRepository, NotificationOutboxRepository, NotificationSubscriptionRepository, NotificationTargetRepository } from '../persistence/contracts';
 import type { NotificationDeliveryHealthSummary, NotificationOperationalSummary, NotificationSubjectDecisionView } from './contracts';
+import { getNotificationDeliveryOperationalSummary, getNotificationProviderCapabilitiesFromEnv } from '../providers/diagnostics';
 
 type SummaryDeps = {
   targetRepository: NotificationTargetRepository;
@@ -11,7 +12,7 @@ type SummaryDeps = {
 };
 
 export class NotificationOperationalSummaryService {
-  constructor(private readonly deps: SummaryDeps) {}
+  constructor(private readonly deps: SummaryDeps, private readonly env: Record<string, string | undefined> = {}) {}
 
   async getNotificationOperationalSummaryForSubject(subjectKind: NotificationSubjectKind, subjectId: string): Promise<NotificationOperationalSummary> {
     const targets = await this.deps.targetRepository.listTargetsForSubject(subjectKind, subjectId);
@@ -64,6 +65,15 @@ export class NotificationOperationalSummaryService {
       if (!dedupe.has(row.outboxId)) dedupe.set(row.outboxId, row);
     }
     return [...dedupe.values()].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || a.outboxId.localeCompare(b.outboxId)).slice(0, limit);
+  }
+
+
+  getNotificationProviderCapabilities() {
+    return getNotificationProviderCapabilitiesFromEnv(this.env);
+  }
+
+  async getNotificationDeliveryOperationalSummary(asOfIso = new Date().toISOString(), lookbackHours = 24) {
+    return getNotificationDeliveryOperationalSummary(this.deps.outboxRepository, this.env, asOfIso, lookbackHours);
   }
 
   async listRecentDecisionsForSubject(subjectKind: NotificationSubjectKind, subjectId: string, limit = 20): Promise<NotificationSubjectDecisionView[]> {

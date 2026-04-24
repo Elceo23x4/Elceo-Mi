@@ -4,9 +4,10 @@ import type {
   NotificationOutboxAttemptRepository,
   NotificationOutboxRepository,
   NotificationSubscriptionRepository,
-  NotificationTargetRepository
+  NotificationTargetRepository,
+  NotificationVerificationRepository
 } from './contracts';
-import { MemoryNotificationDecisionRepository, MemoryNotificationOutboxAttemptRepository, MemoryNotificationOutboxRepository } from './memory-notification-repository';
+import { MemoryNotificationDecisionRepository, MemoryNotificationOutboxAttemptRepository, MemoryNotificationOutboxRepository, MemoryNotificationVerificationRepository } from './memory-notification-repository';
 import {
   MemoryNotificationInboxRepository,
   MemoryNotificationSubscriptionRepository,
@@ -18,7 +19,8 @@ import {
   SqlNotificationOutboxAttemptRepository,
   SqlNotificationOutboxRepository,
   SqlNotificationSubscriptionRepository,
-  SqlNotificationTargetRepository
+  SqlNotificationTargetRepository,
+  SqlNotificationVerificationRepository
 } from './sql-notification-repository';
 
 export function createNotificationDecisionRepository(env: Record<string, string | undefined>): NotificationDecisionRepository {
@@ -56,3 +58,9 @@ export * from './memory-notification-repository';
 export * from './sql-notification-repository';
 export * from './serialization';
 export * from './replay';
+
+
+export function createNotificationVerificationRepository(env: Record<string, string | undefined>): NotificationVerificationRepository {
+  if (env.NOTIFICATIONS_PERSISTENCE_BACKEND === 'sql') return new SqlNotificationVerificationRepository() as NotificationVerificationRepository;
+  return new MemoryNotificationVerificationRepository();
+}

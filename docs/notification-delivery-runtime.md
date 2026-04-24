@@ -143,3 +143,8 @@ Replay APIs now deserialize target-aware envelopes and support inbox replay by t
 
 Delivery runtime now coexists with a canonical management boundary that owns target/subscription lifecycle and inbox management semantics.
 Operational delivery health read surfaces (delivered/failed/dead/staged/dispatching) can be queried through the management summary service without changing dispatch retry rules.
+
+
+## C3-I extension
+
+This boundary now includes provider capability and operational delivery summary calls, plus verification runtime integration via the canonical verification boundary.

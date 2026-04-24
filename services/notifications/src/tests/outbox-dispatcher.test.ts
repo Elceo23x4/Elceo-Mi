@@ -6,7 +6,8 @@ import {
   MemoryNotificationOutboxAttemptRepository,
   MemoryNotificationOutboxRepository,
   MemoryNotificationSubscriptionRepository,
-  MemoryNotificationTargetRepository
+  MemoryNotificationTargetRepository,
+  MemoryNotificationVerificationRepository
 } from '../persistence/memory-notification-repository.js';
 import { stageNotificationDeliveryForDecision } from '../delivery/staging-service.js';
 import { createNotificationDeliveryTransport } from '../delivery/transport.js';
@@ -20,7 +21,8 @@ function buildRepos() {
     outboxAttemptRepository: new MemoryNotificationOutboxAttemptRepository(),
     subscriptionRepository: new MemoryNotificationSubscriptionRepository(),
     targetRepository: new MemoryNotificationTargetRepository(),
-    inboxRepository: new MemoryNotificationInboxRepository()
+    inboxRepository: new MemoryNotificationInboxRepository(),
+    verificationRepository: new MemoryNotificationVerificationRepository()
   };
 }
 
@@ -31,6 +33,7 @@ export async function runOutboxDispatcherTests(): Promise<void> {
   const decision = buildDecision({ channels: ['in_app'] });
   const record = buildDecisionRecord({ decisionJson: JSON.stringify(decision), channelsJson: JSON.stringify(decision.channels) });
   await stageNotificationDeliveryForDecision(record, decision, repos, '2026-01-15T10:05:00.000Z');
+  await repos.targetRepository.updateTargetStatus('target-hard', 'disabled', '2026-01-15T10:05:30.000Z');
 
   const successTransport = createNotificationDeliveryTransport({}, { inboxRepository: repos.inboxRepository });
   const successReport = await dispatchDueNotificationOutbox('2026-01-15T10:06:00.000Z', 10, repos, successTransport);
@@ -43,7 +46,7 @@ export async function runOutboxDispatcherTests(): Promise<void> {
   const emailDecision = buildDecision({ channels: ['email'] });
   const emailRecord = buildDecisionRecord({ decisionId: 'decision-2', decisionKey: 'decision|2', decisionJson: JSON.stringify(emailDecision), channelsJson: JSON.stringify(emailDecision.channels) });
   await stageNotificationDeliveryForDecision(emailRecord, emailDecision, retryRepos, '2026-01-15T11:00:00.000Z');
-  const failingTransport = createNotificationDeliveryTransport({}, { inboxRepository: retryRepos.inboxRepository, memoryFailureByChannel: { email: { errorCode: 'x', errorMessage: 'x' } } });
+  const failingTransport = createNotificationDeliveryTransport({}, { inboxRepository: retryRepos.inboxRepository, memoryFailureByChannel: { email: { errorCode: 'provider_not_configured', errorMessage: 'x' } } });
 
   await dispatchDueNotificationOutbox('2026-01-15T11:00:00.000Z', 10, retryRepos, failingTransport);
   await dispatchDueNotificationOutbox('2026-01-15T12:30:00.000Z', 10, retryRepos, failingTransport);
@@ -51,4 +54,17 @@ export async function runOutboxDispatcherTests(): Promise<void> {
   await dispatchDueNotificationOutbox('2026-01-15T14:30:00.000Z', 10, retryRepos, failingTransport);
   await dispatchDueNotificationOutbox('2026-01-15T15:30:00.000Z', 10, retryRepos, failingTransport);
   assert((await retryRepos.outboxRepository.listOutboxForDecision(emailRecord.decisionId)).every((item) => item.status === 'dead'), 'fifth failure should mark dead');
+}
+
+
+export async function runOutboxDispatcherHardeningTests(): Promise<void> {
+  const repos = buildRepos();
+  await repos.subscriptionRepository.saveSubscription({ subscriptionId: 'sub-hard', subjectKind: 'user', subjectId: 'u-hard', channel: 'email', asset: '*', timeframe: '*', ruleKey: '*', enabled: true, minMaterialityScore: null, createdAt: '2026-01-15T10:00:00.000Z', updatedAt: '2026-01-15T10:00:00.000Z' });
+  await repos.targetRepository.saveTarget({ targetId: 'target-hard', subjectKind: 'user', subjectId: 'u-hard', channel: 'email', targetKind: 'email_address', status: 'active', label: null, addressJson: '{"email":"a@b.c"}', createdAt: '2026-01-15T10:00:00.000Z', updatedAt: '2026-01-15T10:00:00.000Z', verifiedAt: '2026-01-15T10:00:00.000Z' });
+  const decision = buildDecision({ channels: ['email'] });
+  const record = buildDecisionRecord({ decisionId: 'decision-hard', decisionKey: 'decision|hard', decisionJson: JSON.stringify(decision), channelsJson: JSON.stringify(decision.channels) });
+  await stageNotificationDeliveryForDecision(record, decision, repos, '2026-01-15T10:05:00.000Z');
+  await repos.targetRepository.updateTargetStatus('target-hard', 'disabled', '2026-01-15T10:05:30.000Z');
+  const report = await dispatchDueNotificationOutbox('2026-01-15T10:06:00.000Z', 10, repos, createNotificationDeliveryTransport({}, { inboxRepository: repos.inboxRepository }));
+  assert(report.reports[0]?.errorCode === 'target_not_active', 'inactive target should map to target_not_active');
 }

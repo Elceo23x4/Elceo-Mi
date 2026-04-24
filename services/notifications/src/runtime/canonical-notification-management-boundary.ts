@@ -12,7 +12,7 @@ export class CanonicalNotificationManagementBoundaryService {
   private readonly inboxService: NotificationInboxManagementService;
   private readonly summaryService: NotificationOperationalSummaryService;
 
-  constructor(private readonly repositories: NotificationDeliveryRuntimeRepositories) {
+  constructor(private readonly repositories: NotificationDeliveryRuntimeRepositories, private readonly env: Record<string, string | undefined> = {}) {
     this.targetService = new NotificationTargetManagementService(repositories.targetRepository);
     this.subscriptionService = new NotificationSubscriptionManagementService(repositories.subscriptionRepository);
     this.inboxService = new NotificationInboxManagementService(repositories.inboxRepository, repositories.targetRepository);
@@ -22,7 +22,7 @@ export class CanonicalNotificationManagementBoundaryService {
       inboxRepository: repositories.inboxRepository,
       outboxRepository: repositories.outboxRepository,
       decisionRepository: repositories.decisionRepository
-    });
+    }, this.env);
   }
 
   async registerOrUpdateTarget(input: UpsertNotificationTargetInput, nowIso?: string) { return this.targetService.registerOrUpdateTarget(input, nowIso); }
@@ -47,6 +47,14 @@ export class CanonicalNotificationManagementBoundaryService {
 
   async getNotificationDeliveryHealthSummary(asOfIso?: string, lookbackHours?: number) {
     return this.summaryService.getNotificationDeliveryHealthSummary(asOfIso, lookbackHours);
+  }
+
+  getNotificationProviderCapabilities(_asOfIso?: string) {
+    return this.summaryService.getNotificationProviderCapabilities();
+  }
+
+  async getNotificationDeliveryOperationalSummary(asOfIso?: string, lookbackHours?: number) {
+    return this.summaryService.getNotificationDeliveryOperationalSummary(asOfIso, lookbackHours);
   }
 
   async listTargetsForSubjectDetailed(subjectKind: NotificationSubjectKind, subjectId: string) { return this.summaryService.listTargetsForSubjectDetailed(subjectKind, subjectId); }

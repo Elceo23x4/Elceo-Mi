@@ -10,6 +10,9 @@ import type {
   NotificationTargetChannelStatus,
   NotificationTargetKind,
   NotificationTargetRecord,
+  NotificationTargetVerificationStatus,
+  NotificationVerificationKind,
+  NotificationVerificationRecord,
   NotificationTriggerContext,
   NotificationTriggerKind,
   NotificationTriggerRule
@@ -66,6 +69,8 @@ const SUPPRESSION_REASONS: NotificationSuppressionReason[] = ['condition_not_met
 const SUBJECT_KINDS: NotificationSubjectKind[] = ['user', 'workspace', 'ops'];
 const TARGET_STATUSES: NotificationTargetChannelStatus[] = ['active', 'disabled', 'unverified'];
 const TARGET_KINDS: NotificationTargetKind[] = ['in_app_user', 'email_address', 'push_endpoint'];
+const VERIFICATION_STATUSES: NotificationTargetVerificationStatus[] = ['pending', 'verified', 'expired', 'consumed', 'canceled'];
+const VERIFICATION_KINDS: NotificationVerificationKind[] = ['email_verification', 'push_verification'];
 
 export function validateNotificationTriggerRule(input: unknown, pathPrefix = ''): SchemaValidationResult<NotificationTriggerRule> {
   const errors: string[] = [];
@@ -203,4 +208,27 @@ export function validateNotificationInboxRecord(input: unknown, pathPrefix = '')
   if (!(input.archivedAt === null || input.archivedAt === undefined || isIsoDateString(input.archivedAt))) errors.push(`${pathPrefix}archivedAt must be ISO date or null`);
   if (!isNonEmptyString(input.payloadJson)) errors.push(`${pathPrefix}payloadJson must be non-empty string`);
   return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as NotificationInboxRecord };
+}
+
+
+export function validateNotificationVerificationRecord(input: unknown, pathPrefix = ''): SchemaValidationResult<NotificationVerificationRecord> {
+  const errors: string[] = [];
+  if (!isObjectRecord(input)) return { ok: false, errors: [`${pathPrefix}NotificationVerificationRecord must be object`] };
+  if (!isNonEmptyString(input.verificationId)) errors.push(`${pathPrefix}verificationId must be non-empty string`);
+  if (!isNonEmptyString(input.verificationKey)) errors.push(`${pathPrefix}verificationKey must be non-empty string`);
+  if (!isNonEmptyString(input.targetId)) errors.push(`${pathPrefix}targetId must be non-empty string`);
+  if (!isEnumValue(input.subjectKind, SUBJECT_KINDS)) errors.push(`${pathPrefix}subjectKind is invalid`);
+  if (!isNonEmptyString(input.subjectId)) errors.push(`${pathPrefix}subjectId must be non-empty string`);
+  if (!isEnumValue(input.channel, NOTIFICATION_CHANNELS)) errors.push(`${pathPrefix}channel is invalid`);
+  if (!isEnumValue(input.verificationKind, VERIFICATION_KINDS)) errors.push(`${pathPrefix}verificationKind is invalid`);
+  if (!isNonEmptyString(input.tokenHash)) errors.push(`${pathPrefix}tokenHash must be non-empty string`);
+  if (!isIsoDateString(input.issuedAt)) errors.push(`${pathPrefix}issuedAt must be ISO date`);
+  if (!isIsoDateString(input.expiresAt)) errors.push(`${pathPrefix}expiresAt must be ISO date`);
+  if (!(input.consumedAt === null || input.consumedAt === undefined || isIsoDateString(input.consumedAt))) errors.push(`${pathPrefix}consumedAt must be ISO date or null`);
+  if (!isEnumValue(input.status, VERIFICATION_STATUSES)) errors.push(`${pathPrefix}status is invalid`);
+  if (!(typeof input.attemptCount === 'number' && Number.isInteger(input.attemptCount) && input.attemptCount >= 0)) errors.push(`${pathPrefix}attemptCount must be integer >= 0`);
+  if (!(input.lastAttemptAt === null || input.lastAttemptAt === undefined || isIsoDateString(input.lastAttemptAt))) errors.push(`${pathPrefix}lastAttemptAt must be ISO date or null`);
+  if (!isIsoDateString(input.createdAt)) errors.push(`${pathPrefix}createdAt must be ISO date`);
+  if (!isIsoDateString(input.updatedAt)) errors.push(`${pathPrefix}updatedAt must be ISO date`);
+  return errors.length > 0 ? { ok: false, errors } : { ok: true, value: input as NotificationVerificationRecord };
 }

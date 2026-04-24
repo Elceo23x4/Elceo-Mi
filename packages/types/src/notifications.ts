@@ -151,3 +151,44 @@ export type NotificationInboxRecord = {
   archivedAt: string | null;
   payloadJson: string;
 };
+
+
+export type NotificationTargetVerificationStatus = 'pending' | 'verified' | 'expired' | 'consumed' | 'canceled';
+
+export type NotificationVerificationKind = 'email_verification' | 'push_verification';
+
+export type NotificationVerificationRecord = {
+  verificationId: string;
+  verificationKey: string;
+  targetId: string;
+  subjectKind: NotificationSubjectKind;
+  subjectId: string;
+  channel: NotificationChannel;
+  verificationKind: NotificationVerificationKind;
+  tokenHash: string;
+  issuedAt: string;
+  expiresAt: string;
+  consumedAt: string | null;
+  status: NotificationTargetVerificationStatus;
+  attemptCount: number;
+  lastAttemptAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type NotificationVerificationIssueResult = {
+  verificationId: string;
+  targetId: string;
+  verificationKind: NotificationVerificationKind;
+  issuedAt: string;
+  expiresAt: string;
+  rawToken: string;
+  alreadyActive: boolean;
+};
+
+export type NotificationVerificationConsumeResult = {
+  verificationId: string;
+  targetId: string;
+  verified: boolean;
+  reason: string | null;
+};

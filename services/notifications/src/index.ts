@@ -9,3 +9,7 @@ export * from './persistence';
 export * from './runtime';
 
 export * from './management';
+
+export * from './verification';
+
+export * from './providers';

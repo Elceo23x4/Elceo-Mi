@@ -1,0 +1,66 @@
+import type {
+  AnalyticsSnapshotLookupRepository,
+  CoachingSnapshotRepository,
+  JournalInfluenceSnapshotLookupRepository
+} from './contracts';
+import {
+  MemoryAnalyticsSnapshotLookupRepository,
+  MemoryCoachingSnapshotRepository,
+  MemoryJournalInfluenceSnapshotLookupRepository,
+  SqlAnalyticsSnapshotLookupRepository,
+  SqlCoachingSnapshotRepository,
+  SqlJournalInfluenceSnapshotLookupRepository
+} from './repositories';
+
+function runtimeEnv(): Record<string, string | undefined> {
+  return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
+}
+
+let coachingSnapshotRepositorySingleton: CoachingSnapshotRepository | null = null;
+let analyticsSnapshotLookupRepositorySingleton: AnalyticsSnapshotLookupRepository | null = null;
+let journalInfluenceLookupRepositorySingleton: JournalInfluenceSnapshotLookupRepository | null = null;
+
+export function createCoachingSnapshotRepository(env: Record<string, string | undefined>): CoachingSnapshotRepository {
+  if (env.ANALYTICS_PERSISTENCE_BACKEND === 'sql') return new SqlCoachingSnapshotRepository();
+  return new MemoryCoachingSnapshotRepository();
+}
+
+export function createAnalyticsSnapshotLookupRepository(env: Record<string, string | undefined>): AnalyticsSnapshotLookupRepository {
+  if (env.ANALYTICS_PERSISTENCE_BACKEND === 'sql') return new SqlAnalyticsSnapshotLookupRepository();
+  return new MemoryAnalyticsSnapshotLookupRepository();
+}
+
+export function createJournalInfluenceSnapshotLookupRepository(env: Record<string, string | undefined>): JournalInfluenceSnapshotLookupRepository {
+  if (env.ANALYTICS_PERSISTENCE_BACKEND === 'sql') return new SqlJournalInfluenceSnapshotLookupRepository();
+  return new MemoryJournalInfluenceSnapshotLookupRepository();
+}
+
+export function getCoachingSnapshotRepository(): CoachingSnapshotRepository {
+  if (!coachingSnapshotRepositorySingleton) coachingSnapshotRepositorySingleton = createCoachingSnapshotRepository(runtimeEnv());
+  return coachingSnapshotRepositorySingleton;
+}
+
+export function setCoachingSnapshotRepository(repository: CoachingSnapshotRepository): void {
+  coachingSnapshotRepositorySingleton = repository;
+}
+
+export function getAnalyticsSnapshotLookupRepository(): AnalyticsSnapshotLookupRepository {
+  if (!analyticsSnapshotLookupRepositorySingleton) analyticsSnapshotLookupRepositorySingleton = createAnalyticsSnapshotLookupRepository(runtimeEnv());
+  return analyticsSnapshotLookupRepositorySingleton;
+}
+
+export function setAnalyticsSnapshotLookupRepository(repository: AnalyticsSnapshotLookupRepository): void {
+  analyticsSnapshotLookupRepositorySingleton = repository;
+}
+
+export function getJournalInfluenceSnapshotLookupRepository(): JournalInfluenceSnapshotLookupRepository {
+  if (!journalInfluenceLookupRepositorySingleton) journalInfluenceLookupRepositorySingleton = createJournalInfluenceSnapshotLookupRepository(runtimeEnv());
+  return journalInfluenceLookupRepositorySingleton;
+}
+
+export function setJournalInfluenceSnapshotLookupRepository(repository: JournalInfluenceSnapshotLookupRepository): void {
+  journalInfluenceLookupRepositorySingleton = repository;
+}
+
+export * from './contracts';
+export * from './repositories';

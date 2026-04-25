@@ -20,3 +20,5 @@ export * from './billing';
 export * from './journal-influence';
 
 export * from './analytics';
+
+export * from './coaching';

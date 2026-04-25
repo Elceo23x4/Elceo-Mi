@@ -102,3 +102,6 @@ C4-E should focus on safe integration layers:
 
 ## Portfolio domain linkage (C4-E)
 The durable portfolio domain core now provides canonical watchlist/position/action queue state and replay/snapshot query surfaces. Analytics and coaching consumers should read this operational layer for current portfolio context instead of deriving ad-hoc mutable state.
+
+## Workspace snapshot linkage (C4-F)
+The canonical workspace snapshot engine now consumes persisted portfolio/coaching outputs as durable cross-domain operating inputs. Portfolio and coaching query surfaces remain independently authoritative for their domains, while workspace snapshots provide the unified operating-state surface for later dashboard/admin UI integration.

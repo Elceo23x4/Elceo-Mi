@@ -247,3 +247,39 @@ export type PortfolioRepository = {
   saveSnapshot(record: PersistedPortfolioSnapshotRecord): Promise<void>;
   getLatestSnapshot(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string): Promise<PersistedPortfolioSnapshotRecord | null>;
 };
+
+export type PersistedWorkspaceSnapshotRecord = {
+  snapshotId: string;
+  subjectKind: 'user' | 'workspace' | 'ops';
+  subjectId: string;
+  generatedAt: string;
+  healthState: 'stable' | 'attention_needed' | 'critical';
+  attentionLevel: 'low' | 'medium' | 'high' | 'critical';
+  portfolioSnapshotId: string | null;
+  coachingSnapshotId: string | null;
+  analyticsSnapshotId: string | null;
+  activeWatchlistCount: number;
+  activePositionCount: number;
+  weakeningThesisCount: number;
+  invalidatedThesisCount: number;
+  openActionCount: number;
+  criticalActionCount: number;
+  unreadInboxCount: number;
+  degradedTargetCount: number;
+  criticalReceiptCount: number;
+  focusAreaCount: number;
+  actionPlanCount: number;
+  topFocusPriority: 'critical' | 'high' | 'medium' | 'low' | null;
+  recentReasoningCount: number;
+  agendaJson: string;
+  dependencyStatusJson: string;
+  summaryJson: string;
+  createdAt: string;
+};
+
+export type WorkspaceSnapshotRepository = {
+  saveSnapshot(record: PersistedWorkspaceSnapshotRecord): Promise<void>;
+  getSnapshotById(snapshotId: string): Promise<PersistedWorkspaceSnapshotRecord | null>;
+  getLatestSnapshot(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string): Promise<PersistedWorkspaceSnapshotRecord | null>;
+  listSnapshots(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, limit?: number): Promise<PersistedWorkspaceSnapshotRecord[]>;
+};

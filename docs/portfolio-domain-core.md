@@ -89,3 +89,6 @@ No implicit cross-service fetches are required.
 - portfolio/admin API surfaces for UI consumers
 - scheduled generation cadence and operational controls
 - broker/execution integration contracts (without breaking deterministic core state semantics)
+
+## Workspace snapshot linkage (C4-F)
+The canonical workspace snapshot engine now consumes persisted portfolio/coaching outputs as durable cross-domain operating inputs. Portfolio and coaching query surfaces remain independently authoritative for their domains, while workspace snapshots provide the unified operating-state surface for later dashboard/admin UI integration.

@@ -92,3 +92,7 @@ No implicit cross-service fetches are required.
 
 ## Workspace snapshot linkage (C4-F)
 The canonical workspace snapshot engine now consumes persisted portfolio/coaching outputs as durable cross-domain operating inputs. Portfolio and coaching query surfaces remain independently authoritative for their domains, while workspace snapshots provide the unified operating-state surface for later dashboard/admin UI integration.
+
+
+## C4-H application API linkage
+Authenticated API routes now expose watchlist/positions/actions lifecycle operations, replay, snapshot query/generation, and attention summaries for future UI integration.

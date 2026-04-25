@@ -1,4 +1,4 @@
-import NextAuth from 'next-auth';
+import NextAuth, { type NextAuthConfig, type Session } from 'next-auth';
 import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
 import { ApplicationStateService, getUserStateRepository } from '@elceo/application-state';
@@ -13,7 +13,16 @@ if (isProduction && !runtimeEnv.AUTH_SECRET) {
   throw new Error('AUTH_SECRET must be configured in production');
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+type AuthenticatedProfile = {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  planTier: string;
+  onboardingCompletedAt: string | null;
+};
+
+const authConfig: NextAuthConfig = {
   trustHost: true,
   secret: runtimeEnv.AUTH_SECRET,
   session: {
@@ -36,7 +45,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' }
       },
-      async authorize(credentials: any) {
+      async authorize(credentials): Promise<AuthenticatedProfile | null> {
         const email = String(credentials?.email ?? '').trim();
         const password = String(credentials?.password ?? '');
         if (!email || !password || password.length > 256) return null;
@@ -59,46 +68,39 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     })
   ],
   callbacks: {
-    async signIn({ user }: any) {
+    async signIn({ user }) {
       if (!user.email) return false;
-
-      await appStateService.ensureUserFromIdentity({
-        email: user.email,
-        name: user.name ?? user.email,
-        role: 'user'
-      });
-
+      await appStateService.ensureUserFromIdentity({ email: user.email, name: user.name ?? user.email, role: 'user' });
       return true;
     },
-    async jwt({ token, user }: any) {
+    async jwt({ token, user }) {
       const email = user?.email ?? token.email;
       if (!email) return token;
-
-      const state = await appStateService.ensureUserFromIdentity({
-        email,
-        name: user?.name ?? token.name ?? email,
-        role: 'user'
-      });
-
+      const state = await appStateService.ensureUserFromIdentity({ email, name: user?.name ?? token.name ?? email, role: 'user' });
       token.sub = state.profile.id;
       token.role = state.profile.role;
       token.planTier = state.profile.planTier;
       token.onboardingCompletedAt = state.profile.onboardingCompletedAt;
-
       return token;
     },
-    async session({ session, token }: any) {
+    async session({ session, token }) {
       if (!session.user) return session;
-
       session.user.id = String(token.sub ?? '');
       session.user.role = (token.role as string | undefined) ?? 'user';
       session.user.planTier = (token.planTier as string | undefined) ?? 'free';
       session.user.onboardingCompletedAt = (token.onboardingCompletedAt as string | null | undefined) ?? null;
-
       return session;
     }
   },
-  pages: {
-    signIn: '/login'
-  }
-});
+  pages: { signIn: '/login' }
+};
+
+const nextAuthResult = NextAuth(authConfig);
+
+export const handlers: typeof nextAuthResult.handlers = nextAuthResult.handlers;
+export const signIn: typeof nextAuthResult.signIn = nextAuthResult.signIn;
+export const signOut: typeof nextAuthResult.signOut = nextAuthResult.signOut;
+export const auth: () => Promise<Session | null> = async () => {
+  const resolveSession = nextAuthResult.auth as unknown as () => Promise<Session | null>;
+  return resolveSession();
+};

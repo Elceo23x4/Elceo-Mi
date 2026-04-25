@@ -24,3 +24,5 @@ export * from './analytics';
 export * from './coaching';
 
 export * from './portfolio';
+
+export * from './workspace';

@@ -7,6 +7,11 @@ import type {
   PortfolioEntityKind,
   PortfolioRevisionRecord,
   PositionStatus,
+  SnapshotDependencyState,
+  SnapshotDomainKind,
+  SnapshotFreshnessState,
+  SnapshotRefreshRunStatus,
+  SnapshotRefreshTriggerKind,
   ThesisHealth,
   Timeframe,
   WatchlistEntryStatus
@@ -282,4 +287,57 @@ export type WorkspaceSnapshotRepository = {
   getSnapshotById(snapshotId: string): Promise<PersistedWorkspaceSnapshotRecord | null>;
   getLatestSnapshot(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string): Promise<PersistedWorkspaceSnapshotRecord | null>;
   listSnapshots(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, limit?: number): Promise<PersistedWorkspaceSnapshotRecord[]>;
+};
+
+export type PersistedSnapshotRefreshRunRecord = {
+  refreshRunId: string;
+  subjectKind: 'user' | 'workspace' | 'ops';
+  subjectId: string;
+  triggerKind: SnapshotRefreshTriggerKind;
+  overallStatus: SnapshotRefreshRunStatus;
+  generatedAt: string;
+  refreshedDomainsJson: string;
+  failedDomainsJson: string;
+  staleDomainsJson: string;
+  warningsJson: string;
+  reportJson: string;
+  createdAt: string;
+};
+
+export type PersistedSnapshotFreshnessRecord = {
+  freshnessId: string;
+  domain: SnapshotDomainKind;
+  subjectKind: 'user' | 'workspace' | 'ops';
+  subjectId: string;
+  assetScope: CanonicalAssetSymbol | '*';
+  timeframeScope: Timeframe | '*';
+  latestSnapshotId: string | null;
+  freshnessState: SnapshotFreshnessState;
+  dependencyState: SnapshotDependencyState;
+  snapshotGeneratedAt: string | null;
+  evaluatedAt: string;
+  ageMinutes: number | null;
+  maxFreshMinutes: number;
+  failureReason: string | null;
+  updatedAt: string;
+};
+
+export type SnapshotRefreshRunRepository = {
+  saveRun(record: PersistedSnapshotRefreshRunRecord): Promise<void>;
+  getRunById(refreshRunId: string): Promise<PersistedSnapshotRefreshRunRecord | null>;
+  listRecentRuns(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, limit?: number): Promise<PersistedSnapshotRefreshRunRecord[]>;
+  getLatestRun(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string): Promise<PersistedSnapshotRefreshRunRecord | null>;
+};
+
+export type SnapshotFreshnessRepository = {
+  upsertFreshness(record: PersistedSnapshotFreshnessRecord): Promise<void>;
+  getFreshness(
+    domain: SnapshotDomainKind,
+    subjectKind: 'user' | 'workspace' | 'ops',
+    subjectId: string,
+    assetScope: CanonicalAssetSymbol | '*',
+    timeframeScope: Timeframe | '*'
+  ): Promise<PersistedSnapshotFreshnessRecord | null>;
+  listFreshnessForSubject(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string): Promise<PersistedSnapshotFreshnessRecord[]>;
+  listDomainsNeedingRefresh(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string): Promise<PersistedSnapshotFreshnessRecord[]>;
 };

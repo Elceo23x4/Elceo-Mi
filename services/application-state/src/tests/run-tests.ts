@@ -12,6 +12,7 @@ async function main(): Promise<void> {
   const { runJournalInfluenceEngineTests } = await import('./journal-influence-engine.test.js');
   const { runPortfolioDomainCoreTests } = await import('./portfolio-domain-core.test.js');
   const { runWorkspaceSnapshotEngineTests } = await import('./workspace-snapshot-engine.test.js');
+  const { runSnapshotRefreshRuntimeTests } = await import('./snapshot-refresh-runtime.test.js');
 
   await runApplicationStateTests();
   await runUserStateAccessTests();
@@ -22,6 +23,7 @@ async function main(): Promise<void> {
   await runJournalInfluenceEngineTests();
   await runPortfolioDomainCoreTests();
   await runWorkspaceSnapshotEngineTests();
+  await runSnapshotRefreshRuntimeTests();
   console.log('application-state tests passed');
 }
 

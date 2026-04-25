@@ -114,3 +114,6 @@ C4-D should layer:
 
 ## Portfolio domain linkage (C4-E)
 The durable portfolio domain core now provides canonical watchlist/position/action queue state and replay/snapshot query surfaces. Analytics and coaching consumers should read this operational layer for current portfolio context instead of deriving ad-hoc mutable state.
+
+## Refresh runtime integration (C4-G)
+Analytics snapshots are now orchestrated by the canonical snapshot refresh runtime for subject-wide `*/*` regeneration and freshness tracking. See `docs/snapshot-refresh-runtime.md` for trigger, dependency, and replay semantics.

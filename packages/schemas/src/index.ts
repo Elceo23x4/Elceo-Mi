@@ -22,3 +22,5 @@ export * from './coaching.schema';
 export * from './portfolio.schema';
 
 export * from './workspace.schema';
+
+export * from './refresh-runtime.schema';

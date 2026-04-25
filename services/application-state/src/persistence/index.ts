@@ -5,3 +5,5 @@ export * from './journal-influence-repository';
 export * from './portfolio-repository';
 
 export * from './workspace-repository';
+
+export * from './refresh-repository';

@@ -22,3 +22,5 @@ export * from './journal-influence';
 export * from './analytics';
 
 export * from './coaching';
+
+export * from './portfolio';

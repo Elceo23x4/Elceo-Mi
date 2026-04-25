@@ -8,3 +8,5 @@ export * from './repositories/trade-journal-repository';
 export * from './persistence';
 export * from './journal';
 export * from './runtime';
+
+export * from './portfolio';

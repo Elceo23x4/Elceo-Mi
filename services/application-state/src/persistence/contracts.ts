@@ -3,7 +3,13 @@ import type {
   CanonicalJournalCase,
   JournalCaseRevisionRecord,
   JournalCaseStatus,
-  Timeframe
+  PortfolioActionStatus,
+  PortfolioEntityKind,
+  PortfolioRevisionRecord,
+  PositionStatus,
+  ThesisHealth,
+  Timeframe,
+  WatchlistEntryStatus
 } from '@elceo/types';
 
 export type PersistedJournalCaseRecord = {
@@ -86,7 +92,6 @@ export type JournalCaseRepository = {
   getLatestCaseForReasoningRun(reasoningRunId: string): Promise<PersistedJournalCaseRecord | null>;
 };
 
-
 export type PersistedJournalInfluenceSnapshotRecord = {
   snapshotId: string;
   subjectKind: 'user' | 'workspace' | 'ops';
@@ -118,4 +123,127 @@ export type JournalInfluenceRepository = {
     timeframeScope?: Timeframe | '*',
     limit?: number
   ): Promise<PersistedJournalInfluenceSnapshotRecord[]>;
+};
+
+export type PersistedWatchlistEntryRecord = {
+  entryId: string;
+  subjectKind: 'user' | 'workspace' | 'ops';
+  subjectId: string;
+  asset: CanonicalAssetSymbol;
+  timeframe: Timeframe;
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  status: WatchlistEntryStatus;
+  thesisHealth: ThesisHealth;
+  note: string | null;
+  linkedReasoningRunId: string | null;
+  linkedSnapshotId: string | null;
+  linkedDriftId: string | null;
+  linkedJournalCaseId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  entryJson: string;
+};
+
+export type PersistedPositionRecord = {
+  positionId: string;
+  subjectKind: 'user' | 'workspace' | 'ops';
+  subjectId: string;
+  asset: CanonicalAssetSymbol;
+  timeframe: Timeframe;
+  status: PositionStatus;
+  direction: 'long' | 'short';
+  entryPrice: number | null;
+  stopLoss: number | null;
+  takeProfitLevelsJson: string;
+  size: number | null;
+  openedAt: string | null;
+  updatedAt: string;
+  closedAt: string | null;
+  thesisHealth: ThesisHealth;
+  linkedJournalCaseId: string | null;
+  linkedReasoningRunId: string | null;
+  linkedSnapshotId: string | null;
+  linkedDriftId: string | null;
+  note: string | null;
+  positionJson: string;
+};
+
+export type PersistedPortfolioActionItemRecord = {
+  actionId: string;
+  subjectKind: 'user' | 'workspace' | 'ops';
+  subjectId: string;
+  kind: 'review_thesis' | 'review_risk' | 'tighten_execution' | 'prepare_entry' | 'reduce_exposure' | 'close_position' | 'review_invalidated_thesis' | 'update_journal' | 'review_notification_signal';
+  status: PortfolioActionStatus;
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  asset: CanonicalAssetSymbol | null;
+  timeframe: Timeframe | null;
+  headline: string;
+  rationale: string;
+  linkedEntryId: string | null;
+  linkedPositionId: string | null;
+  linkedJournalCaseId: string | null;
+  linkedReasoningRunId: string | null;
+  linkedNotificationDecisionId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+  dismissedAt: string | null;
+  actionJson: string;
+};
+
+export type PersistedPortfolioRevisionRecord = {
+  revisionId: string;
+  entityKind: PortfolioEntityKind;
+  entityId: string;
+  revisionType: PortfolioRevisionRecord['revisionType'];
+  changedAt: string;
+  changedByKind: PortfolioRevisionRecord['changedByKind'];
+  changedById: string;
+  summary: string;
+  snapshotJson: string;
+};
+
+export type PersistedPortfolioSnapshotRecord = {
+  snapshotId: string;
+  subjectKind: 'user' | 'workspace' | 'ops';
+  subjectId: string;
+  generatedAt: string;
+  activeWatchlistCount: number;
+  activePositionCount: number;
+  weakeningThesisCount: number;
+  invalidatedThesisCount: number;
+  openActionCount: number;
+  criticalActionCount: number;
+  snapshotJson: string;
+  createdAt: string;
+};
+
+export type PortfolioEntityListQuery = {
+  subjectKind?: 'user' | 'workspace' | 'ops';
+  subjectId?: string;
+  asset?: CanonicalAssetSymbol;
+  timeframe?: Timeframe;
+  status?: string;
+  thesisHealth?: ThesisHealth;
+  limit?: number;
+};
+
+export type PortfolioRepository = {
+  saveWatchlistEntry(record: PersistedWatchlistEntryRecord): Promise<void>;
+  getWatchlistEntryById(entryId: string): Promise<PersistedWatchlistEntryRecord | null>;
+  listWatchlistEntries(query: PortfolioEntityListQuery): Promise<PersistedWatchlistEntryRecord[]>;
+
+  savePosition(record: PersistedPositionRecord): Promise<void>;
+  getPositionById(positionId: string): Promise<PersistedPositionRecord | null>;
+  listPositions(query: PortfolioEntityListQuery): Promise<PersistedPositionRecord[]>;
+
+  saveActionItem(record: PersistedPortfolioActionItemRecord): Promise<void>;
+  getActionItemById(actionId: string): Promise<PersistedPortfolioActionItemRecord | null>;
+  listActionItems(query: PortfolioEntityListQuery): Promise<PersistedPortfolioActionItemRecord[]>;
+
+  saveRevision(record: PersistedPortfolioRevisionRecord): Promise<void>;
+  listRevisionsForEntity(entityKind: PortfolioEntityKind, entityId: string): Promise<PersistedPortfolioRevisionRecord[]>;
+
+  saveSnapshot(record: PersistedPortfolioSnapshotRecord): Promise<void>;
+  getLatestSnapshot(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string): Promise<PersistedPortfolioSnapshotRecord | null>;
 };

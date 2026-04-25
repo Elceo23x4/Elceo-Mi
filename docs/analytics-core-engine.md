@@ -111,3 +111,6 @@ C4-D should layer:
 - coaching workflows consuming persisted snapshots
 - admin review screens using replay/query services
 - portfolio-level analytics once portfolio domain contracts are frozen
+
+## Portfolio domain linkage (C4-E)
+The durable portfolio domain core now provides canonical watchlist/position/action queue state and replay/snapshot query surfaces. Analytics and coaching consumers should read this operational layer for current portfolio context instead of deriving ad-hoc mutable state.

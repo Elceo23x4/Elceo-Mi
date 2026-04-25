@@ -99,3 +99,6 @@ C4-E should focus on safe integration layers:
 - admin/coaching ops query endpoints and moderation controls
 - UI read APIs and presentation adapters
 - explicit cadence policies for snapshot generation jobs
+
+## Portfolio domain linkage (C4-E)
+The durable portfolio domain core now provides canonical watchlist/position/action queue state and replay/snapshot query surfaces. Analytics and coaching consumers should read this operational layer for current portfolio context instead of deriving ad-hoc mutable state.

@@ -10,6 +10,7 @@ async function main(): Promise<void> {
   const { runSubscriptionMappingTests } = await import('./subscription-mapping.test.js');
   const { runJournalDomainCoreTests } = await import('./journal-domain-core.test.js');
   const { runJournalInfluenceEngineTests } = await import('./journal-influence-engine.test.js');
+  const { runPortfolioDomainCoreTests } = await import('./portfolio-domain-core.test.js');
 
   await runApplicationStateTests();
   await runUserStateAccessTests();
@@ -18,6 +19,7 @@ async function main(): Promise<void> {
   await runSubscriptionMappingTests();
   await runJournalDomainCoreTests();
   await runJournalInfluenceEngineTests();
+  await runPortfolioDomainCoreTests();
   console.log('application-state tests passed');
 }
 

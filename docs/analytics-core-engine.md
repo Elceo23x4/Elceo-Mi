@@ -102,6 +102,9 @@ Query services read from latest persisted snapshot; they do not silently recompu
 ## Why this stops before UI/coaching
 C4-C establishes canonical backend analytics primitives only. Dashboard rendering, coaching narrative UX, and portfolio analytics remain out-of-scope by design.
 
+## C4-D coaching linkage
+C4-D now consumes persisted analytics snapshots as one deterministic input to the coaching core engine. Coaching reads persisted analytics/journal influence snapshots with explicit fallback rules and writes durable coaching snapshots for replay/query use.
+
 ## C4-D next
 C4-D should layer:
 - analytics dashboard read APIs/UI wiring

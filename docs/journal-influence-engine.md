@@ -134,6 +134,9 @@ Adoption behavior:
 - provider failures are warning-only (`journal_provider_failure:*`)
 - reasoning input assembly remains non-fatal and falls back to disabled influence state
 
+## Coaching linkage (C4-D)
+C4-D consumes persisted journal influence snapshots as a parallel input alongside analytics snapshots. Influence data is not recomputed in coaching queries; persisted snapshots are loaded with deterministic fallback and references are retained in coaching snapshot metadata.
+
 ## C4-C next scope
 
 C4-C should focus on:

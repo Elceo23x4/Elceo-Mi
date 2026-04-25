@@ -20,7 +20,10 @@ const aliasTargets = {
   '@elceo/providers': 'packages/providers/src/index.cjs',
   '@elceo/application-state': 'services/application-state/src/index.cjs',
   '@elceo/analytics': 'services/analytics/src/index.cjs',
-  '@elceo/billing': 'services/billing/src/index.cjs'
+  '@elceo/billing': 'services/billing/src/index.cjs',
+  '@/lib/server/api': 'lib/server/api/index.cjs',
+  '@/lib/server/auth': 'lib/server/auth/index.cjs',
+  '@/lib/server/composition': 'tests/stubs/composition.cjs',
 };
 
 async function walk(dir) {
@@ -36,6 +39,7 @@ async function walk(dir) {
 
 function rewriteRequires(content, targetFile) {
   let updated = content.replace(/require\((['"])(\.{1,2}\/[^'"\)]+)\1\)/g, (_match, quote, spec) => {
+
     let next = spec;
     if (next.endsWith('.js')) next = next.slice(0, -3) + '.cjs';
     else {
@@ -45,7 +49,7 @@ function rewriteRequires(content, targetFile) {
     return `require(${quote}${next}${quote})`;
   });
 
-  updated = updated.replace(/require\((['"])(@elceo\/[a-z\-]+)\1\)/g, (_match, quote, alias) => {
+  updated = updated.replace(/require\((['"])(@elceo\/[a-z\-]+|@\/lib\/server\/(?:api|auth|composition))\1\)/g, (_match, quote, alias) => {
     const relTarget = aliasTargets[alias];
     if (!relTarget) return _match;
     const absolute = path.join(outputRoot, relTarget);
@@ -54,6 +58,7 @@ function rewriteRequires(content, targetFile) {
     return `require(${quote}${relative}${quote})`;
   });
 
+  updated = updated.replace(/require\((['"])server-only\1\);?/g, '');
   return updated;
 }
 

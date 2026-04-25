@@ -124,3 +124,7 @@ C4-G should focus on integration and presentation layers over persisted workspac
 
 ## Refresh runtime integration (C4-G)
 Workspace snapshots now participate in the canonical snapshot refresh runtime (`docs/snapshot-refresh-runtime.md`). Workspace refresh is dependency-aware, freshness-tracked, and persisted through `app_snapshot_freshness` and `app_snapshot_refresh_runs`.
+
+
+## C4-H application API linkage
+Authenticated API routes now expose workspace snapshot read/refresh/freshness/history/agenda semantics for future UI integration without recomputation in read endpoints.

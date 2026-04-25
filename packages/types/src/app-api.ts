@@ -1,0 +1,186 @@
+import type { CanonicalAssetSymbol, Timeframe } from './events';
+import type { JournalConvictionLabel, JournalExecutionQuality, JournalOutcomeLabel, TradeDirection } from './journal';
+import type { NotificationChannel, NotificationTriggerKind } from './notifications';
+import type { PortfolioActionKind, ThesisHealth, WatchlistEntryStatus, WatchlistPriority } from './portfolio';
+import type { SnapshotRefreshTriggerKind } from './refresh-runtime';
+
+export type ApiSuccessEnvelope<T> = {
+  ok: true;
+  data: T;
+  meta?: Record<string, string | number | boolean | null>;
+};
+
+export const API_ERROR_CODES = [
+  'unauthorized',
+  'forbidden',
+  'bad_request',
+  'validation_error',
+  'not_found',
+  'conflict',
+  'unprocessable_entity',
+  'dependency_failed',
+  'internal_error'
+] as const;
+export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
+
+export type ApiErrorEnvelope = {
+  ok: false;
+  error: {
+    code: ApiErrorCode;
+    message: string;
+    details?: string[];
+  };
+};
+
+export type WorkspaceRefreshRequest = { triggerKind: SnapshotRefreshTriggerKind };
+export type JournalCreateDraftRequest = {
+  asset: CanonicalAssetSymbol;
+  timeframe: Timeframe;
+  title: string;
+  direction?: TradeDirection;
+  setupType?: string;
+  conviction?: JournalConvictionLabel;
+  thesis?: string;
+  linkedReasoningRunId?: string | null;
+  linkedSnapshotId?: string | null;
+  linkedDriftId?: string | null;
+};
+export type JournalPlanRequest = {
+  title?: string;
+  direction?: TradeDirection;
+  thesis?: string;
+  setupType?: string;
+  conviction?: JournalConvictionLabel;
+  entryPricePlanned?: number | null;
+  stopLossPlanned?: number | null;
+  takeProfitPlanned?: number[];
+  riskAmountPlanned?: number | null;
+  riskPercentPlanned?: number | null;
+  invalidationNote?: string | null;
+  executionChecklist?: string[];
+};
+export type JournalExecuteRequest = {
+  entryPriceExecuted?: number | null;
+  positionSize?: number | null;
+  openedAt: string;
+  notes?: string[];
+  executionQuality?: JournalExecutionQuality | null;
+};
+export type JournalAdjustExecutionRequest = {
+  entryPriceExecuted?: number | null;
+  positionSize?: number | null;
+  stopLossPlanned?: number | null;
+  takeProfitPlanned?: number[];
+  notes?: string[];
+  executionQuality?: JournalExecutionQuality | null;
+  lastAdjustedAt?: string;
+};
+export type JournalPartialCloseRequest = {
+  exitPrice?: number | null;
+  pnlAmount?: number | null;
+  pnlPercent?: number | null;
+  rMultiple?: number | null;
+  closureReason?: string | null;
+  outcome?: JournalOutcomeLabel;
+};
+export type JournalCloseRequest = {
+  exitPrice?: number | null;
+  closedAt: string;
+  pnlAmount?: number | null;
+  pnlPercent?: number | null;
+  rMultiple?: number | null;
+  outcome: JournalOutcomeLabel;
+  closureReason?: string | null;
+};
+export type JournalCancelRequest = { closureReason?: string | null };
+export type JournalReviewRequest = {
+  reviewedAt: string;
+  whatWentWell?: string[];
+  whatWentWrong?: string[];
+  lessons?: string[];
+  behaviorTags?: string[];
+  followUpActions?: string[];
+};
+
+export type WatchlistCreateRequest = {
+  asset: CanonicalAssetSymbol;
+  timeframe: Timeframe;
+  priority: WatchlistPriority;
+  status?: WatchlistEntryStatus;
+  thesisHealth?: ThesisHealth;
+  note?: string | null;
+  linkedReasoningRunId?: string | null;
+  linkedSnapshotId?: string | null;
+  linkedDriftId?: string | null;
+  linkedJournalCaseId?: string | null;
+};
+export type WatchlistUpdateRequest = { priority?: WatchlistPriority; note?: string | null };
+export type WatchlistStatusRequest = { status: WatchlistEntryStatus };
+export type WatchlistThesisHealthRequest = { thesisHealth: ThesisHealth };
+
+export type PositionCreateRequest = {
+  asset: CanonicalAssetSymbol;
+  timeframe: Timeframe;
+  direction: TradeDirection;
+  entryPrice?: number | null;
+  stopLoss?: number | null;
+  takeProfitLevels?: number[];
+  size?: number | null;
+  thesisHealth?: ThesisHealth;
+  linkedJournalCaseId?: string | null;
+  linkedReasoningRunId?: string | null;
+  linkedSnapshotId?: string | null;
+  linkedDriftId?: string | null;
+  note?: string | null;
+};
+export type PositionOpenRequest = {
+  openedAt: string;
+  entryPrice?: number | null;
+  stopLoss?: number | null;
+  takeProfitLevels?: number[];
+  size?: number | null;
+  note?: string | null;
+};
+export type PositionReduceRequest = { size?: number | null; note?: string | null; updatedAt?: string };
+export type PositionCloseRequest = { closedAt: string; note?: string | null };
+export type PositionCancelRequest = { note?: string | null };
+export type PositionUpdateRequest = {
+  entryPrice?: number | null;
+  stopLoss?: number | null;
+  takeProfitLevels?: number[];
+  size?: number | null;
+  note?: string | null;
+};
+export type PositionThesisHealthRequest = { thesisHealth: ThesisHealth };
+
+export type ActionCreateRequest = {
+  kind: PortfolioActionKind;
+  priority: WatchlistPriority;
+  asset?: CanonicalAssetSymbol | null;
+  timeframe?: Timeframe | null;
+  headline: string;
+  rationale: string;
+  linkedEntryId?: string | null;
+  linkedPositionId?: string | null;
+  linkedJournalCaseId?: string | null;
+  linkedReasoningRunId?: string | null;
+  linkedNotificationDecisionId?: string | null;
+};
+export type ActionUpdateRequest = { priority?: WatchlistPriority; headline?: string; rationale?: string };
+
+export type TargetCreateRequest = { channel: NotificationChannel; value: string; label?: string | null };
+export type TargetStatusRequest = { isEnabled: boolean };
+export type SubscriptionCreateRequest = {
+  channel: NotificationChannel;
+  decisionKind?: NotificationTriggerKind | null;
+  minimumPriority?: string | null;
+  minimumMaterialityScore?: number | null;
+  isEnabled?: boolean;
+};
+export type SubscriptionUpdateRequest = {
+  minimumPriority?: string | null;
+  minimumMaterialityScore?: number | null;
+  isEnabled?: boolean;
+};
+export type VerificationIssueRequest = { targetId: string };
+export type VerificationConsumeRequest = { targetId: string; token: string };

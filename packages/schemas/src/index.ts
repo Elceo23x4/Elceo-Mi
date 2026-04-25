@@ -24,3 +24,5 @@ export * from './portfolio.schema';
 export * from './workspace.schema';
 
 export * from './refresh-runtime.schema';
+
+export * from './app-api.schema';

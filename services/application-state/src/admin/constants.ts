@@ -1,0 +1,1 @@
+export const ADMIN_AUDIT_DEFAULT_LIMIT = 100;

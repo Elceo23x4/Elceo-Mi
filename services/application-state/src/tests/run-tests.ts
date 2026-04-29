@@ -14,6 +14,7 @@ async function main(): Promise<void> {
   const { runWorkspaceSnapshotEngineTests } = await import('./workspace-snapshot-engine.test.js');
   const { runSnapshotRefreshRuntimeTests } = await import('./snapshot-refresh-runtime.test.js');
   const { runOpsRuntimeTests } = await import('./ops-runtime.test.js');
+  const { runAdminControlPlaneTests } = await import('./admin-control-plane.test.js');
 
   await runApplicationStateTests();
   await runUserStateAccessTests();
@@ -26,6 +27,7 @@ async function main(): Promise<void> {
   await runWorkspaceSnapshotEngineTests();
   await runSnapshotRefreshRuntimeTests();
   await runOpsRuntimeTests();
+  await runAdminControlPlaneTests();
   console.log('application-state tests passed');
 }
 

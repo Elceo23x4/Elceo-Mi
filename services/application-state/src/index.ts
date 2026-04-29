@@ -16,3 +16,5 @@ export * from './workspace';
 export * from './refresh';
 
 export * from './ops';
+
+export * from './admin';

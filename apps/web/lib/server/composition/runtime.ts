@@ -6,6 +6,7 @@ import {
   CanonicalPortfolioBoundaryService,
   CanonicalRefreshBoundaryService,
   CanonicalWorkspaceBoundaryService,
+  CanonicalAdminBoundaryService,
   createDefaultSnapshotRefreshLoaders,
   createWorkspaceDefaultLoaders,
   getPortfolioRepository,
@@ -43,6 +44,7 @@ type ApplicationStateRuntime = {
   portfolio: CanonicalPortfolioBoundaryService;
   workspace: CanonicalWorkspaceBoundaryService;
   refresh: CanonicalRefreshBoundaryService;
+  admin: CanonicalAdminBoundaryService;
 };
 
 type AnalyticsRuntime = {
@@ -168,7 +170,8 @@ export function getApplicationStateRuntime(): ApplicationStateRuntime {
     getSnapshotFreshnessRepository()
   );
 
-  applicationStateRuntime = { journal, journalInfluence, portfolio, workspace, refresh };
+  const admin = new CanonicalAdminBoundaryService();
+  applicationStateRuntime = { journal, journalInfluence, portfolio, workspace, refresh, admin };
   return applicationStateRuntime;
 }
 

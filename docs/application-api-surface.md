@@ -76,3 +76,10 @@ Generation is explicit through dedicated mutation routes (`.../generate`, `.../r
 
 ## C4-I ops runtime linkage
 Internal operational execution is now unified under the canonical ops runtime boundary for lease-safe scheduling and replayable maintenance job history.
+
+## C4-J admin control-plane routes
+- GET /api/admin/system-summary (internal token)
+- GET /api/admin/freshness (internal token)
+- GET /api/admin/ops (internal token)
+- GET /api/admin/providers (internal token)
+- GET /api/admin/audit (internal token)

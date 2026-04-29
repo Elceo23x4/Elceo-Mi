@@ -28,3 +28,5 @@ export * from './refresh-runtime.schema';
 export * from './app-api.schema';
 
 export * from './ops-runtime.schema';
+
+export * from './admin-control-plane.schema';

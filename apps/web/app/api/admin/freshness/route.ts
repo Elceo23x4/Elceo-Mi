@@ -6,8 +6,8 @@ export const GET = withApiErrorBoundary(async (request: Request) => {
   requireInternalRouteAccess(request);
   const admin = getApplicationStateRuntime().admin;
   
+  const freshness = await admin.getAdminFreshnessSummary('ops', 'global'); return jsonSuccess({ freshness });
   
-  const ops = await admin.getAdminOpsSummary(); return jsonSuccess({ ops });
   
   
 });

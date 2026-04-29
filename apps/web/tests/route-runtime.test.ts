@@ -50,6 +50,11 @@ import * as refreshFreshnessRoute from '../app/api/refresh/freshness/route';
 import * as refreshRunRoute from '../app/api/refresh/run/route';
 import * as opsExpireRoute from '../app/api/ops/notifications/expire-verifications/route';
 import * as opsFeedbackRoute from '../app/api/ops/notifications/process-feedback/route';
+import * as adminSystemSummaryRoute from '../app/api/admin/system-summary/route';
+import * as adminFreshnessRoute from '../app/api/admin/freshness/route';
+import * as adminOpsRoute from '../app/api/admin/ops/route';
+import * as adminProvidersRoute from '../app/api/admin/providers/route';
+import * as adminAuditRoute from '../app/api/admin/audit/route';
 
 const subject = { subjectKind: 'user' as const, subjectId: 'user-1', userId: 'user-1' };
 
@@ -96,6 +101,13 @@ const mockApplicationStateRuntime = {
     getLatestWorkspaceSnapshot: async () => null,
     listWorkspaceSnapshots: async (_kind: 'user' | 'workspace' | 'ops', subjectId: string) => { latestWorkspaceSubjectId = subjectId; return []; },
     getCurrentWorkspaceAgenda: async () => []
+  },
+  admin: {
+    getAdminSystemSummary: async () => ({ overallHealth: 'healthy' }),
+    getAdminFreshnessSummary: async () => ({ totalDomains: 0 }),
+    getAdminOpsSummary: async () => ({ totalRecentRuns: 1 }),
+    getAdminProviderCapabilitySummary: async () => ({ notificationProviders: [], ingestionProviders: [] }),
+    getAdminAuditTimeline: async () => ({ events: [] })
   },
   refresh: {
     runSnapshotRefresh: async () => ({ refreshRunId: 'rr-1' }),
@@ -253,6 +265,15 @@ export async function runRouteRuntimeTests(): Promise<void> {
 
   assert.equal((await readJson(await opsExpireRoute.POST(request('https://x/api/ops/notifications/expire-verifications', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
   assert.equal((await readJson(await opsFeedbackRoute.POST(request('https://x/api/ops/notifications/process-feedback', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'memory', channel: 'email', rawEvent: {} }) })))).ok, true);
+
+  const adminUnauthorized = await adminSystemSummaryRoute.GET(request('https://x/api/admin/system-summary'));
+  assert.equal(adminUnauthorized.status, 403);
+  assert.equal((await readJson(adminUnauthorized)).ok, false);
+  assert.equal((await readJson(await adminSystemSummaryRoute.GET(request('https://x/api/admin/system-summary', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+  assert.equal((await readJson(await adminFreshnessRoute.GET(request('https://x/api/admin/freshness', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+  assert.equal((await readJson(await adminOpsRoute.GET(request('https://x/api/admin/ops', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+  assert.equal((await readJson(await adminProvidersRoute.GET(request('https://x/api/admin/providers', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+  assert.equal((await readJson(await adminAuditRoute.GET(request('https://x/api/admin/audit?limit=5', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
 
   clearMocks();
 }

@@ -45,3 +45,6 @@ This batch does not include admin UI, cloud cron wiring, or external queue infra
 
 ## Next batch
 C4-J should add authenticated admin/ops APIs and operator-focused runbook surfaces over these persisted runtime/query contracts.
+
+## C4-J linkage
+Ops run and lease persistence now feed the admin control-plane read models for cross-domain operational summary and timeline assembly.

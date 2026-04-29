@@ -9,3 +9,5 @@ export * from './canonical-workspace-boundary';
 export * from './canonical-refresh-boundary';
 
 export * from './canonical-ops-boundary';
+
+export * from './canonical-admin-boundary';

@@ -7,7 +7,7 @@ export const GET = withApiErrorBoundary(async (request: Request) => {
   const admin = getApplicationStateRuntime().admin;
   
   
-  const ops = await admin.getAdminOpsSummary(); return jsonSuccess({ ops });
   
   
+  const { searchParams } = new URL(request.url); const raw = Number(searchParams.get('limit') ?? '100'); const limit = Number.isFinite(raw) ? Math.max(1, Math.min(200, Math.trunc(raw))) : 100; const audit = await admin.getAdminAuditTimeline(limit); return jsonSuccess({ audit });
 });

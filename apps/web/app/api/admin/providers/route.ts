@@ -7,7 +7,7 @@ export const GET = withApiErrorBoundary(async (request: Request) => {
   const admin = getApplicationStateRuntime().admin;
   
   
-  const ops = await admin.getAdminOpsSummary(); return jsonSuccess({ ops });
   
+  const providers = await admin.getAdminProviderCapabilitySummary(); return jsonSuccess({ providers });
   
 });

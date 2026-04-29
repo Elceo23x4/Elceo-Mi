@@ -7,3 +7,5 @@ export * from './portfolio-repository';
 export * from './workspace-repository';
 
 export * from './refresh-repository';
+
+export * from './ops-runtime-repository';

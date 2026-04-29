@@ -11,3 +11,5 @@ export * from './canonical-refresh-boundary';
 export * from './canonical-ops-boundary';
 
 export * from './canonical-admin-boundary';
+
+export * from './canonical-entitlements-boundary';

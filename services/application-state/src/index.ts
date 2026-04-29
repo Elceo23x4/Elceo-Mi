@@ -18,3 +18,5 @@ export * from './refresh';
 export * from './ops';
 
 export * from './admin';
+
+export * from './entitlements';

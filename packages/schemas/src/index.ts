@@ -30,3 +30,5 @@ export * from './app-api.schema';
 export * from './ops-runtime.schema';
 
 export * from './admin-control-plane.schema';
+
+export * from './entitlements.schema';

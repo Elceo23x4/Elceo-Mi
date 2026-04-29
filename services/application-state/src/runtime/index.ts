@@ -7,3 +7,5 @@ export * from './canonical-portfolio-boundary';
 export * from './canonical-workspace-boundary';
 
 export * from './canonical-refresh-boundary';
+
+export * from './canonical-ops-boundary';

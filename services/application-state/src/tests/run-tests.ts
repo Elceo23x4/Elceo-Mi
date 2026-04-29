@@ -13,6 +13,7 @@ async function main(): Promise<void> {
   const { runPortfolioDomainCoreTests } = await import('./portfolio-domain-core.test.js');
   const { runWorkspaceSnapshotEngineTests } = await import('./workspace-snapshot-engine.test.js');
   const { runSnapshotRefreshRuntimeTests } = await import('./snapshot-refresh-runtime.test.js');
+  const { runOpsRuntimeTests } = await import('./ops-runtime.test.js');
 
   await runApplicationStateTests();
   await runUserStateAccessTests();
@@ -24,6 +25,7 @@ async function main(): Promise<void> {
   await runPortfolioDomainCoreTests();
   await runWorkspaceSnapshotEngineTests();
   await runSnapshotRefreshRuntimeTests();
+  await runOpsRuntimeTests();
   console.log('application-state tests passed');
 }
 

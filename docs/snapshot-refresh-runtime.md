@@ -90,3 +90,7 @@ Those are follow-up integration layers, not core runtime contracts.
 - API endpoints for refresh runs/freshness/attention
 - admin inspection tools over replay/query services
 - policy knobs for domain-specific trigger filtering and rollout guards
+
+
+## C4-I ops runtime linkage
+Snapshot refresh execution can now be orchestrated by the canonical ops runtime scheduler/service layer with durable ops run history and lease safety.

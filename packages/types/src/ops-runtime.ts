@@ -1,0 +1,13 @@
+export const OPS_JOB_KINDS = ['snapshot_refresh','notification_dispatch','notification_verification_expiry','notification_feedback_ingest','ingestion_tick','workspace_maintenance'] as const;
+export type OpsJobKind = (typeof OPS_JOB_KINDS)[number];
+export const OPS_JOB_TRIGGER_KINDS = ['manual','scheduled','internal_api','maintenance'] as const;
+export type OpsJobTriggerKind = (typeof OPS_JOB_TRIGGER_KINDS)[number];
+export const OPS_JOB_RUN_STATUSES = ['success','partial_success','failed','skipped'] as const;
+export type OpsJobRunStatus = (typeof OPS_JOB_RUN_STATUSES)[number];
+export const OPS_LEASE_STATES = ['acquired','blocked','released','expired'] as const;
+export type OpsLeaseState = (typeof OPS_LEASE_STATES)[number];
+export const OPS_JOB_SCOPES = ['subject','global'] as const;
+export type OpsJobScope = (typeof OPS_JOB_SCOPES)[number];
+export type OpsJobLeaseRecord={leaseId:string;jobKind:OpsJobKind;scopeKind:OpsJobScope;scopeKey:string;leaseState:OpsLeaseState;acquiredAt:string;expiresAt:string;releasedAt:string|null;holderId:string;createdAt:string};
+export type OpsJobRunReport={runId:string;jobKind:OpsJobKind;triggerKind:OpsJobTriggerKind;scopeKind:OpsJobScope;scopeKey:string;startedAt:string;endedAt:string;durationMs:number;status:OpsJobRunStatus;warnings:string[];failureReason:string|null;childReportIds:string[];metricsJson:string;createdAt:string};
+export type OpsJobHealthSummary={generatedAt:string;totalRecentRuns:number;failedRecentRuns:number;partialRecentRuns:number;blockedRecentRuns:number;mostRecentFailureJobKind:OpsJobKind|null;staleLeaseCount:number};

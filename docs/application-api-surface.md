@@ -72,3 +72,7 @@ Generation is explicit through dedicated mutation routes (`.../generate`, `.../r
 - Endpoint-level rate limiting and idempotency tokens for high-value mutations.
 - Admin operations policy hardening and audit trails.
 - UI integration using these stable authenticated contracts.
+
+
+## C4-I ops runtime linkage
+Internal operational execution is now unified under the canonical ops runtime boundary for lease-safe scheduling and replayable maintenance job history.

@@ -14,7 +14,12 @@ import type {
   SnapshotRefreshTriggerKind,
   ThesisHealth,
   Timeframe,
-  WatchlistEntryStatus
+  WatchlistEntryStatus,
+  OpsJobKind,
+  OpsJobRunStatus,
+  OpsJobScope,
+  OpsLeaseState,
+  OpsJobTriggerKind
 } from '@elceo/types';
 
 export type PersistedJournalCaseRecord = {
@@ -340,4 +345,27 @@ export type SnapshotFreshnessRepository = {
   ): Promise<PersistedSnapshotFreshnessRecord | null>;
   listFreshnessForSubject(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string): Promise<PersistedSnapshotFreshnessRecord[]>;
   listDomainsNeedingRefresh(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string): Promise<PersistedSnapshotFreshnessRecord[]>;
+};
+
+
+export type PersistedOpsJobLeaseRecord = {
+  leaseId: string; jobKind: OpsJobKind; scopeKind: OpsJobScope; scopeKey: string; leaseState: OpsLeaseState; acquiredAt: string; expiresAt: string; releasedAt: string | null; holderId: string; createdAt: string;
+};
+export type PersistedOpsJobRunRecord = {
+  runId: string; jobKind: OpsJobKind; triggerKind: OpsJobTriggerKind; scopeKind: OpsJobScope; scopeKey: string; startedAt: string; endedAt: string; durationMs: number; status: OpsJobRunStatus; warningsJson: string; failureReason: string | null; childReportIdsJson: string; metricsJson: string; reportJson: string; createdAt: string;
+};
+export type OpsJobRunListQuery = { jobKind?: OpsJobKind; scopeKind?: OpsJobScope; scopeKey?: string; status?: OpsJobRunStatus; limit?: number; };
+export type OpsJobLeaseRepository = {
+  acquireLease(params: PersistedOpsJobLeaseRecord): Promise<{ acquired: true; lease: PersistedOpsJobLeaseRecord } | { acquired: false; existingLease: PersistedOpsJobLeaseRecord }>;
+  releaseLease(leaseId: string, releasedAt: string): Promise<void>;
+  getLeaseByJobScope(jobKind: OpsJobKind, scopeKind: OpsJobScope, scopeKey: string): Promise<PersistedOpsJobLeaseRecord | null>;
+  cleanupExpiredLeases(asOfIso: string): Promise<number>;
+  listStaleLeases(asOfIso: string): Promise<PersistedOpsJobLeaseRecord[]>;
+};
+export type OpsJobRunRepository = {
+  saveRun(record: PersistedOpsJobRunRecord): Promise<void>;
+  getRunById(runId: string): Promise<PersistedOpsJobRunRecord | null>;
+  getLatestRun(jobKind: OpsJobKind, scopeKind: OpsJobScope, scopeKey: string): Promise<PersistedOpsJobRunRecord | null>;
+  listRecentRuns(query?: OpsJobRunListQuery): Promise<PersistedOpsJobRunRecord[]>;
+  listRecentFailedRuns(limit?: number): Promise<PersistedOpsJobRunRecord[]>;
 };

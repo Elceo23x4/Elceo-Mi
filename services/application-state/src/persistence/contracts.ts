@@ -369,3 +369,11 @@ export type OpsJobRunRepository = {
   listRecentRuns(query?: OpsJobRunListQuery): Promise<PersistedOpsJobRunRecord[]>;
   listRecentFailedRuns(limit?: number): Promise<PersistedOpsJobRunRecord[]>;
 };
+
+
+export type PersistedAccountEntitlementRecord = { subjectKind: 'user'; subjectId: string; planKind: import('@elceo/types').ElceoPlanKind; accountState: import('@elceo/types').ElceoAccountState; planStartedAt: string | null; planEndsAt: string | null; trialEndsAt: string | null; internalOverride: boolean; updatedAt: string; };
+export type PersistedUsageCounterRecord = import('@elceo/types').PersistableUsageCounter;
+export type PersistedFeatureAccessDecisionRecord = import('@elceo/types').FeatureAccessDecision & { decisionJson: string; createdAt: string; };
+export type AccountEntitlementRepository = { getAccountEntitlement(subjectKind:'user', subjectId:string): Promise<PersistedAccountEntitlementRecord | null>; saveAccountEntitlement(record: PersistedAccountEntitlementRecord): Promise<void>; };
+export type UsageCounterRepository = { getUsageCounter(subjectKind:'user', subjectId:string, counterKey: PersistedUsageCounterRecord['counterKey'], period: PersistedUsageCounterRecord['period'], periodStart:string, periodEnd:string): Promise<PersistedUsageCounterRecord | null>; upsertUsageCounter(record: PersistedUsageCounterRecord): Promise<void>; incrementUsageCounter(params: Omit<PersistedUsageCounterRecord,'count'|'updatedAt'> & { incrementBy:number; updatedAt:string }): Promise<PersistedUsageCounterRecord>; listUsageCountersForSubject(subjectKind:'user',subjectId:string): Promise<PersistedUsageCounterRecord[]>; };
+export type FeatureAccessDecisionRepository = { saveDecision(record: PersistedFeatureAccessDecisionRecord): Promise<void>; getLatestDecisionForFeature(subjectKind:'user',subjectId:string,feature:PersistedFeatureAccessDecisionRecord['feature']): Promise<PersistedFeatureAccessDecisionRecord | null>; listRecentDecisions(subjectKind:'user',subjectId:string,limit?:number): Promise<PersistedFeatureAccessDecisionRecord[]>; };

@@ -34,3 +34,5 @@ export * from './app-api';
 export * from './ops-runtime';
 
 export * from './admin-control-plane';
+
+export * from './entitlements';

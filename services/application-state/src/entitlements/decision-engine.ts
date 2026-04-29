@@ -1,0 +1,11 @@
+import type { ElceoAccountEntitlementState, ElceoFeatureKey, FeatureAccessDecision, PlanEntitlementProfile, PersistableUsageCounter } from '@elceo/types';
+import type { FeatureAccessDecisionRepository } from '../persistence';
+function id(){ return `decision_${Date.now()}_${Math.random().toString(16).slice(2,10)}`; }
+export async function decideFeatureAccess(params:{account:ElceoAccountEntitlementState; planProfile:PlanEntitlementProfile; feature:ElceoFeatureKey; asOfIso:string; usageCounter:PersistableUsageCounter | null; decisionRepo:FeatureAccessDecisionRepository; internalOverride?:boolean;}): Promise<FeatureAccessDecision>{ const {account,planProfile,feature,asOfIso,usageCounter}=params; let accessLevel:FeatureAccessDecision['accessLevel']='blocked'; let reasonCode='feature_unknown_or_unmapped'; let usageCounterKey:null|FeatureAccessDecision['usageCounterKey']=null; let limitMax:null|number=null; let currentUsage:null|number=null; if(account.accountState==='suspended'){reasonCode='account_suspended';}
+else if(account.accountState==='canceled'){reasonCode='account_canceled';}
+else if(params.internalOverride===true){accessLevel='allowed';reasonCode='internal_override';}
+else if(planProfile.blockedFeatures.includes(feature)){reasonCode='feature_not_in_plan';}
+else if(planProfile.allowedFeatures.includes(feature)){accessLevel='allowed';reasonCode='feature_allowed';}
+else { const limited=planProfile.limitedFeatures.find((f)=>f.feature===feature); if(limited){ usageCounterKey=limited.limitCounterKey; if(!limited.limitCounterKey){ accessLevel='limited'; reasonCode='feature_limited'; } else { const limit=planProfile.usageLimits.find((l)=>l.counterKey===limited.limitCounterKey); currentUsage=usageCounter?.count ?? 0; limitMax=limit?.maxCount ?? null; if(limit && currentUsage < limit.maxCount){accessLevel='allowed'; reasonCode='usage_available';} else {reasonCode='usage_limit_exceeded';}}}}
+ const d:FeatureAccessDecision={decisionId:id(),feature,subjectKind:account.subjectKind,subjectId:account.subjectId,planKind:account.planKind,accountState:account.accountState,accessLevel,reasonCode,usageCounterKey,currentUsage,limitMax,decidedAt:asOfIso};
+ await params.decisionRepo.saveDecision({...d, decisionJson: JSON.stringify(d), createdAt: asOfIso}); return d; }

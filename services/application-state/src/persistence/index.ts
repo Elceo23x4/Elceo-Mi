@@ -13,3 +13,5 @@ export * from './ops-runtime-repository';
 export * from './entitlements-repository';
 
 export * from './billing-repository';
+
+export * from './payment-provider-repository';

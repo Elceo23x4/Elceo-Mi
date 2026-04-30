@@ -22,3 +22,5 @@ export * from './admin';
 export * from './entitlements';
 
 export * from './billing';
+
+export * from './payment-providers';

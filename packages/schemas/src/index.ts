@@ -34,3 +34,5 @@ export * from './admin-control-plane.schema';
 export * from './entitlements.schema';
 
 export * from './billing.schema';
+
+export * from './payment-providers.schema';

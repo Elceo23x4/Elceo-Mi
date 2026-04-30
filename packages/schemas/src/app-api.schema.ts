@@ -3,6 +3,11 @@ import type {
   AdminEntitlementOverrideRequest,
   AdminEntitlementPlanRequest,
   AdminEntitlementStateRequest,
+  AdminBillingActivateRequest,
+  AdminBillingChangePlanRequest,
+  AdminBillingOccurredAtRequest,
+  AdminBillingRenewRequest,
+  AdminBillingTrialRequest,
   ActionCreateRequest,
   ActionUpdateRequest,
   JournalAdjustExecutionRequest,
@@ -56,6 +61,19 @@ function validateNumberArray(value: unknown, field: string, errors: string[]): v
 
 function validateStringArray(value: unknown, field: string, errors: string[]): void {
   if (!isStringArray(value)) errors.push(`${field} must be string[]`);
+}
+
+
+function isValidPlanKind(value: unknown): boolean {
+  return value === 'free' || value === 'premium' || value === 'admin_internal';
+}
+
+function isValidInterval(value: unknown): boolean {
+  return value === 'monthly' || value === 'quarterly' || value === 'yearly' || value === 'custom';
+}
+
+function isValidProviderKind(value: unknown): boolean {
+  return value === 'internal_manual' || value === 'stripe_placeholder';
 }
 
 export function validateWorkspaceRefreshRequest(input: unknown): SchemaValidationResult<WorkspaceRefreshRequest> {
@@ -176,7 +194,7 @@ export function validateAccountAccessCheckRequest(i: unknown): SchemaValidationR
 export function validateAdminEntitlementPlanRequest(i: unknown): SchemaValidationResult<AdminEntitlementPlanRequest> {
   const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; const v = r.value; const errors: string[] = [];
   if (!isNonEmptyString(v.subjectId)) errors.push('subjectId must be non-empty string');
-  if (!(v.planKind === 'free' || v.planKind === 'premium' || v.planKind === 'admin_internal')) errors.push('planKind is invalid');
+  if (!isValidPlanKind(v.planKind)) errors.push('planKind is invalid');
   ['planStartedAt','planEndsAt','trialEndsAt'].forEach((f)=>{ const x=v[f]; if (!(x===undefined || x===null || isIsoDateString(x))) errors.push(`${f} must be ISO timestamp | null`); });
   return errors.length ? { ok: false, errors } : { ok: true, value: v as AdminEntitlementPlanRequest };
 }
@@ -192,4 +210,49 @@ export function validateAdminEntitlementOverrideRequest(i: unknown): SchemaValid
   const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors };
   if (!isNonEmptyString(r.value.subjectId) || typeof r.value.internalOverride !== 'boolean') return { ok: false, errors: ['subjectId or internalOverride is invalid'] };
   return { ok: true, value: r.value as AdminEntitlementOverrideRequest };
+}
+
+
+export function validateAdminBillingTrialRequest(i: unknown): SchemaValidationResult<AdminBillingTrialRequest> {
+  const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; const v = r.value; const errors: string[] = [];
+  if (!isNonEmptyString(v.subjectId)) errors.push('subjectId must be non-empty string');
+  if (!isValidPlanKind(v.planKind)) errors.push('planKind is invalid');
+  if (!isIsoDateString(v.trialEndsAt)) errors.push('trialEndsAt must be ISO timestamp');
+  if (!(v.providerKind === undefined || isValidProviderKind(v.providerKind))) errors.push('providerKind is invalid');
+  return errors.length ? { ok: false, errors } : { ok: true, value: v as AdminBillingTrialRequest };
+}
+
+export function validateAdminBillingActivateRequest(i: unknown): SchemaValidationResult<AdminBillingActivateRequest> {
+  const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; const v = r.value; const errors: string[] = [];
+  if (!isNonEmptyString(v.subjectId)) errors.push('subjectId must be non-empty string');
+  if (!isValidPlanKind(v.planKind)) errors.push('planKind is invalid');
+  if (!isValidInterval(v.interval)) errors.push('interval is invalid');
+  if (!isIsoDateString(v.currentPeriodStart)) errors.push('currentPeriodStart must be ISO timestamp');
+  if (!isIsoDateString(v.currentPeriodEnd)) errors.push('currentPeriodEnd must be ISO timestamp');
+  if (!(v.providerKind === undefined || isValidProviderKind(v.providerKind))) errors.push('providerKind is invalid');
+  return errors.length ? { ok: false, errors } : { ok: true, value: v as AdminBillingActivateRequest };
+}
+
+export function validateAdminBillingRenewRequest(i: unknown): SchemaValidationResult<AdminBillingRenewRequest> {
+  const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; const v = r.value; const errors: string[] = [];
+  if (!isNonEmptyString(v.subjectId)) errors.push('subjectId must be non-empty string');
+  if (!isIsoDateString(v.nextPeriodStart)) errors.push('nextPeriodStart must be ISO timestamp');
+  if (!isIsoDateString(v.nextPeriodEnd)) errors.push('nextPeriodEnd must be ISO timestamp');
+  return errors.length ? { ok: false, errors } : { ok: true, value: v as AdminBillingRenewRequest };
+}
+
+export function validateAdminBillingChangePlanRequest(i: unknown): SchemaValidationResult<AdminBillingChangePlanRequest> {
+  const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; const v = r.value; const errors: string[] = [];
+  if (!isNonEmptyString(v.subjectId)) errors.push('subjectId must be non-empty string');
+  if (!isValidPlanKind(v.nextPlanKind)) errors.push('nextPlanKind is invalid');
+  if (!isValidInterval(v.interval)) errors.push('interval is invalid');
+  if (!isIsoDateString(v.effectiveAt)) errors.push('effectiveAt must be ISO timestamp');
+  if (!isNonEmptyString(v.reason)) errors.push('reason must be non-empty string');
+  return errors.length ? { ok: false, errors } : { ok: true, value: v as AdminBillingChangePlanRequest };
+}
+
+export function validateAdminBillingOccurredAtRequest(i: unknown): SchemaValidationResult<AdminBillingOccurredAtRequest> {
+  const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; const v = r.value;
+  if (!isNonEmptyString(v.subjectId) || !isIsoDateString(v.occurredAt)) return { ok: false, errors: ['subjectId or occurredAt is invalid'] };
+  return { ok: true, value: v as AdminBillingOccurredAtRequest };
 }

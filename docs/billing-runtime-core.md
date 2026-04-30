@@ -13,3 +13,24 @@ C4-L1 introduces provider-agnostic billing runtime primitives for subscriptions,
 - Real payment-provider adapter implementation and webhook signature validation.
 - Idempotent provider event ingestion pipeline.
 - Retry policies and dead-letter handling for provider delivery failures.
+
+## C4-L2 server/API integration
+
+C4-L2 wires the canonical billing runtime boundary into the web server composition runtime and exposes billing operations through API routes.
+
+Added authenticated account billing read routes:
+- `GET /api/account/billing`
+- `GET /api/account/billing/events`
+
+Added internal/admin billing mutation routes:
+- `POST /api/admin/billing/trial`
+- `POST /api/admin/billing/activate`
+- `POST /api/admin/billing/renew`
+- `POST /api/admin/billing/change-plan`
+- `POST /api/admin/billing/past-due`
+- `POST /api/admin/billing/cancel-at-period-end`
+- `POST /api/admin/billing/expire`
+- `POST /api/admin/billing/pause`
+- `POST /api/admin/billing/resume`
+
+This batch remains provider-agnostic and manual-operations-oriented. It still intentionally stops before checkout, payment provider adapters, webhook ingestion/signature validation, and billing UI.

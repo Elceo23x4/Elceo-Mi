@@ -105,3 +105,22 @@ Route-level entitlement gates in C4-K2:
 - `POST /api/refresh/run` -> `refresh.run`
 - `GET /api/admin/*` -> `admin.read` (in addition to internal token)
 - internal ops `POST /api/ops/*` routes -> `admin.ops` (in addition to internal token)
+
+## C4-L2 billing API additions
+
+Authenticated account endpoints:
+- `GET /api/account/billing`
+- `GET /api/account/billing/events`
+
+Internal/admin endpoints:
+- `POST /api/admin/billing/trial`
+- `POST /api/admin/billing/activate`
+- `POST /api/admin/billing/renew`
+- `POST /api/admin/billing/change-plan`
+- `POST /api/admin/billing/past-due`
+- `POST /api/admin/billing/cancel-at-period-end`
+- `POST /api/admin/billing/expire`
+- `POST /api/admin/billing/pause`
+- `POST /api/admin/billing/resume`
+
+C4-L2 billing routes are runtime-core integrations only. They are intentionally provider-agnostic manual operations and stop before checkout, payment processing, webhook ingestion, and billing UI.

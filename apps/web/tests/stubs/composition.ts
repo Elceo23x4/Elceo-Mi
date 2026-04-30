@@ -45,3 +45,7 @@ export function getRefreshRuntime() {
 export function getEntitlementsRuntime() {
   return ((getApplicationStateRuntime() as unknown) as { entitlements: unknown }).entitlements;
 }
+
+export function getBillingRuntime() {
+  return ((getApplicationStateRuntime() as unknown) as { billing: unknown }).billing;
+}

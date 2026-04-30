@@ -64,6 +64,18 @@ import * as adminEntitlementPlanRoute from '../app/api/admin/entitlements/plan/r
 import * as adminEntitlementStateRoute from '../app/api/admin/entitlements/state/route';
 import * as adminEntitlementOverrideRoute from '../app/api/admin/entitlements/override/route';
 
+import * as accountBillingRoute from '../app/api/account/billing/route';
+import * as accountBillingEventsRoute from '../app/api/account/billing/events/route';
+import * as adminBillingTrialRoute from '../app/api/admin/billing/trial/route';
+import * as adminBillingActivateRoute from '../app/api/admin/billing/activate/route';
+import * as adminBillingRenewRoute from '../app/api/admin/billing/renew/route';
+import * as adminBillingChangePlanRoute from '../app/api/admin/billing/change-plan/route';
+import * as adminBillingPastDueRoute from '../app/api/admin/billing/past-due/route';
+import * as adminBillingCancelAtPeriodEndRoute from '../app/api/admin/billing/cancel-at-period-end/route';
+import * as adminBillingExpireRoute from '../app/api/admin/billing/expire/route';
+import * as adminBillingPauseRoute from '../app/api/admin/billing/pause/route';
+import * as adminBillingResumeRoute from '../app/api/admin/billing/resume/route';
+
 const subject = { subjectKind: 'user' as const, subjectId: 'user-1', userId: 'user-1' };
 
 let latestWorkspaceSubjectId: string | null = null;
@@ -126,6 +138,20 @@ const mockApplicationStateRuntime = {
     listDomainsNeedingRefresh: async () => [],
     getLatestSnapshotRefreshRun: async () => null,
     listSnapshotRefreshRuns: async () => []
+  },
+  billing: {
+    getLatestBillingSubscription: async () => ({ subscriptionId: 'sub-1' }),
+    getBillingCommercialState: async () => ({ currentPlanKind: 'premium' }),
+    listBillingEventsForSubject: async () => [{ eventId: 'be-1' }],
+    startTrial: async () => ({ subscriptionId: 'sub-1', subscriptionState: 'trialing' }),
+    activatePaidPlan: async () => ({ subscriptionId: 'sub-1', subscriptionState: 'active' }),
+    renewPaidPlan: async () => ({ subscriptionId: 'sub-1', subscriptionState: 'active' }),
+    changePlan: async () => ({ subscriptionId: 'sub-1', planKind: 'premium' }),
+    markPastDue: async () => ({ subscriptionId: 'sub-1', subscriptionState: 'past_due' }),
+    cancelAtPeriodEnd: async () => ({ subscriptionId: 'sub-1', cancelAtPeriodEnd: true }),
+    expireSubscription: async () => ({ subscriptionId: 'sub-1', subscriptionState: 'expired' }),
+    pauseSubscription: async () => ({ subscriptionId: 'sub-1', subscriptionState: 'paused' }),
+    resumeSubscription: async () => ({ subscriptionId: 'sub-1', subscriptionState: 'active' })
   },
   entitlements: {
     decideFeatureAccess: async (_kind: 'user', _subjectId: string, feature: string) => ({
@@ -312,6 +338,24 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await accountUsageRoute.GET())).ok, true);
   assert.equal((await readJson(await accountAccessDecisionsRoute.GET(request('https://x/api/account/access-decisions?limit=5')))).ok, true);
   assert.equal((await readJson(await accountAccessCheckRoute.POST(request('https://x/api/account/access-check', { method: 'POST', body: JSON.stringify({ feature: 'workspace.refresh' }) })))).ok, true);
+
+  const accountBilling = await accountBillingRoute.GET();
+  assert.equal(accountBilling.status, 200);
+  assert.equal((await readJson(accountBilling)).ok, true);
+  assert.equal((await readJson(await accountBillingEventsRoute.GET())).ok, true);
+
+  const adminBillingUnauthorized = await adminBillingTrialRoute.POST(request('https://x/api/admin/billing/trial', { method: 'POST', body: JSON.stringify({ subjectId: 'user-2', planKind: 'premium', trialEndsAt: '2026-01-01T00:00:00.000Z' }) }));
+  assert.equal(adminBillingUnauthorized.status, 403);
+  assert.equal((await readJson(adminBillingUnauthorized)).ok, false);
+  assert.equal((await readJson(await adminBillingTrialRoute.POST(request('https://x/api/admin/billing/trial', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', planKind: 'premium', trialEndsAt: '2026-01-01T00:00:00.000Z' }) })))).ok, true);
+  assert.equal((await readJson(await adminBillingActivateRoute.POST(request('https://x/api/admin/billing/activate', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', planKind: 'premium', interval: 'monthly', currentPeriodStart: '2026-01-01T00:00:00.000Z', currentPeriodEnd: '2026-02-01T00:00:00.000Z' }) })))).ok, true);
+  assert.equal((await readJson(await adminBillingRenewRoute.POST(request('https://x/api/admin/billing/renew', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', nextPeriodStart: '2026-02-01T00:00:00.000Z', nextPeriodEnd: '2026-03-01T00:00:00.000Z' }) })))).ok, true);
+  assert.equal((await readJson(await adminBillingChangePlanRoute.POST(request('https://x/api/admin/billing/change-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', nextPlanKind: 'premium', interval: 'monthly', effectiveAt: '2026-02-01T00:00:00.000Z', reason: 'upgrade' }) })))).ok, true);
+  assert.equal((await readJson(await adminBillingPastDueRoute.POST(request('https://x/api/admin/billing/past-due', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', occurredAt: '2026-02-01T00:00:00.000Z' }) })))).ok, true);
+  assert.equal((await readJson(await adminBillingCancelAtPeriodEndRoute.POST(request('https://x/api/admin/billing/cancel-at-period-end', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', occurredAt: '2026-02-01T00:00:00.000Z' }) })))).ok, true);
+  assert.equal((await readJson(await adminBillingExpireRoute.POST(request('https://x/api/admin/billing/expire', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', occurredAt: '2026-02-01T00:00:00.000Z' }) })))).ok, true);
+  assert.equal((await readJson(await adminBillingPauseRoute.POST(request('https://x/api/admin/billing/pause', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', occurredAt: '2026-02-01T00:00:00.000Z' }) })))).ok, true);
+  assert.equal((await readJson(await adminBillingResumeRoute.POST(request('https://x/api/admin/billing/resume', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', occurredAt: '2026-02-01T00:00:00.000Z' }) })))).ok, true);
 
   assert.equal((await readJson(await adminEntitlementPlanRoute.POST(request('https://x/api/admin/entitlements/plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', planKind: 'premium' }) })))).ok, true);
   assert.equal((await readJson(await adminEntitlementStateRoute.POST(request('https://x/api/admin/entitlements/state', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', accountState: 'restricted' }) })))).ok, true);

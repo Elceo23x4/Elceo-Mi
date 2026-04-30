@@ -1,0 +1,2 @@
+import type { BillingCommercialState } from '@elceo/types'; import type { AccountEntitlementRepository } from '../persistence';
+export async function syncCommercialStateToEntitlements(repo:AccountEntitlementRepository,state:BillingCommercialState):Promise<void>{ await repo.saveAccountEntitlement({subjectKind:state.subjectKind,subjectId:state.subjectId,planKind:state.currentPlanKind,accountState:state.accountState,planStartedAt:null,planEndsAt:state.currentPeriodEnd,trialEndsAt:state.trialEndsAt,internalOverride:false,updatedAt:state.generatedAt}); }

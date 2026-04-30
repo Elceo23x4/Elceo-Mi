@@ -11,3 +11,5 @@ export * from './refresh-repository';
 export * from './ops-runtime-repository';
 
 export * from './entitlements-repository';
+
+export * from './billing-repository';

@@ -1,0 +1,12 @@
+import type { BillingEventKind, BillingPlanInterval, BillingProviderKind, BillingSubscriptionRecord } from '@elceo/types';
+const id=()=>`sub_${Math.random().toString(36).slice(2,12)}`;
+export const createTrialSubscription=(subjectId:string,planKind:BillingSubscriptionRecord['planKind'],trialEndsAt:string,providerKind:BillingProviderKind='internal_manual'):BillingSubscriptionRecord=>({subscriptionId:id(),subjectKind:'user',subjectId,providerKind,externalSubscriptionId:null,planKind,subscriptionState:'trialing',interval:'custom',startedAt:new Date().toISOString(),currentPeriodStart:null,currentPeriodEnd:trialEndsAt,cancelAtPeriodEnd:false,canceledAt:null,trialStartedAt:new Date().toISOString(),trialEndsAt,updatedAt:new Date().toISOString()});
+export const activateSubscription=(s:BillingSubscriptionRecord,interval:BillingPlanInterval,start:string,end:string)=>({...s,subscriptionState:'active' as const,interval,currentPeriodStart:start,currentPeriodEnd:end,cancelAtPeriodEnd:false,updatedAt:new Date().toISOString()});
+export const renewSubscription=(s:BillingSubscriptionRecord,start:string,end:string)=>({...s,subscriptionState:'active' as const,currentPeriodStart:start,currentPeriodEnd:end,updatedAt:new Date().toISOString()});
+export const changeSubscriptionPlan=(s:BillingSubscriptionRecord,nextPlanKind:BillingSubscriptionRecord['planKind'],interval:BillingPlanInterval,effectiveAt:string)=>({...s,planKind:nextPlanKind,interval,currentPeriodStart:effectiveAt,updatedAt:new Date().toISOString()});
+export const markPastDue=(s:BillingSubscriptionRecord)=>({...s,subscriptionState:'past_due' as const,updatedAt:new Date().toISOString()});
+export const cancelSubscription=(s:BillingSubscriptionRecord,occurredAt:string)=>({...s,subscriptionState:'canceled' as const,cancelAtPeriodEnd:true,canceledAt:occurredAt,updatedAt:new Date().toISOString()});
+export const expireSubscription=(s:BillingSubscriptionRecord,occurredAt:string)=>({...s,subscriptionState:'expired' as const,currentPeriodEnd:occurredAt,cancelAtPeriodEnd:false,updatedAt:new Date().toISOString()});
+export const pauseSubscription=(s:BillingSubscriptionRecord)=>({...s,subscriptionState:'paused' as const,updatedAt:new Date().toISOString()});
+export const resumeSubscription=(s:BillingSubscriptionRecord)=>({...s,subscriptionState:'active' as const,updatedAt:new Date().toISOString()});
+export const applyManualOverrideEvent=():BillingEventKind=>'manual_override_applied';

@@ -21,6 +21,8 @@ import type {
   OpsLeaseState,
   OpsJobTriggerKind
 } from '@elceo/types';
+import type { BillingEventKind, BillingPlanInterval, BillingProviderKind, BillingSubscriptionRuntimeState, ElceoPlanKind } from '@elceo/types';
+
 
 export type PersistedJournalCaseRecord = {
   caseId: string;
@@ -377,3 +379,26 @@ export type PersistedFeatureAccessDecisionRecord = import('@elceo/types').Featur
 export type AccountEntitlementRepository = { getAccountEntitlement(subjectKind:'user', subjectId:string): Promise<PersistedAccountEntitlementRecord | null>; saveAccountEntitlement(record: PersistedAccountEntitlementRecord): Promise<void>; };
 export type UsageCounterRepository = { getUsageCounter(subjectKind:'user', subjectId:string, counterKey: PersistedUsageCounterRecord['counterKey'], period: PersistedUsageCounterRecord['period'], periodStart:string, periodEnd:string): Promise<PersistedUsageCounterRecord | null>; upsertUsageCounter(record: PersistedUsageCounterRecord): Promise<void>; incrementUsageCounter(params: Omit<PersistedUsageCounterRecord,'count'|'updatedAt'> & { incrementBy:number; updatedAt:string }): Promise<PersistedUsageCounterRecord>; listUsageCountersForSubject(subjectKind:'user',subjectId:string): Promise<PersistedUsageCounterRecord[]>; };
 export type FeatureAccessDecisionRepository = { saveDecision(record: PersistedFeatureAccessDecisionRecord): Promise<void>; getLatestDecisionForFeature(subjectKind:'user',subjectId:string,feature:PersistedFeatureAccessDecisionRecord['feature']): Promise<PersistedFeatureAccessDecisionRecord | null>; listRecentDecisions(subjectKind:'user',subjectId:string,limit?:number): Promise<PersistedFeatureAccessDecisionRecord[]>; };
+
+
+export type PersistedBillingSubscriptionRecord = {
+  subscriptionId: string; subjectKind: 'user'; subjectId: string; providerKind: BillingProviderKind; externalSubscriptionId: string | null;
+  planKind: ElceoPlanKind; subscriptionState: BillingSubscriptionRuntimeState; interval: BillingPlanInterval; startedAt: string | null;
+  currentPeriodStart: string | null; currentPeriodEnd: string | null; cancelAtPeriodEnd: boolean; canceledAt: string | null;
+  trialStartedAt: string | null; trialEndsAt: string | null; updatedAt: string;
+};
+export type PersistedBillingEventRecord = {
+  eventId: string; subscriptionId: string; subjectKind: 'user'; subjectId: string; kind: BillingEventKind; providerKind: BillingProviderKind;
+  externalEventId: string | null; occurredAt: string; eventJson: string; createdAt: string;
+};
+export type BillingSubscriptionRepository = {
+  getLatestSubscriptionForSubject(subjectKind:'user',subjectId:string): Promise<PersistedBillingSubscriptionRecord | null>;
+  getSubscriptionById(subscriptionId:string): Promise<PersistedBillingSubscriptionRecord | null>;
+  saveSubscription(record: PersistedBillingSubscriptionRecord): Promise<void>;
+  listSubscriptionsForSubject(subjectKind:'user',subjectId:string): Promise<PersistedBillingSubscriptionRecord[]>;
+};
+export type BillingEventRepository = {
+  saveEvent(record: PersistedBillingEventRecord): Promise<void>;
+  listEventsForSubscription(subscriptionId:string,limit?:number): Promise<PersistedBillingEventRecord[]>;
+  listEventsForSubject(subjectKind:'user',subjectId:string,limit?:number): Promise<PersistedBillingEventRecord[]>;
+};

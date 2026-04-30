@@ -83,3 +83,25 @@ Internal operational execution is now unified under the canonical ops runtime bo
 - GET /api/admin/ops (internal token)
 - GET /api/admin/providers (internal token)
 - GET /api/admin/audit (internal token)
+
+## C4-K2 entitlement API additions
+
+Authenticated account endpoints:
+- `GET /api/account/entitlements`
+- `GET /api/account/usage`
+- `GET /api/account/access-decisions`
+- `POST /api/account/access-check`
+
+Internal/admin endpoints:
+- `POST /api/admin/entitlements/plan`
+- `POST /api/admin/entitlements/state`
+- `POST /api/admin/entitlements/override`
+
+Route-level entitlement gates in C4-K2:
+- `POST /api/workspace/refresh` -> `workspace.refresh`
+- `POST /api/analytics/generate` -> `analytics.generate`
+- `POST /api/coaching/generate` -> `coaching.generate`
+- `POST /api/portfolio/snapshot/generate` -> `portfolio.snapshot.generate`
+- `POST /api/refresh/run` -> `refresh.run`
+- `GET /api/admin/*` -> `admin.read` (in addition to internal token)
+- internal ops `POST /api/ops/*` routes -> `admin.ops` (in addition to internal token)

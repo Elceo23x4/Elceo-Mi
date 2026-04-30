@@ -3,6 +3,7 @@ import type { JournalConvictionLabel, JournalExecutionQuality, JournalOutcomeLab
 import type { NotificationChannel, NotificationTriggerKind } from './notifications';
 import type { PortfolioActionKind, ThesisHealth, WatchlistEntryStatus, WatchlistPriority } from './portfolio';
 import type { SnapshotRefreshTriggerKind } from './refresh-runtime';
+import type { ElceoAccountState, ElceoFeatureKey, ElceoPlanKind } from './entitlements';
 
 export type ApiSuccessEnvelope<T> = {
   ok: true;
@@ -184,3 +185,8 @@ export type SubscriptionUpdateRequest = {
 };
 export type VerificationIssueRequest = { targetId: string };
 export type VerificationConsumeRequest = { targetId: string; token: string };
+
+export type AccountAccessCheckRequest = { feature: ElceoFeatureKey };
+export type AdminEntitlementPlanRequest = { subjectId: string; planKind: ElceoPlanKind; planStartedAt?: string | null; planEndsAt?: string | null; trialEndsAt?: string | null };
+export type AdminEntitlementStateRequest = { subjectId: string; accountState: ElceoAccountState };
+export type AdminEntitlementOverrideRequest = { subjectId: string; internalOverride: boolean };

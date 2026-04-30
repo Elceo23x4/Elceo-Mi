@@ -1,11 +1,13 @@
 import { parseJsonBody, unwrapValidation, withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
 import { validateWorkspaceRefreshRequest } from '@elceo/schemas';
-import { requireAuthenticatedSubject } from '@/lib/server/auth';
 import { getRefreshRuntime } from '@/lib/server/composition';
+import { maybeIncrementUsage, requireFeatureAccess } from '@/lib/server/access';
 
 export const POST = withApiErrorBoundary(async (request: Request) => {
-  const subject = await requireAuthenticatedSubject();
+  const access = await requireFeatureAccess('workspace.refresh', { request });
+  if (!access.ok) return access.response;
   const body = unwrapValidation(validateWorkspaceRefreshRequest(await parseJsonBody(request)));
-  const report = await getRefreshRuntime().runSnapshotRefresh(subject.subjectKind, subject.subjectId, body.triggerKind);
+  const report = await getRefreshRuntime().runSnapshotRefresh(access.subject.subjectKind, access.subject.subjectId, body.triggerKind);
+  await maybeIncrementUsage('workspace.refresh', { request });
   return jsonSuccess({ report });
 });

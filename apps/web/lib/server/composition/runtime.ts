@@ -7,12 +7,16 @@ import {
   CanonicalRefreshBoundaryService,
   CanonicalWorkspaceBoundaryService,
   CanonicalAdminBoundaryService,
+  CanonicalEntitlementsBoundaryService,
   createDefaultSnapshotRefreshLoaders,
   createWorkspaceDefaultLoaders,
   getPortfolioRepository,
   getSnapshotFreshnessRepository,
   getSnapshotRefreshRunRepository,
-  getWorkspaceSnapshotRepository
+  getWorkspaceSnapshotRepository,
+  SQLAccountEntitlementRepository,
+  SQLFeatureAccessDecisionRepository,
+  SQLUsageCounterRepository
 } from '@elceo/application-state';
 import { CanonicalAnalyticsBoundaryService, CanonicalCoachingBoundaryService } from '@elceo/analytics';
 import { createReasoningPersistenceRepository } from '@elceo/reasoning';
@@ -45,6 +49,7 @@ type ApplicationStateRuntime = {
   workspace: CanonicalWorkspaceBoundaryService;
   refresh: CanonicalRefreshBoundaryService;
   admin: CanonicalAdminBoundaryService;
+  entitlements: CanonicalEntitlementsBoundaryService;
 };
 
 type AnalyticsRuntime = {
@@ -171,9 +176,16 @@ export function getApplicationStateRuntime(): ApplicationStateRuntime {
   );
 
   const admin = new CanonicalAdminBoundaryService();
-  applicationStateRuntime = { journal, journalInfluence, portfolio, workspace, refresh, admin };
+  const entitlements = new CanonicalEntitlementsBoundaryService(
+    new SQLAccountEntitlementRepository(),
+    new SQLUsageCounterRepository(),
+    new SQLFeatureAccessDecisionRepository()
+  );
+  applicationStateRuntime = { journal, journalInfluence, portfolio, workspace, refresh, admin, entitlements };
   return applicationStateRuntime;
 }
 
 export function getWorkspaceRuntime() { return getApplicationStateRuntime().workspace; }
 export function getRefreshRuntime() { return getApplicationStateRuntime().refresh; }
+
+export function getEntitlementsRuntime() { return getApplicationStateRuntime().entitlements; }

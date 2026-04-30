@@ -41,5 +41,9 @@ export const validateSubscriptionCreateRequest = (input: unknown) => validation<
 export const validateSubscriptionUpdateRequest = (input: unknown) => validation<Record<string, unknown>>(input);
 export const validateVerificationIssueRequest = (input: unknown) => validation<{ targetId: string }>(input, ['targetId']);
 export const validateVerificationConsumeRequest = (input: unknown) => validation<{ targetId: string; token: string }>(input, ['targetId', 'token']);
+export const validateAccountAccessCheckRequest = (input: unknown) => validation<{ feature: string }>(input, ['feature']);
+export const validateAdminEntitlementPlanRequest = (input: unknown) => validation<{ subjectId: string; planKind: string }>(input, ['subjectId', 'planKind']);
+export const validateAdminEntitlementStateRequest = (input: unknown) => validation<{ subjectId: string; accountState: string }>(input, ['subjectId', 'accountState']);
+export const validateAdminEntitlementOverrideRequest = (input: unknown) => validation<{ subjectId: string; internalOverride: boolean }>(input, ['subjectId', 'internalOverride']);
 
 export type SchemaValidationResult<T> = Ok<T> | Fail;

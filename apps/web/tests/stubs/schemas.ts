@@ -45,5 +45,10 @@ export const validateAccountAccessCheckRequest = (input: unknown) => validation<
 export const validateAdminEntitlementPlanRequest = (input: unknown) => validation<{ subjectId: string; planKind: string }>(input, ['subjectId', 'planKind']);
 export const validateAdminEntitlementStateRequest = (input: unknown) => validation<{ subjectId: string; accountState: string }>(input, ['subjectId', 'accountState']);
 export const validateAdminEntitlementOverrideRequest = (input: unknown) => validation<{ subjectId: string; internalOverride: boolean }>(input, ['subjectId', 'internalOverride']);
+export const validateAdminBillingTrialRequest = (input: unknown) => validation<{ subjectId: string; planKind: string; trialEndsAt: string }>(input, ['subjectId', 'planKind', 'trialEndsAt']);
+export const validateAdminBillingActivateRequest = (input: unknown) => validation<{ subjectId: string; planKind: string; interval: string; currentPeriodStart: string; currentPeriodEnd: string }>(input, ['subjectId', 'planKind', 'interval', 'currentPeriodStart', 'currentPeriodEnd']);
+export const validateAdminBillingRenewRequest = (input: unknown) => validation<{ subjectId: string; nextPeriodStart: string; nextPeriodEnd: string }>(input, ['subjectId', 'nextPeriodStart', 'nextPeriodEnd']);
+export const validateAdminBillingChangePlanRequest = (input: unknown) => validation<{ subjectId: string; nextPlanKind: string; interval: string; effectiveAt: string; reason: string }>(input, ['subjectId', 'nextPlanKind', 'interval', 'effectiveAt', 'reason']);
+export const validateAdminBillingOccurredAtRequest = (input: unknown) => validation<{ subjectId: string; occurredAt: string }>(input, ['subjectId', 'occurredAt']);
 
 export type SchemaValidationResult<T> = Ok<T> | Fail;

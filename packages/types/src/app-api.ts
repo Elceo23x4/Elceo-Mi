@@ -4,6 +4,7 @@ import type { NotificationChannel, NotificationTriggerKind } from './notificatio
 import type { PortfolioActionKind, ThesisHealth, WatchlistEntryStatus, WatchlistPriority } from './portfolio';
 import type { SnapshotRefreshTriggerKind } from './refresh-runtime';
 import type { ElceoAccountState, ElceoFeatureKey, ElceoPlanKind } from './entitlements';
+import type { BillingPlanInterval, BillingProviderKind } from './billing';
 
 export type ApiSuccessEnvelope<T> = {
   ok: true;
@@ -190,3 +191,8 @@ export type AccountAccessCheckRequest = { feature: ElceoFeatureKey };
 export type AdminEntitlementPlanRequest = { subjectId: string; planKind: ElceoPlanKind; planStartedAt?: string | null; planEndsAt?: string | null; trialEndsAt?: string | null };
 export type AdminEntitlementStateRequest = { subjectId: string; accountState: ElceoAccountState };
 export type AdminEntitlementOverrideRequest = { subjectId: string; internalOverride: boolean };
+export type AdminBillingTrialRequest = { subjectId: string; planKind: ElceoPlanKind; trialEndsAt: string; providerKind?: BillingProviderKind };
+export type AdminBillingActivateRequest = { subjectId: string; planKind: ElceoPlanKind; interval: BillingPlanInterval; currentPeriodStart: string; currentPeriodEnd: string; providerKind?: BillingProviderKind };
+export type AdminBillingRenewRequest = { subjectId: string; nextPeriodStart: string; nextPeriodEnd: string };
+export type AdminBillingChangePlanRequest = { subjectId: string; nextPlanKind: ElceoPlanKind; interval: BillingPlanInterval; effectiveAt: string; reason: string };
+export type AdminBillingOccurredAtRequest = { subjectId: string; occurredAt: string };

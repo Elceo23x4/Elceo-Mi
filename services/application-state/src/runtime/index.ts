@@ -15,3 +15,5 @@ export * from './canonical-admin-boundary';
 export * from './canonical-entitlements-boundary';
 
 export * from './canonical-billing-boundary';
+
+export * from './canonical-payment-provider-boundary';

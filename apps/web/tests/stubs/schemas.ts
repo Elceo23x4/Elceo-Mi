@@ -52,3 +52,16 @@ export const validateAdminBillingChangePlanRequest = (input: unknown) => validat
 export const validateAdminBillingOccurredAtRequest = (input: unknown) => validation<{ subjectId: string; occurredAt: string }>(input, ['subjectId', 'occurredAt']);
 
 export type SchemaValidationResult<T> = Ok<T> | Fail;
+export const validateBillingProviderEventIngestRequest = (input: unknown) => validation<{ providerKind: string; externalEventId: string; eventType: string; createdAt: string; dataJson: string }>(input, ['providerKind', 'externalEventId', 'eventType', 'createdAt', 'dataJson']);
+export const validateBillingProviderEventReplayRequest = (input: unknown) => validation<{ limit?: number }>(input);
+export const validateBillingProviderPlanMappingRequest = (input: unknown) => validation<{ providerKind: string; externalPriceId: string; mappedPlanKind: string; interval: string }>(input, ['providerKind', 'externalPriceId', 'mappedPlanKind', 'interval']);
+export const parseAdminBillingProviderEventsQuery = (url: URL): Ok<{ providerKind?: string; subjectId?: string; limit?: number }> => {
+  const providerKind = url.searchParams.get('providerKind');
+  const subjectId = url.searchParams.get('subjectId');
+  const limitRaw = url.searchParams.get('limit');
+  const value: { providerKind?: string; subjectId?: string; limit?: number } = {};
+  if (providerKind) value.providerKind = providerKind;
+  if (subjectId) value.subjectId = subjectId;
+  if (limitRaw) value.limit = Number.parseInt(limitRaw, 10);
+  return { ok: true, value };
+};

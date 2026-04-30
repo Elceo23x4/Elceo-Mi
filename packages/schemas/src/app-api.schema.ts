@@ -1,4 +1,8 @@
 import type {
+  AccountAccessCheckRequest,
+  AdminEntitlementOverrideRequest,
+  AdminEntitlementPlanRequest,
+  AdminEntitlementStateRequest,
   ActionCreateRequest,
   ActionUpdateRequest,
   JournalAdjustExecutionRequest,
@@ -163,3 +167,29 @@ export function validateSubscriptionCreateRequest(i: unknown): SchemaValidationR
 export const validateSubscriptionUpdateRequest = (i: unknown): SchemaValidationResult<SubscriptionUpdateRequest> => validateSubscriptionCreateRequest(i) as SchemaValidationResult<SubscriptionUpdateRequest>;
 export function validateVerificationIssueRequest(i: unknown): SchemaValidationResult<VerificationIssueRequest> { const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; return isNonEmptyString(r.value.targetId) ? { ok: true, value: r.value as VerificationIssueRequest } : { ok: false, errors: ['targetId must be non-empty string'] }; }
 export function validateVerificationConsumeRequest(i: unknown): SchemaValidationResult<VerificationConsumeRequest> { const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; const errors: string[] = []; if (!isNonEmptyString(r.value.targetId)) errors.push('targetId must be non-empty string'); if (!isNonEmptyString(r.value.token)) errors.push('token must be non-empty string'); return errors.length ? { ok: false, errors } : { ok: true, value: r.value as VerificationConsumeRequest }; }
+
+export function validateAccountAccessCheckRequest(i: unknown): SchemaValidationResult<AccountAccessCheckRequest> {
+  const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors };
+  return isNonEmptyString(r.value.feature) ? { ok: true, value: r.value as AccountAccessCheckRequest } : { ok: false, errors: ['feature is invalid'] };
+}
+
+export function validateAdminEntitlementPlanRequest(i: unknown): SchemaValidationResult<AdminEntitlementPlanRequest> {
+  const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; const v = r.value; const errors: string[] = [];
+  if (!isNonEmptyString(v.subjectId)) errors.push('subjectId must be non-empty string');
+  if (!(v.planKind === 'free' || v.planKind === 'premium' || v.planKind === 'admin_internal')) errors.push('planKind is invalid');
+  ['planStartedAt','planEndsAt','trialEndsAt'].forEach((f)=>{ const x=v[f]; if (!(x===undefined || x===null || isIsoDateString(x))) errors.push(`${f} must be ISO timestamp | null`); });
+  return errors.length ? { ok: false, errors } : { ok: true, value: v as AdminEntitlementPlanRequest };
+}
+
+export function validateAdminEntitlementStateRequest(i: unknown): SchemaValidationResult<AdminEntitlementStateRequest> {
+  const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors };
+  const validState = r.value.accountState === 'active' || r.value.accountState === 'suspended' || r.value.accountState === 'restricted' || r.value.accountState === 'canceled';
+  if (!isNonEmptyString(r.value.subjectId) || !validState) return { ok: false, errors: ['subjectId or accountState is invalid'] };
+  return { ok: true, value: r.value as AdminEntitlementStateRequest };
+}
+
+export function validateAdminEntitlementOverrideRequest(i: unknown): SchemaValidationResult<AdminEntitlementOverrideRequest> {
+  const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors };
+  if (!isNonEmptyString(r.value.subjectId) || typeof r.value.internalOverride !== 'boolean') return { ok: false, errors: ['subjectId or internalOverride is invalid'] };
+  return { ok: true, value: r.value as AdminEntitlementOverrideRequest };
+}

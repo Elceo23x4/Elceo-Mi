@@ -1,9 +1,11 @@
 import { withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
-import { requireAuthenticatedSubject } from '@/lib/server/auth';
 import { getApplicationStateRuntime } from '@/lib/server/composition';
+import { maybeIncrementUsage, requireFeatureAccess } from '@/lib/server/access';
 
-export const POST = withApiErrorBoundary(async () => {
-  const subject = await requireAuthenticatedSubject();
-  const snapshot = await getApplicationStateRuntime().portfolio.generatePortfolioSnapshot(subject.subjectKind, subject.subjectId);
+export const POST = withApiErrorBoundary(async (request: Request) => {
+  const access = await requireFeatureAccess('portfolio.snapshot.generate', { request });
+  if (!access.ok) return access.response;
+  const snapshot = await getApplicationStateRuntime().portfolio.generatePortfolioSnapshot(access.subject.subjectKind, access.subject.subjectId);
+  await maybeIncrementUsage('portfolio.snapshot.generate', { request });
   return jsonSuccess({ snapshot });
 });

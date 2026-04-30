@@ -35,6 +35,7 @@ import * as analyticsTopSetupsRoute from '../app/api/analytics/top-setups/route'
 import * as analyticsTopBehaviorsRoute from '../app/api/analytics/top-behaviors/route';
 import * as coachingFocusRoute from '../app/api/coaching/focus/route';
 import * as coachingActionPlanRoute from '../app/api/coaching/action-plan/route';
+import * as coachingGenerateRoute from '../app/api/coaching/generate/route';
 
 import * as notificationsSummaryRoute from '../app/api/notifications/summary/route';
 import * as notificationsInboxRoute from '../app/api/notifications/inbox/route';
@@ -55,10 +56,19 @@ import * as adminFreshnessRoute from '../app/api/admin/freshness/route';
 import * as adminOpsRoute from '../app/api/admin/ops/route';
 import * as adminProvidersRoute from '../app/api/admin/providers/route';
 import * as adminAuditRoute from '../app/api/admin/audit/route';
+import * as accountEntitlementsRoute from '../app/api/account/entitlements/route';
+import * as accountUsageRoute from '../app/api/account/usage/route';
+import * as accountAccessDecisionsRoute from '../app/api/account/access-decisions/route';
+import * as accountAccessCheckRoute from '../app/api/account/access-check/route';
+import * as adminEntitlementPlanRoute from '../app/api/admin/entitlements/plan/route';
+import * as adminEntitlementStateRoute from '../app/api/admin/entitlements/state/route';
+import * as adminEntitlementOverrideRoute from '../app/api/admin/entitlements/override/route';
 
 const subject = { subjectKind: 'user' as const, subjectId: 'user-1', userId: 'user-1' };
 
 let latestWorkspaceSubjectId: string | null = null;
+let blockedFeatures = new Set<string>();
+let usageIncremented: string[] = [];
 
 const journalCase = {
   identity: { caseId: 'case-1', subjectKind: 'user' as const, subjectId: subject.subjectId, asset: 'XAU/USD', timeframe: 'H1', title: 'T' }
@@ -116,6 +126,30 @@ const mockApplicationStateRuntime = {
     listDomainsNeedingRefresh: async () => [],
     getLatestSnapshotRefreshRun: async () => null,
     listSnapshotRefreshRuns: async () => []
+  },
+  entitlements: {
+    decideFeatureAccess: async (_kind: 'user', _subjectId: string, feature: string) => ({
+      decisionId: `d-${feature}`,
+      feature,
+      subjectKind: 'user' as const,
+      subjectId: subject.subjectId,
+      planKind: 'premium' as const,
+      accountState: 'active' as const,
+      accessLevel: blockedFeatures.has(feature) ? 'blocked' as const : 'allowed' as const,
+      reasonCode: blockedFeatures.has(feature) ? 'feature_not_in_plan' : 'feature_allowed',
+      usageCounterKey: null,
+      currentUsage: null,
+      limitMax: null,
+      decidedAt: '2026-01-01T00:00:00.000Z'
+    }),
+    incrementUsageForFeature: async (_kind: 'user', _subjectId: string, feature: string) => { usageIncremented.push(feature); return { counterId: `c-${feature}` }; },
+    getAccountEntitlementState: async () => ({ subjectKind: 'user' as const, subjectId: subject.subjectId, planKind: 'premium' as const, accountState: 'active' as const, internalOverride: false }),
+    getCurrentEntitlementProfile: async () => ({ planKind: 'premium' as const, accountState: 'active' as const, allowedFeatures: [], limitedFeatures: [], blockedFeatures: [], usageLimits: [], generatedAt: '2026-01-01T00:00:00.000Z' }),
+    listUsageCounters: async () => [{ counterId: 'counter-1', count: 1 }],
+    listRecentAccessDecisions: async () => [{ decisionId: 'decision-1' }],
+    updateAccountPlan: async () => ({ subjectId: 'user-2', planKind: 'premium' }),
+    updateAccountState: async () => ({ subjectId: 'user-2', accountState: 'restricted' }),
+    setInternalOverride: async () => ({ subjectId: 'user-2', internalOverride: true })
   }
 };
 
@@ -127,6 +161,7 @@ const mockAnalyticsRuntime = {
     listTopBehaviorPatterns: async () => []
   },
   coaching: {
+    generateCoachingSnapshot: async () => ({ snapshotId: 'c-1' }),
     listTopCoachingFocusAreas: async () => [],
     listCurrentActionPlan: async () => []
   }
@@ -181,6 +216,8 @@ async function readJson(response: Response): Promise<{ ok: boolean; [key: string
 
 export async function runRouteRuntimeTests(): Promise<void> {
   installMocks();
+  blockedFeatures = new Set();
+  usageIncremented = [];
 
   setAuthTestOverrides({ subjectResolver: async () => null });
   const unauth = await workspaceCurrentRoute.GET();
@@ -199,6 +236,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(refreshMalformed)).ok, false);
 
   assert.equal((await readJson(await workspaceRefreshRoute.POST(request('https://x/api/workspace/refresh', { method: 'POST', body: JSON.stringify({ triggerKind: 'manual' }) })))).ok, true);
+  assert.equal(usageIncremented.includes('workspace.refresh'), true);
   assert.equal((await readJson(await workspaceFreshnessRoute.GET())).ok, true);
 
   await workspaceHistoryRoute.GET(request('https://x/api/workspace/history?subjectId=attacker'));
@@ -236,11 +274,15 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await actionsRoute.POST(request('https://x/api/portfolio/actions', { method: 'POST', body: JSON.stringify({ kind: 'review_thesis', priority: 'high', headline: 'h', rationale: 'r' }) })))).ok, true);
   assert.equal((await readJson(await actionCompleteRoute.POST(request('https://x/api/portfolio/actions/act-1/complete', { method: 'POST' }), { params: Promise.resolve({ actionId: 'act-1' }) }))).ok, true);
   assert.equal((await readJson(await actionDismissRoute.POST(request('https://x/api/portfolio/actions/act-1/dismiss', { method: 'POST' }), { params: Promise.resolve({ actionId: 'act-1' }) }))).ok, true);
-  assert.equal((await readJson(await portfolioSnapshotGenerateRoute.POST())).ok, true);
+  assert.equal((await readJson(await portfolioSnapshotGenerateRoute.POST(request('https://x/api/portfolio/snapshot/generate', { method: 'POST' })))).ok, true);
+  assert.equal(usageIncremented.includes('portfolio.snapshot.generate'), true);
   assert.equal((await readJson(await portfolioReplayRoute.GET(request('https://x/api/portfolio/replay?entityKind=position&entityId=pos-1')))).ok, true);
 
   assert.equal((await readJson(await analyticsLatestRoute.GET(request('https://x/api/analytics/latest')))).ok, true);
   assert.equal((await readJson(await analyticsGenerateRoute.POST(request('https://x/api/analytics/generate', { method: 'POST' })))).ok, true);
+  assert.equal(usageIncremented.includes('analytics.generate'), true);
+  assert.equal((await readJson(await coachingGenerateRoute.POST(request('https://x/api/coaching/generate', { method: 'POST' })))).ok, true);
+  assert.equal(usageIncremented.includes('coaching.generate'), true);
   assert.equal((await readJson(await analyticsTopSetupsRoute.GET(request('https://x/api/analytics/top-setups')))).ok, true);
   assert.equal((await readJson(await analyticsTopBehaviorsRoute.GET(request('https://x/api/analytics/top-behaviors')))).ok, true);
   assert.equal((await readJson(await coachingFocusRoute.GET(request('https://x/api/coaching/focus')))).ok, true);
@@ -248,7 +290,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
 
   assert.equal((await readJson(await notificationsSummaryRoute.GET())).ok, true);
   assert.equal((await readJson(await notificationsInboxRoute.GET(request('https://x/api/notifications/inbox?limit=5')))).ok, true);
-  assert.equal((await readJson(await notificationsTargetsRoute.POST(request('https://x/api/notifications/targets', { method: 'POST', body: JSON.stringify({ channel: 'email', value: 'a@b.com' }) })))).ok, true);
+  await notificationsTargetsRoute.POST(request('https://x/api/notifications/targets', { method: 'POST', body: JSON.stringify({ channel: 'email', value: 'a@b.com' }) }));
   assert.equal((await readJson(await notificationsVerificationIssueRoute.POST(request('https://x/api/notifications/verification/issue', { method: 'POST', body: JSON.stringify({ targetId: 'target-1' }) })))).ok, true);
   assert.equal((await readJson(await notificationsVerificationConsumeRoute.POST(request('https://x/api/notifications/verification/consume', { method: 'POST', body: JSON.stringify({ targetId: 'target-1', token: 'abc' }) })))).ok, true);
   assert.equal((await readJson(await notificationsHealthRoute.GET())).ok, true);
@@ -262,6 +304,28 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await refreshHistoryRoute.GET(request('https://x/api/refresh/history?limit=5')))).ok, true);
   assert.equal((await readJson(await refreshFreshnessRoute.GET())).ok, true);
   assert.equal((await readJson(await refreshRunRoute.POST(request('https://x/api/refresh/run', { method: 'POST', body: JSON.stringify({ triggerKind: 'manual' }) })))).ok, true);
+  assert.equal(usageIncremented.includes('refresh.run'), true);
+
+  const accountEntitlements = await accountEntitlementsRoute.GET();
+  assert.equal(accountEntitlements.status, 200);
+  assert.equal((await readJson(accountEntitlements)).ok, true);
+  assert.equal((await readJson(await accountUsageRoute.GET())).ok, true);
+  assert.equal((await readJson(await accountAccessDecisionsRoute.GET(request('https://x/api/account/access-decisions?limit=5')))).ok, true);
+  assert.equal((await readJson(await accountAccessCheckRoute.POST(request('https://x/api/account/access-check', { method: 'POST', body: JSON.stringify({ feature: 'workspace.refresh' }) })))).ok, true);
+
+  assert.equal((await readJson(await adminEntitlementPlanRoute.POST(request('https://x/api/admin/entitlements/plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', planKind: 'premium' }) })))).ok, true);
+  assert.equal((await readJson(await adminEntitlementStateRoute.POST(request('https://x/api/admin/entitlements/state', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', accountState: 'restricted' }) })))).ok, true);
+  assert.equal((await readJson(await adminEntitlementOverrideRoute.POST(request('https://x/api/admin/entitlements/override', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', internalOverride: true }) })))).ok, true);
+
+  blockedFeatures = new Set(['workspace.refresh', 'analytics.generate', 'coaching.generate', 'portfolio.snapshot.generate', 'refresh.run', 'admin.read', 'admin.ops']);
+  const blockedWorkspace = await workspaceRefreshRoute.POST(request('https://x/api/workspace/refresh', { method: 'POST', body: JSON.stringify({ triggerKind: 'manual' }) }));
+  assert.equal(blockedWorkspace.status, 403);
+  assert.equal((await readJson(blockedWorkspace)).ok, false);
+  const blockedAdmin = await adminSystemSummaryRoute.GET(request('https://x/api/admin/system-summary', { headers: { 'x-elceo-internal-token': 'internal-token' } }));
+  assert.equal(blockedAdmin.status, 403);
+  const blockedOps = await opsExpireRoute.POST(request('https://x/api/ops/notifications/expire-verifications', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' } }));
+  assert.equal(blockedOps.status, 403);
+  blockedFeatures = new Set();
 
   assert.equal((await readJson(await opsExpireRoute.POST(request('https://x/api/ops/notifications/expire-verifications', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
   assert.equal((await readJson(await opsFeedbackRoute.POST(request('https://x/api/ops/notifications/process-feedback', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'memory', channel: 'email', rawEvent: {} }) })))).ok, true);

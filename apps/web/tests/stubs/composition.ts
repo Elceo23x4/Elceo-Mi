@@ -41,3 +41,7 @@ export function getWorkspaceRuntime() {
 export function getRefreshRuntime() {
   return (getApplicationStateRuntime() as { refresh: unknown }).refresh;
 }
+
+export function getEntitlementsRuntime() {
+  return ((getApplicationStateRuntime() as unknown) as { entitlements: unknown }).entitlements;
+}

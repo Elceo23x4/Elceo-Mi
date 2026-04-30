@@ -49,3 +49,7 @@ export function getEntitlementsRuntime() {
 export function getBillingRuntime() {
   return ((getApplicationStateRuntime() as unknown) as { billing: unknown }).billing;
 }
+
+export function getPaymentProviderRuntime() {
+  return ((getApplicationStateRuntime() as unknown) as { paymentProviders: unknown }).paymentProviders;
+}

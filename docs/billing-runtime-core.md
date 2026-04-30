@@ -34,3 +34,8 @@ Added internal/admin billing mutation routes:
 - `POST /api/admin/billing/resume`
 
 This batch remains provider-agnostic and manual-operations-oriented. It still intentionally stops before checkout, payment provider adapters, webhook ingestion/signature validation, and billing UI.
+
+
+## C4-M1C provider boundary and routes
+
+C4-M1C adds a canonical payment-provider runtime boundary plus internal/admin API routes for provider event ingest/replay and provider-plan mapping. This layer composes existing normalization/dedupe/sync/translator modules without re-implementing provider logic in routes.

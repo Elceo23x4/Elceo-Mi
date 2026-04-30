@@ -76,6 +76,12 @@ import * as adminBillingExpireRoute from '../app/api/admin/billing/expire/route'
 import * as adminBillingPauseRoute from '../app/api/admin/billing/pause/route';
 import * as adminBillingResumeRoute from '../app/api/admin/billing/resume/route';
 
+import * as internalBillingProviderEventsRoute from '../app/api/internal/billing/provider-events/route';
+import * as internalBillingProviderReplayRoute from '../app/api/internal/billing/provider-events/replay/route';
+import * as adminBillingProviderPlanMappingRoute from '../app/api/admin/billing/provider-plan-mapping/route';
+import * as adminBillingProviderPlanMappingsRoute from '../app/api/admin/billing/provider-plan-mappings/route';
+import * as adminBillingProviderEventsRoute from '../app/api/admin/billing/provider-events/route';
+
 const subject = { subjectKind: 'user' as const, subjectId: 'user-1', userId: 'user-1' };
 
 let latestWorkspaceSubjectId: string | null = null;
@@ -152,6 +158,14 @@ const mockApplicationStateRuntime = {
     expireSubscription: async () => ({ subscriptionId: 'sub-1', subscriptionState: 'expired' }),
     pauseSubscription: async () => ({ subscriptionId: 'sub-1', subscriptionState: 'paused' }),
     resumeSubscription: async () => ({ subscriptionId: 'sub-1', subscriptionState: 'active' })
+  },
+  paymentProviders: {
+    ingestExternalEvent: async () => ({ accepted: true, deduplicated: false, translated: true, externalEventId: 'evt-1', providerKind: 'stripe', processingResultCode: 'translated_subscription_created', linkedBillingSubscriptionId: 'sub-1', linkedSubjectId: 'user-1', processedAt: '2026-01-01T00:00:00.000Z' }),
+    replayUnprocessedEvents: async () => [{ accepted: true, deduplicated: false, translated: true, externalEventId: 'evt-2', providerKind: 'stripe', processingResultCode: 'translated_subscription_updated', linkedBillingSubscriptionId: 'sub-1', linkedSubjectId: 'user-1', processedAt: '2026-01-01T00:00:00.000Z' }],
+    upsertProviderPlanMapping: async () => ({ providerKind: 'stripe', externalPriceId: 'price_1', mappedPlanKind: 'premium', interval: 'month' }),
+    listProviderPlanMappings: async () => [{ providerKind: 'stripe', externalPriceId: 'price_1', mappedPlanKind: 'premium', interval: 'month' }],
+    listExternalEventsForSubject: async () => [{ externalEventId: 'evt-subject' }],
+    listUnprocessedExternalEvents: async () => [{ externalEventId: 'evt-unprocessed' }]
   },
   entitlements: {
     decideFeatureAccess: async (_kind: 'user', _subjectId: string, feature: string) => ({
@@ -383,5 +397,46 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await adminProvidersRoute.GET(request('https://x/api/admin/providers', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
   assert.equal((await readJson(await adminAuditRoute.GET(request('https://x/api/admin/audit?limit=5', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
 
+
+
+  const providerNoToken = await internalBillingProviderEventsRoute.POST(request('https://x/api/internal/billing/provider-events', { method: 'POST', body: JSON.stringify({}) }));
+  assert.equal(providerNoToken.status, 403);
+  assert.deepEqual(await readJson(providerNoToken), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
+
+  const providerIngest = await internalBillingProviderEventsRoute.POST(request('https://x/api/internal/billing/provider-events', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'stripe', externalEventId: 'evt-1', eventType: 'customer.subscription.created', createdAt: '2026-01-01T00:00:00.000Z', dataJson: '{}' }) }));
+  assert.equal(providerIngest.status, 200);
+  assert.deepEqual(await readJson(providerIngest), { ok: true, data: { result: { accepted: true, deduplicated: false, translated: true, externalEventId: 'evt-1', providerKind: 'stripe', processingResultCode: 'translated_subscription_created', linkedBillingSubscriptionId: 'sub-1', linkedSubjectId: 'user-1', processedAt: '2026-01-01T00:00:00.000Z' } } });
+
+  blockedFeatures = new Set(['admin.ops']);
+  const providerReplayForbidden = await internalBillingProviderReplayRoute.POST(request('https://x/api/internal/billing/provider-events/replay', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ limit: 5 }) }));
+  assert.equal(providerReplayForbidden.status, 403);
+  assert.deepEqual(await readJson(providerReplayForbidden), { ok: false, error: { code: 'forbidden', message: 'Feature access blocked', details: ['feature:admin.ops', 'reason:feature_not_in_plan', 'accessLevel:blocked'] } });
+  blockedFeatures = new Set();
+  const providerReplayOk = await internalBillingProviderReplayRoute.POST(request('https://x/api/internal/billing/provider-events/replay', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ limit: 5 }) }));
+  assert.equal(providerReplayOk.status, 200);
+  assert.deepEqual(await readJson(providerReplayOk), { ok: true, data: { results: [{ accepted: true, deduplicated: false, translated: true, externalEventId: 'evt-2', providerKind: 'stripe', processingResultCode: 'translated_subscription_updated', linkedBillingSubscriptionId: 'sub-1', linkedSubjectId: 'user-1', processedAt: '2026-01-01T00:00:00.000Z' }] } });
+
+  blockedFeatures = new Set(['admin.ops']);
+  const mapCreateDenied = await adminBillingProviderPlanMappingRoute.POST(request('https://x/api/admin/billing/provider-plan-mapping', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'stripe', externalPriceId: 'price_1', mappedPlanKind: 'premium', interval: 'monthly' }) }));
+  assert.equal(mapCreateDenied.status, 403);
+  assert.deepEqual(await readJson(mapCreateDenied), { ok: false, error: { code: 'forbidden', message: 'Feature access blocked', details: ['feature:admin.ops', 'reason:feature_not_in_plan', 'accessLevel:blocked'] } });
+  blockedFeatures = new Set();
+  const mapCreate = await adminBillingProviderPlanMappingRoute.POST(request('https://x/api/admin/billing/provider-plan-mapping', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'stripe', externalPriceId: 'price_1', mappedPlanKind: 'premium', interval: 'monthly' }) }));
+  assert.equal(mapCreate.status, 200);
+  assert.deepEqual(await readJson(mapCreate), { ok: true, data: { mapping: { providerKind: 'stripe', externalPriceId: 'price_1', mappedPlanKind: 'premium', interval: 'month' } } });
+
+  const mappingsNoToken = await adminBillingProviderPlanMappingsRoute.GET(request('https://x/api/admin/billing/provider-plan-mappings?providerKind=stripe'));
+  assert.equal(mappingsNoToken.status, 403);
+  assert.deepEqual(await readJson(mappingsNoToken), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
+  const mappings = await adminBillingProviderPlanMappingsRoute.GET(request('https://x/api/admin/billing/provider-plan-mappings?providerKind=stripe', { headers: { 'x-elceo-internal-token': 'internal-token' } }));
+  assert.equal(mappings.status, 200);
+  assert.deepEqual(await readJson(mappings), { ok: true, data: { mappings: [{ providerKind: 'stripe', externalPriceId: 'price_1', mappedPlanKind: 'premium', interval: 'month' }] } });
+
+  const subjectEvents = await adminBillingProviderEventsRoute.GET(request('https://x/api/admin/billing/provider-events?subjectId=user-1&limit=1', { headers: { 'x-elceo-internal-token': 'internal-token' } }));
+  assert.equal(subjectEvents.status, 200);
+  assert.deepEqual(await readJson(subjectEvents), { ok: true, data: { mode: 'subject', events: [{ externalEventId: 'evt-subject' }] } });
+  const unprocessedEvents = await adminBillingProviderEventsRoute.GET(request('https://x/api/admin/billing/provider-events?limit=1', { headers: { 'x-elceo-internal-token': 'internal-token' } }));
+  assert.equal(unprocessedEvents.status, 200);
+  assert.deepEqual(await readJson(unprocessedEvents), { ok: true, data: { mode: 'unprocessed', events: [{ externalEventId: 'evt-unprocessed' }] } });
   clearMocks();
 }

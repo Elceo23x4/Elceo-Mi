@@ -5,6 +5,7 @@ import type { PortfolioActionKind, ThesisHealth, WatchlistEntryStatus, Watchlist
 import type { SnapshotRefreshTriggerKind } from './refresh-runtime';
 import type { ElceoAccountState, ElceoFeatureKey, ElceoPlanKind } from './entitlements';
 import type { BillingPlanInterval, BillingProviderKind } from './billing';
+import type { BillingExternalProviderKind, StripeLikeWebhookEnvelope } from './payment-providers';
 
 export type ApiSuccessEnvelope<T> = {
   ok: true;
@@ -195,4 +196,9 @@ export type AdminBillingTrialRequest = { subjectId: string; planKind: ElceoPlanK
 export type AdminBillingActivateRequest = { subjectId: string; planKind: ElceoPlanKind; interval: BillingPlanInterval; currentPeriodStart: string; currentPeriodEnd: string; providerKind?: BillingProviderKind };
 export type AdminBillingRenewRequest = { subjectId: string; nextPeriodStart: string; nextPeriodEnd: string };
 export type AdminBillingChangePlanRequest = { subjectId: string; nextPlanKind: ElceoPlanKind; interval: BillingPlanInterval; effectiveAt: string; reason: string };
+
+export type BillingProviderEventReplayRequest = { limit?: number };
+export type BillingProviderPlanMappingRequest = { providerKind: BillingExternalProviderKind; externalPriceId: string; mappedPlanKind: ElceoPlanKind; interval: BillingPlanInterval };
+export type AdminBillingProviderEventsQuery = { providerKind?: BillingExternalProviderKind; subjectId?: string; limit?: number };
+export type BillingProviderEventIngestRequest = StripeLikeWebhookEnvelope;
 export type AdminBillingOccurredAtRequest = { subjectId: string; occurredAt: string };

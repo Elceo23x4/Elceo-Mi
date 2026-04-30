@@ -9,6 +9,7 @@ import {
   CanonicalAdminBoundaryService,
   CanonicalEntitlementsBoundaryService,
   CanonicalBillingBoundaryService,
+  CanonicalPaymentProviderBoundaryService,
   createDefaultSnapshotRefreshLoaders,
   createWorkspaceDefaultLoaders,
   getPortfolioRepository,
@@ -19,7 +20,12 @@ import {
   SQLFeatureAccessDecisionRepository,
   SQLUsageCounterRepository,
   SQLBillingSubscriptionRepository,
-  SQLBillingEventRepository
+  SQLBillingEventRepository,
+  SQLExternalBillingCustomerRepository,
+  SQLExternalBillingSubscriptionRepository,
+  SQLExternalBillingEventRepository,
+  SQLProviderPlanMappingRepository,
+  PaymentProviderTranslator
 } from '@elceo/application-state';
 import { CanonicalAnalyticsBoundaryService, CanonicalCoachingBoundaryService } from '@elceo/analytics';
 import { createReasoningPersistenceRepository } from '@elceo/reasoning';
@@ -54,6 +60,7 @@ type ApplicationStateRuntime = {
   admin: CanonicalAdminBoundaryService;
   entitlements: CanonicalEntitlementsBoundaryService;
   billing: CanonicalBillingBoundaryService;
+  paymentProviders: CanonicalPaymentProviderBoundaryService;
 };
 
 type AnalyticsRuntime = {
@@ -185,12 +192,22 @@ export function getApplicationStateRuntime(): ApplicationStateRuntime {
     new SQLUsageCounterRepository(),
     new SQLFeatureAccessDecisionRepository()
   );
+  const billingSubscriptions = new SQLBillingSubscriptionRepository();
+  const billingEvents = new SQLBillingEventRepository();
   const billing = new CanonicalBillingBoundaryService(
-    new SQLBillingSubscriptionRepository(),
-    new SQLBillingEventRepository(),
+    billingSubscriptions,
+    billingEvents,
     new SQLAccountEntitlementRepository()
   );
-  applicationStateRuntime = { journal, journalInfluence, portfolio, workspace, refresh, admin, entitlements, billing };
+  const externalSubscriptions = new SQLExternalBillingSubscriptionRepository();
+  const paymentProviders = new CanonicalPaymentProviderBoundaryService(
+    new SQLExternalBillingEventRepository(),
+    new SQLExternalBillingCustomerRepository(),
+    externalSubscriptions,
+    new SQLProviderPlanMappingRepository(),
+    new PaymentProviderTranslator(billing, externalSubscriptions)
+  );
+  applicationStateRuntime = { journal, journalInfluence, portfolio, workspace, refresh, admin, entitlements, billing, paymentProviders };
   return applicationStateRuntime;
 }
 
@@ -199,3 +216,4 @@ export function getRefreshRuntime() { return getApplicationStateRuntime().refres
 
 export function getEntitlementsRuntime() { return getApplicationStateRuntime().entitlements; }
 export function getBillingRuntime() { return getApplicationStateRuntime().billing; }
+export function getPaymentProviderRuntime() { return getApplicationStateRuntime().paymentProviders; }

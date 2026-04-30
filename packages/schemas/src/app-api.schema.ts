@@ -8,6 +8,10 @@ import type {
   AdminBillingOccurredAtRequest,
   AdminBillingRenewRequest,
   AdminBillingTrialRequest,
+  AdminBillingProviderEventsQuery,
+  BillingProviderEventIngestRequest,
+  BillingProviderEventReplayRequest,
+  BillingProviderPlanMappingRequest,
   ActionCreateRequest,
   ActionUpdateRequest,
   JournalAdjustExecutionRequest,
@@ -74,6 +78,10 @@ function isValidInterval(value: unknown): boolean {
 
 function isValidProviderKind(value: unknown): boolean {
   return value === 'internal_manual' || value === 'stripe_placeholder';
+}
+
+function isValidExternalProviderKind(value: unknown): boolean {
+  return value === 'stripe' || value === 'manual_test' || value === 'internal_import';
 }
 
 export function validateWorkspaceRefreshRequest(input: unknown): SchemaValidationResult<WorkspaceRefreshRequest> {
@@ -255,4 +263,52 @@ export function validateAdminBillingOccurredAtRequest(i: unknown): SchemaValidat
   const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; const v = r.value;
   if (!isNonEmptyString(v.subjectId) || !isIsoDateString(v.occurredAt)) return { ok: false, errors: ['subjectId or occurredAt is invalid'] };
   return { ok: true, value: v as AdminBillingOccurredAtRequest };
+}
+
+
+export function validateBillingProviderEventIngestRequest(i: unknown): SchemaValidationResult<BillingProviderEventIngestRequest> {
+  const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; const v = r.value; const errors: string[] = [];
+  if (!isValidExternalProviderKind(v.providerKind)) errors.push('providerKind is invalid');
+  if (!isNonEmptyString(v.externalEventId)) errors.push('externalEventId must be non-empty string');
+  if (!isNonEmptyString(v.eventType)) errors.push('eventType must be non-empty string');
+  if (!isIsoDateString(v.createdAt)) errors.push('createdAt must be ISO timestamp');
+  if (!isNonEmptyString(v.dataJson)) errors.push('dataJson must be non-empty string');
+  return errors.length ? { ok: false, errors } : { ok: true, value: v as BillingProviderEventIngestRequest };
+}
+
+export function validateBillingProviderEventReplayRequest(i: unknown): SchemaValidationResult<BillingProviderEventReplayRequest> {
+  const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors };
+  const limit = r.value.limit as unknown;
+  if (limit !== undefined) {
+    if (!Number.isInteger(limit)) return { ok: false, errors: ['limit must be integer 1..500'] };
+    const limitNumber = limit as number;
+    if (limitNumber <= 0 || limitNumber > 500) return { ok: false, errors: ['limit must be integer 1..500'] };
+  }
+  return { ok: true, value: r.value as BillingProviderEventReplayRequest };
+}
+
+export function validateBillingProviderPlanMappingRequest(i: unknown): SchemaValidationResult<BillingProviderPlanMappingRequest> {
+  const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; const v = r.value; const errors: string[] = [];
+  if (!isValidExternalProviderKind(v.providerKind)) errors.push('providerKind is invalid');
+  if (!isNonEmptyString(v.externalPriceId)) errors.push('externalPriceId must be non-empty string');
+  if (!isValidPlanKind(v.mappedPlanKind)) errors.push('mappedPlanKind is invalid');
+  if (!isValidInterval(v.interval)) errors.push('interval is invalid');
+  return errors.length ? { ok: false, errors } : { ok: true, value: v as BillingProviderPlanMappingRequest };
+}
+
+export function parseAdminBillingProviderEventsQuery(url: URL): SchemaValidationResult<AdminBillingProviderEventsQuery> {
+  const providerKind = url.searchParams.get('providerKind');
+  const subjectId = url.searchParams.get('subjectId');
+  const limitRaw = url.searchParams.get('limit');
+  const errors: string[] = [];
+  if (!(providerKind === null || isValidExternalProviderKind(providerKind))) errors.push('providerKind is invalid');
+  if (!(subjectId === null || isNonEmptyString(subjectId))) errors.push('subjectId must be non-empty string');
+  let limit: number | undefined;
+  if (limitRaw !== null) { const n = Number.parseInt(limitRaw, 10); if (!Number.isInteger(n) || n <= 0 || n > 500) errors.push('limit must be integer 1..500'); else limit = n; }
+  if (errors.length) return { ok: false, errors };
+  const value: AdminBillingProviderEventsQuery = {};
+  if (providerKind === 'stripe' || providerKind === 'manual_test' || providerKind === 'internal_import') value.providerKind = providerKind;
+  if (subjectId !== null) value.subjectId = subjectId;
+  if (limit !== undefined) value.limit = limit;
+  return { ok: true, value };
 }

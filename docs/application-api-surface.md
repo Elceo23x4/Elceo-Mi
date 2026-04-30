@@ -124,3 +124,17 @@ Internal/admin endpoints:
 - `POST /api/admin/billing/resume`
 
 C4-L2 billing routes are runtime-core integrations only. They are intentionally provider-agnostic manual operations and stop before checkout, payment processing, webhook ingestion, and billing UI.
+
+
+## C4-M1C payment-provider route additions
+
+Internal routes:
+- `POST /api/internal/billing/provider-events`
+- `POST /api/internal/billing/provider-events/replay`
+
+Admin routes:
+- `POST /api/admin/billing/provider-plan-mapping`
+- `GET /api/admin/billing/provider-plan-mappings`
+- `GET /api/admin/billing/provider-events`
+
+These routes use standardized success/error envelopes and are internal-token gated; admin paths also require admin feature-access gates.

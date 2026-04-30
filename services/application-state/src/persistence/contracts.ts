@@ -402,3 +402,33 @@ export type BillingEventRepository = {
   listEventsForSubscription(subscriptionId:string,limit?:number): Promise<PersistedBillingEventRecord[]>;
   listEventsForSubject(subjectKind:'user',subjectId:string,limit?:number): Promise<PersistedBillingEventRecord[]>;
 };
+
+
+export type PersistedExternalCustomerRecord = import('@elceo/types').BillingExternalCustomerRecord;
+export type PersistedExternalSubscriptionRecord = import('@elceo/types').BillingExternalSubscriptionRecord;
+export type PersistedExternalEventRecord = import('@elceo/types').BillingExternalEventRecord;
+export type PersistedProviderPlanMappingRecord = import('@elceo/types').BillingProviderPlanMapping & { updatedAt: string };
+
+export type ExternalBillingCustomerRepository = {
+  getCustomer(providerKind: import('@elceo/types').BillingExternalProviderKind, externalCustomerId: string): Promise<PersistedExternalCustomerRecord | null>;
+  saveCustomer(record: PersistedExternalCustomerRecord): Promise<void>;
+  getCustomerBySubject(subjectKind: 'user', subjectId: string, providerKind?: import('@elceo/types').BillingExternalProviderKind): Promise<PersistedExternalCustomerRecord | null>;
+};
+export type ExternalBillingSubscriptionRepository = {
+  getSubscription(providerKind: import('@elceo/types').BillingExternalProviderKind, externalSubscriptionId: string): Promise<PersistedExternalSubscriptionRecord | null>;
+  saveSubscription(record: PersistedExternalSubscriptionRecord): Promise<void>;
+  getLatestSubscriptionForSubject(subjectKind: 'user', subjectId: string, providerKind?: import('@elceo/types').BillingExternalProviderKind): Promise<PersistedExternalSubscriptionRecord | null>;
+  listSubscriptionsForSubject(subjectKind: 'user', subjectId: string, providerKind?: import('@elceo/types').BillingExternalProviderKind): Promise<PersistedExternalSubscriptionRecord[]>;
+};
+export type ExternalBillingEventRepository = {
+  getEvent(providerKind: import('@elceo/types').BillingExternalProviderKind, externalEventId: string): Promise<PersistedExternalEventRecord | null>;
+  saveEvent(record: PersistedExternalEventRecord): Promise<void>;
+  markProcessed(providerKind: import('@elceo/types').BillingExternalProviderKind, externalEventId: string, processingResultCode: string, updatedAt: string): Promise<void>;
+  listEventsForSubject(subjectKind: 'user', subjectId: string, limit?: number): Promise<PersistedExternalEventRecord[]>;
+  listUnprocessedEvents(limit?: number): Promise<PersistedExternalEventRecord[]>;
+};
+export type ProviderPlanMappingRepository = {
+  getPlanMapping(providerKind: import('@elceo/types').BillingExternalProviderKind, externalPriceId: string): Promise<PersistedProviderPlanMappingRecord | null>;
+  upsertPlanMapping(record: PersistedProviderPlanMappingRecord): Promise<void>;
+  listPlanMappings(providerKind?: import('@elceo/types').BillingExternalProviderKind): Promise<PersistedProviderPlanMappingRecord[]>;
+};

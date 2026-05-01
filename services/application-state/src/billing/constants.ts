@@ -1,1 +1,1 @@
-export const BILLING_DEFAULT_PROVIDER = 'internal_manual' as const;
+export const BILLING_RECONCILIATION_SUMMARY = 'reconciled';

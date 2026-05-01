@@ -38,3 +38,5 @@ export * from './admin-control-plane';
 export * from './entitlements';
 
 export * from './payment-providers';
+
+export * from './billing-lifecycle';

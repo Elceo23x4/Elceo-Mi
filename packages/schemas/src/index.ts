@@ -36,3 +36,5 @@ export * from './entitlements.schema';
 export * from './billing.schema';
 
 export * from './payment-providers.schema';
+
+export * from './billing-lifecycle.schema';

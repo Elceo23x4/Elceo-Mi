@@ -455,3 +455,13 @@ export type BillingReconciliationRunRepository = {
   listRecentRunsForSubject(subjectKind:'user', subjectId:string, limit?:number): Promise<PersistedBillingReconciliationRunRecord[]>;
   getLatestRunForProviderEvent(providerKind: import('@elceo/types').BillingLifecycleProviderKind, sourceEventId:string): Promise<PersistedBillingReconciliationRunRecord | null>;
 };
+
+
+export type PersistedBillingPolicyTransitionRecord = import('@elceo/types').BillingPolicyTransition;
+export type BillingPolicyTransitionRepository = {
+  saveTransition(record: PersistedBillingPolicyTransitionRecord): Promise<void>;
+  getTransitionById(transitionId:string): Promise<PersistedBillingPolicyTransitionRecord | null>;
+  getLatestTransitionForSubject(subjectKind:'user',subjectId:string): Promise<PersistedBillingPolicyTransitionRecord | null>;
+  listRecentTransitionsForSubject(subjectKind:'user',subjectId:string,limit?:number): Promise<PersistedBillingPolicyTransitionRecord[]>;
+  getLatestTransitionForReconciliationRun(sourceReconciliationRunId:string): Promise<PersistedBillingPolicyTransitionRecord | null>;
+};

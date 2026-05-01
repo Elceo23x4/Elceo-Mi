@@ -44,3 +44,7 @@ C4-M2B intentionally stops before checkout/payment collection UI, invoice/tax/ac
 
 ## Next batch expectation
 Next billing batch should cover payment lifecycle execution surfaces (checkout/session orchestration, portal/session flow, webhook hardening, and idempotent mutation policy), while reusing this canonical reconciliation foundation.
+
+
+## C4-M3A billing policy linkage
+C4-M3A adds canonical billing policy contracts, durable transition persistence, conservative restriction/recovery evaluation, and runtime query/replay surfaces on top of billing lifecycle reconciliation.

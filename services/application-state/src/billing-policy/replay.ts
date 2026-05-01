@@ -1,0 +1,2 @@
+import type { BillingPolicyTransitionRepository } from '../persistence';
+export class BillingPolicyReplayService { constructor(private repo:BillingPolicyTransitionRepository){} getLatestBillingPolicyTransitionReplay(subjectKind:'user',subjectId:string){return this.repo.getLatestTransitionForSubject(subjectKind,subjectId);} listRecentBillingPolicyTransitionReplays(subjectKind:'user',subjectId:string,limit?:number){return this.repo.listRecentTransitionsForSubject(subjectKind,subjectId,limit);} }

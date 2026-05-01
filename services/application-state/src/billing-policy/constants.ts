@@ -1,0 +1,3 @@
+export const BILLING_POLICY_RATIONALES = {
+  admin_internal_override_preserved:'internal override preserved', free_default_ok:'no active subscription; fallback to free', premium_active_ok:'premium subscription active', premium_trial_ok:'premium subscription trialing', premium_paused_restricted:'premium subscription paused; restricted access', premium_past_due_restricted:'premium subscription past due; restricted access', premium_incomplete_restricted:'premium subscription incomplete; restricted access', premium_incomplete_expired_free_fallback:'premium incomplete expired; fallback to free', premium_canceled_free_fallback:'premium canceled; fallback to free', premium_recovered_to_active:'premium recovered to active access'
+} as const;

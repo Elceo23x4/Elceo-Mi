@@ -65,6 +65,8 @@ import * as adminEntitlementStateRoute from '../app/api/admin/entitlements/state
 import * as adminEntitlementOverrideRoute from '../app/api/admin/entitlements/override/route';
 
 import * as accountBillingRoute from '../app/api/account/billing/route';
+import * as accountBillingPolicyRoute from '../app/api/account/billing/policy/route';
+import * as accountBillingPolicyTransitionsRoute from '../app/api/account/billing/policy/transitions/route';
 import * as accountBillingReconciliationRunsRoute from '../app/api/account/billing/reconciliation-runs/route';
 import * as adminBillingTrialRoute from '../app/api/admin/billing/trial/route';
 import * as adminBillingActivateRoute from '../app/api/admin/billing/activate/route';
@@ -79,9 +81,12 @@ import * as adminBillingResumeRoute from '../app/api/admin/billing/resume/route'
 import * as internalBillingProviderEventsRoute from '../app/api/internal/billing/provider-events/route';
 import * as internalBillingProviderReplayRoute from '../app/api/internal/billing/provider-events/replay/route';
 import * as internalBillingReconcileRoute from '../app/api/internal/billing/reconcile/route';
+import * as internalBillingPolicyEvaluateRoute from '../app/api/internal/billing/policy/evaluate/route';
 import * as adminBillingProviderPlanMappingRoute from '../app/api/admin/billing/provider-plan-mapping/route';
 import * as adminBillingProviderPlanMappingsRoute from '../app/api/admin/billing/provider-plan-mappings/route';
 import * as adminBillingProviderEventsRoute from '../app/api/admin/billing/provider-events/route';
+import * as adminBillingPolicyRoute from '../app/api/admin/billing/policy/route';
+import * as adminBillingPolicyTransitionsRoute from '../app/api/admin/billing/policy/transitions/route';
 
 const subject = { subjectKind: 'user' as const, subjectId: 'user-1', userId: 'user-1' };
 
@@ -150,6 +155,11 @@ const mockApplicationStateRuntime = {
     getBillingLifecycleSnapshot: async (_kind: 'user', sid: string) => ({ generatedAt: '2026-01-01T00:00:00.000Z', subjectKind: 'user', subjectId: sid, customer: null, subscription: null, entitlementState: { subjectKind: 'user', subjectId: sid, planKind: 'premium', accountState: 'active', internalOverride: false }, latestReconciliationRunId: 'run-1' }),
     listRecentBillingReconciliationRuns: async (_kind: 'user', sid: string) => ([{ runId: 'run-1', providerKind: 'stripe', sourceEventId: 'evt-1', subjectKind: 'user', subjectId: sid, status: 'success', summary: 'ok', customerChanged: true, subscriptionChanged: true, entitlementChanged: true, previousPlanKind: 'free', nextPlanKind: 'premium', startedAt: '2026-01-01T00:00:00.000Z', endedAt: '2026-01-01T00:00:01.000Z', createdAt: '2026-01-01T00:00:01.000Z' }]),
     reconcileProviderEvent: async (providerKind: string, sourceEventId: string, subjectId?: string) => ({ runId: 'run-2', providerKind, sourceEventId, subjectKind: 'user', subjectId: subjectId ?? 'user-1', status: 'success', summary: 'ok', customerChanged: false, subscriptionChanged: true, entitlementChanged: true, previousPlanKind: 'free', nextPlanKind: 'premium', startedAt: '2026-01-01T00:00:00.000Z', endedAt: '2026-01-01T00:00:01.000Z', createdAt: '2026-01-01T00:00:01.000Z' })
+  },
+  billingPolicy: {
+    getBillingPolicySnapshot: async (_kind: 'user', sid: string) => ({ generatedAt: '2026-01-01T00:00:00.000Z', subjectKind: 'user', subjectId: sid, customer: null, subscription: null, entitlementState: { subjectKind: 'user', subjectId: sid, planKind: 'premium', accountState: 'active', internalOverride: false }, latestPolicyTransition: null }),
+    listRecentBillingPolicyTransitions: async (_kind: 'user', sid: string, limit?: number) => ([{ transitionId: `bpt-${limit ?? 0}`, subjectKind: 'user', subjectId: sid }]),
+    evaluateBillingPolicyForSubject: async (_kind: 'user', sid: string, sourceReconciliationRunId?: string) => ({ transition: { transitionId: 'transition-1', subjectKind: 'user', subjectId: sid, sourceReconciliationRunId: sourceReconciliationRunId ?? null } })
   },
   billing: {
     getLatestBillingSubscription: async () => ({ subscriptionId: 'sub-1' }),
@@ -366,6 +376,14 @@ export async function runRouteRuntimeTests(): Promise<void> {
   installMocks();
   assert.deepEqual(await readJson(await accountBillingRoute.GET()), { ok: true, data: { snapshot: await mockApplicationStateRuntime.billingLifecycle.getBillingLifecycleSnapshot('user', 'user-1') } });
   setAuthTestOverrides({ subjectResolver: async () => null });
+  assert.deepEqual(await readJson(await accountBillingPolicyRoute.GET()), { ok: false, error: { code: 'unauthorized', message: 'Unauthorized' } });
+  installMocks();
+  assert.deepEqual(await readJson(await accountBillingPolicyRoute.GET()), { ok: true, data: { snapshot: await mockApplicationStateRuntime.billingPolicy.getBillingPolicySnapshot('user', 'user-1') } });
+  setAuthTestOverrides({ subjectResolver: async () => null });
+  assert.deepEqual(await readJson(await accountBillingPolicyTransitionsRoute.GET()), { ok: false, error: { code: 'unauthorized', message: 'Unauthorized' } });
+  installMocks();
+  assert.deepEqual(await readJson(await accountBillingPolicyTransitionsRoute.GET()), { ok: true, data: { transitions: await mockApplicationStateRuntime.billingPolicy.listRecentBillingPolicyTransitions('user', 'user-1') } });
+  setAuthTestOverrides({ subjectResolver: async () => null });
   const runsUnauthorized = await accountBillingReconciliationRunsRoute.GET();
   assert.equal(runsUnauthorized.status, 401);
   assert.deepEqual(await readJson(runsUnauthorized), { ok: false, error: { code: 'unauthorized', message: 'Unauthorized' } });
@@ -422,6 +440,13 @@ export async function runRouteRuntimeTests(): Promise<void> {
   blockedFeatures = new Set();
   const reconcileOk = await internalBillingReconcileRoute.POST(request('https://x/api/internal/billing/reconcile', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'stripe', sourceEventId: 'evt-1', subjectId: 'user-2' }) }));
   assert.deepEqual(await readJson(reconcileOk), { ok: true, data: { run: await mockApplicationStateRuntime.billingLifecycle.reconcileProviderEvent('stripe', 'evt-1', 'user-2') } });
+  assert.deepEqual(await readJson(await internalBillingPolicyEvaluateRoute.POST(request('https://x/api/internal/billing/policy/evaluate', { method: 'POST', body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
+  blockedFeatures = new Set(['admin.ops']);
+  const evaluateBlocked = await internalBillingPolicyEvaluateRoute.POST(request('https://x/api/internal/billing/policy/evaluate', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2' }) }));
+  assert.deepEqual(await readJson(evaluateBlocked), { ok: false, error: { code: 'forbidden', message: 'Feature access blocked', details: ['feature:admin.ops', 'reason:feature_not_in_plan', 'accessLevel:blocked'] } });
+  blockedFeatures = new Set();
+  installMocks();
+  assert.deepEqual(await readJson(await internalBillingPolicyEvaluateRoute.POST(request('https://x/api/internal/billing/policy/evaluate', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', sourceReconciliationRunId: 'run-2' }) }))), { ok: true, data: { evaluation: await mockApplicationStateRuntime.billingPolicy.evaluateBillingPolicyForSubject('user', 'user-2', 'run-2') } });
 
   const providerNoToken = await internalBillingProviderEventsRoute.POST(request('https://x/api/internal/billing/provider-events', { method: 'POST', body: JSON.stringify({}) }));
   assert.equal(providerNoToken.status, 403);
@@ -462,5 +487,9 @@ export async function runRouteRuntimeTests(): Promise<void> {
   const unprocessedEvents = await adminBillingProviderEventsRoute.GET(request('https://x/api/admin/billing/provider-events?limit=1', { headers: { 'x-elceo-internal-token': 'internal-token' } }));
   assert.equal(unprocessedEvents.status, 200);
   assert.deepEqual(await readJson(unprocessedEvents), { ok: true, data: { mode: 'unprocessed', events: [{ externalEventId: 'evt-unprocessed' }] } });
+  assert.deepEqual(await readJson(await adminBillingPolicyRoute.GET(request('https://x/api/admin/billing/policy?subjectId=user-2'))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
+  assert.deepEqual(await readJson(await adminBillingPolicyRoute.GET(request('https://x/api/admin/billing/policy?subjectId=user-2', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { snapshot: await mockApplicationStateRuntime.billingPolicy.getBillingPolicySnapshot('user', 'user-2') } });
+  assert.deepEqual(await readJson(await adminBillingPolicyTransitionsRoute.GET(request('https://x/api/admin/billing/policy/transitions?subjectId=user-2'))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
+  assert.deepEqual(await readJson(await adminBillingPolicyTransitionsRoute.GET(request('https://x/api/admin/billing/policy/transitions?subjectId=user-2&limit=4', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { transitions: await mockApplicationStateRuntime.billingPolicy.listRecentBillingPolicyTransitions('user', 'user-2', 4) } });
   clearMocks();
 }

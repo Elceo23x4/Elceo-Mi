@@ -21,3 +21,8 @@ This batch intentionally stops before admin UI rendering.
 ## C4-M2B internal billing reconciliation linkage
 
 Operational billing reconciliation execution is exposed via `POST /api/internal/billing/reconcile`, guarded by internal token and `admin.ops` feature access to align with existing internal operations policy.
+
+
+### Billing policy admin/internal controls (C4-M3B)
+- Internal evaluation endpoint for subject-level policy replay/evaluation: `POST /api/internal/billing/policy/evaluate`.
+- Admin read endpoints for subject policy status and transition history are API-only in this batch; no control-plane UI shipped.

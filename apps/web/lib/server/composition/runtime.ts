@@ -10,10 +10,13 @@ import {
   CanonicalEntitlementsBoundaryService,
   CanonicalBillingBoundaryService,
   CanonicalBillingLifecycleBoundaryService,
+  CanonicalBillingPolicyBoundaryService,
   CanonicalPaymentProviderBoundaryService,
   BillingLifecycleQueryService,
   BillingLifecycleReconciliationService,
   BillingLifecycleReplayService,
+  BillingPolicyTransitionService,
+  BillingPolicyQueryService,
   BillingProviderPlanMapper,
   createDefaultSnapshotRefreshLoaders,
   createWorkspaceDefaultLoaders,
@@ -32,6 +35,7 @@ import {
   SQLBillingCustomerRepository,
   SQLBillingLifecycleSubscriptionRepository,
   SQLBillingReconciliationRunRepository,
+  SQLBillingPolicyTransitionRepository,
   SQLProviderPlanMappingRepository,
   PaymentProviderTranslator
 } from '@elceo/application-state';
@@ -69,6 +73,7 @@ type ApplicationStateRuntime = {
   entitlements: CanonicalEntitlementsBoundaryService;
   billing: CanonicalBillingBoundaryService;
   billingLifecycle: CanonicalBillingLifecycleBoundaryService;
+  billingPolicy: CanonicalBillingPolicyBoundaryService;
   paymentProviders: CanonicalPaymentProviderBoundaryService;
 };
 
@@ -221,7 +226,25 @@ export function getApplicationStateRuntime(): ApplicationStateRuntime {
     new SQLProviderPlanMappingRepository(),
     new PaymentProviderTranslator(billing, externalSubscriptions)
   );
-  applicationStateRuntime = { journal, journalInfluence, portfolio, workspace, refresh, admin, entitlements, billing, billingLifecycle, paymentProviders };
+  const billingPolicyTransitions = new SQLBillingPolicyTransitionRepository();
+  applicationStateRuntime = {
+    journal, journalInfluence, portfolio, workspace, refresh, admin, entitlements, billing, billingLifecycle,
+    billingPolicy: new CanonicalBillingPolicyBoundaryService(
+      new BillingPolicyTransitionService(
+        new SQLBillingCustomerRepository(),
+        new SQLBillingLifecycleSubscriptionRepository(),
+        billingPolicyTransitions,
+        new SQLAccountEntitlementRepository()
+      ),
+      new BillingPolicyQueryService(
+        new SQLBillingCustomerRepository(),
+        new SQLBillingLifecycleSubscriptionRepository(),
+        billingPolicyTransitions,
+        new SQLAccountEntitlementRepository()
+      )
+    ),
+    paymentProviders
+  };
   return applicationStateRuntime;
 }
 
@@ -233,3 +256,4 @@ export function getBillingRuntime() { return getApplicationStateRuntime().billin
 export function getPaymentProviderRuntime() { return getApplicationStateRuntime().paymentProviders; }
 
 export function getBillingLifecycleRuntime() { return getApplicationStateRuntime().billingLifecycle; }
+export function getBillingPolicyRuntime() { return getApplicationStateRuntime().billingPolicy; }

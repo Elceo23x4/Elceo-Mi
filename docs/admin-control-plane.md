@@ -34,3 +34,12 @@ Adds runtime-only billing operational summary, failure classification, retry-can
 
 ## C4-M4A completion note
 The control-plane backend now has concrete billing-admin runtime read models (summary, failures, candidates, subject snapshot) ready for route integration in C4-M4B.
+
+## C4-M4B Billing Admin Control Surfaces
+- `/api/admin/billing/operations/summary`
+- `/api/admin/billing/operations/failures?limit=`
+- `/api/admin/billing/operations/retry-candidates?limit=`
+- `/api/admin/billing/operations/subject?subjectId=`
+- `/api/internal/billing/reconcile/retry`
+All routes are internal/admin guarded; no end-user direct access.
+

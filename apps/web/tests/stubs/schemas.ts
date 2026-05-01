@@ -66,7 +66,7 @@ export const parseAdminBillingProviderEventsQuery = (url: URL): Ok<{ providerKin
   return { ok: true, value };
 };
 
-export const validateInternalBillingReconcileRequest = (input: unknown) => validation<{ providerKind: string; sourceEventId: string; subjectId?: string }>(input, ['providerKind', 'sourceEventId']);
+export const validateInternalBillingReconcileRequest = (input: unknown) => validation<{ subjectId: string; providerKind?: string; sourceEventId?: string }>(input, ['subjectId']);
 export const validateInternalBillingPolicyEvaluateRequest = (input: unknown) => validation<{ subjectId: string; sourceReconciliationRunId?: string }>(input, ['subjectId']);
 export const parseAdminBillingPolicySubjectQuery = (url: URL): Ok<{ subjectId: string }> | Fail => {
   const subjectId = url.searchParams.get('subjectId');

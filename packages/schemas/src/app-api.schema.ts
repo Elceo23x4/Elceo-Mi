@@ -16,6 +16,8 @@ import type {
   BillingProviderPlanMappingRequest,
   AdminBillingPolicySubjectQuery,
   AdminBillingPolicyTransitionsQuery,
+  AdminBillingOperationsLimitQuery,
+  AdminBillingOperationsSubjectQuery,
   ActionCreateRequest,
   ActionUpdateRequest,
   JournalAdjustExecutionRequest,
@@ -294,9 +296,9 @@ export function validateBillingProviderEventReplayRequest(i: unknown): SchemaVal
 
 export function validateInternalBillingReconcileRequest(i: unknown): SchemaValidationResult<InternalBillingReconcileRequest> {
   const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; const v = r.value; const errors: string[] = [];
-  if (!isValidExternalProviderKind(v.providerKind)) errors.push('providerKind is invalid');
-  if (!isNonEmptyString(v.sourceEventId)) errors.push('sourceEventId must be non-empty string');
-  if (!(v.subjectId === undefined || isNonEmptyString(v.subjectId))) errors.push('subjectId must be non-empty string when provided');
+  if (!isNonEmptyString(v.subjectId)) errors.push('subjectId must be non-empty string');
+  if (!(v.providerKind === undefined || isValidExternalProviderKind(v.providerKind))) errors.push('providerKind is invalid when provided');
+  if (!(v.sourceEventId === undefined || isNonEmptyString(v.sourceEventId))) errors.push('sourceEventId must be non-empty string when provided');
   return errors.length ? { ok: false, errors } : { ok: true, value: v as InternalBillingReconcileRequest };
 }
 
@@ -348,4 +350,19 @@ export function parseAdminBillingPolicyTransitionsQuery(url: URL): SchemaValidat
   const limit = Number.parseInt(limitRaw, 10);
   if (!Number.isInteger(limit) || limit <= 0 || limit > 500) return { ok: false, errors: ['limit must be integer 1..500'] };
   return { ok: true, value: { subjectId: subject.value.subjectId, limit } };
+}
+
+
+export function parseAdminBillingOperationsLimitQuery(url: URL): SchemaValidationResult<AdminBillingOperationsLimitQuery> {
+  const limitRaw = url.searchParams.get('limit');
+  if (limitRaw === null) return { ok: true, value: {} };
+  const limit = Number.parseInt(limitRaw, 10);
+  if (!Number.isInteger(limit) || limit <= 0 || limit > 500) return { ok: false, errors: ['limit must be integer 1..500'] };
+  return { ok: true, value: { limit } };
+}
+
+export function parseAdminBillingOperationsSubjectQuery(url: URL): SchemaValidationResult<AdminBillingOperationsSubjectQuery> {
+  const subjectId = url.searchParams.get('subjectId');
+  if (!isNonEmptyString(subjectId)) return { ok: false, errors: ['subjectId must be non-empty string'] };
+  return { ok: true, value: { subjectId } };
 }

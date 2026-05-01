@@ -28,3 +28,10 @@ This pass intentionally stops before admin route wiring and admin UI rendering.
 - add internal/admin route layer over this boundary
 - add pagination/filter contracts for operator workflows
 - add richer audit/replay diagnostics for control-plane investigation
+
+## C4-M4B Admin/Internal Route Surfaces
+Added admin read routes for billing operations summary, failures, retry candidates, and subject snapshot under `/api/admin/billing/operations/*` (internal token + admin.ops gated).
+Added controlled retry route: `POST /api/internal/billing/reconcile/retry` with body `{ subjectId, providerKind?, sourceEventId? }`.
+Policy re-evaluation remains at `POST /api/internal/billing/policy/evaluate` and is reused as-is for controlled internal usage.
+This batch intentionally excludes admin UI and background retry automation; those move to C4-M4C.
+

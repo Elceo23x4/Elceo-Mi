@@ -19,3 +19,5 @@ export * from './canonical-billing-boundary';
 export * from './canonical-payment-provider-boundary';
 
 export * from './canonical-billing-lifecycle-boundary';
+
+export * from './canonical-billing-policy-boundary';

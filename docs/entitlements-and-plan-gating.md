@@ -41,3 +41,7 @@ C4-K2 still intentionally stops before payment gateway integration and billing U
 ## C4-M2B billing lifecycle linkage
 
 C4-M2B billing lifecycle reconciliation updates canonical entitlement state as part of provider-event reconciliation, and exposes account-facing read routes that return synchronized billing + entitlement snapshot state.
+
+
+## C4-M3A policy sync linkage
+Entitlement plan/account state is now synchronized through a deterministic billing policy core that preserves stronger non-billing restrictions and records auditable policy transitions.

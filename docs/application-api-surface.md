@@ -150,3 +150,11 @@ Internal/admin endpoint:
 - `POST /api/internal/billing/reconcile` (internal token + `admin.ops`)
 
 These routes consume the canonical billing lifecycle boundary and intentionally stop before checkout/payment collection surfaces.
+
+
+### Billing policy routes (C4-M3B)
+- `GET /api/account/billing/policy` (auth subject snapshot)
+- `GET /api/account/billing/policy/transitions` (auth subject recent transitions)
+- `POST /api/internal/billing/policy/evaluate` (internal token + `admin.ops`, body: `{ subjectId, sourceReconciliationRunId? }`)
+- `GET /api/admin/billing/policy?subjectId=...` (internal token)
+- `GET /api/admin/billing/policy/transitions?subjectId=...&limit=...` (internal token)

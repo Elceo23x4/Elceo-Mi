@@ -16,3 +16,10 @@ This pass intentionally stops before admin/API route work. It provides canonical
 
 ## C4-M3B next
 C4-M3B should add authenticated/internal route surfaces for policy evaluation history, administrative overrides workflow, and policy-trigger observability/reporting.
+
+
+## C4-M3B API route completion
+- Added authenticated current-subject policy read routes: `GET /api/account/billing/policy` and `GET /api/account/billing/policy/transitions`.
+- Added internal/admin policy evaluation route: `POST /api/internal/billing/policy/evaluate` (internal token + `admin.ops` feature gate).
+- Added admin subject inspection routes: `GET /api/admin/billing/policy` and `GET /api/admin/billing/policy/transitions` with `subjectId` and optional `limit`.
+- This batch intentionally stops at API/runtime/docs only; no checkout/payment UI or admin UI was added.

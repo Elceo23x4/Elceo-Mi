@@ -67,3 +67,19 @@ export const parseAdminBillingProviderEventsQuery = (url: URL): Ok<{ providerKin
 };
 
 export const validateInternalBillingReconcileRequest = (input: unknown) => validation<{ providerKind: string; sourceEventId: string; subjectId?: string }>(input, ['providerKind', 'sourceEventId']);
+export const validateInternalBillingPolicyEvaluateRequest = (input: unknown) => validation<{ subjectId: string; sourceReconciliationRunId?: string }>(input, ['subjectId']);
+export const parseAdminBillingPolicySubjectQuery = (url: URL): Ok<{ subjectId: string }> | Fail => {
+  const subjectId = url.searchParams.get('subjectId');
+  if (!subjectId) return { ok: false, errors: ['subjectId must be non-empty string'] };
+  return { ok: true, value: { subjectId } };
+};
+export const parseAdminBillingPolicyTransitionsQuery = (url: URL): Ok<{ subjectId: string; limit?: number }> | Fail => {
+  const subject = parseAdminBillingPolicySubjectQuery(url);
+  if (!subject.ok) return subject;
+  const limitRaw = url.searchParams.get('limit');
+  if (!limitRaw) return { ok: true, value: { subjectId: subject.value.subjectId } };
+  const limit = Number.parseInt(limitRaw, 10);
+  return Number.isNaN(limit)
+    ? { ok: false, errors: ['limit must be integer 1..500'] }
+    : { ok: true, value: { subjectId: subject.value.subjectId, limit } };
+};

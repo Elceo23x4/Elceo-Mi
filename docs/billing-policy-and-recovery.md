@@ -23,3 +23,7 @@ C4-M3B should add authenticated/internal route surfaces for policy evaluation hi
 - Added internal/admin policy evaluation route: `POST /api/internal/billing/policy/evaluate` (internal token + `admin.ops` feature gate).
 - Added admin subject inspection routes: `GET /api/admin/billing/policy` and `GET /api/admin/billing/policy/transitions` with `subjectId` and optional `limit`.
 - This batch intentionally stops at API/runtime/docs only; no checkout/payment UI or admin UI was added.
+
+
+## C4-M4A billing-admin linkage
+C4-M4A adds backend billing-admin operational summary/failure/candidate/snapshot read-model core and canonical runtime boundary without adding routes or UI.

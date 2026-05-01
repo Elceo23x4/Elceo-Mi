@@ -40,3 +40,5 @@ export * from './payment-providers.schema';
 export * from './billing-lifecycle.schema';
 
 export * from './billing-policy.schema';
+
+export * from './billing-admin.schema';

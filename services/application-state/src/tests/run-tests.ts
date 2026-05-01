@@ -19,6 +19,7 @@ async function main(): Promise<void> {
   const { runBillingRuntimeCoreTests } = await import('./billing-runtime-core.test.js');
   const { runBillingLifecycleCoreTests } = await import('./billing-lifecycle-core.test.js');
   const { runBillingPolicyCoreTests } = await import('./billing-policy-core.test.js');
+  const { runBillingAdminCoreTests } = await import('./billing-admin-core.test.js');
 
   await runApplicationStateTests();
   await runUserStateAccessTests();
@@ -36,6 +37,7 @@ async function main(): Promise<void> {
   await runBillingRuntimeCoreTests();
   await runBillingLifecycleCoreTests();
   await runBillingPolicyCoreTests();
+  await runBillingAdminCoreTests();
   console.log('application-state tests passed');
 }
 

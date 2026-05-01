@@ -158,3 +158,12 @@ These routes consume the canonical billing lifecycle boundary and intentionally 
 - `POST /api/internal/billing/policy/evaluate` (internal token + `admin.ops`, body: `{ subjectId, sourceReconciliationRunId? }`)
 - `GET /api/admin/billing/policy?subjectId=...` (internal token)
 - `GET /api/admin/billing/policy/transitions?subjectId=...&limit=...` (internal token)
+
+## C4-M4B API additions
+- GET `/api/admin/billing/operations/summary`
+- GET `/api/admin/billing/operations/failures`
+- GET `/api/admin/billing/operations/retry-candidates`
+- GET `/api/admin/billing/operations/subject`
+- POST `/api/internal/billing/reconcile/retry`
+- POST `/api/internal/billing/policy/evaluate` retained for re-evaluation alignment.
+

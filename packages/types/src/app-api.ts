@@ -198,7 +198,7 @@ export type AdminBillingRenewRequest = { subjectId: string; nextPeriodStart: str
 export type AdminBillingChangePlanRequest = { subjectId: string; nextPlanKind: ElceoPlanKind; interval: BillingPlanInterval; effectiveAt: string; reason: string };
 
 export type BillingProviderEventReplayRequest = { limit?: number };
-export type InternalBillingReconcileRequest = { providerKind: BillingExternalProviderKind; sourceEventId: string; subjectId?: string };
+export type InternalBillingReconcileRequest = { subjectId: string; providerKind?: BillingExternalProviderKind; sourceEventId?: string };
 export type InternalBillingPolicyEvaluateRequest = { subjectId: string; sourceReconciliationRunId?: string };
 export type BillingProviderPlanMappingRequest = { providerKind: BillingExternalProviderKind; externalPriceId: string; mappedPlanKind: ElceoPlanKind; interval: BillingPlanInterval };
 export type AdminBillingProviderEventsQuery = { providerKind?: BillingExternalProviderKind; subjectId?: string; limit?: number };
@@ -206,3 +206,6 @@ export type AdminBillingPolicySubjectQuery = { subjectId: string };
 export type AdminBillingPolicyTransitionsQuery = { subjectId: string; limit?: number };
 export type BillingProviderEventIngestRequest = StripeLikeWebhookEnvelope;
 export type AdminBillingOccurredAtRequest = { subjectId: string; occurredAt: string };
+
+export type AdminBillingOperationsLimitQuery = { limit?: number };
+export type AdminBillingOperationsSubjectQuery = { subjectId: string };

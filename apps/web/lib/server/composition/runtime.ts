@@ -12,6 +12,7 @@ import {
   CanonicalBillingLifecycleBoundaryService,
   CanonicalBillingPolicyBoundaryService,
   CanonicalPaymentProviderBoundaryService,
+  CanonicalBillingAdminBoundaryService,
   BillingLifecycleQueryService,
   BillingLifecycleReconciliationService,
   BillingLifecycleReplayService,
@@ -74,6 +75,7 @@ type ApplicationStateRuntime = {
   billing: CanonicalBillingBoundaryService;
   billingLifecycle: CanonicalBillingLifecycleBoundaryService;
   billingPolicy: CanonicalBillingPolicyBoundaryService;
+  billingAdmin: CanonicalBillingAdminBoundaryService;
   paymentProviders: CanonicalPaymentProviderBoundaryService;
 };
 
@@ -243,6 +245,7 @@ export function getApplicationStateRuntime(): ApplicationStateRuntime {
         new SQLAccountEntitlementRepository()
       )
     ),
+    billingAdmin: new CanonicalBillingAdminBoundaryService(),
     paymentProviders
   };
   return applicationStateRuntime;
@@ -257,3 +260,5 @@ export function getPaymentProviderRuntime() { return getApplicationStateRuntime(
 
 export function getBillingLifecycleRuntime() { return getApplicationStateRuntime().billingLifecycle; }
 export function getBillingPolicyRuntime() { return getApplicationStateRuntime().billingPolicy; }
+
+export function getBillingAdminRuntime() { return getApplicationStateRuntime().billingAdmin; }

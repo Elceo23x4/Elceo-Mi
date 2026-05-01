@@ -61,3 +61,7 @@ export function getBillingLifecycleRuntime() {
 export function getBillingPolicyRuntime() {
   return ((getApplicationStateRuntime() as unknown) as { billingPolicy: unknown }).billingPolicy;
 }
+
+export function getBillingAdminRuntime() {
+  return ((getApplicationStateRuntime() as unknown) as { billingAdmin: unknown }).billingAdmin;
+}

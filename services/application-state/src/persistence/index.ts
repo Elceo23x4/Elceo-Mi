@@ -15,3 +15,5 @@ export * from './entitlements-repository';
 export * from './billing-repository';
 
 export * from './payment-provider-repository';
+
+export * from './billing-lifecycle-repository';

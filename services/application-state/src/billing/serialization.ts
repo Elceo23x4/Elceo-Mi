@@ -1,1 +1,2 @@
-export const strictParseJson=(json:string):unknown=>JSON.parse(json);
+export const serializeBillingReconciliationRun = (value: unknown): string => JSON.stringify(value);
+export const deserializeBillingReconciliationRun = (value: string): unknown => JSON.parse(value) as unknown;

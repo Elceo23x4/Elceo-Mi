@@ -432,3 +432,26 @@ export type ProviderPlanMappingRepository = {
   upsertPlanMapping(record: PersistedProviderPlanMappingRecord): Promise<void>;
   listPlanMappings(providerKind?: import('@elceo/types').BillingExternalProviderKind): Promise<PersistedProviderPlanMappingRecord[]>;
 };
+
+
+export type PersistedBillingCustomerRecord = import('@elceo/types').CanonicalBillingCustomer;
+export type PersistedBillingLifecycleSubscriptionRecord = import('@elceo/types').CanonicalBillingSubscription;
+export type PersistedBillingReconciliationRunRecord = import('@elceo/types').BillingReconciliationRun & { runJson: string };
+
+export type BillingCustomerRepository = {
+  getCustomerBySubject(subjectKind:'user', subjectId:string, providerKind?: import('@elceo/types').BillingLifecycleProviderKind): Promise<PersistedBillingCustomerRecord | null>;
+  getCustomerByProviderId(providerKind: import('@elceo/types').BillingLifecycleProviderKind, providerCustomerId:string): Promise<PersistedBillingCustomerRecord | null>;
+  saveCustomer(record: PersistedBillingCustomerRecord): Promise<void>;
+};
+export type BillingLifecycleSubscriptionRepository = {
+  getSubscriptionBySubject(subjectKind:'user', subjectId:string, providerKind?: import('@elceo/types').BillingLifecycleProviderKind): Promise<PersistedBillingLifecycleSubscriptionRecord | null>;
+  getSubscriptionByProviderId(providerKind: import('@elceo/types').BillingLifecycleProviderKind, providerSubscriptionId:string): Promise<PersistedBillingLifecycleSubscriptionRecord | null>;
+  saveSubscription(record: PersistedBillingLifecycleSubscriptionRecord): Promise<void>;
+};
+export type BillingReconciliationRunRepository = {
+  saveRun(record: PersistedBillingReconciliationRunRecord): Promise<void>;
+  getRunById(runId:string): Promise<PersistedBillingReconciliationRunRecord | null>;
+  getLatestRunForSubject(subjectKind:'user', subjectId:string): Promise<PersistedBillingReconciliationRunRecord | null>;
+  listRecentRunsForSubject(subjectKind:'user', subjectId:string, limit?:number): Promise<PersistedBillingReconciliationRunRecord[]>;
+  getLatestRunForProviderEvent(providerKind: import('@elceo/types').BillingLifecycleProviderKind, sourceEventId:string): Promise<PersistedBillingReconciliationRunRecord | null>;
+};

@@ -24,3 +24,5 @@ export * from './entitlements';
 export * from './billing';
 
 export * from './payment-providers';
+
+export * from './runtime/canonical-billing-lifecycle-boundary';

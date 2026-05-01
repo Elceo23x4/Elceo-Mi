@@ -17,6 +17,7 @@ async function main(): Promise<void> {
   const { runAdminControlPlaneTests } = await import('./admin-control-plane.test.js');
   const { runEntitlementsRuntimeCoreTests } = await import('./entitlements-runtime-core.test.js');
   const { runBillingRuntimeCoreTests } = await import('./billing-runtime-core.test.js');
+  const { runBillingLifecycleCoreTests } = await import('./billing-lifecycle-core.test.js');
 
   await runApplicationStateTests();
   await runUserStateAccessTests();
@@ -32,6 +33,7 @@ async function main(): Promise<void> {
   await runAdminControlPlaneTests();
   await runEntitlementsRuntimeCoreTests();
   await runBillingRuntimeCoreTests();
+  await runBillingLifecycleCoreTests();
   console.log('application-state tests passed');
 }
 

@@ -11,6 +11,7 @@ import type {
   AdminBillingProviderEventsQuery,
   BillingProviderEventIngestRequest,
   BillingProviderEventReplayRequest,
+  InternalBillingReconcileRequest,
   BillingProviderPlanMappingRequest,
   ActionCreateRequest,
   ActionUpdateRequest,
@@ -285,6 +286,15 @@ export function validateBillingProviderEventReplayRequest(i: unknown): SchemaVal
     if (limitNumber <= 0 || limitNumber > 500) return { ok: false, errors: ['limit must be integer 1..500'] };
   }
   return { ok: true, value: r.value as BillingProviderEventReplayRequest };
+}
+
+
+export function validateInternalBillingReconcileRequest(i: unknown): SchemaValidationResult<InternalBillingReconcileRequest> {
+  const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; const v = r.value; const errors: string[] = [];
+  if (!isValidExternalProviderKind(v.providerKind)) errors.push('providerKind is invalid');
+  if (!isNonEmptyString(v.sourceEventId)) errors.push('sourceEventId must be non-empty string');
+  if (!(v.subjectId === undefined || isNonEmptyString(v.subjectId))) errors.push('subjectId must be non-empty string when provided');
+  return errors.length ? { ok: false, errors } : { ok: true, value: v as InternalBillingReconcileRequest };
 }
 
 export function validateBillingProviderPlanMappingRequest(i: unknown): SchemaValidationResult<BillingProviderPlanMappingRequest> {

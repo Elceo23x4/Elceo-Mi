@@ -65,3 +65,5 @@ export const parseAdminBillingProviderEventsQuery = (url: URL): Ok<{ providerKin
   if (limitRaw) value.limit = Number.parseInt(limitRaw, 10);
   return { ok: true, value };
 };
+
+export const validateInternalBillingReconcileRequest = (input: unknown) => validation<{ providerKind: string; sourceEventId: string; subjectId?: string }>(input, ['providerKind', 'sourceEventId']);

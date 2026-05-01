@@ -16,3 +16,8 @@ API routes (internal-gated):
 - `/api/admin/audit`
 
 This batch intentionally stops before admin UI rendering.
+
+
+## C4-M2B internal billing reconciliation linkage
+
+Operational billing reconciliation execution is exposed via `POST /api/internal/billing/reconcile`, guarded by internal token and `admin.ops` feature access to align with existing internal operations policy.

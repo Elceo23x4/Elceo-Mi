@@ -48,3 +48,7 @@ Next billing batch should cover payment lifecycle execution surfaces (checkout/s
 
 ## C4-M3A billing policy linkage
 C4-M3A adds canonical billing policy contracts, durable transition persistence, conservative restriction/recovery evaluation, and runtime query/replay surfaces on top of billing lifecycle reconciliation.
+
+
+## C4-M4A admin operations linkage
+Operational summaries and failure/candidate read models are now available from a canonical billing-admin boundary for future admin routes.

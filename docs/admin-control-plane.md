@@ -26,3 +26,7 @@ Operational billing reconciliation execution is exposed via `POST /api/internal/
 ### Billing policy admin/internal controls (C4-M3B)
 - Internal evaluation endpoint for subject-level policy replay/evaluation: `POST /api/internal/billing/policy/evaluate`.
 - Admin read endpoints for subject policy status and transition history are API-only in this batch; no control-plane UI shipped.
+
+
+### C4-M4A billing-admin operational core
+Adds runtime-only billing operational summary, failure classification, retry-candidate, and subject snapshot read models for future control-plane route integration.

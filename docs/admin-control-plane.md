@@ -30,3 +30,7 @@ Operational billing reconciliation execution is exposed via `POST /api/internal/
 
 ### C4-M4A billing-admin operational core
 Adds runtime-only billing operational summary, failure classification, retry-candidate, and subject snapshot read models for future control-plane route integration.
+
+
+## C4-M4A completion note
+The control-plane backend now has concrete billing-admin runtime read models (summary, failures, candidates, subject snapshot) ready for route integration in C4-M4B.

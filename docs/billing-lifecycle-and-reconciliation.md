@@ -52,3 +52,7 @@ C4-M3A adds canonical billing policy contracts, durable transition persistence, 
 
 ## C4-M4A admin operations linkage
 Operational summaries and failure/candidate read models are now available from a canonical billing-admin boundary for future admin routes.
+
+
+## C4-M4A completion note
+Billing lifecycle reconciliation persistence now feeds concrete billing-admin operational summaries, failure classification, and retry candidate read models through the canonical billing-admin runtime boundary.

@@ -27,3 +27,7 @@ C4-M3B should add authenticated/internal route surfaces for policy evaluation hi
 
 ## C4-M4A billing-admin linkage
 C4-M4A adds backend billing-admin operational summary/failure/candidate/snapshot read-model core and canonical runtime boundary without adding routes or UI.
+
+
+## C4-M4A completion note
+C4-M4A now includes concrete billing-admin operational summary, failure read models, retry candidate read models, and subject snapshots over persisted lifecycle/policy state. Route/UI work remains out of scope until C4-M4B.

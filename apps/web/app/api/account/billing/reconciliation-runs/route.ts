@@ -4,6 +4,6 @@ import { getBillingLifecycleRuntime } from '@/lib/server/composition';
 
 export const GET = withApiErrorBoundary(async () => {
   const subject = await requireAuthenticatedSubject();
-  const snapshot = await getBillingLifecycleRuntime().getBillingLifecycleSnapshot(subject.subjectKind, subject.subjectId);
-  return jsonSuccess({ snapshot });
+  const runs = await getBillingLifecycleRuntime().listRecentBillingReconciliationRuns(subject.subjectKind, subject.subjectId, 20);
+  return jsonSuccess({ runs });
 });

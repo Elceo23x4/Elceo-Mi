@@ -9,7 +9,12 @@ import {
   CanonicalAdminBoundaryService,
   CanonicalEntitlementsBoundaryService,
   CanonicalBillingBoundaryService,
+  CanonicalBillingLifecycleBoundaryService,
   CanonicalPaymentProviderBoundaryService,
+  BillingLifecycleQueryService,
+  BillingLifecycleReconciliationService,
+  BillingLifecycleReplayService,
+  BillingProviderPlanMapper,
   createDefaultSnapshotRefreshLoaders,
   createWorkspaceDefaultLoaders,
   getPortfolioRepository,
@@ -24,6 +29,9 @@ import {
   SQLExternalBillingCustomerRepository,
   SQLExternalBillingSubscriptionRepository,
   SQLExternalBillingEventRepository,
+  SQLBillingCustomerRepository,
+  SQLBillingLifecycleSubscriptionRepository,
+  SQLBillingReconciliationRunRepository,
   SQLProviderPlanMappingRepository,
   PaymentProviderTranslator
 } from '@elceo/application-state';
@@ -60,6 +68,7 @@ type ApplicationStateRuntime = {
   admin: CanonicalAdminBoundaryService;
   entitlements: CanonicalEntitlementsBoundaryService;
   billing: CanonicalBillingBoundaryService;
+  billingLifecycle: CanonicalBillingLifecycleBoundaryService;
   paymentProviders: CanonicalPaymentProviderBoundaryService;
 };
 
@@ -200,6 +209,11 @@ export function getApplicationStateRuntime(): ApplicationStateRuntime {
     new SQLAccountEntitlementRepository()
   );
   const externalSubscriptions = new SQLExternalBillingSubscriptionRepository();
+  const billingLifecycle = new CanonicalBillingLifecycleBoundaryService(
+    new BillingLifecycleReconciliationService(new SQLBillingCustomerRepository(), new SQLBillingLifecycleSubscriptionRepository(), new SQLBillingReconciliationRunRepository(), new SQLExternalBillingEventRepository(), externalSubscriptions, new SQLAccountEntitlementRepository(), new BillingProviderPlanMapper(new SQLProviderPlanMappingRepository())),
+    new BillingLifecycleQueryService(new SQLBillingCustomerRepository(), new SQLBillingLifecycleSubscriptionRepository(), new SQLBillingReconciliationRunRepository(), new SQLAccountEntitlementRepository()),
+    new BillingLifecycleReplayService(new SQLBillingReconciliationRunRepository())
+  );
   const paymentProviders = new CanonicalPaymentProviderBoundaryService(
     new SQLExternalBillingEventRepository(),
     new SQLExternalBillingCustomerRepository(),
@@ -207,7 +221,7 @@ export function getApplicationStateRuntime(): ApplicationStateRuntime {
     new SQLProviderPlanMappingRepository(),
     new PaymentProviderTranslator(billing, externalSubscriptions)
   );
-  applicationStateRuntime = { journal, journalInfluence, portfolio, workspace, refresh, admin, entitlements, billing, paymentProviders };
+  applicationStateRuntime = { journal, journalInfluence, portfolio, workspace, refresh, admin, entitlements, billing, billingLifecycle, paymentProviders };
   return applicationStateRuntime;
 }
 
@@ -217,3 +231,5 @@ export function getRefreshRuntime() { return getApplicationStateRuntime().refres
 export function getEntitlementsRuntime() { return getApplicationStateRuntime().entitlements; }
 export function getBillingRuntime() { return getApplicationStateRuntime().billing; }
 export function getPaymentProviderRuntime() { return getApplicationStateRuntime().paymentProviders; }
+
+export function getBillingLifecycleRuntime() { return getApplicationStateRuntime().billingLifecycle; }

@@ -53,3 +53,7 @@ export function getBillingRuntime() {
 export function getPaymentProviderRuntime() {
   return ((getApplicationStateRuntime() as unknown) as { paymentProviders: unknown }).paymentProviders;
 }
+
+export function getBillingLifecycleRuntime() {
+  return ((getApplicationStateRuntime() as unknown) as { billingLifecycle: unknown }).billingLifecycle;
+}

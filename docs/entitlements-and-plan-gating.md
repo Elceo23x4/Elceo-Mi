@@ -36,3 +36,8 @@ C4-K2 wires the runtime core into server/API routes via server-only access helpe
 Usage increments are server-side and explicit. C4-K2 increments only after successful completion for `workspace.refresh`, `analytics.generate`, `coaching.generate`, `portfolio.snapshot.generate`, and `refresh.run`.
 
 C4-K2 still intentionally stops before payment gateway integration and billing UI.
+
+
+## C4-M2B billing lifecycle linkage
+
+C4-M2B billing lifecycle reconciliation updates canonical entitlement state as part of provider-event reconciliation, and exposes account-facing read routes that return synchronized billing + entitlement snapshot state.

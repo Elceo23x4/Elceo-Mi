@@ -138,3 +138,15 @@ Admin routes:
 - `GET /api/admin/billing/provider-events`
 
 These routes use standardized success/error envelopes and are internal-token gated; admin paths also require admin feature-access gates.
+
+
+## C4-M2B billing lifecycle route additions
+
+Authenticated account endpoints:
+- `GET /api/account/billing` (canonical lifecycle snapshot)
+- `GET /api/account/billing/reconciliation-runs`
+
+Internal/admin endpoint:
+- `POST /api/internal/billing/reconcile` (internal token + `admin.ops`)
+
+These routes consume the canonical billing lifecycle boundary and intentionally stop before checkout/payment collection surfaces.

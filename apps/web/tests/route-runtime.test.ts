@@ -10,7 +10,10 @@ import * as workspaceAgendaRoute from '../app/api/workspace/agenda/route';
 
 import * as journalCasesRoute from '../app/api/journal/cases/route';
 import * as journalPlanRoute from '../app/api/journal/cases/[caseId]/plan/route';
+import * as journalAdjustRoute from '../app/api/journal/cases/[caseId]/adjust/route';
+import * as journalCancelRoute from '../app/api/journal/cases/[caseId]/cancel/route';
 import * as journalExecuteRoute from '../app/api/journal/cases/[caseId]/execute/route';
+import * as journalPartialCloseRoute from '../app/api/journal/cases/[caseId]/partial-close/route';
 import * as journalCloseRoute from '../app/api/journal/cases/[caseId]/close/route';
 import * as journalReviewRoute from '../app/api/journal/cases/[caseId]/review/route';
 import * as journalReplayRoute from '../app/api/journal/cases/[caseId]/replay/route';
@@ -120,8 +123,11 @@ const mockApplicationStateRuntime = {
     createDraftCaseFromReasoningContext: async () => journalCase,
     createDraftCase: async () => journalCase,
     planCase: async () => journalCase,
+    adjustExecution: async () => journalCase,
     markExecuted: async () => journalCase,
+    markPartiallyClosed: async () => journalCase,
     closeCase: async () => journalCase,
+    cancelCase: async () => journalCase,
     reviewCase: async () => journalCase,
     getJournalCaseReplay: async () => ({ caseData: journalCase, revisions: [], caseRecord: {} })
   },
@@ -374,9 +380,25 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.deepEqual(await readJson(journalPlanRateLimited), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
   securityDecisionMode = 'allowed';
   assert.equal((await readJson(await journalExecuteRoute.POST(request('https://x/api/journal/cases/case-1/execute', { method: 'POST', body: JSON.stringify({ openedAt: '2026-01-01T00:00:00.000Z' }) }), { params: Promise.resolve({ caseId: 'case-1' }) }))).ok, true);
+  assert.equal(latestSecurityActionKind, 'journal_case_lifecycle');
+  assert.equal((await readJson(await journalAdjustRoute.POST(request('https://x/api/journal/cases/case-1/adjust', { method: 'POST', body: JSON.stringify({ notes: 'adjusted' }) }), { params: Promise.resolve({ caseId: 'case-1' }) }))).ok, true);
+  assert.equal(latestSecurityActionKind, 'journal_case_lifecycle');
+  assert.equal((await readJson(await journalPartialCloseRoute.POST(request('https://x/api/journal/cases/case-1/partial-close', { method: 'POST', body: JSON.stringify({ partialClosedAt: '2026-01-01T00:00:00.000Z', portionClosedPct: 50 }) }), { params: Promise.resolve({ caseId: 'case-1' }) }))).ok, true);
+  assert.equal(latestSecurityActionKind, 'journal_case_lifecycle');
   assert.equal((await readJson(await journalCloseRoute.POST(request('https://x/api/journal/cases/case-1/close', { method: 'POST', body: JSON.stringify({ closedAt: '2026-01-01T00:00:00.000Z', outcome: 'win' }) }), { params: Promise.resolve({ caseId: 'case-1' }) }))).ok, true);
+  assert.equal(latestSecurityActionKind, 'journal_case_lifecycle');
+  assert.equal((await readJson(await journalCancelRoute.POST(request('https://x/api/journal/cases/case-1/cancel', { method: 'POST', body: JSON.stringify({ reason: 'n/a' }) }), { params: Promise.resolve({ caseId: 'case-1' }) }))).ok, true);
+  assert.equal(latestSecurityActionKind, 'journal_case_lifecycle');
   assert.equal((await readJson(await journalReviewRoute.POST(request('https://x/api/journal/cases/case-1/review', { method: 'POST', body: JSON.stringify({ reviewedAt: '2026-01-01T00:00:00.000Z' }) }), { params: Promise.resolve({ caseId: 'case-1' }) }))).ok, true);
+  assert.equal(latestSecurityActionKind, 'journal_case_lifecycle');
   assert.equal((await readJson(await journalReplayRoute.GET(request('https://x/api/journal/cases/case-1/replay'), { params: Promise.resolve({ caseId: 'case-1' }) }))).ok, true);
+  securityDecisionMode = 'rate_limited';
+  assert.deepEqual(await readJson(await journalExecuteRoute.POST(request('https://x/api/journal/cases/case-1/execute', { method: 'POST', body: JSON.stringify({ openedAt: '2026-01-01T00:00:00.000Z' }) }), { params: Promise.resolve({ caseId: 'case-1' }) })), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  assert.deepEqual(await readJson(await journalAdjustRoute.POST(request('https://x/api/journal/cases/case-1/adjust', { method: 'POST', body: JSON.stringify({ notes: 'adjusted' }) }), { params: Promise.resolve({ caseId: 'case-1' }) })), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  assert.deepEqual(await readJson(await journalReviewRoute.POST(request('https://x/api/journal/cases/case-1/review', { method: 'POST', body: JSON.stringify({ reviewedAt: '2026-01-01T00:00:00.000Z' }) }), { params: Promise.resolve({ caseId: 'case-1' }) })), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'idempotency_conflict';
+  assert.deepEqual(await readJson(await journalCloseRoute.POST(request('https://x/api/journal/cases/case-1/close', { method: 'POST', headers: { 'Idempotency-Key': 'journal-close-conflict' }, body: JSON.stringify({ closedAt: '2026-01-01T00:00:00.000Z', outcome: 'win' }) }), { params: Promise.resolve({ caseId: 'case-1' }) })), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
+  securityDecisionMode = 'allowed';
 
   const originalPlanCase = mockApplicationStateRuntime.journal.planCase;
   mockApplicationStateRuntime.journal.planCase = async () => { throw new Error('invalid_transition'); };

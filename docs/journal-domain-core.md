@@ -154,3 +154,15 @@ Journal case history now feeds the canonical analytics core snapshot engine (`@e
 
 ## C4-M6C1 security alignment note
 Security runtime policy foundation now includes journal-specific action kinds (`journal_case_write`, `journal_case_lifecycle`, `journal_influence_generate`) so journal mutation families can be rate-limited and audited with production-grade precision. Route integration is intentionally deferred to M6C2.
+
+## C4-M6C2B journal lifecycle route security integration
+Journal lifecycle mutation route integration is now complete for the existing case lifecycle route family by applying `journal_case_lifecycle` to:
+- `POST /api/journal/cases/[caseId]/plan`
+- `POST /api/journal/cases/[caseId]/execute`
+- `POST /api/journal/cases/[caseId]/adjust`
+- `POST /api/journal/cases/[caseId]/partial-close`
+- `POST /api/journal/cases/[caseId]/close`
+- `POST /api/journal/cases/[caseId]/cancel`
+- `POST /api/journal/cases/[caseId]/review`
+
+Read-equivalent routes (`GET /api/journal/cases/[caseId]`, `GET /api/journal/cases/[caseId]/replay`) intentionally remain outside mutation-security decisioning because they do not perform state transitions.

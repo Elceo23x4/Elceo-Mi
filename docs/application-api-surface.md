@@ -217,3 +217,21 @@ Remaining M6C2 follow-up scope (not covered by this partial slice):
 - other journal lifecycle mutation routes
 - portfolio watchlist/position/action mutation routes
 - notification target/subscription mutation routes
+
+## C4-M6C2B narrow journal lifecycle integration (completion)
+- Newly security-protected journal lifecycle mutation routes (`actionKind: journal_case_lifecycle`):
+  - `POST /api/journal/cases/[caseId]/adjust`
+  - `POST /api/journal/cases/[caseId]/cancel`
+  - `POST /api/journal/cases/[caseId]/close`
+  - `POST /api/journal/cases/[caseId]/execute`
+  - `POST /api/journal/cases/[caseId]/partial-close`
+  - `POST /api/journal/cases/[caseId]/review`
+- Existing M6C2A journal lifecycle coverage retained:
+  - `POST /api/journal/cases/[caseId]/plan`
+- Intentionally unprotected (read-equivalent):
+  - `GET /api/journal/cases/[caseId]`
+  - `GET /api/journal/cases/[caseId]/replay`
+
+Remaining M6C2 follow-up scope after C4-M6C2B:
+- portfolio watchlist/position/action mutation routes
+- notification target/subscription mutation routes

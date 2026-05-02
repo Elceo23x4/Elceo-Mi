@@ -161,3 +161,11 @@ Remaining C4-M6C2 scope: notification target/subscription route family. Replay s
 - Replay semantics are unchanged: replayed requests return the standardized conflict replay envelope (no full prior-response payload replay yet).
 - C4-M6C2 narrow-route action coverage is now complete across journal, portfolio, and notification mutation families.
 - Remaining production hardening is unchanged: full-response idempotency replay, infra/WAF rate limits, and final penetration/security review.
+
+## C4-M7A full-response idempotency replay runtime core
+- Runtime now supports durable idempotency response envelope storage and replay lookup contracts.
+- `responseJson` is persisted as serialized JSON string in `app_security_idempotency_responses`.
+- Request bodies are never persisted; only `requestHash` is stored.
+- Replay lookup reasons: `completed_response_found`, `no_completed_response`, `request_hash_mismatch`, `expired`, `not_found`.
+- Route handlers will be wired in M7B to return stored response envelopes.
+- Current limitation moved to route integration pending (runtime storage/replay core is now present).

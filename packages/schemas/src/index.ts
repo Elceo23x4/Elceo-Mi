@@ -45,3 +45,5 @@ export * from './billing-admin.schema';
 
 export * from './billing-orchestration.schema';
 export * from './security-runtime.schema';
+export * from './market-evidence.schema';
+export * from './seo-content.schema';

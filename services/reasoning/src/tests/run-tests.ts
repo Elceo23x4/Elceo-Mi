@@ -19,6 +19,8 @@ import { runZoneAnchoringTests } from './zone-anchoring.test.js';
 import { runPriceLevelProjectionTests } from './price-level-projection.test.js';
 import { runChartProjectionBuilderTests } from './chart-projection-builder.test.js';
 import { runJournalInfluenceAdoptionTests } from './journal-influence-adoption.test.js';
+import { runMarketEvidenceRegistryTests } from './market-evidence-registry.test.js';
+import { runSeoContentArchitectureTests } from './seo-content-architecture.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -42,6 +44,8 @@ async function run(): Promise<void> {
   await runPersistenceReplayTests();
   await runCanonicalReasoningBoundaryTests();
   await runJournalInfluenceAdoptionTests();
+  runMarketEvidenceRegistryTests();
+  runSeoContentArchitectureTests();
   console.log('reasoning runtime contract tests passed');
 }
 

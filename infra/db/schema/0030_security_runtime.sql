@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS app_security_idempotency_records (idempotency_key text PRIMARY KEY, action_kind text NOT NULL, actor_kind text NOT NULL, actor_id text NOT NULL, request_hash text NOT NULL, response_hash text NULL, status text NOT NULL, first_seen_at timestamptz NOT NULL, last_seen_at timestamptz NOT NULL, expires_at timestamptz NOT NULL, metadata_json jsonb NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_security_idempotency_actor ON app_security_idempotency_records (actor_kind, actor_id, action_kind, last_seen_at DESC);
+CREATE INDEX IF NOT EXISTS idx_security_idempotency_expires ON app_security_idempotency_records (expires_at);
+CREATE TABLE IF NOT EXISTS app_security_rate_limit_counters (counter_id text PRIMARY KEY, policy_key text NOT NULL, action_kind text NOT NULL, actor_kind text NOT NULL, actor_id text NOT NULL, subject_id text NULL, window text NOT NULL, window_start timestamptz NOT NULL, window_end timestamptz NOT NULL, count integer NOT NULL, updated_at timestamptz NOT NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_security_rate_counter_scope ON app_security_rate_limit_counters (policy_key, actor_kind, actor_id, coalesce(subject_id, ''), window_start, window_end);
+CREATE INDEX IF NOT EXISTS idx_security_rate_actor ON app_security_rate_limit_counters (actor_kind, actor_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_security_rate_policy ON app_security_rate_limit_counters (policy_key, updated_at DESC);
+CREATE TABLE IF NOT EXISTS app_security_audit_events (audit_event_id text PRIMARY KEY, actor_kind text NOT NULL, actor_id text NOT NULL, subject_id text NULL, action_kind text NOT NULL, decision_status text NOT NULL, block_reason text NULL, route_path text NULL, method text NULL, ip_hash text NULL, user_agent_hash text NULL, idempotency_key text NULL, metadata_json jsonb NOT NULL, occurred_at timestamptz NOT NULL, created_at timestamptz NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_security_audit_actor ON app_security_audit_events (actor_kind, actor_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_security_audit_subject ON app_security_audit_events (subject_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_security_audit_action ON app_security_audit_events (action_kind, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_security_audit_decision ON app_security_audit_events (decision_status, occurred_at DESC);

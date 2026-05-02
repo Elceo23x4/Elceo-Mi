@@ -21,3 +21,4 @@ export * from './billing-lifecycle-repository';
 export * from './billing-policy-repository';
 
 export * from './billing-orchestration-repository';
+export * from './security-runtime-repository';

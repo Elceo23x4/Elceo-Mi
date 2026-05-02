@@ -25,3 +25,4 @@ export * from './canonical-billing-policy-boundary';
 export * from './canonical-billing-admin-boundary';
 
 export * from './canonical-billing-orchestration-boundary';
+export * from './canonical-security-boundary';

@@ -204,3 +204,16 @@ All newly protected routes now evaluate security controls between auth+validatio
 
 ## C4-M6C1 security policy foundation (no route rewiring yet)
 Security runtime action-kind taxonomy is expanded for deferred user mutation families (journal, portfolio write operations, notification target/subscription/verification mutations). This batch does not change route handlers yet; M6C2 will apply these action kinds to the remaining mutation endpoints.
+
+
+## C4-M6C2A narrow security action route wiring (partial slice)
+- `POST /api/journal/cases` -> `journal_case_write`
+- `POST /api/journal/cases/[caseId]/plan` -> `journal_case_lifecycle`
+- `POST /api/journal/influence/generate` -> `journal_influence_generate`
+- `POST /api/notifications/verification/issue` -> `notification_verification_issue`
+- `POST /api/notifications/verification/consume` -> `notification_verification_consume`
+
+Remaining M6C2 follow-up scope (not covered by this partial slice):
+- other journal lifecycle mutation routes
+- portfolio watchlist/position/action mutation routes
+- notification target/subscription mutation routes

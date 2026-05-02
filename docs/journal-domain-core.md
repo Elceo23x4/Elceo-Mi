@@ -151,3 +151,6 @@ This preserves C4-A lifecycle boundaries while making durable journal history co
 ## Analytics Core Linkage (C4-C)
 
 Journal case history now feeds the canonical analytics core snapshot engine (`@elceo/analytics`) for deterministic, persisted, replayable performance aggregation. This keeps journal lifecycle semantics unchanged while enabling downstream analytics/coaching consumers to read stable snapshots instead of recomputing from mutable views.
+
+## C4-M6C1 security alignment note
+Security runtime policy foundation now includes journal-specific action kinds (`journal_case_write`, `journal_case_lifecycle`, `journal_influence_generate`) so journal mutation families can be rate-limited and audited with production-grade precision. Route integration is intentionally deferred to M6C2.

@@ -19,6 +19,16 @@ export const SECURITY_RATE_LIMIT_POLICIES: readonly SecurityRateLimitPolicy[] = 
   policy('analytics_generate', 'hour', 60, 'analytics_generate.hour.60'),
   policy('coaching_generate', 'hour', 60, 'coaching_generate.hour.60'),
   policy('portfolio_snapshot_generate', 'hour', 60, 'portfolio_snapshot_generate.hour.60'),
+  policy('journal_case_write', 'hour', 120, 'journal_case_write.hour.120'),
+  policy('journal_case_lifecycle', 'hour', 120, 'journal_case_lifecycle.hour.120'),
+  policy('journal_influence_generate', 'hour', 30, 'journal_influence_generate.hour.30'),
+  policy('portfolio_watchlist_write', 'hour', 120, 'portfolio_watchlist_write.hour.120'),
+  policy('portfolio_position_write', 'hour', 120, 'portfolio_position_write.hour.120'),
+  policy('portfolio_action_write', 'hour', 120, 'portfolio_action_write.hour.120'),
+  policy('notification_target_write', 'hour', 60, 'notification_target_write.hour.60'),
+  policy('notification_subscription_write', 'hour', 60, 'notification_subscription_write.hour.60'),
+  policy('notification_verification_issue', 'hour', 20, 'notification_verification_issue.hour.20'),
+  policy('notification_verification_consume', 'hour', 60, 'notification_verification_consume.hour.60'),
   policy('admin_write', 'hour', 100, 'admin_write.hour.100'),
   policy('internal_mutation', 'minute', 120, 'internal_mutation.minute.120')
 ];

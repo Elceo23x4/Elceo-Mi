@@ -91,3 +91,20 @@ Deferred cleanup after this sweep:
 - Per-route narrower action kinds for journal/portfolio/notifications write routes.
 - Infrastructure/WAF rate limits on top of app-level controls.
 - Final security review + penetration test.
+
+## C4-M6C1 security action-kind policy foundation
+M6C1 expands the security runtime contract with narrower user mutation action kinds for journal, portfolio, and notification families that were deferred in M6B2B.
+
+Added action kinds:
+- Journal: `journal_case_write`, `journal_case_lifecycle`, `journal_influence_generate`
+- Portfolio: `portfolio_watchlist_write`, `portfolio_position_write`, `portfolio_action_write`, `portfolio_snapshot_generate` (already present, policy-confirmed)
+- Notifications: `notification_target_write`, `notification_subscription_write`, `notification_verification_issue`, `notification_verification_consume`
+
+Why this is needed:
+- Broad fallback actions (`account_write` / `internal_mutation`) are too coarse for production-grade per-family abuse controls.
+- Narrow action kinds allow explicit policy tuning and clearer security audit attribution per mutation family.
+
+Scope note:
+- M6C1 is policy foundation only (types/schemas/policies/tests/docs).
+- Route-level integration of these new action kinds is deferred to M6C2.
+- Replay semantics remain unchanged (standard replay conflict envelope, no full prior-response body replay).

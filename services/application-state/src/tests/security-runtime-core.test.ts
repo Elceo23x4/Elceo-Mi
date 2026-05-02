@@ -1,9 +1,11 @@
 import { strict as assert } from 'assert';
+import { validateSecurityRateLimitPolicy } from '@elceo/schemas';
 import { MemorySecurityAuditEventRepository, MemorySecurityIdempotencyRepository, MemorySecurityRateLimitRepository } from '../persistence/security-runtime-repository';
 import { SecurityAuditService } from '../security/audit-service';
 import { SecurityDecisionService } from '../security/decision-service';
 import { SecurityIdempotencyService } from '../security/idempotency-service';
 import { SecurityQueryService } from '../security/query-service';
+import { SECURITY_RATE_LIMIT_POLICIES } from '../security/rate-limit-policies';
 import { SecurityRateLimitService } from '../security/rate-limit-service';
 import { CanonicalSecurityBoundaryService } from '../runtime/canonical-security-boundary';
 
@@ -17,6 +19,38 @@ export async function runSecurityRuntimeCoreTests(): Promise<void> {
   const auditSvc = new SecurityAuditService(auditRepo);
   const decisionSvc = new SecurityDecisionService(idSvc, rateSvc, auditSvc);
   const querySvc = new SecurityQueryService(auditRepo);
+
+  const newActionPolicyValidation = validateSecurityRateLimitPolicy({
+    policyKey: 'journal_case_write.hour.120',
+    actionKind: 'journal_case_write',
+    window: 'hour',
+    maxCount: 120,
+    subjectScoped: false,
+    actorScoped: true
+  });
+  assert.equal(newActionPolicyValidation.ok, true);
+
+  const invalidActionPolicyValidation = validateSecurityRateLimitPolicy({
+    policyKey: 'invalid.hour.1',
+    actionKind: 'not_real_action_kind',
+    window: 'hour',
+    maxCount: 1,
+    subjectScoped: false,
+    actorScoped: true
+  });
+  assert.equal(invalidActionPolicyValidation.ok, false);
+
+  const policyMap = new Map(SECURITY_RATE_LIMIT_POLICIES.map((policy) => [policy.actionKind, policy]));
+  assert.equal(policyMap.get('journal_case_write')?.maxCount, 120);
+  assert.equal(policyMap.get('journal_case_write')?.window, 'hour');
+  assert.equal(policyMap.get('journal_influence_generate')?.maxCount, 30);
+  assert.equal(policyMap.get('portfolio_position_write')?.maxCount, 120);
+  assert.equal(policyMap.get('notification_target_write')?.maxCount, 60);
+  assert.equal(policyMap.get('notification_verification_issue')?.maxCount, 20);
+  assert.equal(policyMap.get('refresh_run')?.maxCount, 60);
+
+  const policyKeys = SECURITY_RATE_LIMIT_POLICIES.map((policy) => policy.policyKey);
+  assert.equal(new Set(policyKeys).size, policyKeys.length);
 
   assert.equal((await idSvc.beginIdempotentAction({ actionKind:'refresh_run', actorKind:'user', actorId:'u', idempotencyKey:'k1', requestHash:'h1', nowIso:now })).status,'allowed');
   assert.equal((await idSvc.beginIdempotentAction({ actionKind:'refresh_run', actorKind:'user', actorId:'u', idempotencyKey:'k1', requestHash:'h1', nowIso:now })).status,'blocked');

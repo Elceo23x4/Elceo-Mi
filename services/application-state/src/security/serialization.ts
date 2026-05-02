@@ -1,5 +1,5 @@
-import { validateSecurityAuditEvent, validateSecurityDecision, validateSecurityRuntimeSummary } from '@elceo/schemas';
-import type { SecurityAuditEvent, SecurityDecision, SecurityRuntimeSummary } from '@elceo/types';
+import { validateSecurityAuditEvent, validateSecurityDecision, validateSecurityIdempotencyReplayResult, validateSecurityIdempotencyResponseRecord, validateSecurityRuntimeSummary } from '@elceo/schemas';
+import type { SecurityAuditEvent, SecurityDecision, SecurityIdempotencyReplayResult, SecurityIdempotencyResponseRecord, SecurityRuntimeSummary } from '@elceo/types';
 
 export const toCompactJson = (value: Record<string, unknown>): string => JSON.stringify(value);
 const parseJson = (json: string): unknown => JSON.parse(json);
@@ -23,3 +23,6 @@ export const deserializeSecurityRuntimeSummary = (json: string): SecurityRuntime
   if (!validation.ok) throw new Error(`Invalid SecurityRuntimeSummary payload: ${validationError(validation)}`);
   return validation.value;
 };
+
+export const deserializeSecurityIdempotencyResponseRecord = (json: string): SecurityIdempotencyResponseRecord => { const parsed = parseJson(json); const validation = validateSecurityIdempotencyResponseRecord(parsed); if (!validation.ok) throw new Error(`Invalid SecurityIdempotencyResponseRecord payload: ${validationError(validation)}`); return validation.value; };
+export const deserializeSecurityIdempotencyReplayResult = (json: string): SecurityIdempotencyReplayResult => { const parsed = parseJson(json); const validation = validateSecurityIdempotencyReplayResult(parsed); if (!validation.ok) throw new Error(`Invalid SecurityIdempotencyReplayResult payload: ${validationError(validation)}`); return validation.value; };

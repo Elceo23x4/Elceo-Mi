@@ -19,7 +19,9 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   if (!security.ok) return security.response;
   try {
     const position = await getApplicationStateRuntime().portfolio.createProposedPosition({ subjectKind: subject.subjectKind, subjectId: subject.subjectId, asset: body.asset, timeframe: body.timeframe, direction: body.direction, entryPrice: body.entryPrice ?? null, stopLoss: body.stopLoss ?? null, takeProfitLevels: body.takeProfitLevels ?? [], size: body.size ?? null, thesisHealth: body.thesisHealth ?? 'stable', linkedJournalCaseId: body.linkedJournalCaseId ?? null, linkedReasoningRunId: body.linkedReasoningRunId ?? null, linkedSnapshotId: body.linkedSnapshotId ?? null, linkedDriftId: body.linkedDriftId ?? null, note: body.note ?? null }, { actorKind: 'user', actorId: subject.userId });
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { position } });
+    const envelope = { ok: true as const, data: { position } };
+
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { position }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: subject.subjectId, actionKind: 'portfolio_position_write', routePath: '/api/portfolio/positions', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ position });
   } catch (error) {

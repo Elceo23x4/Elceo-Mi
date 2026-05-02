@@ -12,7 +12,9 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   if (!security.ok) return security.response;
   try {
     const accountState = await getEntitlementsRuntime().updateAccountState('user', body.subjectId, body.accountState);
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { accountState } });
+    const envelope = { ok: true as const, data: { accountState } };
+
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { accountState }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: body.subjectId, actionKind: 'admin_write', routePath: '/api/admin/entitlements/state', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ accountState });
   } catch (error) {

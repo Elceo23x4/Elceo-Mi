@@ -16,7 +16,9 @@ export const PATCH = withApiErrorBoundary(async (request: Request, context: { pa
     if (body.isEnabled === true) await runtime.enableSubscription(subscriptionId);
     if (body.isEnabled === false) await runtime.disableSubscription(subscriptionId);
     if (body.minimumMaterialityScore !== undefined) await runtime.updateSubscriptionThreshold(subscriptionId, body.minimumMaterialityScore ?? null);
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { subscriptionId, updated: true } });
+    const envelope = { ok: true as const, data: { subscriptionId, updated: true } };
+
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { subscriptionId, updated: true }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: subject.subjectId, actionKind: 'notification_subscription_write', routePath: '/api/notifications/subscriptions/[subscriptionId]', method: 'PATCH', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ subscriptionId, updated: true });
   } catch (error) {

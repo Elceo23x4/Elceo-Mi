@@ -13,7 +13,9 @@ export const POST = withApiErrorBoundary(async (request: Request, context: { par
   if (!security.ok) return security.response;
   try {
     const entry = await getApplicationStateRuntime().portfolio.changeWatchlistStatus(entryId, body.status, { actorKind: 'user', actorId: subject.userId });
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { entry } });
+    const envelope = { ok: true as const, data: { entry } };
+
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { entry }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: subject.subjectId, actionKind: 'portfolio_watchlist_write', routePath: '/api/portfolio/watchlist/[entryId]/status', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ entry });
   } catch (error) { await failSecurityDecision({ idempotencyKey: security.idempotencyKey, errorMessage: error instanceof Error ? error.message : 'unknown_error' }); throw error; }

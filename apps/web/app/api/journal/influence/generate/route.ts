@@ -14,7 +14,9 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   if (!security.ok) return security.response;
   try {
     const snapshot = await getApplicationStateRuntime().journalInfluence.generateJournalInfluenceSnapshot({ subjectKind: subject.subjectKind, subjectId: subject.subjectId, assetScope, timeframeScope });
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { snapshot } });
+    const envelope = { ok: true as const, data: { snapshot } };
+
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { snapshot }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: subject.subjectId, actionKind: 'journal_influence_generate', routePath: '/api/journal/influence/generate', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ snapshot });
   } catch (error) {

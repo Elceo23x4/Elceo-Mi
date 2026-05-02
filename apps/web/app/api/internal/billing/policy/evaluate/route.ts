@@ -14,7 +14,9 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   const security = await requireSecurityDecision({ request, routePath: '/api/internal/billing/policy/evaluate', method: 'POST', actionKind: 'billing_policy_evaluate', actor, subjectId: body.subjectId, requestBody: body });
   if (!security.ok) return security.response;
   try { const evaluation = await getBillingPolicyRuntime().evaluateBillingPolicyForSubject('user', body.subjectId, body.sourceReconciliationRunId);
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { evaluation } });
+    const envelope = { ok: true as const, data: { evaluation } };
+
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { evaluation }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: body.subjectId, actionKind: 'billing_policy_evaluate', routePath: '/api/internal/billing/policy/evaluate', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ evaluation });
   } catch (error) { await failSecurityDecision({ idempotencyKey: security.idempotencyKey, errorMessage: error instanceof Error ? error.message : 'unknown_error' }); throw error; }

@@ -59,7 +59,9 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
             createdFromDriftId: body.linkedDriftId ?? null
           }
         }, { actorKind: 'user', actorId: subject.userId });
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { case: created } });
+    const envelope = { ok: true as const, data: { case: created } };
+
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { case: created }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: subject.subjectId, actionKind: 'journal_case_write', routePath: '/api/journal/cases', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ case: created });
   } catch (error) {

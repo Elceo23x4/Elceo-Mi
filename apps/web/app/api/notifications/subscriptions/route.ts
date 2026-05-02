@@ -27,7 +27,8 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
       enabled: body.isEnabled ?? true,
       minMaterialityScore: body.minimumMaterialityScore ?? null
     });
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { subscription } });
+    const envelope = { ok: true as const, data: { subscription } };
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { subscription }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: subject.subjectId, actionKind: 'notification_subscription_write', routePath: '/api/notifications/subscriptions', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ subscription });
   } catch (error) {

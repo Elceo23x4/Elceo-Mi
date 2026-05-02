@@ -29,7 +29,8 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
 
   try {
     const run = await getBillingLifecycleRuntime().reconcileProviderEvent(providerKind, sourceEventId, body.subjectId);
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { run } });
+    const envelope = { ok: true as const, data: { run } };
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { run }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: body.subjectId, actionKind: 'billing_reconcile', routePath: '/api/internal/billing/reconcile/retry', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ run });
   } catch (error) {

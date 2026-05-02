@@ -14,7 +14,9 @@ export const POST = withApiErrorBoundary(async (request: Request, context: { par
   try {
   const updated = await getApplicationStateRuntime().journal.closeCase(caseId, patch as never, { actorKind: 'user', actorId: subject.userId });
   if (updated.identity.subjectId !== subject.subjectId) throw new Error('forbidden');
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { case: updated } });
+    const envelope = { ok: true as const, data: { case: updated } };
+
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { case: updated }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: subject.subjectId, actionKind: 'journal_case_lifecycle', routePath: '/api/journal/cases/[caseId]/close', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ case: updated });
   } catch (error) {

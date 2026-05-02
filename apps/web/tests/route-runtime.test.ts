@@ -103,6 +103,10 @@ let latestWorkspaceSubjectId: string | null = null;
 let blockedFeatures = new Set<string>();
 let usageIncremented: string[] = [];
 
+let securityDecisionMode: 'allowed' | 'rate_limited' | 'idempotency_conflict' | 'replayed' = 'allowed';
+let securityCompletedCount = 0;
+let securityFailedCount = 0;
+
 const journalCase = {
   identity: { caseId: 'case-1', subjectKind: 'user' as const, subjectId: subject.subjectId, asset: 'XAU/USD', timeframe: 'H1', title: 'T' }
 };
@@ -206,6 +210,18 @@ const mockApplicationStateRuntime = {
     listExternalEventsForSubject: async () => [{ externalEventId: 'evt-subject' }],
     listUnprocessedExternalEvents: async () => [{ externalEventId: 'evt-unprocessed' }]
   },
+
+  security: {
+    evaluateSecurityControl: async (_params: { actionKind: string; actorKind: string; actorId: string; subjectId?: string | null; idempotencyKey?: string | null; requestHash?: string | null; routePath?: string; method?: string }) => {
+      if (securityDecisionMode === 'rate_limited') return { decisionId: 'sec-rate', actionKind: 'billing_reconcile', actorKind: 'internal', actorId: 'internal-api', subjectId: 'user-2', status: 'blocked', blockReason: 'rate_limit_exceeded', idempotencyKey: 'idem', rateLimitPolicyKey: 'p', currentCount: 60, maxCount: 60, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
+      if (securityDecisionMode === 'idempotency_conflict') return { decisionId: 'sec-idem', actionKind: 'billing_reconcile', actorKind: 'internal', actorId: 'internal-api', subjectId: 'user-2', status: 'blocked', blockReason: 'idempotency_conflict', idempotencyKey: 'idem', rateLimitPolicyKey: null, currentCount: null, maxCount: null, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
+      if (securityDecisionMode === 'replayed') return { decisionId: 'sec-replay', actionKind: 'billing_orchestration_retry', actorKind: 'internal', actorId: 'internal-api', subjectId: 'user-2', status: 'replayed', blockReason: null, idempotencyKey: 'idem', rateLimitPolicyKey: null, currentCount: null, maxCount: null, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
+      return { decisionId: 'sec-allow', actionKind: 'billing_reconcile', actorKind: 'internal', actorId: 'internal-api', subjectId: 'user-2', status: 'allowed', blockReason: null, idempotencyKey: 'idem', rateLimitPolicyKey: null, currentCount: null, maxCount: null, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
+    },
+    completeIdempotentAction: async (_params: { idempotencyKey: string; responseHash: string; nowIso: string }) => { securityCompletedCount += 1; },
+    failIdempotentAction: async (_params: { idempotencyKey: string; nowIso: string; metadata?: Record<string, unknown> }) => { securityFailedCount += 1; },
+    recordSecurityAuditEvent: async (_params: { actorKind: string; actorId: string; actionKind: string }) => ({ ok: true })
+  },
   entitlements: {
     decideFeatureAccess: async (_kind: 'user', _subjectId: string, feature: string) => ({
       decisionId: `d-${feature}`,
@@ -297,6 +313,9 @@ export async function runRouteRuntimeTests(): Promise<void> {
   installMocks();
   blockedFeatures = new Set();
   usageIncremented = [];
+  securityDecisionMode = 'allowed';
+  securityCompletedCount = 0;
+  securityFailedCount = 0;
 
   setAuthTestOverrides({ subjectResolver: async () => null });
   const unauth = await workspaceCurrentRoute.GET();
@@ -461,8 +480,16 @@ export async function runRouteRuntimeTests(): Promise<void> {
   const reconcileUnauthorized = await internalBillingReconcileRoute.POST(request('https://x/api/internal/billing/reconcile', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'stripe', sourceEventId: 'evt-1' }) }));
   assert.equal(reconcileUnauthorized.status, 403);
   blockedFeatures = new Set();
-  const reconcileOk = await internalBillingReconcileRoute.POST(request('https://x/api/internal/billing/reconcile', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'stripe', sourceEventId: 'evt-1', subjectId: 'user-2' }) }));
+  const reconcileOk = await internalBillingReconcileRoute.POST(request('https://x/api/internal/billing/reconcile', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'idem-success' }, body: JSON.stringify({ providerKind: 'stripe', sourceEventId: 'evt-1', subjectId: 'user-2' }) }));
   assert.deepEqual(await readJson(reconcileOk), { ok: true, data: { run: await mockApplicationStateRuntime.billingLifecycle.reconcileProviderEvent('stripe', 'evt-1', 'user-2') } });
+  assert.equal(securityCompletedCount > 0, true);
+  securityDecisionMode = 'rate_limited';
+  const reconcileRateLimited = await internalBillingReconcileRoute.POST(request('https://x/api/internal/billing/reconcile', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'stripe', sourceEventId: 'evt-1', subjectId: 'user-2' }) }));
+  assert.deepEqual(await readJson(reconcileRateLimited), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'idempotency_conflict';
+  const reconcileIdempotencyConflict = await internalBillingReconcileRoute.POST(request('https://x/api/internal/billing/reconcile', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'idem-1' }, body: JSON.stringify({ providerKind: 'stripe', sourceEventId: 'evt-1', subjectId: 'user-2' }) }));
+  assert.deepEqual(await readJson(reconcileIdempotencyConflict), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
+  securityDecisionMode = 'allowed';
   assert.deepEqual(await readJson(await internalBillingPolicyEvaluateRoute.POST(request('https://x/api/internal/billing/policy/evaluate', { method: 'POST', body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
   blockedFeatures = new Set(['admin.ops']);
   const evaluateBlocked = await internalBillingPolicyEvaluateRoute.POST(request('https://x/api/internal/billing/policy/evaluate', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2' }) }));
@@ -470,6 +497,9 @@ export async function runRouteRuntimeTests(): Promise<void> {
   blockedFeatures = new Set();
   installMocks();
   assert.deepEqual(await readJson(await internalBillingPolicyEvaluateRoute.POST(request('https://x/api/internal/billing/policy/evaluate', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', sourceReconciliationRunId: 'run-2' }) }))), { ok: true, data: { evaluation: await mockApplicationStateRuntime.billingPolicy.evaluateBillingPolicyForSubject('user', 'user-2', 'run-2') } });
+  securityDecisionMode = 'rate_limited';
+  assert.deepEqual(await readJson(await internalBillingPolicyEvaluateRoute.POST(request('https://x/api/internal/billing/policy/evaluate', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'allowed';
 
   const providerNoToken = await internalBillingProviderEventsRoute.POST(request('https://x/api/internal/billing/provider-events', { method: 'POST', body: JSON.stringify({}) }));
   assert.equal(providerNoToken.status, 403);
@@ -524,6 +554,9 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.deepEqual(await readJson(await adminBillingOperationsSubjectRoute.GET(request('https://x/api/admin/billing/operations/subject?subjectId=user-2', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { snapshot: await mockApplicationStateRuntime.billingAdmin.getBillingAdminSubjectSnapshot('user', 'user-2') } });
   assert.deepEqual(await readJson(await internalBillingReconcileRetryRoute.POST(request('https://x/api/internal/billing/reconcile/retry', { method: 'POST', body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
   assert.deepEqual(await readJson(await internalBillingReconcileRetryRoute.POST(request('https://x/api/internal/billing/reconcile/retry', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: true, data: { run: await mockApplicationStateRuntime.billingLifecycle.reconcileProviderEvent('stripe', 'evt-1', 'user-2') } });
+  securityDecisionMode = 'rate_limited';
+  assert.deepEqual(await readJson(await internalBillingReconcileRetryRoute.POST(request('https://x/api/internal/billing/reconcile/retry', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'allowed';
 
   assert.deepEqual(await readJson(await adminBillingOrchestrationLatestRoute.GET(request('https://x/api/admin/billing/orchestration/latest'))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
   assert.deepEqual(await readJson(await adminBillingOrchestrationLatestRoute.GET(request('https://x/api/admin/billing/orchestration/latest', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: false, error: { code: 'validation_error', message: 'Validation failed', details: ['subjectId must be non-empty string'] } });
@@ -540,6 +573,9 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.deepEqual(await readJson(await internalBillingOrchestrationRetryRoute.POST(request('https://x/api/internal/billing/orchestration/retry', { method: 'POST', body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
   assert.deepEqual(await readJson(await internalBillingOrchestrationRetryRoute.POST(request('https://x/api/internal/billing/orchestration/retry', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({}) }))), { ok: false, error: { code: 'validation_error', message: 'Validation failed', details: ['subjectId required'] } });
   assert.deepEqual(await readJson(await internalBillingOrchestrationRetryRoute.POST(request('https://x/api/internal/billing/orchestration/retry', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: true, data: { run: await mockApplicationStateRuntime.billingOrchestration.runRetryForSubject('user', 'user-2') } });
+  securityDecisionMode = 'replayed';
+  assert.deepEqual(await readJson(await internalBillingOrchestrationRetryRoute.POST(request('https://x/api/internal/billing/orchestration/retry', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'idem-replay' }, body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: false, error: { code: 'conflict', message: 'Request replayed', details: ['replayed'] } });
+  securityDecisionMode = 'allowed';
 
   clearMocks();
 }

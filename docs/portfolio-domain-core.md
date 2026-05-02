@@ -102,3 +102,12 @@ C4-M6B2A note: related user-facing `.../generate` or refresh mutation routes are
 
 ## C4-M6C1 security alignment note
 Security runtime policy foundation now includes portfolio mutation action kinds (`portfolio_watchlist_write`, `portfolio_position_write`, `portfolio_action_write`) with explicit rate-limit policies. Existing `portfolio_snapshot_generate` remains in use with confirmed policy coverage. Route-level wiring follows in M6C2.
+
+## C4-M6C2C runtime security integration note
+Portfolio mutation route families are now wired to narrow runtime security action kinds:
+- watchlist mutations -> `portfolio_watchlist_write`
+- position mutations -> `portfolio_position_write`
+- action-item mutations -> `portfolio_action_write`
+- snapshot generation remains -> `portfolio_snapshot_generate`
+
+Read-only portfolio routes remain outside mutation security controls to avoid write-policy/idempotency consumption on non-mutating traffic.

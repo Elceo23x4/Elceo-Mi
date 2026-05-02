@@ -420,6 +420,35 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await actionsRoute.POST(request('https://x/api/portfolio/actions', { method: 'POST', body: JSON.stringify({ kind: 'review_thesis', priority: 'high', headline: 'h', rationale: 'r' }) })))).ok, true);
   assert.equal((await readJson(await actionCompleteRoute.POST(request('https://x/api/portfolio/actions/act-1/complete', { method: 'POST' }), { params: Promise.resolve({ actionId: 'act-1' }) }))).ok, true);
   assert.equal((await readJson(await actionDismissRoute.POST(request('https://x/api/portfolio/actions/act-1/dismiss', { method: 'POST' }), { params: Promise.resolve({ actionId: 'act-1' }) }))).ok, true);
+  securityDecisionMode = 'rate_limited';
+  assert.deepEqual(await readJson(await watchlistStatusRoute.POST(request('https://x/api/portfolio/watchlist/entry-1/status', { method: 'POST', body: JSON.stringify({ status: 'archived' }) }), { params: Promise.resolve({ entryId: 'entry-1' }) })), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'allowed';
+  assert.equal((await readJson(await watchlistStatusRoute.POST(request('https://x/api/portfolio/watchlist/entry-1/status', { method: 'POST', headers: { 'Idempotency-Key': 'wl-status-ok' }, body: JSON.stringify({ status: 'archived' }) }), { params: Promise.resolve({ entryId: 'entry-1' }) }))).ok, true);
+  assert.equal(latestSecurityActionKind, 'portfolio_watchlist_write');
+  securityDecisionMode = 'rate_limited';
+  assert.deepEqual(await readJson(await positionOpenRoute.POST(request('https://x/api/portfolio/positions/pos-1/open', { method: 'POST', body: JSON.stringify({ openedAt: '2026-01-01T00:00:00.000Z' }) }), { params: Promise.resolve({ positionId: 'pos-1' }) })), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'allowed';
+  assert.equal((await readJson(await positionOpenRoute.POST(request('https://x/api/portfolio/positions/pos-1/open', { method: 'POST', headers: { 'Idempotency-Key': 'pos-open-ok' }, body: JSON.stringify({ openedAt: '2026-01-01T00:00:00.000Z' }) }), { params: Promise.resolve({ positionId: 'pos-1' }) }))).ok, true);
+  assert.equal(latestSecurityActionKind, 'portfolio_position_write');
+  securityDecisionMode = 'idempotency_conflict';
+  assert.deepEqual(await readJson(await actionCompleteRoute.POST(request('https://x/api/portfolio/actions/act-1/complete', { method: 'POST', headers: { 'Idempotency-Key': 'act-complete-conflict' } }), { params: Promise.resolve({ actionId: 'act-1' }) })), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
+  securityDecisionMode = 'allowed';
+  assert.equal((await readJson(await actionCompleteRoute.POST(request('https://x/api/portfolio/actions/act-1/complete', { method: 'POST', headers: { 'Idempotency-Key': 'act-complete-ok' } }), { params: Promise.resolve({ actionId: 'act-1' }) }))).ok, true);
+  assert.equal(latestSecurityActionKind, 'portfolio_action_write');
+
+  assert.equal(latestSecurityActionKind, 'portfolio_action_write');
+  securityDecisionMode = 'rate_limited';
+  assert.deepEqual(await readJson(await watchlistRoute.POST(request('https://x/api/portfolio/watchlist', { method: 'POST', body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', priority: 'high' }) }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'allowed';
+  assert.equal((await readJson(await watchlistRoute.POST(request('https://x/api/portfolio/watchlist', { method: 'POST', headers: { 'Idempotency-Key': 'watchlist-ok' }, body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', priority: 'high' }) })))).ok, true);
+  assert.equal(latestSecurityActionKind, 'portfolio_watchlist_write');
+  securityDecisionMode = 'idempotency_conflict';
+  assert.deepEqual(await readJson(await positionsRoute.POST(request('https://x/api/portfolio/positions', { method: 'POST', headers: { 'Idempotency-Key': 'pos-conflict' }, body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', direction: 'long' }) }))), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
+  securityDecisionMode = 'allowed';
+  assert.equal((await readJson(await positionsRoute.POST(request('https://x/api/portfolio/positions', { method: 'POST', headers: { 'Idempotency-Key': 'pos-ok' }, body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', direction: 'long' }) })))).ok, true);
+  assert.equal(latestSecurityActionKind, 'portfolio_position_write');
+  assert.equal(securityAuditCount > 0, true);
+
   assert.equal((await readJson(await portfolioSnapshotGenerateRoute.POST(request('https://x/api/portfolio/snapshot/generate', { method: 'POST', headers: { 'Idempotency-Key': 'portfolio-generate-ok' } })))).ok, true);
   assert.equal(usageIncremented.includes('portfolio.snapshot.generate'), true);
   assert.equal((await readJson(await portfolioReplayRoute.GET(request('https://x/api/portfolio/replay?entityKind=position&entityId=pos-1')))).ok, true);

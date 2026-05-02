@@ -139,3 +139,14 @@ Scope note:
 - Remaining M6C2 scope is unchanged:
   - portfolio mutation route family
   - notification target/subscription mutation route family
+
+## C4-M6C2C portfolio narrow-action coverage
+Portfolio mutation routes are now wired to narrow action kinds:
+- Watchlist mutation routes -> `portfolio_watchlist_write`
+- Position mutation routes -> `portfolio_position_write`
+- Action-item mutation routes -> `portfolio_action_write`
+- Snapshot generate remains -> `portfolio_snapshot_generate`
+
+Read-equivalent routes (watchlist/position/action replay + portfolio attention/current snapshot reads) remain intentionally outside mutation decisioning because they do not mutate state.
+
+Remaining C4-M6C2 scope: notification target/subscription route family. Replay semantics are unchanged (standard replay conflict envelope only).

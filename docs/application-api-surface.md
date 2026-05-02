@@ -189,3 +189,7 @@ Protected by canonical server security decisioning (`requireSecurityDecision`) w
 - `POST /api/admin/entitlements/plan`
 - `POST /api/admin/entitlements/state`
 - `POST /api/admin/entitlements/override`
+
+
+## C4-M6B2A user-facing route security integration
+Security controls (`requireSecurityDecision`) now protect authenticated high-cost user mutation routes: workspace refresh, analytics generate, coaching generate, portfolio snapshot generate, refresh run, and journal influence generate. These routes now enforce rate-limit/idempotency/replay envelopes and complete/fail idempotency lifecycle around mutation execution, with audit recording on successful mutation paths.

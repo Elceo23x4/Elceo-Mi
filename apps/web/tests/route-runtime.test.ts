@@ -14,6 +14,7 @@ import * as journalExecuteRoute from '../app/api/journal/cases/[caseId]/execute/
 import * as journalCloseRoute from '../app/api/journal/cases/[caseId]/close/route';
 import * as journalReviewRoute from '../app/api/journal/cases/[caseId]/review/route';
 import * as journalReplayRoute from '../app/api/journal/cases/[caseId]/replay/route';
+import * as journalInfluenceGenerateRoute from '../app/api/journal/influence/generate/route';
 
 import * as watchlistRoute from '../app/api/portfolio/watchlist/route';
 import * as watchlistEntryRoute from '../app/api/portfolio/watchlist/[entryId]/route';
@@ -335,7 +336,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal(refreshMalformed.status, 400);
   assert.equal((await readJson(refreshMalformed)).ok, false);
 
-  assert.equal((await readJson(await workspaceRefreshRoute.POST(request('https://x/api/workspace/refresh', { method: 'POST', body: JSON.stringify({ triggerKind: 'manual' }) })))).ok, true);
+  assert.equal((await readJson(await workspaceRefreshRoute.POST(request('https://x/api/workspace/refresh', { method: 'POST', body: JSON.stringify({ triggerKind: 'manual' }), headers: { 'Idempotency-Key': 'workspace-refresh-ok' } })))).ok, true);
   assert.equal(usageIncremented.includes('workspace.refresh'), true);
   assert.equal((await readJson(await workspaceFreshnessRoute.GET())).ok, true);
 
@@ -374,14 +375,14 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await actionsRoute.POST(request('https://x/api/portfolio/actions', { method: 'POST', body: JSON.stringify({ kind: 'review_thesis', priority: 'high', headline: 'h', rationale: 'r' }) })))).ok, true);
   assert.equal((await readJson(await actionCompleteRoute.POST(request('https://x/api/portfolio/actions/act-1/complete', { method: 'POST' }), { params: Promise.resolve({ actionId: 'act-1' }) }))).ok, true);
   assert.equal((await readJson(await actionDismissRoute.POST(request('https://x/api/portfolio/actions/act-1/dismiss', { method: 'POST' }), { params: Promise.resolve({ actionId: 'act-1' }) }))).ok, true);
-  assert.equal((await readJson(await portfolioSnapshotGenerateRoute.POST(request('https://x/api/portfolio/snapshot/generate', { method: 'POST' })))).ok, true);
+  assert.equal((await readJson(await portfolioSnapshotGenerateRoute.POST(request('https://x/api/portfolio/snapshot/generate', { method: 'POST', headers: { 'Idempotency-Key': 'portfolio-generate-ok' } })))).ok, true);
   assert.equal(usageIncremented.includes('portfolio.snapshot.generate'), true);
   assert.equal((await readJson(await portfolioReplayRoute.GET(request('https://x/api/portfolio/replay?entityKind=position&entityId=pos-1')))).ok, true);
 
   assert.equal((await readJson(await analyticsLatestRoute.GET(request('https://x/api/analytics/latest')))).ok, true);
-  assert.equal((await readJson(await analyticsGenerateRoute.POST(request('https://x/api/analytics/generate', { method: 'POST' })))).ok, true);
+  assert.equal((await readJson(await analyticsGenerateRoute.POST(request('https://x/api/analytics/generate', { method: 'POST', headers: { 'Idempotency-Key': 'analytics-generate-ok' } })))).ok, true);
   assert.equal(usageIncremented.includes('analytics.generate'), true);
-  assert.equal((await readJson(await coachingGenerateRoute.POST(request('https://x/api/coaching/generate', { method: 'POST' })))).ok, true);
+  assert.equal((await readJson(await coachingGenerateRoute.POST(request('https://x/api/coaching/generate', { method: 'POST', headers: { 'Idempotency-Key': 'coaching-generate-ok' } })))).ok, true);
   assert.equal(usageIncremented.includes('coaching.generate'), true);
   assert.equal((await readJson(await analyticsTopSetupsRoute.GET(request('https://x/api/analytics/top-setups')))).ok, true);
   assert.equal((await readJson(await analyticsTopBehaviorsRoute.GET(request('https://x/api/analytics/top-behaviors')))).ok, true);
@@ -411,8 +412,21 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await refreshLatestRoute.GET())).ok, true);
   assert.equal((await readJson(await refreshHistoryRoute.GET(request('https://x/api/refresh/history?limit=5')))).ok, true);
   assert.equal((await readJson(await refreshFreshnessRoute.GET())).ok, true);
-  assert.equal((await readJson(await refreshRunRoute.POST(request('https://x/api/refresh/run', { method: 'POST', body: JSON.stringify({ triggerKind: 'manual' }) })))).ok, true);
+  assert.equal((await readJson(await refreshRunRoute.POST(request('https://x/api/refresh/run', { method: 'POST', body: JSON.stringify({ triggerKind: 'manual' }), headers: { 'Idempotency-Key': 'refresh-run-ok' } })))).ok, true);
+  assert.equal((await readJson(await journalInfluenceGenerateRoute.POST(request('https://x/api/journal/influence/generate', { method: 'POST', headers: { 'Idempotency-Key': 'journal-influence-ok' } })))).ok, true);
   assert.equal(usageIncremented.includes('refresh.run'), true);
+
+  securityDecisionMode = 'rate_limited';
+  assert.deepEqual(await readJson(await workspaceRefreshRoute.POST(request('https://x/api/workspace/refresh', { method: 'POST', body: JSON.stringify({ triggerKind: 'manual' }) }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  assert.deepEqual(await readJson(await analyticsGenerateRoute.POST(request('https://x/api/analytics/generate', { method: 'POST' }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  assert.deepEqual(await readJson(await coachingGenerateRoute.POST(request('https://x/api/coaching/generate', { method: 'POST' }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  assert.deepEqual(await readJson(await portfolioSnapshotGenerateRoute.POST(request('https://x/api/portfolio/snapshot/generate', { method: 'POST' }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  assert.deepEqual(await readJson(await refreshRunRoute.POST(request('https://x/api/refresh/run', { method: 'POST', body: JSON.stringify({ triggerKind: 'manual' }) }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  assert.deepEqual(await readJson(await journalInfluenceGenerateRoute.POST(request('https://x/api/journal/influence/generate', { method: 'POST' }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'idempotency_conflict';
+  assert.deepEqual(await readJson(await workspaceRefreshRoute.POST(request('https://x/api/workspace/refresh', { method: 'POST', headers: { 'Idempotency-Key': 'workspace-conflict' }, body: JSON.stringify({ triggerKind: 'manual' }) }))), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
+  assert.deepEqual(await readJson(await analyticsGenerateRoute.POST(request('https://x/api/analytics/generate', { method: 'POST', headers: { 'Idempotency-Key': 'analytics-conflict' } }))), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
+  securityDecisionMode = 'allowed';
 
   const accountEntitlements = await accountEntitlementsRoute.GET();
   assert.equal(accountEntitlements.status, 200);

@@ -42,3 +42,5 @@ export * from './billing-lifecycle.schema';
 export * from './billing-policy.schema';
 
 export * from './billing-admin.schema';
+
+export * from './billing-orchestration.schema';

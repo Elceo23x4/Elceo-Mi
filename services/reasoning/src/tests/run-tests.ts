@@ -21,6 +21,8 @@ import { runChartProjectionBuilderTests } from './chart-projection-builder.test.
 import { runJournalInfluenceAdoptionTests } from './journal-influence-adoption.test.js';
 import { runMarketEvidenceRegistryTests } from './market-evidence-registry.test.js';
 import { runSeoContentArchitectureTests } from './seo-content-architecture.test.js';
+import { runMarketEvidencePersistenceTests } from './market-evidence-persistence.test.js';
+import { runSeoContentPersistenceTests } from './seo-content-persistence.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -46,6 +48,8 @@ async function run(): Promise<void> {
   await runJournalInfluenceAdoptionTests();
   runMarketEvidenceRegistryTests();
   runSeoContentArchitectureTests();
+  await runMarketEvidencePersistenceTests();
+  await runSeoContentPersistenceTests();
   console.log('reasoning runtime contract tests passed');
 }
 

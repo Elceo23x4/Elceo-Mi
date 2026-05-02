@@ -108,3 +108,7 @@ Launch is **NO-GO** until all blockers are cleared:
 
 ## C5-A1 note
 C5-A1 starts backend market-evidence and SEO/content architecture expansion as a foundation only; no live provider integration is active yet.
+
+
+## C5-A2 note
+C5-A2 adds durable/replayable market evidence registry and SEO architecture snapshot persistence with persisted-only query services; no live provider ingestion is enabled yet.

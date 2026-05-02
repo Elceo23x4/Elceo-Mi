@@ -17,3 +17,5 @@ export function createReasoningPersistenceRepository(env: Record<string, string 
   }
   return new MemoryReasoningPersistenceRepository();
 }
+
+export * from './registry-snapshot-repository';

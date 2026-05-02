@@ -8,3 +8,9 @@ Backend SEO architecture foundation for canonical keyword clusters, page contrac
 - Structured data kinds are contract-backed for article/faq/howto/dataset/webpage.
 - Anti-abuse rule: avoid keyword stuffing and prioritize intent-matched authored content.
 - Frontend consumes snapshots later; this batch is backend-only and does not render pages.
+
+
+## C5-A2 durability/query/replay update
+- SEO architecture snapshots now persist durably via `app_seo_content_architecture_snapshots` with strict JSON serialization and schema-validated replay.
+- Query helpers read persisted snapshots only; no hidden regeneration.
+- Generation remains deterministic and backend-only; C5-A3 should add provider-ingestion foundations/contracts.

@@ -8,3 +8,9 @@ C5-A1 defines canonical market evidence classes, strict validation, deterministi
 - Excluded now: interbank/order-flow/bank-order sources due licensing complexity.
 - Placeholders: Tiingo-compatible market data source contract and TradingView-compatible chart presentation source contract are modeled as provider-ready evidence types but not integrated.
 - Future integration sequence: source adapters -> normalization -> persistence -> reasoning ingestion.
+
+
+## C5-A2 durability/query/replay update
+- Registry snapshots now persist durably via `app_market_evidence_registry_snapshots` with strict JSON serialization and schema-validated replay.
+- Query helpers read persisted rows only (latest/list/by-id replay) and never recompute on read.
+- Snapshot generation remains deterministic and provider-offline; live ingestion/adapters remain deferred to C5-A3.

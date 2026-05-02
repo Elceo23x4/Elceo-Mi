@@ -82,3 +82,9 @@
 
 ## C5-A1 note
 C5-A1 starts backend market-evidence and SEO/content architecture expansion as a foundation only; no live provider integration is active yet.
+
+
+## C5-A2 persistence readiness note
+- [ ] Market evidence registry snapshot migration applied (`0032_market_evidence_and_seo_snapshots.sql`).
+- [ ] SEO architecture snapshot migration applied (`0032_market_evidence_and_seo_snapshots.sql`).
+- [ ] Replay/query checks validated against persisted snapshot records only.

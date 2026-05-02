@@ -117,3 +117,6 @@ The durable portfolio domain core now provides canonical watchlist/position/acti
 
 ## Refresh runtime integration (C4-G)
 Analytics snapshots are now orchestrated by the canonical snapshot refresh runtime for subject-wide `*/*` regeneration and freshness tracking. See `docs/snapshot-refresh-runtime.md` for trigger, dependency, and replay semantics.
+
+
+C4-M6B2A note: related user-facing `.../generate` or refresh mutation routes are now protected by canonical server security decisioning (rate limit, idempotency, replay envelope mapping, and success-path audit logging).

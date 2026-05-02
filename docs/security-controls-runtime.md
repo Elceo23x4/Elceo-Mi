@@ -42,3 +42,24 @@ Behavior:
 - Workspace refresh and broader mutation-path coverage expansion.
 - Broader admin read/write route expansion where policy requires runtime controls.
 - Stronger idempotency replay semantics (optional prior-response body replay) if required.
+
+
+## C4-M6B2A protected user-facing routes
+- `POST /api/workspace/refresh` (`workspace_refresh`)
+- `POST /api/analytics/generate` (`analytics_generate`)
+- `POST /api/coaching/generate` (`coaching_generate`)
+- `POST /api/portfolio/snapshot/generate` (`portfolio_snapshot_generate`)
+- `POST /api/refresh/run` (`refresh_run`)
+- `POST /api/journal/influence/generate` (`internal_mutation`, narrow action pending)
+
+Behavior in M6B2A:
+- Security decision enforced after auth + existing validation/access checks and before mutation execution.
+- Idempotency headers accepted: `Idempotency-Key` and `x-idempotency-key`.
+- Block mapping: rate limit => `429`, idempotency conflict => `409`, suspicious replay => `409`.
+- Replayed requests return standardized `conflict` / `Request replayed` envelope (full prior-response replay remains deferred).
+- Successful high-cost user mutations now record security audit events through shared helper.
+
+## M6B2B next
+- Extend user mutation-route protection coverage beyond generate/refresh routes.
+- Expand broader admin write surfaces where runtime controls are still missing.
+- Implement stronger full-response idempotency replay semantics when required.

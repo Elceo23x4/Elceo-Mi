@@ -105,3 +105,6 @@ The durable portfolio domain core now provides canonical watchlist/position/acti
 
 ## Workspace snapshot linkage (C4-F)
 The canonical workspace snapshot engine now consumes persisted portfolio/coaching outputs as durable cross-domain operating inputs. Portfolio and coaching query surfaces remain independently authoritative for their domains, while workspace snapshots provide the unified operating-state surface for later dashboard/admin UI integration.
+
+
+C4-M6B2A note: related user-facing `.../generate` or refresh mutation routes are now protected by canonical server security decisioning (rate limit, idempotency, replay envelope mapping, and success-path audit logging).

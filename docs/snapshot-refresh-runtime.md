@@ -94,3 +94,6 @@ Those are follow-up integration layers, not core runtime contracts.
 
 ## C4-I ops runtime linkage
 Snapshot refresh execution can now be orchestrated by the canonical ops runtime scheduler/service layer with durable ops run history and lease safety.
+
+
+C4-M6B2A note: related user-facing `.../generate` or refresh mutation routes are now protected by canonical server security decisioning (rate limit, idempotency, replay envelope mapping, and success-path audit logging).

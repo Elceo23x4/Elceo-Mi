@@ -96,3 +96,6 @@ The canonical workspace snapshot engine now consumes persisted portfolio/coachin
 
 ## C4-H application API linkage
 Authenticated API routes now expose watchlist/positions/actions lifecycle operations, replay, snapshot query/generation, and attention summaries for future UI integration.
+
+
+C4-M6B2A note: related user-facing `.../generate` or refresh mutation routes are now protected by canonical server security decisioning (rate limit, idempotency, replay envelope mapping, and success-path audit logging).

@@ -175,3 +175,17 @@ These routes consume the canonical billing lifecycle boundary and intentionally 
 - `POST /api/internal/billing/orchestration/retry` body `{ subjectId }`
 
 All routes are internal/admin operational surfaces: internal token + `admin.ops` access, standardized success/error envelopes.
+
+
+## C4-M6B1 security-protected mutation routes
+Protected by canonical server security decisioning (`requireSecurityDecision`) with standardized blocked/replay envelopes and helper-managed idempotency completion/failure + audit:
+- `POST /api/internal/billing/reconcile`
+- `POST /api/internal/billing/reconcile/retry`
+- `POST /api/internal/billing/policy/evaluate`
+- `POST /api/internal/billing/orchestration/retry`
+- `POST /api/notifications/delivery/dispatch`
+- `POST /api/ops/notifications/expire-verifications`
+- `POST /api/ops/notifications/process-feedback`
+- `POST /api/admin/entitlements/plan`
+- `POST /api/admin/entitlements/state`
+- `POST /api/admin/entitlements/override`

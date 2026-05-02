@@ -30,3 +30,11 @@
 - Perform final penetration/security review before launch.
 - Enforce edge/WAF rate limiting in front of app-level limits.
 - Run backup/restore drill for production database before go-live.
+
+## C4-M8B smoke-test verification command
+- Run `npm run smoke:production` against staging before production rollout.
+- Required env: `ELCEO_SMOKE_BASE_URL`.
+- Optional env: `ELCEO_INTERNAL_API_TOKEN`, `ELCEO_SMOKE_AUTH_TOKEN`.
+- Default safe mode (`ELCEO_SMOKE_ALLOW_MUTATIONS=false`) verifies envelope/auth/internal-gate behavior without intentional mutations.
+- If `ELCEO_SMOKE_AUTH_TOKEN` is absent, authenticated checks are marked skipped and do not fail the full run.
+- Any failed required smoke check is release-blocking.

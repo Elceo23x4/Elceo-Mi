@@ -57,3 +57,16 @@
 - Optional full-response idempotency replay body support.
 - Infra/WAF tier rate limits layered above app limits.
 - Final external penetration/security test sign-off.
+
+## 10) Deployment smoke test command (C4-M8B)
+- [ ] Export `ELCEO_SMOKE_BASE_URL` to the deployed environment URL (staging first).
+- [ ] Optionally export `ELCEO_INTERNAL_API_TOKEN` for internal/admin read checks.
+- [ ] Optionally export `ELCEO_SMOKE_AUTH_TOKEN` for authenticated read checks.
+- [ ] Keep `ELCEO_SMOKE_ALLOW_MUTATIONS=false` (default safe mode).
+- [ ] Run `npm run smoke:production`.
+- [ ] Review summary output (`passed/failed/skipped`) and treat any failed required check as release-blocking.
+
+### Smoke test safety behavior
+- Default mode is non-destructive and read-only focused.
+- Mutation probes are skipped unless `ELCEO_SMOKE_ALLOW_MUTATIONS=true`.
+- Mutation mode is intended for staging/safe environments only, not live production.

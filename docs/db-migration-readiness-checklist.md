@@ -61,3 +61,13 @@ Apply `infra/db/schema/*.sql` in lexicographic filename order exactly as listed:
 - Existing nullable compatibility columns/JSON payload fields are expected across snapshot/runtime tables to preserve replay compatibility.
 - Do not enforce new NOT NULL constraints without a dedicated backfill batch.
 - If schema additions require backfill later, run in staged chunks and verify replay validators after each chunk.
+
+## Migration file verification command (C4-M8B)
+Run:
+- `npm run check:migrations`
+
+What it verifies:
+- Reads `infra/db/schema/*.sql`.
+- Prints the exact lexicographic execution order.
+- Warns when numeric prefixes are duplicated (for example `0027_*`, `0028_*`).
+- Exits non-zero only if schema directory is unreadable/missing or exact duplicate filenames are found.

@@ -277,3 +277,13 @@ Notes:
 - Envelope shape returned by routes is unchanged.
 - Replay storage persists serialized success envelopes plus hashes; request bodies remain hash-only.
 - No residual legacy completion tail remains for protected JSON mutation routes using `completeSecurityDecision(...)` in this batch.
+
+## C4-M8B deployed API smoke-test coverage
+Deployment verification script: `npm run smoke:production` (`scripts/production-smoke-test.mjs`).
+
+Coverage intent:
+- Unauthorized envelope checks on protected account/admin surfaces.
+- Internal-token gate validation on admin read routes.
+- Safe read checks for admin and authenticated route families when tokens are provided.
+- Protected POST rejection behavior without auth/internal credentials.
+- Optional mutation-mode checks only when `ELCEO_SMOKE_ALLOW_MUTATIONS=true`.

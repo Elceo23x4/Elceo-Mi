@@ -43,3 +43,6 @@
 - Run `npm run release:gate` before deployment handoff.
 - Use `docs/deployment-runbook.md` for staging -> production release sequence.
 - Staging smoke-test execution (`ELCEO_SMOKE_BASE_URL=... npm run smoke:production`) is required post-deploy and pre-production.
+
+## Final production status linkage (C4-M8D)
+- Cross-check final launch blockers, caveats, and go/no-go criteria in `docs/final-production-status-report.md` before production sign-off.

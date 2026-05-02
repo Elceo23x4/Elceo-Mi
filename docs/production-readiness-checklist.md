@@ -75,3 +75,6 @@
 - [ ] Run `npm run release:gate` locally before requesting deployment approval.
 - [ ] Follow staged rollout sequence in `docs/deployment-runbook.md`.
 - [ ] Run staging smoke validation (`ELCEO_SMOKE_BASE_URL=... npm run smoke:production`) after staging deploy and before production promotion.
+
+## 12) Final production status report (C4-M8D)
+- Reference: `docs/final-production-status-report.md` for consolidated backend completion, launch blockers, and explicit go/no-go criteria.

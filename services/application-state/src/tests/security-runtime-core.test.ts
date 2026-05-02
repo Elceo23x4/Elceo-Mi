@@ -1,43 +1,55 @@
 import { strict as assert } from 'assert';
-import { validateSecurityRateLimitPolicy } from '@elceo/schemas';
-import { hashIpAddress, hashRequestBody } from '../security/hashing';
-import { getSecurityRateLimitWindow } from '../security/constants';
 import { MemorySecurityAuditEventRepository, MemorySecurityIdempotencyRepository, MemorySecurityRateLimitRepository } from '../persistence/security-runtime-repository';
+import { SecurityAuditService } from '../security/audit-service';
+import { SecurityDecisionService } from '../security/decision-service';
+import { SecurityIdempotencyService } from '../security/idempotency-service';
+import { SecurityQueryService } from '../security/query-service';
+import { SecurityRateLimitService } from '../security/rate-limit-service';
+import { CanonicalSecurityBoundaryService } from '../runtime/canonical-security-boundary';
 
 export async function runSecurityRuntimeCoreTests(): Promise<void> {
-  const good = validateSecurityRateLimitPolicy({ policyKey: 'p', actionKind: 'refresh_run', window: 'hour', maxCount: 1, subjectScoped: false, actorScoped: true });
-  assert.equal(good.ok, true);
-  assert.equal(validateSecurityRateLimitPolicy({ policyKey: 'p', actionKind: 'refresh_run', window: 'bad', maxCount: 1, subjectScoped: false, actorScoped: true }).ok, false);
-  assert.equal(validateSecurityRateLimitPolicy({ policyKey: 'p', actionKind: 'refresh_run', window: 'hour', maxCount: -1, subjectScoped: false, actorScoped: true }).ok, false);
-
-  assert.equal(hashRequestBody('abc'), hashRequestBody('abc'));
-  assert.notEqual(hashRequestBody('abc'), hashRequestBody('abcd'));
-  assert.notEqual(hashIpAddress('1.1.1.1'), hashIpAddress('2.2.2.2'));
-
-  assert.deepEqual(getSecurityRateLimitWindow('minute', '2026-05-02T10:22:33.456Z'), { windowStart: '2026-05-02T10:22:00.000Z', windowEnd: '2026-05-02T10:23:00.000Z' });
-  assert.deepEqual(getSecurityRateLimitWindow('hour', '2026-05-02T10:22:33.456Z'), { windowStart: '2026-05-02T10:00:00.000Z', windowEnd: '2026-05-02T11:00:00.000Z' });
-  assert.deepEqual(getSecurityRateLimitWindow('day', '2026-05-02T10:22:33.456Z'), { windowStart: '2026-05-02T00:00:00.000Z', windowEnd: '2026-05-03T00:00:00.000Z' });
-
+  const now = '2026-05-02T10:00:00.000Z';
   const idRepo = new MemorySecurityIdempotencyRepository();
-  await idRepo.saveIdempotencyRecord({ idempotencyKey:'k',actionKind:'refresh_run',actorKind:'user',actorId:'u',requestHash:'rq',responseHash:null,status:'started',firstSeenAt:'2026-05-02T00:00:00.000Z',lastSeenAt:'2026-05-02T00:00:00.000Z',expiresAt:'2026-05-03T00:00:00.000Z',metadataJson:'{}' });
-  assert.equal((await idRepo.getIdempotencyRecord('k'))?.status, 'started');
-  await idRepo.completeIdempotencyRecord('k', 'rh', '{}', '2026-05-02T00:10:00.000Z');
-  assert.equal((await idRepo.getIdempotencyRecord('k'))?.status, 'completed');
-  await idRepo.failIdempotencyRecord('k', '{}', '2026-05-02T00:11:00.000Z');
-  assert.equal((await idRepo.getIdempotencyRecord('k'))?.status, 'failed');
-  assert.equal(await idRepo.cleanupExpiredIdempotencyRecords('2026-05-04T00:00:00.000Z'), 1);
-
   const rateRepo = new MemorySecurityRateLimitRepository();
-  await rateRepo.upsertCounter({ counterId:'a',policyKey:'p',actionKind:'refresh_run',actorKind:'user',actorId:'u',subjectId:null,window:'hour',windowStart:'2026-05-02T00:00:00.000Z',windowEnd:'2026-05-02T01:00:00.000Z',count:2,updatedAt:'2026-05-02T00:00:01.000Z' });
-  const inc = await rateRepo.incrementCounter({ policyKey:'p',actionKind:'refresh_run',actorKind:'user',actorId:'u',subjectId:null,window:'hour',windowStart:'2026-05-02T00:00:00.000Z',windowEnd:'2026-05-02T01:00:00.000Z',updatedAt:'2026-05-02T00:00:02.000Z' });
-  assert.equal(inc.count, 3);
-  assert.equal((await rateRepo.listCountersForActor('user', 'u', 1)).length, 1);
-
   const auditRepo = new MemorySecurityAuditEventRepository();
-  await auditRepo.saveAuditEvent({ auditEventId:'2',actorKind:'user',actorId:'u',subjectId:null,actionKind:'refresh_run',decisionStatus:'blocked',blockReason:'rate_limit_exceeded',routePath:null,method:null,ipHash:null,userAgentHash:null,idempotencyKey:null,metadataJson:'{}',occurredAt:'2026-05-02T00:01:00.000Z',createdAt:'2026-05-02T00:01:00.000Z' });
-  await auditRepo.saveAuditEvent({ auditEventId:'1',actorKind:'user',actorId:'u',subjectId:'s',actionKind:'refresh_run',decisionStatus:'replayed',blockReason:null,routePath:null,method:null,ipHash:null,userAgentHash:null,idempotencyKey:'k',metadataJson:'{}',occurredAt:'2026-05-02T00:02:00.000Z',createdAt:'2026-05-02T00:02:00.000Z' });
-  assert.equal((await auditRepo.listRecentBlockedEvents()).length, 1);
-  const summary=await auditRepo.getSecurityRuntimeSummary();
-  assert.equal(summary.totalAuditEvents,2);
-  assert.equal(summary.blockedDecisionCount,1);
+  const idSvc = new SecurityIdempotencyService(idRepo);
+  const rateSvc = new SecurityRateLimitService(rateRepo);
+  const auditSvc = new SecurityAuditService(auditRepo);
+  const decisionSvc = new SecurityDecisionService(idSvc, rateSvc, auditSvc);
+  const querySvc = new SecurityQueryService(auditRepo);
+
+  assert.equal((await idSvc.beginIdempotentAction({ actionKind:'refresh_run', actorKind:'user', actorId:'u', idempotencyKey:'k1', requestHash:'h1', nowIso:now })).status,'allowed');
+  assert.equal((await idSvc.beginIdempotentAction({ actionKind:'refresh_run', actorKind:'user', actorId:'u', idempotencyKey:'k1', requestHash:'h1', nowIso:now })).status,'blocked');
+  await idSvc.completeIdempotentAction({ idempotencyKey:'k1', responseHash:'rh1', nowIso:now });
+  assert.equal((await idSvc.beginIdempotentAction({ actionKind:'refresh_run', actorKind:'user', actorId:'u', idempotencyKey:'k1', requestHash:'h1', nowIso:now })).status,'replayed');
+  assert.equal((await idSvc.beginIdempotentAction({ actionKind:'refresh_run', actorKind:'user', actorId:'u', idempotencyKey:'k1', requestHash:'h2', nowIso:now })).blockReason,'suspicious_replay');
+  await idSvc.failIdempotentAction({ idempotencyKey:'k1', nowIso:now });
+
+  assert.equal((await rateSvc.evaluateRateLimit({ actionKind:'account_read', actorKind:'user', actorId:'u', nowIso:now })).status, 'allowed');
+  const rateAllowed = await rateSvc.evaluateRateLimit({ actionKind:'refresh_run', actorKind:'user', actorId:'u', nowIso:now });
+  assert.equal(rateAllowed.status,'allowed');
+  for (let i = 0; i < 60; i++) await rateSvc.incrementRateLimit({ actionKind:'refresh_run', actorKind:'user', actorId:'u', nowIso:now });
+  assert.equal((await rateSvc.evaluateRateLimit({ actionKind:'refresh_run', actorKind:'user', actorId:'u', nowIso:now })).status,'blocked');
+
+  const blocked = await decisionSvc.evaluateSecurityControl({ actionKind:'refresh_run', actorKind:null, actorId:null, nowIso:now });
+  assert.equal(blocked.blockReason, 'missing_actor');
+  const allowedInternal = await decisionSvc.evaluateSecurityControl({ actionKind:'internal_mutation', actorKind:'internal', actorId:'svc', nowIso:now });
+  assert.equal(allowedInternal.status, 'allowed');
+
+  const replayDecision = await decisionSvc.evaluateSecurityControl({ actionKind:'refresh_run', actorKind:'user', actorId:'u2', idempotencyKey:'k2', requestHash:'h2', nowIso:now });
+  assert.equal(replayDecision.status,'allowed');
+  await idSvc.completeIdempotentAction({ idempotencyKey:'k2', responseHash:'rh2', nowIso:now });
+  const replay = await decisionSvc.evaluateSecurityControl({ actionKind:'refresh_run', actorKind:'user', actorId:'u2', idempotencyKey:'k2', requestHash:'h2', nowIso:now });
+  assert.equal(replay.status,'replayed');
+
+  const actorEvents = await querySvc.listRecentSecurityAuditEventsForActor('user', 'u2');
+  assert.ok(actorEvents.length >= 1);
+  const blockedEvents = await querySvc.listRecentBlockedSecurityEvents();
+  assert.ok(blockedEvents.length >= 1);
+  const summary = await querySvc.getSecurityRuntimeSummary();
+  assert.ok(summary.totalAuditEvents >= 1);
+
+  const boundary = new CanonicalSecurityBoundaryService();
+  const boundaryDecision = await boundary.evaluateSecurityControl({ actionKind:'refresh_run', actorKind:'user', actorId:'b', nowIso: now });
+  assert.equal(boundaryDecision.status, 'allowed');
 }

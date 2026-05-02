@@ -465,3 +465,7 @@ export type BillingPolicyTransitionRepository = {
   listRecentTransitionsForSubject(subjectKind:'user',subjectId:string,limit?:number): Promise<PersistedBillingPolicyTransitionRecord[]>;
   getLatestTransitionForReconciliationRun(sourceReconciliationRunId:string): Promise<PersistedBillingPolicyTransitionRecord | null>;
 };
+
+
+export type PersistedBillingOrchestrationRunRecord={runId:string;subjectKind:'user';subjectId:string;providerKind:'stripe'|'manual_test'|'internal_import';retryPlanJson:string;status:'success'|'partial_success'|'failed'|'skipped';changedLifecycle:boolean;changedPolicy:boolean;changedEntitlement:boolean;sourceReconciliationRunId:string|null;sourcePolicyTransitionId:string|null;startedAt:string;endedAt:string;runJson:string;createdAt:string;};
+export type BillingOrchestrationRunRepository={saveRun(record:PersistedBillingOrchestrationRunRecord):Promise<void>;getRunById(runId:string):Promise<PersistedBillingOrchestrationRunRecord|null>;getLatestRunForSubject(subjectKind:'user',subjectId:string):Promise<PersistedBillingOrchestrationRunRecord|null>;listRecentRunsForSubject(subjectKind:'user',subjectId:string,limit?:number):Promise<PersistedBillingOrchestrationRunRecord[]>;getLatestRunForRetrySource(sourceReconciliationRunId?:string|null,sourcePolicyTransitionId?:string|null):Promise<PersistedBillingOrchestrationRunRecord|null>;};

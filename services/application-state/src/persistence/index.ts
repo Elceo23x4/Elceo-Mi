@@ -19,3 +19,5 @@ export * from './payment-provider-repository';
 export * from './billing-lifecycle-repository';
 
 export * from './billing-policy-repository';
+
+export * from './billing-orchestration-repository';

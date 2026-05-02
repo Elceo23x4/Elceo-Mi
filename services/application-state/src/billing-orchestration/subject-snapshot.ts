@@ -1,0 +1,6 @@
+import type { BillingOrchestrationSubjectSnapshot } from '@elceo/types';
+import { BillingAdminQueryService } from '../billing-admin/query-service';
+import { BillingLifecycleQueryService } from '../billing/query-service';
+import { BillingPolicyQueryService } from '../billing-policy/query-service';
+import { BillingOrchestrationQueryService } from './query-service';
+export const getBillingOrchestrationSubjectSnapshot=async(subjectKind:'user',subjectId:string,query:BillingOrchestrationQueryService,admin:BillingAdminQueryService,lifecycle:BillingLifecycleQueryService,policy:BillingPolicyQueryService):Promise<BillingOrchestrationSubjectSnapshot>=>{const [latestRetryCandidate,latestOrchestrationRun,latestLifecycleSnapshot,latestPolicySnapshot,adminSnapshot]=await Promise.all([admin.listBillingRetryCandidates().then((x)=>x.find((y)=>y.subjectId===subjectId)??null),query.getLatestBillingOrchestrationRun(subjectKind,subjectId),lifecycle.getBillingLifecycleSnapshot(subjectKind,subjectId),policy.getBillingPolicySnapshot(subjectKind,subjectId),admin.getBillingAdminSubjectSnapshot(subjectKind,subjectId)]); return {generatedAt:new Date().toISOString(),subjectKind,subjectId,latestRetryCandidate,latestOrchestrationRun,latestLifecycleSnapshot,latestPolicySnapshot,adminSnapshot};};

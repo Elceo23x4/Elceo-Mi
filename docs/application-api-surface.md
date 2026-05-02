@@ -235,3 +235,12 @@ Remaining M6C2 follow-up scope (not covered by this partial slice):
 Remaining M6C2 follow-up scope after C4-M6C2B:
 - portfolio watchlist/position/action mutation routes
 - notification target/subscription mutation routes
+
+## C4-M6C2C portfolio mutation security wiring
+Narrow security action kinds are now applied for portfolio mutation families:
+- Watchlist POST/PATCH/lifecycle write routes use `portfolio_watchlist_write`.
+- Position POST/PATCH/lifecycle write routes use `portfolio_position_write`.
+- Action-item POST/PATCH/lifecycle write routes use `portfolio_action_write`.
+- `POST /api/portfolio/snapshot/generate` remains on `portfolio_snapshot_generate`.
+
+Portfolio read routes remain unprotected by mutation security decisioning by design.

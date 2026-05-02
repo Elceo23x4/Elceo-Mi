@@ -22,6 +22,7 @@ export type ProviderEnv = {
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_PRICE_ID_PREMIUM?: string;
+  ELCEO_INTERNAL_API_TOKEN?: string;
   SENTRY_DSN?: string;
   LOG_LEVEL?: 'debug' | 'info' | 'warn' | 'error';
 };
@@ -30,6 +31,15 @@ export type EnvValidationResult = {
   valid: boolean;
   errors: string[];
 };
+
+function isValidAbsoluteHttpUrl(input: string): boolean {
+  try {
+    const parsed = new URL(input);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
 export function readProviderEnv(env: Record<string, string | undefined> = {}): ProviderEnv {
   const out: ProviderEnv = {};
@@ -56,6 +66,7 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   if (env.STRIPE_SECRET_KEY) out.STRIPE_SECRET_KEY = env.STRIPE_SECRET_KEY;
   if (env.STRIPE_WEBHOOK_SECRET) out.STRIPE_WEBHOOK_SECRET = env.STRIPE_WEBHOOK_SECRET;
   if (env.STRIPE_PRICE_ID_PREMIUM) out.STRIPE_PRICE_ID_PREMIUM = env.STRIPE_PRICE_ID_PREMIUM;
+  if (env.ELCEO_INTERNAL_API_TOKEN) out.ELCEO_INTERNAL_API_TOKEN = env.ELCEO_INTERNAL_API_TOKEN;
   if (env.SENTRY_DSN) out.SENTRY_DSN = env.SENTRY_DSN;
   if (env.LOG_LEVEL === 'debug' || env.LOG_LEVEL === 'info' || env.LOG_LEVEL === 'warn' || env.LOG_LEVEL === 'error') out.LOG_LEVEL = env.LOG_LEVEL;
   return out;
@@ -63,13 +74,20 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
 
 export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
   const errors: string[] = [];
+  const appEnv = env.APP_ENV ?? 'development';
 
   if (!env.NEXT_PUBLIC_APP_BASE_URL) {
     errors.push('NEXT_PUBLIC_APP_BASE_URL is required');
+  } else if (!isValidAbsoluteHttpUrl(env.NEXT_PUBLIC_APP_BASE_URL)) {
+    errors.push('NEXT_PUBLIC_APP_BASE_URL must be an absolute http(s) URL');
   }
 
-  if (env.APP_ENV === 'production' && !env.AUTH_SECRET) {
+  if (appEnv === 'production' && !env.AUTH_SECRET) {
     errors.push('AUTH_SECRET is required in production');
+  }
+
+  if (appEnv === 'production' && !env.ELCEO_INTERNAL_API_TOKEN) {
+    errors.push('ELCEO_INTERNAL_API_TOKEN is required in production');
   }
 
   if (env.BILLING_PROVIDER === 'stripe') {

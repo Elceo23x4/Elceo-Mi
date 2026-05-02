@@ -108,3 +108,16 @@ Scope note:
 - M6C1 is policy foundation only (types/schemas/policies/tests/docs).
 - Route-level integration of these new action kinds is deferred to M6C2.
 - Replay semantics remain unchanged (standard replay conflict envelope, no full prior-response body replay).
+
+## C4-M6C2A narrow route integration (partial slice)
+- Covered in this partial slice only:
+  - `/api/journal/cases` -> `journal_case_write`
+  - `/api/journal/cases/[caseId]/plan` -> `journal_case_lifecycle`
+  - `/api/journal/influence/generate` -> `journal_influence_generate`
+  - `/api/notifications/verification/issue` -> `notification_verification_issue`
+  - `/api/notifications/verification/consume` -> `notification_verification_consume`
+- Remaining for follow-up batches:
+  - other journal lifecycle mutation routes
+  - all portfolio watchlist/position/action mutation routes
+  - notification target/subscription mutation routes
+- Replay semantics remain unchanged (standardized replay conflict envelope; no prior-response payload replay body).

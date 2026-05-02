@@ -10,12 +10,12 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   const timeframeScope = (params.get('timeframeScope') ?? '*') as '*' | 'M5' | 'M15' | 'H1' | 'H4' | 'D1';
   const requestBody = { assetScope, timeframeScope };
   const actor = { actorKind: 'user' as const, actorId: subject.subjectId, subjectId: subject.subjectId };
-  const security = await requireSecurityDecision({ request, routePath: '/api/journal/influence/generate', method: 'POST', actionKind: 'internal_mutation', actor, subjectId: subject.subjectId, requestBody });
+  const security = await requireSecurityDecision({ request, routePath: '/api/journal/influence/generate', method: 'POST', actionKind: 'journal_influence_generate', actor, subjectId: subject.subjectId, requestBody });
   if (!security.ok) return security.response;
   try {
     const snapshot = await getApplicationStateRuntime().journalInfluence.generateJournalInfluenceSnapshot({ subjectKind: subject.subjectKind, subjectId: subject.subjectId, assetScope, timeframeScope });
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { snapshot } });
-    await auditInternalMutation({ actor, subjectId: subject.subjectId, actionKind: 'internal_mutation', routePath: '/api/journal/influence/generate', method: 'POST', request, idempotencyKey: security.idempotencyKey });
+    await auditInternalMutation({ actor, subjectId: subject.subjectId, actionKind: 'journal_influence_generate', routePath: '/api/journal/influence/generate', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ snapshot });
   } catch (error) {
     await failSecurityDecision({ idempotencyKey: security.idempotencyKey, errorMessage: error instanceof Error ? error.message : 'unknown_error' });

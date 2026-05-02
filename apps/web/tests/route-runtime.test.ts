@@ -108,6 +108,7 @@ let securityDecisionMode: 'allowed' | 'rate_limited' | 'idempotency_conflict' | 
 let securityCompletedCount = 0;
 let securityFailedCount = 0;
 let securityAuditCount = 0;
+let latestSecurityActionKind: string | null = null;
 
 const journalCase = {
   identity: { caseId: 'case-1', subjectKind: 'user' as const, subjectId: subject.subjectId, asset: 'XAU/USD', timeframe: 'H1', title: 'T' }
@@ -215,6 +216,7 @@ const mockApplicationStateRuntime = {
 
   security: {
     evaluateSecurityControl: async (_params: { actionKind: string; actorKind: string; actorId: string; subjectId?: string | null; idempotencyKey?: string | null; requestHash?: string | null; routePath?: string; method?: string }) => {
+      latestSecurityActionKind = _params.actionKind;
       if (securityDecisionMode === 'rate_limited') return { decisionId: 'sec-rate', actionKind: 'billing_reconcile', actorKind: 'internal', actorId: 'internal-api', subjectId: 'user-2', status: 'blocked', blockReason: 'rate_limit_exceeded', idempotencyKey: 'idem', rateLimitPolicyKey: 'p', currentCount: 60, maxCount: 60, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
       if (securityDecisionMode === 'idempotency_conflict') return { decisionId: 'sec-idem', actionKind: 'billing_reconcile', actorKind: 'internal', actorId: 'internal-api', subjectId: 'user-2', status: 'blocked', blockReason: 'idempotency_conflict', idempotencyKey: 'idem', rateLimitPolicyKey: null, currentCount: null, maxCount: null, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
       if (securityDecisionMode === 'replayed') return { decisionId: 'sec-replay', actionKind: 'billing_orchestration_retry', actorKind: 'internal', actorId: 'internal-api', subjectId: 'user-2', status: 'replayed', blockReason: null, idempotencyKey: 'idem', rateLimitPolicyKey: null, currentCount: null, maxCount: null, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
@@ -319,6 +321,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   securityCompletedCount = 0;
   securityFailedCount = 0;
   securityAuditCount = 0;
+  latestSecurityActionKind = null;
 
   setAuthTestOverrides({ subjectResolver: async () => null });
   const unauth = await workspaceCurrentRoute.GET();
@@ -348,8 +351,28 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(historyInvalid)).ok, false);
   assert.equal((await readJson(await workspaceAgendaRoute.GET())).ok, true);
 
-  assert.equal((await readJson(await journalCasesRoute.POST(request('https://x/api/journal/cases', { method: 'POST', body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', title: 'draft' }) })))).ok, true);
-  assert.equal((await readJson(await journalPlanRoute.POST(request('https://x/api/journal/cases/case-1/plan', { method: 'POST', body: JSON.stringify({ thesis: 'x' }) }), { params: Promise.resolve({ caseId: 'case-1' }) }))).ok, true);
+  const journalCaseCreateOk = await journalCasesRoute.POST(request('https://x/api/journal/cases', { method: 'POST', headers: { 'Idempotency-Key': 'journal-create-ok' }, body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', title: 'draft' }) }));
+  assert.equal(journalCaseCreateOk.status, 200);
+  assert.equal((await readJson(journalCaseCreateOk)).ok, true);
+  assert.equal(latestSecurityActionKind, 'journal_case_write');
+  assert.equal(securityCompletedCount > 0, true);
+  assert.equal(securityAuditCount > 0, true);
+  securityDecisionMode = 'rate_limited';
+  const journalCaseCreateRateLimited = await journalCasesRoute.POST(request('https://x/api/journal/cases', { method: 'POST', body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', title: 'draft' }) }));
+  assert.deepEqual(await readJson(journalCaseCreateRateLimited), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'idempotency_conflict';
+  const journalCaseCreateIdempotencyConflict = await journalCasesRoute.POST(request('https://x/api/journal/cases', { method: 'POST', headers: { 'Idempotency-Key': 'journal-create-conflict' }, body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', title: 'draft' }) }));
+  assert.deepEqual(await readJson(journalCaseCreateIdempotencyConflict), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
+  securityDecisionMode = 'allowed';
+
+  const journalPlanOk = await journalPlanRoute.POST(request('https://x/api/journal/cases/case-1/plan', { method: 'POST', body: JSON.stringify({ thesis: 'x' }) }), { params: Promise.resolve({ caseId: 'case-1' }) });
+  assert.equal(journalPlanOk.status, 200);
+  assert.equal((await readJson(journalPlanOk)).ok, true);
+  assert.equal(latestSecurityActionKind, 'journal_case_lifecycle');
+  securityDecisionMode = 'rate_limited';
+  const journalPlanRateLimited = await journalPlanRoute.POST(request('https://x/api/journal/cases/case-1/plan', { method: 'POST', body: JSON.stringify({ thesis: 'x' }) }), { params: Promise.resolve({ caseId: 'case-1' }) });
+  assert.deepEqual(await readJson(journalPlanRateLimited), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'allowed';
   assert.equal((await readJson(await journalExecuteRoute.POST(request('https://x/api/journal/cases/case-1/execute', { method: 'POST', body: JSON.stringify({ openedAt: '2026-01-01T00:00:00.000Z' }) }), { params: Promise.resolve({ caseId: 'case-1' }) }))).ok, true);
   assert.equal((await readJson(await journalCloseRoute.POST(request('https://x/api/journal/cases/case-1/close', { method: 'POST', body: JSON.stringify({ closedAt: '2026-01-01T00:00:00.000Z', outcome: 'win' }) }), { params: Promise.resolve({ caseId: 'case-1' }) }))).ok, true);
   assert.equal((await readJson(await journalReviewRoute.POST(request('https://x/api/journal/cases/case-1/review', { method: 'POST', body: JSON.stringify({ reviewedAt: '2026-01-01T00:00:00.000Z' }) }), { params: Promise.resolve({ caseId: 'case-1' }) }))).ok, true);
@@ -392,8 +415,26 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await notificationsSummaryRoute.GET())).ok, true);
   assert.equal((await readJson(await notificationsInboxRoute.GET(request('https://x/api/notifications/inbox?limit=5')))).ok, true);
   await notificationsTargetsRoute.POST(request('https://x/api/notifications/targets', { method: 'POST', body: JSON.stringify({ channel: 'email', value: 'a@b.com' }) }));
-  assert.equal((await readJson(await notificationsVerificationIssueRoute.POST(request('https://x/api/notifications/verification/issue', { method: 'POST', body: JSON.stringify({ targetId: 'target-1' }) })))).ok, true);
-  assert.equal((await readJson(await notificationsVerificationConsumeRoute.POST(request('https://x/api/notifications/verification/consume', { method: 'POST', body: JSON.stringify({ targetId: 'target-1', token: 'abc' }) })))).ok, true);
+  const notificationVerificationIssueOk = await notificationsVerificationIssueRoute.POST(request('https://x/api/notifications/verification/issue', { method: 'POST', headers: { 'Idempotency-Key': 'notification-issue-ok' }, body: JSON.stringify({ targetId: 'target-1' }) }));
+  assert.equal(notificationVerificationIssueOk.status, 200);
+  assert.equal((await readJson(notificationVerificationIssueOk)).ok, true);
+  assert.equal(latestSecurityActionKind, 'notification_verification_issue');
+  securityDecisionMode = 'rate_limited';
+  const notificationVerificationIssueRateLimited = await notificationsVerificationIssueRoute.POST(request('https://x/api/notifications/verification/issue', { method: 'POST', body: JSON.stringify({ targetId: 'target-1' }) }));
+  assert.deepEqual(await readJson(notificationVerificationIssueRateLimited), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'idempotency_conflict';
+  const notificationVerificationIssueIdempotencyConflict = await notificationsVerificationIssueRoute.POST(request('https://x/api/notifications/verification/issue', { method: 'POST', headers: { 'Idempotency-Key': 'notification-issue-conflict' }, body: JSON.stringify({ targetId: 'target-1' }) }));
+  assert.deepEqual(await readJson(notificationVerificationIssueIdempotencyConflict), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
+  securityDecisionMode = 'allowed';
+
+  const notificationVerificationConsumeOk = await notificationsVerificationConsumeRoute.POST(request('https://x/api/notifications/verification/consume', { method: 'POST', body: JSON.stringify({ targetId: 'target-1', token: 'abc' }) }));
+  assert.equal(notificationVerificationConsumeOk.status, 200);
+  assert.equal((await readJson(notificationVerificationConsumeOk)).ok, true);
+  assert.equal(latestSecurityActionKind, 'notification_verification_consume');
+  securityDecisionMode = 'rate_limited';
+  const notificationVerificationConsumeRateLimited = await notificationsVerificationConsumeRoute.POST(request('https://x/api/notifications/verification/consume', { method: 'POST', body: JSON.stringify({ targetId: 'target-1', token: 'abc' }) }));
+  assert.deepEqual(await readJson(notificationVerificationConsumeRateLimited), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'allowed';
   assert.equal((await readJson(await notificationsHealthRoute.GET())).ok, true);
 
   const blockedDispatch = await notificationsDispatchRoute.POST(request('https://x/api/notifications/delivery/dispatch', { method: 'POST' }));
@@ -413,7 +454,9 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await refreshHistoryRoute.GET(request('https://x/api/refresh/history?limit=5')))).ok, true);
   assert.equal((await readJson(await refreshFreshnessRoute.GET())).ok, true);
   assert.equal((await readJson(await refreshRunRoute.POST(request('https://x/api/refresh/run', { method: 'POST', body: JSON.stringify({ triggerKind: 'manual' }), headers: { 'Idempotency-Key': 'refresh-run-ok' } })))).ok, true);
-  assert.equal((await readJson(await journalInfluenceGenerateRoute.POST(request('https://x/api/journal/influence/generate', { method: 'POST', headers: { 'Idempotency-Key': 'journal-influence-ok' } })))).ok, true);
+  const journalInfluenceOk = await journalInfluenceGenerateRoute.POST(request('https://x/api/journal/influence/generate', { method: 'POST', headers: { 'Idempotency-Key': 'journal-influence-ok' } }));
+  assert.equal((await readJson(journalInfluenceOk)).ok, true);
+  assert.equal(latestSecurityActionKind, 'journal_influence_generate');
   assert.equal(usageIncremented.includes('refresh.run'), true);
 
   securityDecisionMode = 'rate_limited';

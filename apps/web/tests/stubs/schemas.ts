@@ -83,3 +83,18 @@ export const parseAdminBillingPolicyTransitionsQuery = (url: URL): Ok<{ subjectI
     ? { ok: false, errors: ['limit must be integer 1..500'] }
     : { ok: true, value: { subjectId: subject.value.subjectId, limit } };
 };
+
+export const validateInternalBillingOrchestrationRetryRequest = (input: unknown) => validation<{ subjectId: string }>(input, ['subjectId']);
+export const parseAdminBillingOrchestrationSubjectQuery = (url: URL): Ok<{ subjectId: string }> | Fail => {
+  const subjectId = url.searchParams.get('subjectId');
+  if (!subjectId) return { ok: false, errors: ['subjectId must be non-empty string'] };
+  return { ok: true, value: { subjectId } };
+};
+export const parseAdminBillingOrchestrationRunsQuery = (url: URL): Ok<{ subjectId: string; limit?: number }> | Fail => {
+  const subject = parseAdminBillingOrchestrationSubjectQuery(url);
+  if (!subject.ok) return subject;
+  const limitRaw = url.searchParams.get('limit');
+  if (!limitRaw) return { ok: true, value: { subjectId: subject.value.subjectId } };
+  const limit = Number.parseInt(limitRaw, 10);
+  return Number.isNaN(limit) ? { ok: false, errors: ['limit must be integer 1..500'] } : { ok: true, value: { subjectId: subject.value.subjectId, limit } };
+};

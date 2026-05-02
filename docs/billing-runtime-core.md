@@ -39,3 +39,14 @@ This batch remains provider-agnostic and manual-operations-oriented. It still in
 ## C4-M1C provider boundary and routes
 
 C4-M1C adds a canonical payment-provider runtime boundary plus internal/admin API routes for provider event ingest/replay and provider-plan mapping. This layer composes existing normalization/dedupe/sync/translator modules without re-implementing provider logic in routes.
+
+## C4-M5B orchestration routes
+C4-M5B adds API wiring for billing orchestration read/retry operations only:
+- `GET /api/admin/billing/orchestration/latest?subjectId=`
+- `GET /api/admin/billing/orchestration/runs?subjectId=&limit=`
+- `GET /api/admin/billing/orchestration/subject?subjectId=`
+- `POST /api/internal/billing/orchestration/retry` with `{ subjectId }`
+
+Protection model: internal token and `admin.ops` feature access for all routes.
+
+Non-goals remain unchanged: no admin UI, no checkout/payment collection UX, and no automated scheduler retry jobs in this batch.

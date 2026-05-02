@@ -35,3 +35,11 @@ Added controlled retry route: `POST /api/internal/billing/reconcile/retry` with 
 Policy re-evaluation remains at `POST /api/internal/billing/policy/evaluate` and is reused as-is for controlled internal usage.
 This batch intentionally excludes admin UI and background retry automation; those move to C4-M4C.
 
+
+## C4-M5B Orchestration route completion
+Admin/internal orchestration route layer now exposes subject-scoped latest run, recent runs, subject snapshots, and controlled internal retry execution through canonical billing orchestration runtime boundaries.
+
+Next hardening batch should add:
+- operator audit trails for retry invocations
+- explicit idempotency/rate controls for retry route
+- scheduler/queue automation with bounded concurrency and backoff policy

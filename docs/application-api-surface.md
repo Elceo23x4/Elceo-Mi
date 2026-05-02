@@ -167,3 +167,11 @@ These routes consume the canonical billing lifecycle boundary and intentionally 
 - POST `/api/internal/billing/reconcile/retry`
 - POST `/api/internal/billing/policy/evaluate` retained for re-evaluation alignment.
 
+
+## C4-M5B billing orchestration API additions
+- `GET /api/admin/billing/orchestration/latest?subjectId=...`
+- `GET /api/admin/billing/orchestration/runs?subjectId=...&limit=...`
+- `GET /api/admin/billing/orchestration/subject?subjectId=...`
+- `POST /api/internal/billing/orchestration/retry` body `{ subjectId }`
+
+All routes are internal/admin operational surfaces: internal token + `admin.ops` access, standardized success/error envelopes.

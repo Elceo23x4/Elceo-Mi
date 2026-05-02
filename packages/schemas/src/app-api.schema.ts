@@ -18,6 +18,9 @@ import type {
   AdminBillingPolicyTransitionsQuery,
   AdminBillingOperationsLimitQuery,
   AdminBillingOperationsSubjectQuery,
+  InternalBillingOrchestrationRetryRequest,
+  AdminBillingOrchestrationSubjectQuery,
+  AdminBillingOrchestrationRunsQuery,
   ActionCreateRequest,
   ActionUpdateRequest,
   JournalAdjustExecutionRequest,
@@ -352,6 +355,29 @@ export function parseAdminBillingPolicyTransitionsQuery(url: URL): SchemaValidat
   return { ok: true, value: { subjectId: subject.value.subjectId, limit } };
 }
 
+
+
+export function validateInternalBillingOrchestrationRetryRequest(i: unknown): SchemaValidationResult<InternalBillingOrchestrationRetryRequest> {
+  const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; const v = r.value;
+  if (!isNonEmptyString(v.subjectId)) return { ok: false, errors: ['subjectId must be non-empty string'] };
+  return { ok: true, value: v as InternalBillingOrchestrationRetryRequest };
+}
+
+export function parseAdminBillingOrchestrationSubjectQuery(url: URL): SchemaValidationResult<AdminBillingOrchestrationSubjectQuery> {
+  const subjectId = url.searchParams.get('subjectId');
+  if (!isNonEmptyString(subjectId)) return { ok: false, errors: ['subjectId must be non-empty string'] };
+  return { ok: true, value: { subjectId } };
+}
+
+export function parseAdminBillingOrchestrationRunsQuery(url: URL): SchemaValidationResult<AdminBillingOrchestrationRunsQuery> {
+  const subject = parseAdminBillingOrchestrationSubjectQuery(url);
+  if (!subject.ok) return subject;
+  const limitRaw = url.searchParams.get('limit');
+  if (limitRaw === null) return { ok: true, value: { subjectId: subject.value.subjectId } };
+  const limit = Number.parseInt(limitRaw, 10);
+  if (!Number.isInteger(limit) || limit <= 0 || limit > 500) return { ok: false, errors: ['limit must be integer 1..500'] };
+  return { ok: true, value: { subjectId: subject.value.subjectId, limit } };
+}
 
 export function parseAdminBillingOperationsLimitQuery(url: URL): SchemaValidationResult<AdminBillingOperationsLimitQuery> {
   const limitRaw = url.searchParams.get('limit');

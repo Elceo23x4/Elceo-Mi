@@ -25,6 +25,8 @@ export * from './billing';
 
 export * from './payment-providers';
 
+export * from './billing-admin';
+
 export * from './runtime/canonical-billing-lifecycle-boundary';
 
 export * from './billing-policy';

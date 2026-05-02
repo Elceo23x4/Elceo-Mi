@@ -200,6 +200,10 @@ export type AdminBillingChangePlanRequest = { subjectId: string; nextPlanKind: E
 export type BillingProviderEventReplayRequest = { limit?: number };
 export type InternalBillingReconcileRequest = { subjectId: string; providerKind?: BillingExternalProviderKind; sourceEventId?: string };
 export type InternalBillingPolicyEvaluateRequest = { subjectId: string; sourceReconciliationRunId?: string };
+
+export type InternalBillingOrchestrationRetryRequest = { subjectId: string };
+export type AdminBillingOrchestrationSubjectQuery = { subjectId: string };
+export type AdminBillingOrchestrationRunsQuery = { subjectId: string; limit?: number };
 export type BillingProviderPlanMappingRequest = { providerKind: BillingExternalProviderKind; externalPriceId: string; mappedPlanKind: ElceoPlanKind; interval: BillingPlanInterval };
 export type AdminBillingProviderEventsQuery = { providerKind?: BillingExternalProviderKind; subjectId?: string; limit?: number };
 export type AdminBillingPolicySubjectQuery = { subjectId: string };

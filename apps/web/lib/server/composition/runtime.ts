@@ -13,6 +13,10 @@ import {
   CanonicalBillingPolicyBoundaryService,
   CanonicalPaymentProviderBoundaryService,
   CanonicalBillingAdminBoundaryService,
+  CanonicalBillingOrchestrationBoundaryService,
+  BillingOrchestrationExecutionService,
+  BillingOrchestrationQueryService,
+  BillingAdminQueryService,
   BillingLifecycleQueryService,
   BillingLifecycleReconciliationService,
   BillingLifecycleReplayService,
@@ -38,6 +42,7 @@ import {
   SQLBillingReconciliationRunRepository,
   SQLBillingPolicyTransitionRepository,
   SQLProviderPlanMappingRepository,
+  SQLBillingOrchestrationRunRepository,
   PaymentProviderTranslator
 } from '@elceo/application-state';
 import { CanonicalAnalyticsBoundaryService, CanonicalCoachingBoundaryService } from '@elceo/analytics';
@@ -76,6 +81,7 @@ type ApplicationStateRuntime = {
   billingLifecycle: CanonicalBillingLifecycleBoundaryService;
   billingPolicy: CanonicalBillingPolicyBoundaryService;
   billingAdmin: CanonicalBillingAdminBoundaryService;
+  billingOrchestration: CanonicalBillingOrchestrationBoundaryService;
   paymentProviders: CanonicalPaymentProviderBoundaryService;
 };
 
@@ -229,9 +235,11 @@ export function getApplicationStateRuntime(): ApplicationStateRuntime {
     new PaymentProviderTranslator(billing, externalSubscriptions)
   );
   const billingPolicyTransitions = new SQLBillingPolicyTransitionRepository();
-  applicationStateRuntime = {
-    journal, journalInfluence, portfolio, workspace, refresh, admin, entitlements, billing, billingLifecycle,
-    billingPolicy: new CanonicalBillingPolicyBoundaryService(
+  const billingLifecycleQuery = new BillingLifecycleQueryService(new SQLBillingCustomerRepository(), new SQLBillingLifecycleSubscriptionRepository(), new SQLBillingReconciliationRunRepository(), new SQLAccountEntitlementRepository());
+  const billingPolicyQuery = new BillingPolicyQueryService(new SQLBillingCustomerRepository(), new SQLBillingLifecycleSubscriptionRepository(), billingPolicyTransitions, new SQLAccountEntitlementRepository());
+  const billingAdmin = new CanonicalBillingAdminBoundaryService();
+  const billingAdminQuery = new BillingAdminQueryService(billingLifecycleQuery, billingPolicyQuery);
+  const billingPolicy = new CanonicalBillingPolicyBoundaryService(
       new BillingPolicyTransitionService(
         new SQLBillingCustomerRepository(),
         new SQLBillingLifecycleSubscriptionRepository(),
@@ -244,8 +252,19 @@ export function getApplicationStateRuntime(): ApplicationStateRuntime {
         billingPolicyTransitions,
         new SQLAccountEntitlementRepository()
       )
+  );
+  const orchestrationRepo = new SQLBillingOrchestrationRunRepository();
+  applicationStateRuntime = {
+    journal, journalInfluence, portfolio, workspace, refresh, admin, entitlements, billing, billingLifecycle,
+    billingPolicy,
+    billingAdmin,
+    billingOrchestration: new CanonicalBillingOrchestrationBoundaryService(
+      new BillingOrchestrationExecutionService(orchestrationRepo, billingAdminQuery, billingLifecycle, billingPolicy),
+      new BillingOrchestrationQueryService(orchestrationRepo),
+      billingAdminQuery,
+      billingLifecycleQuery,
+      billingPolicyQuery
     ),
-    billingAdmin: new CanonicalBillingAdminBoundaryService(),
     paymentProviders
   };
   return applicationStateRuntime;
@@ -262,3 +281,7 @@ export function getBillingLifecycleRuntime() { return getApplicationStateRuntime
 export function getBillingPolicyRuntime() { return getApplicationStateRuntime().billingPolicy; }
 
 export function getBillingAdminRuntime() { return getApplicationStateRuntime().billingAdmin; }
+
+export function getBillingOrchestrationRuntime() {
+  return getApplicationStateRuntime().billingOrchestration;
+}

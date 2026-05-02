@@ -43,3 +43,11 @@ The control-plane backend now has concrete billing-admin runtime read models (su
 - `/api/internal/billing/reconcile/retry`
 All routes are internal/admin guarded; no end-user direct access.
 
+
+## C4-M5B Billing Orchestration Controls
+- `/api/admin/billing/orchestration/latest`
+- `/api/admin/billing/orchestration/runs`
+- `/api/admin/billing/orchestration/subject`
+- `/api/internal/billing/orchestration/retry`
+
+This completion is API-only. Admin UI wiring and automated scheduler-managed retries are intentionally deferred to the next hardening batch.

@@ -1,0 +1,94 @@
+# ELCEO Deployment Runbook (C4-M8C)
+
+## Release stages
+1. Local release gate
+2. CI validation
+3. Staging deploy
+4. Staging smoke test
+5. Migration verification
+6. Production env verification
+7. Production deploy
+8. Production smoke test
+9. Monitoring window
+10. Rollback criteria
+
+## 1) Local release gate
+Run from repo root:
+
+```bash
+npm run release:gate
+```
+
+This executes the approved validation chain and stops on first failure.
+
+## 2) CI validation
+CI must run the same quality checks as local release gate (without production secrets):
+- `npm install`
+- `npm run typecheck`
+- `npm run test`
+- `npm run build`
+- package lint commands
+- `npm run check:migrations`
+
+## 3) Staging deploy
+Deploy the candidate artifact to staging first. Keep artifact/version identifier recorded for rollback.
+
+## 4) Staging smoke test
+Run smoke tests only against deployed staging URL:
+
+```bash
+ELCEO_SMOKE_BASE_URL=https://staging.example.com npm run smoke:production
+```
+
+Optional env:
+- `ELCEO_INTERNAL_API_TOKEN`
+- `ELCEO_SMOKE_AUTH_TOKEN`
+
+Smoke behavior:
+- Read-only by default.
+- Auth checks are skipped if auth token is absent.
+- Mutation checks require `ELCEO_SMOKE_ALLOW_MUTATIONS=true` and should be staging-only.
+
+## 5) Migration verification
+Before and during rollout:
+
+```bash
+npm run check:migrations
+```
+
+Apply DB migrations in lexicographic file order.
+
+## 6) Production env verification
+Confirm required production env/config is set before deploy:
+- `NEXT_PUBLIC_APP_BASE_URL`
+- `ELCEO_INTERNAL_API_TOKEN`
+- DB/persistence variables
+- Auth secrets (`AUTH_SECRET`, provider secrets if enabled)
+- Billing/provider secrets if enabled
+- Notification/provider secrets if enabled
+
+## 7) Production deploy
+Promote the validated artifact to production only after staging checks are clean.
+
+## 8) Production smoke test
+Run post-deploy smoke checks:
+
+```bash
+ELCEO_SMOKE_BASE_URL=https://prod.example.com npm run smoke:production
+```
+
+Default mode remains non-destructive unless mutation mode is explicitly enabled.
+
+## 9) Monitoring window
+Track API errors, security audit events, billing/notification runtime metrics, and deployment logs through a defined post-release monitoring window.
+
+## 10) Rollback criteria and process
+- Take DB backup before migrations.
+- Keep prior deployment artifact available for immediate rollback.
+- Rollback triggers (examples): persistent 5xx increase, failed required smoke checks, migration integrity failures, severe auth/internal-gate regressions.
+- On rollback: restore previous artifact, execute DB restore/recovery plan as needed, then run verification smoke checks.
+
+## Known warnings to acknowledge
+- Next.js Edge runtime warning (`jose` / `CompressionStream` / `DecompressionStream`).
+- `NEXT_PUBLIC_APP_BASE_URL` warning if not configured.
+- npm `Unknown env config "http-proxy"` warning when present in CI/shell env.

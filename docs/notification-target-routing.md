@@ -73,3 +73,14 @@ C3-H should cover:
 C3-H introduces deterministic backend registration/upsert and lifecycle controls for targets and subscriptions via the canonical management boundary.
 Target identity now uses canonical `targetKey` and subscription identity uses canonical `subscriptionKey` for durable idempotent upserts.
 Subject-level inbox aggregation and operational summary read surfaces are backend-ready for later API/UI exposure.
+
+
+## C4-M6C2D notification narrow-action completion
+- Notification target mutation routes are protected with `notification_target_write`: `POST /api/notifications/targets`, `POST /api/notifications/targets/[targetId]/enable`, `POST /api/notifications/targets/[targetId]/disable`.
+- Notification subscription mutation routes are protected with `notification_subscription_write`: `POST /api/notifications/subscriptions`, `PATCH /api/notifications/subscriptions/[subscriptionId]`.
+- Verification mutation routes remain protected with narrow actions from C4-M6C2A: `notification_verification_issue` and `notification_verification_consume`.
+- Internal delivery dispatch remains protected with `notification_dispatch`.
+- Read-equivalent notification routes (`GET /api/notifications/summary`, `GET /api/notifications/inbox`, `GET /api/notifications/targets`, `GET /api/notifications/subscriptions`, `GET /api/notifications/health`) remain intentionally outside mutation security decisioning because they do not mutate state.
+- Replay semantics are unchanged: replayed requests return the standardized conflict replay envelope (no full prior-response payload replay yet).
+- C4-M6C2 narrow-route action coverage is now complete across journal, portfolio, and notification mutation families.
+- Remaining production hardening is unchanged: full-response idempotency replay, infra/WAF rate limits, and final penetration/security review.

@@ -44,6 +44,10 @@ import * as coachingGenerateRoute from '../app/api/coaching/generate/route';
 import * as notificationsSummaryRoute from '../app/api/notifications/summary/route';
 import * as notificationsInboxRoute from '../app/api/notifications/inbox/route';
 import * as notificationsTargetsRoute from '../app/api/notifications/targets/route';
+import * as notificationsTargetEnableRoute from '../app/api/notifications/targets/[targetId]/enable/route';
+import * as notificationsTargetDisableRoute from '../app/api/notifications/targets/[targetId]/disable/route';
+import * as notificationsSubscriptionsRoute from '../app/api/notifications/subscriptions/route';
+import * as notificationsSubscriptionRoute from '../app/api/notifications/subscriptions/[subscriptionId]/route';
 import * as notificationsVerificationIssueRoute from '../app/api/notifications/verification/issue/route';
 import * as notificationsVerificationConsumeRoute from '../app/api/notifications/verification/consume/route';
 import * as notificationsHealthRoute from '../app/api/notifications/health/route';
@@ -277,7 +281,8 @@ const mockNotificationRuntime = {
   management: {
     getNotificationOperationalSummaryForSubject: async () => ({ inboxUnreadCount: 0 }),
     listInbox: async () => [],
-    registerOrUpdateTarget: async () => ({ targetId: 'target-1' })
+    registerOrUpdateTarget: async () => ({ targetId: 'target-1' }),
+    registerOrUpdateSubscription: async () => ({ subscriptionId: 'sub-1' })
   },
   verification: {
     issueTargetVerification: async () => ({ verificationId: 'v-1' }),
@@ -465,7 +470,32 @@ export async function runRouteRuntimeTests(): Promise<void> {
 
   assert.equal((await readJson(await notificationsSummaryRoute.GET())).ok, true);
   assert.equal((await readJson(await notificationsInboxRoute.GET(request('https://x/api/notifications/inbox?limit=5')))).ok, true);
-  await notificationsTargetsRoute.POST(request('https://x/api/notifications/targets', { method: 'POST', body: JSON.stringify({ channel: 'email', value: 'a@b.com' }) }));
+  securityDecisionMode = 'rate_limited';
+  assert.deepEqual(await readJson(await notificationsTargetsRoute.POST(request('https://x/api/notifications/targets', { method: 'POST', body: JSON.stringify({ channel: 'email', value: 'a@b.com' }) }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'idempotency_conflict';
+  assert.deepEqual(await readJson(await notificationsTargetsRoute.POST(request('https://x/api/notifications/targets', { method: 'POST', headers: { 'Idempotency-Key': 'notification-target-conflict' }, body: JSON.stringify({ channel: 'email', value: 'a@b.com' }) }))), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
+  securityDecisionMode = 'allowed';
+  assert.equal((await readJson(await notificationsTargetsRoute.POST(request('https://x/api/notifications/targets', { method: 'POST', headers: { 'Idempotency-Key': 'notification-target-ok' }, body: JSON.stringify({ channel: 'email', value: 'a@b.com' }) })))).ok, true);
+  assert.equal(latestSecurityActionKind, 'notification_target_write');
+  securityDecisionMode = 'rate_limited';
+  assert.deepEqual(await readJson(await notificationsTargetEnableRoute.POST(request('https://x/api/notifications/targets/target-1/enable', { method: 'POST' }), { params: Promise.resolve({ targetId: 'target-1' }) })), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'allowed';
+  assert.equal(latestSecurityActionKind, 'notification_target_write');
+  securityDecisionMode = 'rate_limited';
+  assert.deepEqual(await readJson(await notificationsTargetDisableRoute.POST(request('https://x/api/notifications/targets/target-1/disable', { method: 'POST' }), { params: Promise.resolve({ targetId: 'target-1' }) })), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'allowed';
+  assert.equal(latestSecurityActionKind, 'notification_target_write');
+  securityDecisionMode = 'rate_limited';
+  assert.deepEqual(await readJson(await notificationsSubscriptionsRoute.POST(request('https://x/api/notifications/subscriptions', { method: 'POST', body: JSON.stringify({ channel: 'email', minimumMaterialityScore: 0.7 }) }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'idempotency_conflict';
+  assert.deepEqual(await readJson(await notificationsSubscriptionsRoute.POST(request('https://x/api/notifications/subscriptions', { method: 'POST', headers: { 'Idempotency-Key': 'notification-subscription-conflict' }, body: JSON.stringify({ channel: 'email', minimumMaterialityScore: 0.7 }) }))), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
+  securityDecisionMode = 'allowed';
+  assert.equal((await readJson(await notificationsSubscriptionsRoute.POST(request('https://x/api/notifications/subscriptions', { method: 'POST', headers: { 'Idempotency-Key': 'notification-subscription-ok' }, body: JSON.stringify({ channel: 'email', minimumMaterialityScore: 0.7 }) })))).ok, true);
+  assert.equal(latestSecurityActionKind, 'notification_subscription_write');
+  securityDecisionMode = 'rate_limited';
+  assert.deepEqual(await readJson(await notificationsSubscriptionRoute.PATCH(request('https://x/api/notifications/subscriptions/sub-1', { method: 'PATCH', body: JSON.stringify({ isEnabled: false }) }), { params: Promise.resolve({ subscriptionId: 'sub-1' }) })), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'allowed';
+  assert.equal(latestSecurityActionKind, 'notification_subscription_write');
   const notificationVerificationIssueOk = await notificationsVerificationIssueRoute.POST(request('https://x/api/notifications/verification/issue', { method: 'POST', headers: { 'Idempotency-Key': 'notification-issue-ok' }, body: JSON.stringify({ targetId: 'target-1' }) }));
   assert.equal(notificationVerificationIssueOk.status, 200);
   assert.equal((await readJson(notificationVerificationIssueOk)).ok, true);
@@ -487,6 +517,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.deepEqual(await readJson(notificationVerificationConsumeRateLimited), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
   securityDecisionMode = 'allowed';
   assert.equal((await readJson(await notificationsHealthRoute.GET())).ok, true);
+  assert.equal(securityAuditCount > 0, true);
 
   const blockedDispatch = await notificationsDispatchRoute.POST(request('https://x/api/notifications/delivery/dispatch', { method: 'POST' }));
   assert.equal(blockedDispatch.status, 403);

@@ -193,3 +193,11 @@ Protected by canonical server security decisioning (`requireSecurityDecision`) w
 
 ## C4-M6B2A user-facing route security integration
 Security controls (`requireSecurityDecision`) now protect authenticated high-cost user mutation routes: workspace refresh, analytics generate, coaching generate, portfolio snapshot generate, refresh run, and journal influence generate. These routes now enforce rate-limit/idempotency/replay envelopes and complete/fail idempotency lifecycle around mutation execution, with audit recording on successful mutation paths.
+
+## C4-M6B2B mutation security sweep updates
+Security runtime protection was extended to remaining billing/admin/internal mutation routes:
+- Admin billing mutation POST routes: trial/activate/renew/change-plan/past-due/cancel-at-period-end/expire/pause/resume.
+- Admin billing provider mapping mutation POST route.
+- Internal billing provider event ingest/replay POST routes.
+
+All newly protected routes now evaluate security controls between auth+validation and mutation execution, then complete/fail idempotency lifecycle and emit audit events on success.

@@ -60,3 +60,16 @@ The admin entitlement mutation routes are now runtime-security protected:
 - `POST /api/admin/entitlements/override`
 
 All three retain internal-token gating, then run canonical security control evaluation with `actionKind: admin_write` before mutation execution. Successful mutations complete idempotent actions (when idempotency headers are provided) and emit security audit events.
+
+## C4-M6B2B admin billing write hardening
+Admin billing mutation surfaces now use canonical route-security enforcement (`admin_write`) in addition to existing internal-token gates and request validation:
+- `/api/admin/billing/trial`
+- `/api/admin/billing/activate`
+- `/api/admin/billing/renew`
+- `/api/admin/billing/change-plan`
+- `/api/admin/billing/past-due`
+- `/api/admin/billing/cancel-at-period-end`
+- `/api/admin/billing/expire`
+- `/api/admin/billing/pause`
+- `/api/admin/billing/resume`
+- `/api/admin/billing/provider-plan-mapping`

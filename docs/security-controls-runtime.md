@@ -63,3 +63,31 @@ Behavior in M6B2A:
 - Extend user mutation-route protection coverage beyond generate/refresh routes.
 - Expand broader admin write surfaces where runtime controls are still missing.
 - Implement stronger full-response idempotency replay semantics when required.
+
+## C4-M6B2B route security coverage sweep
+Newly protected in this batch (high-risk mutation/internal/admin paths):
+- `POST /api/admin/billing/trial`
+- `POST /api/admin/billing/activate`
+- `POST /api/admin/billing/renew`
+- `POST /api/admin/billing/change-plan`
+- `POST /api/admin/billing/past-due`
+- `POST /api/admin/billing/cancel-at-period-end`
+- `POST /api/admin/billing/expire`
+- `POST /api/admin/billing/pause`
+- `POST /api/admin/billing/resume`
+- `POST /api/admin/billing/provider-plan-mapping`
+- `POST /api/internal/billing/provider-events`
+- `POST /api/internal/billing/provider-events/replay`
+
+Coverage semantics:
+- Admin billing writes use `actionKind: admin_write`.
+- Internal provider-event mutation/replay uses `actionKind: internal_mutation`.
+- Idempotency headers supported: `Idempotency-Key`, `x-idempotency-key`.
+- Blocked/replayed responses use the standardized security envelope; replay currently returns a normalized conflict envelope, not full prior response payload body.
+- Successful mutations complete idempotency state (when key exists) and record security audit events.
+
+Deferred cleanup after this sweep:
+- Optional full-response idempotency replay body support.
+- Per-route narrower action kinds for journal/portfolio/notifications write routes.
+- Infrastructure/WAF rate limits on top of app-level controls.
+- Final security review + penetration test.

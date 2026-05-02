@@ -15,7 +15,9 @@
     "typecheck": "npm run --workspaces --if-present typecheck",
     "test": "npm run --workspaces --if-present test",
     "format": "npm run --workspaces --if-present format",
-    "quality-gate": "npm run typecheck && npm run test"
+    "quality-gate": "npm run typecheck && npm run test",
+    "smoke:production": "node scripts/production-smoke-test.mjs",
+    "check:migrations": "node scripts/check-db-migrations.mjs"
   },
   "engines": {
     "node": ">=20.0.0"

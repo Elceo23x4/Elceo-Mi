@@ -18,9 +18,10 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   try {
     const snapshot = await getAnalyticsRuntime().analytics.generateAnalyticsSnapshot({ subjectKind: access.subject.subjectKind, subjectId: access.subject.subjectId, ...requestBody });
     await maybeIncrementUsage('analytics.generate', { request });
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { snapshot } });
+    const envelope = { ok: true as const, data: { snapshot } };
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { snapshot }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: access.subject.subjectId, actionKind: 'analytics_generate', routePath: '/api/analytics/generate', method: 'POST', request, idempotencyKey: security.idempotencyKey });
-    return jsonSuccess({ snapshot });
+    return jsonSuccess(envelope.data);
   } catch (error) {
     await failSecurityDecision({ idempotencyKey: security.idempotencyKey, errorMessage: error instanceof Error ? error.message : 'unknown_error' });
     throw error;

@@ -34,14 +34,53 @@ export async function requireSecurityDecision(params: { request: Request; routeP
   const idempotencyKey = getIdempotencyKeyFromRequest(params.request);
   const requestHash = buildSecurityRequestHash(params.requestBody ?? {});
   const decision = await getSecurityRuntime().evaluateSecurityControl({ actionKind: params.actionKind, actorKind: params.actor.actorKind, actorId: params.actor.actorId, subjectId: params.subjectId ?? params.actor.subjectId, idempotencyKey, requestHash, routePath: params.routePath, method: params.method, ipAddress: params.request.headers.get('x-forwarded-for'), userAgent: params.request.headers.get('user-agent'), nowIso });
-  if (decision.status === 'allowed') return { ok: true as const, decision, idempotencyKey };
-  if (decision.status === 'replayed') return { ok: false as const, decision, response: jsonError('conflict', 'Request replayed', ['replayed'], 409), idempotencyKey };
-  return { ok: false as const, decision, response: mapBlockReason(decision.blockReason), idempotencyKey };
+  if (decision.status === 'allowed') return { ok: true as const, decision, idempotencyKey, requestHash };
+  if (decision.status === 'replayed') {
+    const replay = await getSecurityRuntime().getIdempotencyReplayResult(idempotencyKey ?? '', requestHash, nowIso);
+    if (!replay.replayable || !replay.responseJson) {
+      return {
+        ok: false as const,
+        decision,
+        response: jsonError('conflict', 'Replay unavailable', ['replay_unavailable', replay.reason], 409),
+        idempotencyKey,
+        requestHash
+      };
+    }
+    try {
+      const envelope = JSON.parse(replay.responseJson) as unknown;
+      return { ok: false as const, decision, response: Response.json(envelope, { status: replay.httpStatus ?? 200 }), idempotencyKey, requestHash };
+    } catch {
+      return {
+        ok: false as const,
+        decision,
+        response: jsonError('internal_error', 'Replay response parse failure', ['replay_response_malformed'], 500),
+        idempotencyKey,
+        requestHash
+      };
+    }
+  }
+  return { ok: false as const, decision, response: mapBlockReason(decision.blockReason), idempotencyKey, requestHash };
 }
 
-export async function completeSecurityDecision(params: { decision: SecurityDecision; idempotencyKey: string | null; responseBody: unknown; }) {
+export async function completeSecurityDecision(params: { decision: SecurityDecision; idempotencyKey: string | null; responseBody: unknown; responseEnvelope?: unknown; httpStatus?: number; requestHash?: string; }) {
   if (!params.idempotencyKey) return;
-  await getSecurityRuntime().completeIdempotentAction({ idempotencyKey: params.idempotencyKey, responseHash: buildSecurityRequestHash(params.responseBody), nowIso: new Date().toISOString() });
+  const nowIso = new Date().toISOString();
+  if (params.responseEnvelope) {
+    const responseJson = JSON.stringify(params.responseEnvelope);
+    await getSecurityRuntime().completeIdempotentActionWithResponse({
+      idempotencyKey: params.idempotencyKey,
+      actionKind: params.decision.actionKind,
+      actorKind: params.decision.actorKind,
+      actorId: params.decision.actorId,
+      requestHash: params.requestHash ?? '',
+      responseHash: buildSecurityRequestHash(params.responseBody),
+      httpStatus: params.httpStatus ?? 200,
+      responseJson,
+      completedAt: nowIso
+    });
+    return;
+  }
+  await getSecurityRuntime().completeIdempotentAction({ idempotencyKey: params.idempotencyKey, responseHash: buildSecurityRequestHash(params.responseBody), nowIso });
 }
 
 export async function failSecurityDecision(params: { idempotencyKey: string | null; errorMessage: string; }) {

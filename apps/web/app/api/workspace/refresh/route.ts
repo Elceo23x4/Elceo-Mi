@@ -14,9 +14,10 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   try {
     const report = await getRefreshRuntime().runSnapshotRefresh(access.subject.subjectKind, access.subject.subjectId, body.triggerKind);
     await maybeIncrementUsage('workspace.refresh', { request });
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { report } });
+    const envelope = { ok: true as const, data: { report } };
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { report }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: access.subject.subjectId, actionKind: 'workspace_refresh', routePath: '/api/workspace/refresh', method: 'POST', request, idempotencyKey: security.idempotencyKey });
-    return jsonSuccess({ report });
+    return jsonSuccess(envelope.data);
   } catch (error) {
     await failSecurityDecision({ idempotencyKey: security.idempotencyKey, errorMessage: error instanceof Error ? error.message : 'unknown_error' });
     throw error;

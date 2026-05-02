@@ -113,6 +113,9 @@ let usageIncremented: string[] = [];
 
 let securityDecisionMode: 'allowed' | 'rate_limited' | 'idempotency_conflict' | 'replayed' = 'allowed';
 let securityCompletedCount = 0;
+let securityCompletedWithResponseCount = 0;
+let replayMode: 'stored' | 'unavailable' | 'malformed' = 'stored';
+let replayResponseJson = '{"ok":true,"data":{"run":{"runId":"replayed"}}}';
 let securityFailedCount = 0;
 let securityAuditCount = 0;
 let latestSecurityActionKind: string | null = null;
@@ -233,6 +236,12 @@ const mockApplicationStateRuntime = {
       return { decisionId: 'sec-allow', actionKind: 'billing_reconcile', actorKind: 'internal', actorId: 'internal-api', subjectId: 'user-2', status: 'allowed', blockReason: null, idempotencyKey: 'idem', rateLimitPolicyKey: null, currentCount: null, maxCount: null, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
     },
     completeIdempotentAction: async (_params: { idempotencyKey: string; responseHash: string; nowIso: string }) => { securityCompletedCount += 1; },
+    completeIdempotentActionWithResponse: async (_params: { idempotencyKey: string; requestHash: string; responseHash: string; httpStatus: number; responseJson: string; completedAt: string }) => { securityCompletedWithResponseCount += 1; securityCompletedCount += 1; replayResponseJson = _params.responseJson; },
+    getIdempotencyReplayResult: async (_idempotencyKey: string, _requestHash: string, _asOfIso?: string) => {
+      if (replayMode === 'unavailable') return { replayable: false, reason: 'no_completed_response', completedAt: null, httpStatus: null, responseJson: null };
+      if (replayMode === 'malformed') return { replayable: true, reason: 'completed_response_found', completedAt: '2026-01-01T00:00:00.000Z', httpStatus: 200, responseJson: '{' };
+      return { replayable: true, reason: 'completed_response_found', completedAt: '2026-01-01T00:00:00.000Z', httpStatus: 200, responseJson: replayResponseJson };
+    },
     failIdempotentAction: async (_params: { idempotencyKey: string; nowIso: string; metadata?: Record<string, unknown> }) => { securityFailedCount += 1; },
     recordSecurityAuditEvent: async (_params: { actorKind: string; actorId: string; actionKind: string }) => { securityAuditCount += 1; return { ok: true }; }
   },
@@ -330,6 +339,8 @@ export async function runRouteRuntimeTests(): Promise<void> {
   usageIncremented = [];
   securityDecisionMode = 'allowed';
   securityCompletedCount = 0;
+  securityCompletedWithResponseCount = 0;
+  replayMode = 'stored';
   securityFailedCount = 0;
   securityAuditCount = 0;
   latestSecurityActionKind = null;
@@ -751,7 +762,12 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.deepEqual(await readJson(await internalBillingOrchestrationRetryRoute.POST(request('https://x/api/internal/billing/orchestration/retry', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({}) }))), { ok: false, error: { code: 'validation_error', message: 'Validation failed', details: ['subjectId required'] } });
   assert.deepEqual(await readJson(await internalBillingOrchestrationRetryRoute.POST(request('https://x/api/internal/billing/orchestration/retry', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: true, data: { run: await mockApplicationStateRuntime.billingOrchestration.runRetryForSubject('user', 'user-2') } });
   securityDecisionMode = 'replayed';
-  assert.deepEqual(await readJson(await internalBillingOrchestrationRetryRoute.POST(request('https://x/api/internal/billing/orchestration/retry', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'idem-replay' }, body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: false, error: { code: 'conflict', message: 'Request replayed', details: ['replayed'] } });
+  replayMode = 'stored';
+  assert.equal((await readJson(await internalBillingOrchestrationRetryRoute.POST(request('https://x/api/internal/billing/orchestration/retry', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'idem-replay' }, body: JSON.stringify({ subjectId: 'user-2' }) })))).ok, true);
+  replayMode = 'unavailable';
+  assert.deepEqual(await readJson(await internalBillingOrchestrationRetryRoute.POST(request('https://x/api/internal/billing/orchestration/retry', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'idem-replay-miss' }, body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: false, error: { code: 'conflict', message: 'Replay unavailable', details: ['replay_unavailable', 'no_completed_response'] } });
+  replayMode = 'malformed';
+  assert.deepEqual(await readJson(await internalBillingOrchestrationRetryRoute.POST(request('https://x/api/internal/billing/orchestration/retry', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'idem-replay-bad' }, body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: false, error: { code: 'internal_error', message: 'Replay response parse failure', details: ['replay_response_malformed'] } });
   securityDecisionMode = 'allowed';
 
   clearMocks();

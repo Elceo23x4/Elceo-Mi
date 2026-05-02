@@ -255,3 +255,17 @@ Portfolio read routes remain unprotected by mutation security decisioning by des
 - Replay semantics are unchanged: replayed requests return the standardized conflict replay envelope (no full prior-response payload replay yet).
 - C4-M6C2 narrow-route action coverage is now complete across journal, portfolio, and notification mutation families.
 - Remaining production hardening is unchanged: full-response idempotency replay, infra/WAF rate limits, and final penetration/security review.
+
+## C4-M7B full-response idempotency replay route behavior
+For routes using the shared server security helper with response-envelope completion wiring:
+- replayed idempotency decisions can now return the previously stored full API response envelope and stored HTTP status,
+- replay storage persists serialized response envelopes (`responseJson`) and hashes, never raw request bodies,
+- replay-unavailable conditions return explicit conflict envelopes with reason details,
+- malformed stored replay payloads return deterministic internal replay-failure envelopes.
+
+Representative M7B-enabled routes:
+- `POST /api/internal/billing/reconcile`
+- `POST /api/workspace/refresh`
+- `POST /api/analytics/generate`
+- `POST /api/notifications/verification/issue`
+- `POST /api/portfolio/watchlist`

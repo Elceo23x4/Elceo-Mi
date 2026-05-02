@@ -92,3 +92,6 @@ Track API errors, security audit events, billing/notification runtime metrics, a
 - Next.js Edge runtime warning (`jose` / `CompressionStream` / `DecompressionStream`).
 - `NEXT_PUBLIC_APP_BASE_URL` warning if not configured.
 - npm `Unknown env config "http-proxy"` warning when present in CI/shell env.
+
+## Final status and go/no-go reference (C4-M8D)
+- Before launch approval, review `docs/final-production-status-report.md` for consolidated blocker vs non-blocker criteria and final readiness posture.

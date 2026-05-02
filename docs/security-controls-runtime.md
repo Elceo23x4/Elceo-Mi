@@ -121,3 +121,21 @@ Scope note:
   - all portfolio watchlist/position/action mutation routes
   - notification target/subscription mutation routes
 - Replay semantics remain unchanged (standardized replay conflict envelope; no prior-response payload replay body).
+
+## C4-M6C2B narrow journal lifecycle completion
+- Journal lifecycle mutation routes are now protected with `actionKind: journal_case_lifecycle`:
+  - `POST /api/journal/cases/[caseId]/adjust`
+  - `POST /api/journal/cases/[caseId]/cancel`
+  - `POST /api/journal/cases/[caseId]/close`
+  - `POST /api/journal/cases/[caseId]/execute`
+  - `POST /api/journal/cases/[caseId]/partial-close`
+  - `POST /api/journal/cases/[caseId]/plan`
+  - `POST /api/journal/cases/[caseId]/review`
+- Read-equivalent journal routes remain intentionally unprotected by mutation security decisioning:
+  - `GET /api/journal/cases/[caseId]`
+  - `GET /api/journal/cases/[caseId]/replay`
+  because they do not mutate state and must not consume write idempotency/rate-limit policies.
+- Replay semantics are unchanged: replayed requests still return the standardized conflict replay envelope rather than full prior-response payload replay.
+- Remaining M6C2 scope is unchanged:
+  - portfolio mutation route family
+  - notification target/subscription mutation route family

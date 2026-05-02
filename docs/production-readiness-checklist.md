@@ -78,3 +78,7 @@
 
 ## 12) Final production status report (C4-M8D)
 - Reference: `docs/final-production-status-report.md` for consolidated backend completion, launch blockers, and explicit go/no-go criteria.
+
+
+## C5-A1 note
+C5-A1 starts backend market-evidence and SEO/content architecture expansion as a foundation only; no live provider integration is active yet.

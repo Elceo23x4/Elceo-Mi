@@ -1,0 +1,18 @@
+import type { MarketEvidenceRegistrySnapshot, MarketEvidenceSource, MarketEvidenceTypeDefinition } from '@elceo/types';
+
+export const EVIDENCE_SOURCES: MarketEvidenceSource[] = [{sourceId:'fred',sourceName:'FRED',sourceKind:'economic_database',institutionName:'Federal Reserve Bank of St. Louis',region:'united_states',countryOrBloc:'United States',accessLevel:'public',homepageUrl:'https://fred.stlouisfed.org',notes:'Public macro time-series'}];
+
+export const EVIDENCE_TYPES: MarketEvidenceTypeDefinition[] = [
+{evidenceTypeId:'macro_calendar',evidenceClass:'macro_calendar',displayName:'Macro Calendar Events',description:'Scheduled macro events',frequency:'event_driven',primarySources:['fred'],regions:['global'],accessLevel:'public',isLaunchScope:true,isPublicAccessible:true,excludedReason:null},
+{evidenceTypeId:'cot_reports',evidenceClass:'cot_positioning',displayName:'COT Reports',description:'CFTC positioning',frequency:'weekly',primarySources:['fred'],regions:['united_states'],accessLevel:'public',isLaunchScope:true,isPublicAccessible:true,excludedReason:null},
+{evidenceTypeId:'central_bank_liquidity_ops',evidenceClass:'central_bank_liquidity',displayName:'Central Bank Liquidity Operations',description:'Liquidity facilities',frequency:'weekly',primarySources:['fred'],regions:['global'],accessLevel:'public',isLaunchScope:true,isPublicAccessible:true,excludedReason:null},
+{evidenceTypeId:'real_yields_curve',evidenceClass:'real_yields',displayName:'Real Yields',description:'Inflation adjusted yields',frequency:'daily',primarySources:['fred'],regions:['united_states'],accessLevel:'public',isLaunchScope:true,isPublicAccessible:true,excludedReason:null},
+{evidenceTypeId:'treasury_auctions',evidenceClass:'bond_auctions',displayName:'Treasury Auctions',description:'Government debt auctions',frequency:'event_driven',primarySources:['fred'],regions:['united_states'],accessLevel:'public',isLaunchScope:true,isPublicAccessible:true,excludedReason:null},
+{evidenceTypeId:'vol_surface',evidenceClass:'volatility_surface',displayName:'Volatility Surface',description:'Options implied volatility term/smile',frequency:'daily',primarySources:['fred'],regions:['global'],accessLevel:'free_api',isLaunchScope:true,isPublicAccessible:true,excludedReason:null},
+{evidenceTypeId:'credit_stress_index',evidenceClass:'credit_stress',displayName:'Credit Stress Metrics',description:'Credit spread stress indicators',frequency:'daily',primarySources:['fred'],regions:['united_states'],accessLevel:'public',isLaunchScope:true,isPublicAccessible:true,excludedReason:null},
+{evidenceTypeId:'macro_surprise',evidenceClass:'macro_surprise_history',displayName:'Macro Surprise History',description:'Surprise index history',frequency:'daily',primarySources:['fred'],regions:['global'],accessLevel:'free_api',isLaunchScope:true,isPublicAccessible:true,excludedReason:null},
+{evidenceTypeId:'bank_health_metrics',evidenceClass:'bank_health',displayName:'Bank Health Metrics',description:'Public banking stability metrics',frequency:'quarterly',primarySources:['fred'],regions:['united_states'],accessLevel:'public',isLaunchScope:true,isPublicAccessible:true,excludedReason:null},
+{evidenceTypeId:'interbank_orderflow',evidenceClass:'institutional_liquidity',displayName:'Interbank Orderflow',description:'Licensed bank orderflow',frequency:'intraday',primarySources:['fred'],regions:['global'],accessLevel:'licensed',isLaunchScope:false,isPublicAccessible:false,excludedReason:'Excluded from launch due to interbank licensing complexity.'}
+];
+
+export function getMarketEvidenceRegistrySnapshot(asOfIso: string): MarketEvidenceRegistrySnapshot { return { generatedAt: asOfIso, evidenceTypes: EVIDENCE_TYPES, sources: EVIDENCE_SOURCES, assetInfluences: [] }; }

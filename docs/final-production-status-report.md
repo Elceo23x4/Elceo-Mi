@@ -104,3 +104,7 @@ Launch is **NO-GO** until all blockers are cleared:
 - [ ] Security controls/gates fail verification.
 - [ ] Required smoke tests fail.
 - [ ] Rollback plan/readiness is not confirmed.
+
+
+## C5-A1 note
+C5-A1 starts backend market-evidence and SEO/content architecture expansion as a foundation only; no live provider integration is active yet.

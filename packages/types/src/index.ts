@@ -47,3 +47,5 @@ export * from './billing-admin';
 
 export * from './billing-orchestration';
 export * from './security-runtime';
+export * from './market-evidence';
+export * from './seo-content';

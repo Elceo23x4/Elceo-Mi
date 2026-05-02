@@ -468,6 +468,11 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await adminBillingExpireRoute.POST(request('https://x/api/admin/billing/expire', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', occurredAt: '2026-02-01T00:00:00.000Z' }) })))).ok, true);
   assert.equal((await readJson(await adminBillingPauseRoute.POST(request('https://x/api/admin/billing/pause', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', occurredAt: '2026-02-01T00:00:00.000Z' }) })))).ok, true);
   assert.equal((await readJson(await adminBillingResumeRoute.POST(request('https://x/api/admin/billing/resume', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', occurredAt: '2026-02-01T00:00:00.000Z' }) })))).ok, true);
+  securityDecisionMode = 'rate_limited';
+  assert.deepEqual(await readJson(await adminBillingTrialRoute.POST(request('https://x/api/admin/billing/trial', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', planKind: 'premium', trialEndsAt: '2026-01-01T00:00:00.000Z' }) }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'idempotency_conflict';
+  assert.deepEqual(await readJson(await adminBillingTrialRoute.POST(request('https://x/api/admin/billing/trial', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'trial-conflict' }, body: JSON.stringify({ subjectId: 'user-2', planKind: 'premium', trialEndsAt: '2026-01-01T00:00:00.000Z' }) }))), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
+  securityDecisionMode = 'allowed';
 
   assert.equal((await readJson(await adminEntitlementPlanRoute.POST(request('https://x/api/admin/entitlements/plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'ent-plan-ok' }, body: JSON.stringify({ subjectId: 'user-2', planKind: 'premium' }) })))).ok, true);
   assert.equal((await readJson(await adminEntitlementStateRoute.POST(request('https://x/api/admin/entitlements/state', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'ent-state-ok' }, body: JSON.stringify({ subjectId: 'user-2', accountState: 'restricted' }) })))).ok, true);
@@ -552,6 +557,9 @@ export async function runRouteRuntimeTests(): Promise<void> {
   const providerIngest = await internalBillingProviderEventsRoute.POST(request('https://x/api/internal/billing/provider-events', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'stripe', externalEventId: 'evt-1', eventType: 'customer.subscription.created', createdAt: '2026-01-01T00:00:00.000Z', dataJson: '{}' }) }));
   assert.equal(providerIngest.status, 200);
   assert.deepEqual(await readJson(providerIngest), { ok: true, data: { result: { accepted: true, deduplicated: false, translated: true, externalEventId: 'evt-1', providerKind: 'stripe', processingResultCode: 'translated_subscription_created', linkedBillingSubscriptionId: 'sub-1', linkedSubjectId: 'user-1', processedAt: '2026-01-01T00:00:00.000Z' } } });
+  securityDecisionMode = 'rate_limited';
+  assert.deepEqual(await readJson(await internalBillingProviderEventsRoute.POST(request('https://x/api/internal/billing/provider-events', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'stripe', externalEventId: 'evt-rate', eventType: 'customer.subscription.created', createdAt: '2026-01-01T00:00:00.000Z', dataJson: '{}' }) }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'allowed';
 
   blockedFeatures = new Set(['admin.ops']);
   const providerReplayForbidden = await internalBillingProviderReplayRoute.POST(request('https://x/api/internal/billing/provider-events/replay', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ limit: 5 }) }));

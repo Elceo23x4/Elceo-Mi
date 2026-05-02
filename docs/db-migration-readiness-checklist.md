@@ -71,3 +71,8 @@ What it verifies:
 - Prints the exact lexicographic execution order.
 - Warns when numeric prefixes are duplicated (for example `0027_*`, `0028_*`).
 - Exits non-zero only if schema directory is unreadable/missing or exact duplicate filenames are found.
+
+## C4-M8C deployment linkage
+- Run `npm run release:gate` before migration window approval.
+- Use `docs/deployment-runbook.md` for rollout and rollback process alignment.
+- Re-run `npm run check:migrations` immediately before applying migrations in the release window.

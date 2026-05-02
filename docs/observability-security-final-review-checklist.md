@@ -38,3 +38,8 @@
 - Default safe mode (`ELCEO_SMOKE_ALLOW_MUTATIONS=false`) verifies envelope/auth/internal-gate behavior without intentional mutations.
 - If `ELCEO_SMOKE_AUTH_TOKEN` is absent, authenticated checks are marked skipped and do not fail the full run.
 - Any failed required smoke check is release-blocking.
+
+## C4-M8C release execution linkage
+- Run `npm run release:gate` before deployment handoff.
+- Use `docs/deployment-runbook.md` for staging -> production release sequence.
+- Staging smoke-test execution (`ELCEO_SMOKE_BASE_URL=... npm run smoke:production`) is required post-deploy and pre-production.

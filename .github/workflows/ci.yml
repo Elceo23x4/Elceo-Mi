@@ -1,0 +1,52 @@
+name: CI Validation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: Lint application-state
+        run: npm run -w @elceo/application-state lint
+
+      - name: Lint analytics
+        run: npm run -w @elceo/analytics lint
+
+      - name: Lint reasoning
+        run: npm run -w @elceo/reasoning lint
+
+      - name: Lint notifications
+        run: npm run -w @elceo/notifications lint
+
+      - name: Lint web app
+        run: npm run -w apps/web lint
+
+      - name: Check DB migration ordering
+        run: npm run check:migrations
+
+      - name: Post-CI note
+        run: echo "Staging smoke tests are manual/post-deploy via ELCEO_SMOKE_BASE_URL and npm run smoke:production"

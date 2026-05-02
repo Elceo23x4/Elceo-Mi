@@ -70,3 +70,8 @@
 - Default mode is non-destructive and read-only focused.
 - Mutation probes are skipped unless `ELCEO_SMOKE_ALLOW_MUTATIONS=true`.
 - Mutation mode is intended for staging/safe environments only, not live production.
+
+## 11) Release gate + runbook (C4-M8C)
+- [ ] Run `npm run release:gate` locally before requesting deployment approval.
+- [ ] Follow staged rollout sequence in `docs/deployment-runbook.md`.
+- [ ] Run staging smoke validation (`ELCEO_SMOKE_BASE_URL=... npm run smoke:production`) after staging deploy and before production promotion.

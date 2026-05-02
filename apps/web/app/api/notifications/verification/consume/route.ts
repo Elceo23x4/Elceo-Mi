@@ -12,7 +12,9 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   if (!security.ok) return security.response;
   try {
     const result = await getNotificationRuntimes().verification.consumeTargetVerification(body.targetId, body.token);
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { result } });
+    const envelope = { ok: true as const, data: { result } };
+
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { result }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: subject.subjectId, actionKind: 'notification_verification_consume', routePath: '/api/notifications/verification/consume', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ result });
   } catch (error) {

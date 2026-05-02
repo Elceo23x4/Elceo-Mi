@@ -17,7 +17,8 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   try {
     const snapshot = await getAnalyticsRuntime().coaching.generateCoachingSnapshot({ subjectKind: access.subject.subjectKind, subjectId: access.subject.subjectId, ...requestBody });
     await maybeIncrementUsage('coaching.generate', { request });
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { snapshot } });
+    const envelope = { ok: true as const, data: { snapshot } };
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { snapshot }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: access.subject.subjectId, actionKind: 'coaching_generate', routePath: '/api/coaching/generate', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ snapshot });
   } catch (error) {

@@ -269,3 +269,11 @@ Representative M7B-enabled routes:
 - `POST /api/analytics/generate`
 - `POST /api/notifications/verification/issue`
 - `POST /api/portfolio/watchlist`
+
+## C4-M7C broadened idempotency replay persistence coverage
+M7C extends M7B response-envelope persistence across protected JSON mutation route families using shared route-security completion so idempotent replay can return previously stored success envelopes broadly instead of only representative routes.
+
+Notes:
+- Envelope shape returned by routes is unchanged.
+- Replay storage persists serialized success envelopes plus hashes; request bodies remain hash-only.
+- No residual legacy completion tail remains for protected JSON mutation routes using `completeSecurityDecision(...)` in this batch.

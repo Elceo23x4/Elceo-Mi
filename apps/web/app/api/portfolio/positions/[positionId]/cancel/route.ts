@@ -13,7 +13,9 @@ export const POST = withApiErrorBoundary(async (request: Request, context: { par
   if (!security.ok) return security.response;
   try {
 const position = await getApplicationStateRuntime().portfolio.cancelPosition(positionId, { actorKind: 'user', actorId: subject.userId });
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { position } });
+    const envelope = { ok: true as const, data: { position } };
+
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { position }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: subject.subjectId, actionKind: 'portfolio_position_write', routePath: '/api/portfolio/positions/[positionId]/cancel', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ position });
   } catch (error) { await failSecurityDecision({ idempotencyKey: security.idempotencyKey, errorMessage: error instanceof Error ? error.message : 'unknown_error' }); throw error; }

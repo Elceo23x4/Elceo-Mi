@@ -10,7 +10,9 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   if (!security.ok) return security.response;
   try {
     const report = await getNotificationRuntimes().delivery.dispatchDue();
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { report } });
+    const envelope = { ok: true as const, data: { report } };
+
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { report }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, actionKind: 'notification_dispatch', routePath: '/api/notifications/delivery/dispatch', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ report });
   } catch (error) {

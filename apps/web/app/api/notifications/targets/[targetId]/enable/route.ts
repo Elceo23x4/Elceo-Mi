@@ -11,7 +11,9 @@ export const POST = withApiErrorBoundary(async (request: Request, context: { par
   if (!security.ok) return security.response;
   try {
     const target = await getNotificationRuntimes().management.enableTarget(targetId);
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { target } });
+    const envelope = { ok: true as const, data: { target } };
+
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { target }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: subject.subjectId, actionKind: 'notification_target_write', routePath: '/api/notifications/targets/[targetId]/enable', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ target });
   } catch (error) {

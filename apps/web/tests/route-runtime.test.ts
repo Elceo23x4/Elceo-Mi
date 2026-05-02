@@ -395,7 +395,9 @@ export async function runRouteRuntimeTests(): Promise<void> {
   const journalPlanRateLimited = await journalPlanRoute.POST(request('https://x/api/journal/cases/case-1/plan', { method: 'POST', body: JSON.stringify({ thesis: 'x' }) }), { params: Promise.resolve({ caseId: 'case-1' }) });
   assert.deepEqual(await readJson(journalPlanRateLimited), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
   securityDecisionMode = 'allowed';
-  assert.equal((await readJson(await journalExecuteRoute.POST(request('https://x/api/journal/cases/case-1/execute', { method: 'POST', body: JSON.stringify({ openedAt: '2026-01-01T00:00:00.000Z' }) }), { params: Promise.resolve({ caseId: 'case-1' }) }))).ok, true);
+  const journalExecuteResponse = await readJson(await journalExecuteRoute.POST(request('https://x/api/journal/cases/case-1/execute', { method: 'POST', headers: { 'Idempotency-Key': 'journal-execute-ok' }, body: JSON.stringify({ openedAt: '2026-01-01T00:00:00.000Z' }) }), { params: Promise.resolve({ caseId: 'case-1' }) }));
+  assert.equal(journalExecuteResponse.ok, true);
+  assert.deepEqual(JSON.parse(replayResponseJson), journalExecuteResponse);
   assert.equal(latestSecurityActionKind, 'journal_case_lifecycle');
   assert.equal((await readJson(await journalAdjustRoute.POST(request('https://x/api/journal/cases/case-1/adjust', { method: 'POST', body: JSON.stringify({ notes: 'adjusted' }) }), { params: Promise.resolve({ caseId: 'case-1' }) }))).ok, true);
   assert.equal(latestSecurityActionKind, 'journal_case_lifecycle');
@@ -472,7 +474,9 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await analyticsLatestRoute.GET(request('https://x/api/analytics/latest')))).ok, true);
   assert.equal((await readJson(await analyticsGenerateRoute.POST(request('https://x/api/analytics/generate', { method: 'POST', headers: { 'Idempotency-Key': 'analytics-generate-ok' } })))).ok, true);
   assert.equal(usageIncremented.includes('analytics.generate'), true);
-  assert.equal((await readJson(await coachingGenerateRoute.POST(request('https://x/api/coaching/generate', { method: 'POST', headers: { 'Idempotency-Key': 'coaching-generate-ok' } })))).ok, true);
+  const coachingGenerateResponse = await readJson(await coachingGenerateRoute.POST(request('https://x/api/coaching/generate', { method: 'POST', headers: { 'Idempotency-Key': 'coaching-generate-ok' } })));
+  assert.equal(coachingGenerateResponse.ok, true);
+  assert.deepEqual(JSON.parse(replayResponseJson), coachingGenerateResponse);
   assert.equal(usageIncremented.includes('coaching.generate'), true);
   assert.equal((await readJson(await analyticsTopSetupsRoute.GET(request('https://x/api/analytics/top-setups')))).ok, true);
   assert.equal((await readJson(await analyticsTopBehaviorsRoute.GET(request('https://x/api/analytics/top-behaviors')))).ok, true);
@@ -486,7 +490,9 @@ export async function runRouteRuntimeTests(): Promise<void> {
   securityDecisionMode = 'idempotency_conflict';
   assert.deepEqual(await readJson(await notificationsTargetsRoute.POST(request('https://x/api/notifications/targets', { method: 'POST', headers: { 'Idempotency-Key': 'notification-target-conflict' }, body: JSON.stringify({ channel: 'email', value: 'a@b.com' }) }))), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
   securityDecisionMode = 'allowed';
-  assert.equal((await readJson(await notificationsTargetsRoute.POST(request('https://x/api/notifications/targets', { method: 'POST', headers: { 'Idempotency-Key': 'notification-target-ok' }, body: JSON.stringify({ channel: 'email', value: 'a@b.com' }) })))).ok, true);
+  const notificationTargetResponse = await readJson(await notificationsTargetsRoute.POST(request('https://x/api/notifications/targets', { method: 'POST', headers: { 'Idempotency-Key': 'notification-target-ok' }, body: JSON.stringify({ channel: 'email', value: 'a@b.com' }) })));
+  assert.equal(notificationTargetResponse.ok, true);
+  assert.deepEqual(JSON.parse(replayResponseJson), notificationTargetResponse);
   assert.equal(latestSecurityActionKind, 'notification_target_write');
   securityDecisionMode = 'rate_limited';
   assert.deepEqual(await readJson(await notificationsTargetEnableRoute.POST(request('https://x/api/notifications/targets/target-1/enable', { method: 'POST' }), { params: Promise.resolve({ targetId: 'target-1' }) })), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
@@ -546,7 +552,9 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await refreshLatestRoute.GET())).ok, true);
   assert.equal((await readJson(await refreshHistoryRoute.GET(request('https://x/api/refresh/history?limit=5')))).ok, true);
   assert.equal((await readJson(await refreshFreshnessRoute.GET())).ok, true);
-  assert.equal((await readJson(await refreshRunRoute.POST(request('https://x/api/refresh/run', { method: 'POST', body: JSON.stringify({ triggerKind: 'manual' }), headers: { 'Idempotency-Key': 'refresh-run-ok' } })))).ok, true);
+  const refreshRunResponse = await readJson(await refreshRunRoute.POST(request('https://x/api/refresh/run', { method: 'POST', body: JSON.stringify({ triggerKind: 'manual' }), headers: { 'Idempotency-Key': 'refresh-run-ok' } })));
+  assert.equal(refreshRunResponse.ok, true);
+  assert.deepEqual(JSON.parse(replayResponseJson), refreshRunResponse);
   const journalInfluenceOk = await journalInfluenceGenerateRoute.POST(request('https://x/api/journal/influence/generate', { method: 'POST', headers: { 'Idempotency-Key': 'journal-influence-ok' } }));
   assert.equal((await readJson(journalInfluenceOk)).ok, true);
   assert.equal(latestSecurityActionKind, 'journal_influence_generate');
@@ -597,7 +605,9 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(adminBillingUnauthorized)).ok, false);
   assert.equal((await readJson(await adminBillingTrialRoute.POST(request('https://x/api/admin/billing/trial', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', planKind: 'premium', trialEndsAt: '2026-01-01T00:00:00.000Z' }) })))).ok, true);
   assert.equal((await readJson(await adminBillingActivateRoute.POST(request('https://x/api/admin/billing/activate', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', planKind: 'premium', interval: 'monthly', currentPeriodStart: '2026-01-01T00:00:00.000Z', currentPeriodEnd: '2026-02-01T00:00:00.000Z' }) })))).ok, true);
-  assert.equal((await readJson(await adminBillingRenewRoute.POST(request('https://x/api/admin/billing/renew', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', nextPeriodStart: '2026-02-01T00:00:00.000Z', nextPeriodEnd: '2026-03-01T00:00:00.000Z' }) })))).ok, true);
+  const adminBillingRenewResponse = await readJson(await adminBillingRenewRoute.POST(request('https://x/api/admin/billing/renew', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'admin-renew-ok' }, body: JSON.stringify({ subjectId: 'user-2', nextPeriodStart: '2026-02-01T00:00:00.000Z', nextPeriodEnd: '2026-03-01T00:00:00.000Z' }) })));
+  assert.equal(adminBillingRenewResponse.ok, true);
+  assert.deepEqual(JSON.parse(replayResponseJson), adminBillingRenewResponse);
   assert.equal((await readJson(await adminBillingChangePlanRoute.POST(request('https://x/api/admin/billing/change-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', nextPlanKind: 'premium', interval: 'monthly', effectiveAt: '2026-02-01T00:00:00.000Z', reason: 'upgrade' }) })))).ok, true);
   assert.equal((await readJson(await adminBillingPastDueRoute.POST(request('https://x/api/admin/billing/past-due', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', occurredAt: '2026-02-01T00:00:00.000Z' }) })))).ok, true);
   assert.equal((await readJson(await adminBillingCancelAtPeriodEndRoute.POST(request('https://x/api/admin/billing/cancel-at-period-end', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ subjectId: 'user-2', occurredAt: '2026-02-01T00:00:00.000Z' }) })))).ok, true);
@@ -610,7 +620,9 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.deepEqual(await readJson(await adminBillingTrialRoute.POST(request('https://x/api/admin/billing/trial', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'trial-conflict' }, body: JSON.stringify({ subjectId: 'user-2', planKind: 'premium', trialEndsAt: '2026-01-01T00:00:00.000Z' }) }))), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
   securityDecisionMode = 'allowed';
 
-  assert.equal((await readJson(await adminEntitlementPlanRoute.POST(request('https://x/api/admin/entitlements/plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'ent-plan-ok' }, body: JSON.stringify({ subjectId: 'user-2', planKind: 'premium' }) })))).ok, true);
+  const adminEntitlementPlanResponse = await readJson(await adminEntitlementPlanRoute.POST(request('https://x/api/admin/entitlements/plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'ent-plan-ok' }, body: JSON.stringify({ subjectId: 'user-2', planKind: 'premium' }) })));
+  assert.equal(adminEntitlementPlanResponse.ok, true);
+  assert.deepEqual(JSON.parse(replayResponseJson), adminEntitlementPlanResponse);
   assert.equal((await readJson(await adminEntitlementStateRoute.POST(request('https://x/api/admin/entitlements/state', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'ent-state-ok' }, body: JSON.stringify({ subjectId: 'user-2', accountState: 'restricted' }) })))).ok, true);
   assert.equal((await readJson(await adminEntitlementOverrideRoute.POST(request('https://x/api/admin/entitlements/override', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'ent-override-ok' }, body: JSON.stringify({ subjectId: 'user-2', internalOverride: true }) })))).ok, true);
   assert.equal(securityCompletedCount > 0, true);

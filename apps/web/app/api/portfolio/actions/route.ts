@@ -19,7 +19,9 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   if (!security.ok) return security.response;
   try {
     const action = await getApplicationStateRuntime().portfolio.createActionItem({ subjectKind: subject.subjectKind, subjectId: subject.subjectId, kind: body.kind, priority: body.priority, asset: body.asset ?? null, timeframe: body.timeframe ?? null, headline: body.headline, rationale: body.rationale, linkedEntryId: body.linkedEntryId ?? null, linkedPositionId: body.linkedPositionId ?? null, linkedJournalCaseId: body.linkedJournalCaseId ?? null, linkedReasoningRunId: body.linkedReasoningRunId ?? null, linkedNotificationDecisionId: body.linkedNotificationDecisionId ?? null }, { actorKind: 'user', actorId: subject.userId });
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { action } });
+    const envelope = { ok: true as const, data: { action } };
+
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { action }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: subject.subjectId, actionKind: 'portfolio_action_write', routePath: '/api/portfolio/actions', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ action });
   } catch (error) {

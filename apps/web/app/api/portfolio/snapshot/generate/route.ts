@@ -12,7 +12,9 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   try {
     const snapshot = await getApplicationStateRuntime().portfolio.generatePortfolioSnapshot(access.subject.subjectKind, access.subject.subjectId);
     await maybeIncrementUsage('portfolio.snapshot.generate', { request });
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { snapshot } });
+    const envelope = { ok: true as const, data: { snapshot } };
+
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { snapshot }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: access.subject.subjectId, actionKind: 'portfolio_snapshot_generate', routePath: '/api/portfolio/snapshot/generate', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ snapshot });
   } catch (error) {

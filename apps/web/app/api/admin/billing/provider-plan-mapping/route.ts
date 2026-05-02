@@ -15,7 +15,9 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   if (!security.ok) return security.response;
   try {
     const mapping = await getPaymentProviderRuntime().upsertProviderPlanMapping(body);
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { mapping } });
+    const envelope = { ok: true as const, data: { mapping } };
+
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { mapping }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, actionKind: 'admin_write', routePath: '/api/admin/billing/provider-plan-mapping', method: 'POST', request, idempotencyKey: security.idempotencyKey });
     return jsonSuccess({ mapping });
   } catch (error) {

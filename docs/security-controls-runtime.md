@@ -178,3 +178,17 @@ Remaining C4-M6C2 scope: notification target/subscription route family. Replay s
 - Stored replay state continues to persist `requestHash` and serialized response envelope only; raw request bodies are not persisted.
 - Representative M7B route wiring for response-envelope persistence: `POST /api/internal/billing/reconcile`, `POST /api/workspace/refresh`, `POST /api/analytics/generate`, `POST /api/notifications/verification/issue`, `POST /api/portfolio/watchlist`.
 - Remaining cleanup after M7B: broaden response-envelope persistence to all protected mutation routes still using completion without response envelopes, infrastructure/WAF limits, and final security review/penetration test.
+
+## C4-M7C broadened route response-envelope persistence
+M7C completes full-response idempotency completion wiring across protected JSON mutation routes that use `completeSecurityDecision(...)`, moving replay-envelope persistence from representative coverage to broad route-family coverage (internal billing, admin billing/entitlements, notifications, journal, portfolio, refresh, analytics, coaching, and ops notification mutation surfaces).
+
+Behavior:
+- Protected mutation success paths now commonly pass `responseEnvelope`, `httpStatus`, and `requestHash` into `completeSecurityDecision(...)`.
+- Stored replay payload remains `responseJson` (serialized success envelope) with only `requestHash` persisted for request identity.
+- Raw request bodies are still never persisted.
+
+Remaining exceptions:
+- No remaining legacy `completeSecurityDecision(...)` JSON mutation callsites are expected after this pass.
+- Current concrete exceptions are limited to routes not using `completeSecurityDecision(...)` and any future non-JSON/streaming mutation responses, which require explicit replay-contract handling.
+
+Remaining hardening remains unchanged: infra/WAF limits and final penetration/security review.

@@ -103,3 +103,6 @@ Management operational summaries remain complementary read views, while orchestr
 
 Management summary surfaces now include feedback-derived health views (degraded/disabled targets and recent critical delivery receipts) without changing target/subscription lifecycle APIs.
 Provider feedback remains in the dedicated canonical feedback boundary to keep management and delivery concerns separated.
+
+## C4-M6C1 security alignment note
+Security runtime policy foundation now includes notification mutation action kinds (`notification_target_write`, `notification_subscription_write`, `notification_verification_issue`, `notification_verification_consume`) for explicit runtime control coverage. This batch does not integrate route handlers; action-kind route adoption is deferred to M6C2.

@@ -2,7 +2,7 @@ import type { SecurityAuditEvent, SecurityBlockReason, SecurityDecision, Securit
 import { isEnumValue, isIsoDateString, isNonEmptyString, isObjectRecord, type SchemaValidationResult } from './validation-utils';
 
 const ACTOR_KINDS = ['user', 'internal', 'admin', 'system'] as const;
-const ACTION_KINDS = ['account_read','account_write','admin_read','admin_write','internal_mutation','billing_reconcile','billing_policy_evaluate','billing_orchestration_retry','notification_dispatch','refresh_run','workspace_refresh','analytics_generate','coaching_generate','portfolio_snapshot_generate'] as const;
+const ACTION_KINDS = ['account_read','account_write','admin_read','admin_write','internal_mutation','billing_reconcile','billing_policy_evaluate','billing_orchestration_retry','notification_dispatch','refresh_run','workspace_refresh','analytics_generate','coaching_generate','portfolio_snapshot_generate','journal_case_write','journal_case_lifecycle','journal_influence_generate','portfolio_watchlist_write','portfolio_position_write','portfolio_action_write','notification_target_write','notification_subscription_write','notification_verification_issue','notification_verification_consume'] as const;
 const WINDOWS = ['minute','hour','day'] as const;
 const DECISION_STATUS = ['allowed','blocked','replayed','skipped'] as const;
 const BLOCK_REASONS = ['rate_limit_exceeded','idempotency_conflict','invalid_idempotency_key','missing_actor','internal_token_required','admin_access_required','suspicious_replay','unknown'] as const;

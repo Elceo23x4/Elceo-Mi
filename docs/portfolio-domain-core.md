@@ -99,3 +99,6 @@ Authenticated API routes now expose watchlist/positions/actions lifecycle operat
 
 
 C4-M6B2A note: related user-facing `.../generate` or refresh mutation routes are now protected by canonical server security decisioning (rate limit, idempotency, replay envelope mapping, and success-path audit logging).
+
+## C4-M6C1 security alignment note
+Security runtime policy foundation now includes portfolio mutation action kinds (`portfolio_watchlist_write`, `portfolio_position_write`, `portfolio_action_write`) with explicit rate-limit policies. Existing `portfolio_snapshot_generate` remains in use with confirmed policy coverage. Route-level wiring follows in M6C2.

@@ -201,3 +201,6 @@ Security runtime protection was extended to remaining billing/admin/internal mut
 - Internal billing provider event ingest/replay POST routes.
 
 All newly protected routes now evaluate security controls between auth+validation and mutation execution, then complete/fail idempotency lifecycle and emit audit events on success.
+
+## C4-M6C1 security policy foundation (no route rewiring yet)
+Security runtime action-kind taxonomy is expanded for deferred user mutation families (journal, portfolio write operations, notification target/subscription/verification mutations). This batch does not change route handlers yet; M6C2 will apply these action kinds to the remaining mutation endpoints.

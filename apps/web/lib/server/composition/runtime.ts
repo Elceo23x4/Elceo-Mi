@@ -43,7 +43,8 @@ import {
   SQLBillingPolicyTransitionRepository,
   SQLProviderPlanMappingRepository,
   SQLBillingOrchestrationRunRepository,
-  PaymentProviderTranslator
+  PaymentProviderTranslator,
+  CanonicalSecurityBoundaryService
 } from '@elceo/application-state';
 import { CanonicalAnalyticsBoundaryService, CanonicalCoachingBoundaryService } from '@elceo/analytics';
 import { createReasoningPersistenceRepository } from '@elceo/reasoning';
@@ -83,6 +84,7 @@ type ApplicationStateRuntime = {
   billingAdmin: CanonicalBillingAdminBoundaryService;
   billingOrchestration: CanonicalBillingOrchestrationBoundaryService;
   paymentProviders: CanonicalPaymentProviderBoundaryService;
+  security: CanonicalSecurityBoundaryService;
 };
 
 type AnalyticsRuntime = {
@@ -254,6 +256,7 @@ export function getApplicationStateRuntime(): ApplicationStateRuntime {
       )
   );
   const orchestrationRepo = new SQLBillingOrchestrationRunRepository();
+  const security = new CanonicalSecurityBoundaryService();
   applicationStateRuntime = {
     journal, journalInfluence, portfolio, workspace, refresh, admin, entitlements, billing, billingLifecycle,
     billingPolicy,
@@ -265,7 +268,8 @@ export function getApplicationStateRuntime(): ApplicationStateRuntime {
       billingLifecycleQuery,
       billingPolicyQuery
     ),
-    paymentProviders
+    paymentProviders,
+    security
   };
   return applicationStateRuntime;
 }
@@ -285,3 +289,6 @@ export function getBillingAdminRuntime() { return getApplicationStateRuntime().b
 export function getBillingOrchestrationRuntime() {
   return getApplicationStateRuntime().billingOrchestration;
 }
+
+
+export function getSecurityRuntime() { return getApplicationStateRuntime().security; }

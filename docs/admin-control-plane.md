@@ -51,3 +51,12 @@ All routes are internal/admin guarded; no end-user direct access.
 - `/api/internal/billing/orchestration/retry`
 
 This completion is API-only. Admin UI wiring and automated scheduler-managed retries are intentionally deferred to the next hardening batch.
+
+
+## C4-M6B1C admin entitlement write hardening
+The admin entitlement mutation routes are now runtime-security protected:
+- `POST /api/admin/entitlements/plan`
+- `POST /api/admin/entitlements/state`
+- `POST /api/admin/entitlements/override`
+
+All three retain internal-token gating, then run canonical security control evaluation with `actionKind: admin_write` before mutation execution. Successful mutations complete idempotent actions (when idempotency headers are provided) and emit security audit events.

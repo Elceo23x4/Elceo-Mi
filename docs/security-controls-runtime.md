@@ -169,3 +169,12 @@ Remaining C4-M6C2 scope: notification target/subscription route family. Replay s
 - Replay lookup reasons: `completed_response_found`, `no_completed_response`, `request_hash_mismatch`, `expired`, `not_found`.
 - Route handlers will be wired in M7B to return stored response envelopes.
 - Current limitation moved to route integration pending (runtime storage/replay core is now present).
+
+## C4-M7B route full-response replay integration
+- Route helper replay integration is now active for helper-wired protected routes: replayed security decisions call `getIdempotencyReplayResult(idempotencyKey, requestHash, asOfIso)` and, when replayable, return the stored prior response envelope with the stored HTTP status.
+- If replay lookup returns a non-replayable reason (for example `no_completed_response`), routes return an explicit deterministic replay-unavailable conflict envelope and do not execute mutations.
+- If stored `responseJson` is malformed, routes return a deterministic internal replay parse-failure envelope and do not execute mutations.
+- Successful protected mutation paths can now persist full response envelopes via `completeIdempotentActionWithResponse` with `responseJson = JSON.stringify(responseEnvelope)` and hashed response payload tracking.
+- Stored replay state continues to persist `requestHash` and serialized response envelope only; raw request bodies are not persisted.
+- Representative M7B route wiring for response-envelope persistence: `POST /api/internal/billing/reconcile`, `POST /api/workspace/refresh`, `POST /api/analytics/generate`, `POST /api/notifications/verification/issue`, `POST /api/portfolio/watchlist`.
+- Remaining cleanup after M7B: broaden response-envelope persistence to all protected mutation routes still using completion without response envelopes, infrastructure/WAF limits, and final security review/penetration test.

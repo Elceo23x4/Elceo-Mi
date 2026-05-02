@@ -19,9 +19,10 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   if (!security.ok) return security.response;
   try {
     const entry = await getApplicationStateRuntime().portfolio.createWatchlistEntry({ subjectKind: subject.subjectKind, subjectId: subject.subjectId, asset: body.asset, timeframe: body.timeframe, priority: body.priority, status: body.status ?? 'watching', thesisHealth: body.thesisHealth ?? 'stable', note: body.note ?? null, linkedReasoningRunId: body.linkedReasoningRunId ?? null, linkedSnapshotId: body.linkedSnapshotId ?? null, linkedDriftId: body.linkedDriftId ?? null, linkedJournalCaseId: body.linkedJournalCaseId ?? null }, { actorKind: 'user', actorId: subject.userId });
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { entry } });
+    const envelope = { ok: true as const, data: { entry } };
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { entry }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: subject.subjectId, actionKind: 'portfolio_watchlist_write', routePath: '/api/portfolio/watchlist', method: 'POST', request, idempotencyKey: security.idempotencyKey });
-    return jsonSuccess({ entry });
+    return jsonSuccess(envelope.data);
   } catch (error) {
     await failSecurityDecision({ idempotencyKey: security.idempotencyKey, errorMessage: error instanceof Error ? error.message : 'unknown_error' });
     throw error;

@@ -12,9 +12,10 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   if (!security.ok) return security.response;
   try {
     const verification = await getNotificationRuntimes().verification.issueTargetVerification(body.targetId);
-    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { verification } });
+    const envelope = { ok: true as const, data: { verification } };
+    await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { verification }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: subject.subjectId, actionKind: 'notification_verification_issue', routePath: '/api/notifications/verification/issue', method: 'POST', request, idempotencyKey: security.idempotencyKey });
-    return jsonSuccess({ verification });
+    return jsonSuccess(envelope.data);
   } catch (error) {
     await failSecurityDecision({ idempotencyKey: security.idempotencyKey, errorMessage: error instanceof Error ? error.message : 'unknown_error' });
     throw error;

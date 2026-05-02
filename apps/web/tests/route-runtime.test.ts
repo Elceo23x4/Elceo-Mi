@@ -106,6 +106,7 @@ let usageIncremented: string[] = [];
 let securityDecisionMode: 'allowed' | 'rate_limited' | 'idempotency_conflict' | 'replayed' = 'allowed';
 let securityCompletedCount = 0;
 let securityFailedCount = 0;
+let securityAuditCount = 0;
 
 const journalCase = {
   identity: { caseId: 'case-1', subjectKind: 'user' as const, subjectId: subject.subjectId, asset: 'XAU/USD', timeframe: 'H1', title: 'T' }
@@ -220,7 +221,7 @@ const mockApplicationStateRuntime = {
     },
     completeIdempotentAction: async (_params: { idempotencyKey: string; responseHash: string; nowIso: string }) => { securityCompletedCount += 1; },
     failIdempotentAction: async (_params: { idempotencyKey: string; nowIso: string; metadata?: Record<string, unknown> }) => { securityFailedCount += 1; },
-    recordSecurityAuditEvent: async (_params: { actorKind: string; actorId: string; actionKind: string }) => ({ ok: true })
+    recordSecurityAuditEvent: async (_params: { actorKind: string; actorId: string; actionKind: string }) => { securityAuditCount += 1; return { ok: true }; }
   },
   entitlements: {
     decideFeatureAccess: async (_kind: 'user', _subjectId: string, feature: string) => ({
@@ -281,7 +282,7 @@ const mockNotificationRuntime = {
     getNotificationFeedbackSummary: async () => ({ summary: true }),
     listTargetsWithDegradedHealth: async () => [],
     listRecentCriticalReceipts: async () => [],
-    processProviderEvent: async () => ({ accepted: true })
+    processProviderEvent: async (_providerKind?: string, _channel?: string, _rawEvent?: unknown) => ({ accepted: true })
   }
 };
 
@@ -316,6 +317,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   securityDecisionMode = 'allowed';
   securityCompletedCount = 0;
   securityFailedCount = 0;
+  securityAuditCount = 0;
 
   setAuthTestOverrides({ subjectResolver: async () => null });
   const unauth = await workspaceCurrentRoute.GET();
@@ -396,7 +398,15 @@ export async function runRouteRuntimeTests(): Promise<void> {
   const blockedDispatch = await notificationsDispatchRoute.POST(request('https://x/api/notifications/delivery/dispatch', { method: 'POST' }));
   assert.equal(blockedDispatch.status, 403);
   assert.equal((await readJson(blockedDispatch)).ok, false);
-  assert.equal((await readJson(await notificationsDispatchRoute.POST(request('https://x/api/notifications/delivery/dispatch', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+  const dispatchAllowed = await notificationsDispatchRoute.POST(request('https://x/api/notifications/delivery/dispatch', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' } }));
+  assert.deepEqual(await readJson(dispatchAllowed), { ok: true, data: { report: await mockNotificationRuntime.delivery.dispatchDue() } });
+  securityDecisionMode = 'rate_limited';
+  const dispatchRateLimited = await notificationsDispatchRoute.POST(request('https://x/api/notifications/delivery/dispatch', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' } }));
+  assert.deepEqual(await readJson(dispatchRateLimited), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'idempotency_conflict';
+  const dispatchConflict = await notificationsDispatchRoute.POST(request('https://x/api/notifications/delivery/dispatch', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'idem-dispatch' } }));
+  assert.deepEqual(await readJson(dispatchConflict), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
+  securityDecisionMode = 'allowed';
 
   assert.equal((await readJson(await refreshLatestRoute.GET())).ok, true);
   assert.equal((await readJson(await refreshHistoryRoute.GET(request('https://x/api/refresh/history?limit=5')))).ok, true);
@@ -459,8 +469,18 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal(blockedOps.status, 403);
   blockedFeatures = new Set();
 
-  assert.equal((await readJson(await opsExpireRoute.POST(request('https://x/api/ops/notifications/expire-verifications', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
-  assert.equal((await readJson(await opsFeedbackRoute.POST(request('https://x/api/ops/notifications/process-feedback', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'memory', channel: 'email', rawEvent: {} }) })))).ok, true);
+  const expireAllowed = await opsExpireRoute.POST(request('https://x/api/ops/notifications/expire-verifications', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' } }));
+  assert.deepEqual(await readJson(expireAllowed), { ok: true, data: { report: await mockNotificationRuntime.verification.expireStaleVerifications() } });
+  securityDecisionMode = 'rate_limited';
+  const expireRateLimited = await opsExpireRoute.POST(request('https://x/api/ops/notifications/expire-verifications', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' } }));
+  assert.deepEqual(await readJson(expireRateLimited), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'allowed';
+  const feedbackAllowed = await opsFeedbackRoute.POST(request('https://x/api/ops/notifications/process-feedback', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'memory', channel: 'email', rawEvent: {} }) }));
+  assert.deepEqual(await readJson(feedbackAllowed), { ok: true, data: { report: await mockNotificationRuntime.feedback.processProviderEvent('memory', 'email', {}) } });
+  securityDecisionMode = 'rate_limited';
+  const feedbackRateLimited = await opsFeedbackRoute.POST(request('https://x/api/ops/notifications/process-feedback', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'memory', channel: 'email', rawEvent: {} }) }));
+  assert.deepEqual(await readJson(feedbackRateLimited), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'allowed';
 
   const adminUnauthorized = await adminSystemSummaryRoute.GET(request('https://x/api/admin/system-summary'));
   assert.equal(adminUnauthorized.status, 403);
@@ -483,6 +503,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   const reconcileOk = await internalBillingReconcileRoute.POST(request('https://x/api/internal/billing/reconcile', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'idem-success' }, body: JSON.stringify({ providerKind: 'stripe', sourceEventId: 'evt-1', subjectId: 'user-2' }) }));
   assert.deepEqual(await readJson(reconcileOk), { ok: true, data: { run: await mockApplicationStateRuntime.billingLifecycle.reconcileProviderEvent('stripe', 'evt-1', 'user-2') } });
   assert.equal(securityCompletedCount > 0, true);
+  assert.equal(securityAuditCount > 0, true);
   securityDecisionMode = 'rate_limited';
   const reconcileRateLimited = await internalBillingReconcileRoute.POST(request('https://x/api/internal/billing/reconcile', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'stripe', sourceEventId: 'evt-1', subjectId: 'user-2' }) }));
   assert.deepEqual(await readJson(reconcileRateLimited), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });

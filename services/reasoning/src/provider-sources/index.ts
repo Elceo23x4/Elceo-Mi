@@ -17,3 +17,6 @@ export * from './risk-market-structure/index';
 
 export * from './macro-calendar/index';
 export * from './macro-indicators/index';
+
+export * from './bank-reports/index';
+export * from './regulatory-liquidity/index';

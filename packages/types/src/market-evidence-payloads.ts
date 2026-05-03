@@ -18,6 +18,11 @@ export type NormalizedMacroSurprisePoint = { region: string; indicatorName: stri
 export type NormalizedMacroCalendarEvent = { eventId: string; region: string; countryOrBloc: string; eventName: string; eventCategory: 'inflation'|'labor_market'|'growth_activity'|'policy'|'other'; scheduledFor: string; actual: number | null; consensus: number | null; previous: number | null; unit: string | null; importanceScore: number; providerId: string; };
 export type NormalizedMacroIndicatorPoint = { region: string; countryOrBloc: string; indicatorName: string; indicatorCategory: 'inflation'|'labor_market'|'growth_activity'|'economic_indicator'; observedAt: string; period: string; actual: number; consensus: number | null; previous: number | null; unit: string | null; providerId: string; };
 export type NormalizedBankHealthMetric = { institution: string; region: string; reportDate: string; metricName: string; value: number; unit: string; providerId: string; };
+export type NormalizedBankEarningsMetric = { institution: string; region: string; reportDate: string; fiscalPeriod: string; metricName: string; value: number; unit: string; providerId: string; };
+export type NormalizedStressTestResult = { institution: string; region: string; reportDate: string; scenarioName: string; metricName: string; value: number; unit: string; providerId: string; };
+export type NormalizedRegulatoryFilingReference = { filingId: string; institution: string; region: string; filingDate: string; filingType: string; title: string; url: string | null; providerId: string; };
+export type NormalizedInstitutionalLiquidityMetric = { institution: string; region: string; observedAt: string; metricName: string; value: number; unit: string; providerId: string; };
+
 export type NormalizedFinancialConditionsPoint = { region: string; observedAt: string; indexName: string; value: number; unit: string; providerId: string; };
 export type NormalizedLiquidityConditionPoint = { region: string; observedAt: string; indicatorName: string; value: number; unit: string; providerId: string; };
 export type NormalizedDollarLiquidityPoint = { region: string; observedAt: string; indicatorName: string; value: number; unit: string; providerId: string; };

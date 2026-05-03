@@ -118,3 +118,8 @@ C5-A1 starts backend market-evidence and SEO/content architecture expansion as a
 - Tests/build remain no-network by default: live paths are exercised only with injected fake fetch implementations.
 - Staging activation only: set `TIINGO_LIVE_ENABLED=true` + `TIINGO_API_KEY`, verify provider health=`configured`, run internal fixture ingest regression, then execute constrained live smoke manually.
 - Production activation deferred; risks remain provider quota/billing, schema drift, and stale-data monitoring/alerting.
+
+## C5-A8 readiness note
+- [ ] CFTC COT adapter foundation validated in fixture/no-network mode only (`services/reasoning/src/provider-sources/cot/*`).
+- [ ] Confirm no live CFTC URL calls in default test/build paths.
+- [ ] Future live ingestion/scheduler activation remains deferred to C5-A9/C5+ and is not required for current release gate.

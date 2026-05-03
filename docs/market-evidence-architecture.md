@@ -110,3 +110,10 @@ C5-A3 adds provider source contracts, strict normalization schemas, deterministi
 - Added deterministic evidence quality/provenance/freshness/conflict scoring contracts, schemas, runtime scoring service, boundary query-with-quality helpers, and tests.
 - Scoring is pre-weighting quality gating only; trading/reasoning weights are unchanged and remain future C5-A16 scope.
 - Fixture/malformed/partial/stale/failed evidence is downgraded deterministically with explicit reasons.
+
+
+## C5-A16 note
+- Added scored reasoning evidence input boundary integration from persisted normalized payloads + quality scores.
+- Default filter policy excludes blocked, expired, fixture, and below-threshold evidence; deterministic ordering by quality desc, observedAt desc, payloadId asc.
+- Added boundary assembly methods by asset and evidence class with no live/external calls.
+- This batch does not change trading formulas/asset weights; C5-A17 will add weighting engine.

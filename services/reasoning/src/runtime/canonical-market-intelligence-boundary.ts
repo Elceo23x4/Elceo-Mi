@@ -11,6 +11,8 @@ import { ProviderSourceQueryService } from '../provider-sources/query-service';
 import { ProviderSourceReplayService } from '../provider-sources/replay';
 import { getTiingoProviderHealth, TiingoMarketDataAdapter, type TiingoRuntimeConfig } from '../provider-sources/tiingo/index';
 import { buildEvidenceQualityReport, evaluateEvidencePayloadQuality, evaluateEvidencePayloadsQuality } from '../evidence-quality/index';
+import { assembleReasoningEvidenceInputSnapshot as assembleSnapshot, buildReasoningEvidenceInputAssemblyReport as buildSnapshotReport } from '../reasoning-input/index';
+import type { ReasoningEvidenceFilterPolicy, ReasoningEvidenceInputSnapshot, ReasoningEvidenceInputAssemblyReport, MarketEvidenceClass } from '@elceo/types';
 import type { TradingAssetCoverage } from '@elceo/types';
 
 export type TiingoFixtureIngestionParams = { asset: TradingAssetCoverage; frequency?: string | null; requestedAt?: string | null };
@@ -45,6 +47,11 @@ export class CanonicalMarketIntelligenceBoundaryService {
   getNormalizedMarketEvidencePayloadReplayById(payloadId: string) { if (!this.replay) throw new Error('missing_ingestion_repositories'); return this.replay.getNormalizedMarketEvidencePayloadReplayById(payloadId); }
   getTiingoProviderHealth(config?: TiingoRuntimeConfig) { return getTiingoProviderHealth(config); }
 
+
+  assembleReasoningEvidenceInputSnapshot(params:{payloads: Parameters<typeof assembleSnapshot>[0]['payloads']; qualityScores?: Parameters<typeof assembleSnapshot>[0]['qualityScores']; generatedAt: string; asset?: TradingAssetCoverage|null; evidenceClass?: MarketEvidenceClass|null; filterPolicy?: ReasoningEvidenceFilterPolicy;}): ReasoningEvidenceInputSnapshot { return assembleSnapshot(params); }
+  buildReasoningEvidenceInputAssemblyReport(snapshot: ReasoningEvidenceInputSnapshot): ReasoningEvidenceInputAssemblyReport { return buildSnapshotReport(snapshot); }
+  async getReasoningEvidenceInputByAsset(asset: TradingAssetCoverage, limit?: number, evaluatedAt?: string, filterPolicy?: ReasoningEvidenceFilterPolicy) { const payloads=await this.listEvidencePayloadsByAsset(asset,limit); const scores=this.evaluateEvidencePayloadsQuality(payloads,evaluatedAt); return assembleSnapshot({payloads,qualityScores:scores,generatedAt:evaluatedAt??new Date().toISOString(),asset,evidenceClass:null,...(filterPolicy?{filterPolicy}:{})}); }
+  async getReasoningEvidenceInputByEvidenceClass(evidenceClass: MarketEvidenceClass, limit?: number, evaluatedAt?: string, filterPolicy?: ReasoningEvidenceFilterPolicy) { const payloads=await this.listEvidencePayloadsByEvidenceClass(evidenceClass,limit); const scores=this.evaluateEvidencePayloadsQuality(payloads,evaluatedAt); return assembleSnapshot({payloads,qualityScores:scores,generatedAt:evaluatedAt??new Date().toISOString(),asset:null,evidenceClass,...(filterPolicy?{filterPolicy}:{})}); }
   evaluateEvidencePayloadQuality(payload: Parameters<typeof evaluateEvidencePayloadQuality>[0], evaluatedAt?: string) { return evaluateEvidencePayloadQuality(payload, evaluatedAt); }
   evaluateEvidencePayloadsQuality(payloads: Parameters<typeof evaluateEvidencePayloadsQuality>[0], evaluatedAt?: string) { return evaluateEvidencePayloadsQuality(payloads, evaluatedAt); }
   buildEvidenceQualityReport(payloads: Parameters<typeof buildEvidenceQualityReport>[0], evaluatedAt?: string) { return buildEvidenceQualityReport(payloads, evaluatedAt); }

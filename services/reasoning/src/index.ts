@@ -14,3 +14,4 @@ export * from './seo-content';
 export * from './coverage-audit';
 
 export * from './provider-sources';
+export * from './reasoning-input';

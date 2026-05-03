@@ -269,3 +269,10 @@ Adoption semantics:
 - fallback remains disabled influence state with empty linked IDs.
 
 This keeps reasoning input resilient while enabling deterministic use of journal history without importing journal internals directly.
+
+
+## C5-A16 note
+- Added scored reasoning evidence input boundary integration from persisted normalized payloads + quality scores.
+- Default filter policy excludes blocked, expired, fixture, and below-threshold evidence; deterministic ordering by quality desc, observedAt desc, payloadId asc.
+- Added boundary assembly methods by asset and evidence class with no live/external calls.
+- This batch does not change trading formulas/asset weights; C5-A17 will add weighting engine.

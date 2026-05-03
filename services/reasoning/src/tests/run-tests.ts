@@ -36,6 +36,7 @@ import { runMacroCalendarAdapterTests } from './macro-calendar-adapter.test.js';
 import { runMacroIndicatorAdapterTests } from './macro-indicator-adapter.test.js';
 import { runMarketEvidenceCoverageAuditTests } from './market-evidence-coverage-audit.test.js';
 import { runEvidenceQualityTests } from './evidence-quality.test.js';
+import { runReasoningMarketInputTests } from './reasoning-market-input.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -76,6 +77,7 @@ async function run(): Promise<void> {
   await runMacroIndicatorAdapterTests();
   runMarketEvidenceCoverageAuditTests();
   await runEvidenceQualityTests();
+  await runReasoningMarketInputTests();
   console.log('reasoning runtime contract tests passed');
 }
 

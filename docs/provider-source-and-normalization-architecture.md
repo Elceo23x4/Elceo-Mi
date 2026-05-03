@@ -106,3 +106,7 @@ Implement first live/mock adapters and ingestion persistence on top of these con
 - Normalization enforces finite numeric values, ISO timestamps, deterministic payload IDs, and explicit geopolitical sourceUrl http(s)-or-null validation.
 - No live external calls, scraping, scheduler activation, secrets, or private/non-public datasets were introduced in this batch.
 - Future live-ingestion/scheduler risks: source drift, proxy quality limits, benchmark revisions, news/event classification risk, and crypto market-data integrity variance.
+
+
+## C5-A14 coverage-audit closure
+- Provider descriptors are now audited deterministically for schema validity, known capabilities, non-empty capability lists, and rationale completeness.

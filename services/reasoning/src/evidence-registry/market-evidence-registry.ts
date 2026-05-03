@@ -15,4 +15,9 @@ export const EVIDENCE_TYPES: MarketEvidenceTypeDefinition[] = [
 {evidenceTypeId:'interbank_orderflow',evidenceClass:'institutional_liquidity',displayName:'Interbank Orderflow',description:'Licensed bank orderflow',frequency:'intraday',primarySources:['fred'],regions:['global'],accessLevel:'licensed',isLaunchScope:false,isPublicAccessible:false,excludedReason:'Excluded from launch due to interbank licensing complexity.'}
 ];
 
-export function getMarketEvidenceRegistrySnapshot(asOfIso: string): MarketEvidenceRegistrySnapshot { return { generatedAt: asOfIso, evidenceTypes: EVIDENCE_TYPES, sources: EVIDENCE_SOURCES, assetInfluences: [] }; }
+const LAUNCH_ASSETS = [
+  'xau_usd','eur_usd','gbp_usd','usd_jpy','usd_chf','aud_usd','nzd_usd','usd_cad','btc_usd','nasdaq_100','sp500','de30'
+] as const;
+const LAUNCH_ASSET_INFLUENCES: MarketEvidenceRegistrySnapshot['assetInfluences'] = LAUNCH_ASSETS.map((asset)=>({ asset, evidenceTypeId:'macro_calendar', influenceDirection:'contextual', influenceStrength:'medium', influenceHorizon:'swing', rationale:'Launch macro-calendar catalyst path for all launch assets.', primaryCountries:['United States'], primaryInstitutions:['Federal Reserve'] }));
+
+export function getMarketEvidenceRegistrySnapshot(asOfIso: string): MarketEvidenceRegistrySnapshot { return { generatedAt: asOfIso, evidenceTypes: EVIDENCE_TYPES, sources: EVIDENCE_SOURCES, assetInfluences: LAUNCH_ASSET_INFLUENCES }; }

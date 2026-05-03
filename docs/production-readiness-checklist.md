@@ -169,3 +169,7 @@ C5-A1 starts backend market-evidence and SEO/content architecture expansion as a
 - Normalization enforces finite numeric values, ISO timestamps, deterministic payload IDs, and explicit geopolitical sourceUrl http(s)-or-null validation.
 - No live external calls, scraping, scheduler activation, secrets, or private/non-public datasets were introduced in this batch.
 - Future live-ingestion/scheduler risks: source drift, proxy quality limits, benchmark revisions, news/event classification risk, and crypto market-data integrity variance.
+
+
+## C5-A14 checklist note
+- [ ] Run deterministic market-evidence coverage audit tests to confirm no silent evidence/provider/payload/asset/SEO gaps.

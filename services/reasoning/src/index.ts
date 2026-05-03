@@ -11,5 +11,6 @@ export * from './runtime/index';
 
 export * from './evidence-registry';
 export * from './seo-content';
+export * from './coverage-audit';
 
 export * from './provider-sources';

@@ -34,6 +34,7 @@ import { runStressConditionsAdapterTests } from './stress-conditions-adapter.tes
 import { runRiskMarketAdapterTests } from './risk-market-adapter.test.js';
 import { runMacroCalendarAdapterTests } from './macro-calendar-adapter.test.js';
 import { runMacroIndicatorAdapterTests } from './macro-indicator-adapter.test.js';
+import { runMarketEvidenceCoverageAuditTests } from './market-evidence-coverage-audit.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -72,6 +73,7 @@ async function run(): Promise<void> {
   await runRiskMarketAdapterTests();
   await runMacroCalendarAdapterTests();
   await runMacroIndicatorAdapterTests();
+  runMarketEvidenceCoverageAuditTests();
   console.log('reasoning runtime contract tests passed');
 }
 

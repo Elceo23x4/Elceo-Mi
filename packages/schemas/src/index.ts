@@ -47,3 +47,6 @@ export * from './billing-orchestration.schema';
 export * from './security-runtime.schema';
 export * from './market-evidence.schema';
 export * from './seo-content.schema';
+
+export * from './market-data-providers.schema';
+export * from './market-evidence-payloads.schema';

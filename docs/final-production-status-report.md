@@ -112,3 +112,7 @@ C5-A1 starts backend market-evidence and SEO/content architecture expansion as a
 
 ## C5-A2 note
 C5-A2 adds durable/replayable market evidence registry and SEO architecture snapshot persistence with persisted-only query services; no live provider ingestion is enabled yet.
+
+
+## C5-A3 note
+Market-evidence provider source contracts and normalization foundations are now in place (no live fetching yet). This improves backend readiness but does not remove launch blockers tied to env/migrations/security smoke.

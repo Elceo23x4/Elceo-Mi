@@ -1,0 +1,13 @@
+export const PROVIDER_FAMILIES = ['tiingo','tradingview_compatible','cftc','central_bank','treasury','statistics_agency','exchange','fred','world_bank','imf','oecd','news_provider','bank_reports','public_regulatory_filings','calculated_internal'] as const;
+export type ProviderFamily = (typeof PROVIDER_FAMILIES)[number];
+
+export const PROVIDER_CAPABILITY_KINDS = ['market_price_history','intraday_quotes','end_of_day_prices','chart_presentation_metadata','cot_report','futures_positioning_report','central_bank_balance_sheet','central_bank_liquidity_operation','policy_rate_series','real_yield_series','bond_auction_result','debt_supply_calendar','credit_stress_indicator','volatility_surface','macro_surprise_series','bank_earnings_report','bank_health_metric','stress_test_result','institutional_liquidity_report','market_news_feed','economic_calendar','financial_conditions_index','liquidity_conditions_indicator','dollar_liquidity_indicator','cross_market_rate_series','equity_index_breadth_indicator','crypto_market_structure_indicator','energy_commodity_series','precious_metals_flow_indicator','risk_sentiment_indicator','earnings_macro_indicator','positioning_sentiment_indicator','geopolitical_risk_event'] as const;
+export type ProviderCapabilityKind = (typeof PROVIDER_CAPABILITY_KINDS)[number];
+
+export const PROVIDER_ACCESS_REQUIREMENTS = ['none','api_key','paid_api_key','official_public_download','manual_download','derived_internal'] as const;
+export type ProviderAccessRequirement = (typeof PROVIDER_ACCESS_REQUIREMENTS)[number];
+
+export type MarketDataProviderDescriptor = { providerId: string; providerFamily: ProviderFamily; displayName: string; homepageUrl: string; accessRequirement: ProviderAccessRequirement; supportedCapabilities: ProviderCapabilityKind[]; supportedRegions: string[]; supportedAssets: string[]; launchEnabled: boolean; notes: string; };
+export type ProviderSourceRequest = { requestId: string; providerId: string; capability: ProviderCapabilityKind; asset: string | null; region: string | null; evidenceTypeId: string | null; requestedAt: string; paramsJson: string; };
+export type ProviderSourceResponse = { requestId: string; providerId: string; capability: ProviderCapabilityKind; status: 'success'|'empty'|'failed'|'unsupported'; fetchedAt: string; sourceUrl: string | null; rawPayloadJson: string | null; errorCode: string | null; errorMessage: string | null; };
+export type ProviderCapabilityRegistrySnapshot = { generatedAt: string; providers: MarketDataProviderDescriptor[]; };

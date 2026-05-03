@@ -88,3 +88,6 @@ C5-A1 starts backend market-evidence and SEO/content architecture expansion as a
 - [ ] Market evidence registry snapshot migration applied (`0032_market_evidence_and_seo_snapshots.sql`).
 - [ ] SEO architecture snapshot migration applied (`0032_market_evidence_and_seo_snapshots.sql`).
 - [ ] Replay/query checks validated against persisted snapshot records only.
+
+- [ ] C5-A3 provider source + normalization foundation contracts validated (types/schemas/tests).
+- [ ] Provider capability registry snapshot contract verified with launchEnabled=false descriptors until live integration batch.

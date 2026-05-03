@@ -33,11 +33,11 @@ export function runProviderSourcesTests(): void {
     validateNormalizedEnergyCommodityPoint({commodity:'wti',observedAt:payload.observedAt,price:80,currency:'USD',providerId:'energy_public_market_data'}),
     validateNormalizedPreciousMetalsFlowPoint({asset:'xau',observedAt:payload.observedAt,flowAmount:5,unit:'tonnes',providerId:'precious_metals_public_flows'}),
     validateNormalizedRiskSentimentPoint({region:'global',observedAt:payload.observedAt,indicatorName:'risk-on',score:65,providerId:'calculated_internal_conditions'}),
-    validateNormalizedGeopoliticalRiskEvent({eventId:'g1',region:'global',publishedAt:payload.observedAt,severity:'high',title:'Event',providerId:'geopolitical_public_news'}),
+    validateNormalizedGeopoliticalRiskEvent({eventId:'g1',region:'global',publishedAt:payload.observedAt,severity:'high',title:'Event',importanceScore:80,relatedAssets:['wti'],sourceUrl:'https://example.com/event',providerId:'geopolitical_public_news'}),
     validateNormalizedEarningsMacroPoint({region:'united_states',observedAt:payload.observedAt,metricName:'EPS diffusion',value:0.7,unit:'index',providerId:'macro_earnings_public_reports'}),
     validateNormalizedPositioningSentimentPoint({asset:'eur_usd',observedAt:payload.observedAt,longPercent:55,shortPercent:45,netSkew:10,providerId:'calculated_internal_conditions'}),
     validateNormalizedMarketNewsItem({newsId:'n1',providerId:'news',title:'headline',url:null,publishedAt:payload.observedAt,sourceName:'wire',relatedAssets:['xau_usd'],relatedEvidenceClasses:['market_news'],sentiment:null,importanceScore:80})
   ];
   if(checks.some((x)=>x.ok===false)) throw new Error('specialized validator failed');
-  if(validateNormalizedGeopoliticalRiskEvent({eventId:'g1',region:'global',publishedAt:payload.observedAt,severity:'bad',title:'Event',providerId:'geopolitical_public_news'}).ok) throw new Error('severity enum should fail');
+  if(validateNormalizedGeopoliticalRiskEvent({eventId:'g1',region:'global',publishedAt:payload.observedAt,severity:'bad',title:'Event',importanceScore:80,relatedAssets:['wti'],sourceUrl:null,providerId:'geopolitical_public_news'}).ok) throw new Error('severity enum should fail');
 }

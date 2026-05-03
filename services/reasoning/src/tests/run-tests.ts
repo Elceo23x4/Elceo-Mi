@@ -28,6 +28,8 @@ import { runTiingoAdapterTests } from './tiingo-adapter.test.js';
 import { runMarketEvidenceIngestionPersistenceTests } from './market-evidence-ingestion-persistence.test.js';
 import { runTiingoFixtureIngestionTests } from './tiingo-fixture-ingestion.test.js';
 import { runCotAdapterTests } from './cot-adapter.test.js';
+import { runCentralBankAdapterTests } from './central-bank-adapter.test.js';
+import { runTreasuryAdapterTests } from './treasury-adapter.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -60,6 +62,8 @@ async function run(): Promise<void> {
   await runMarketEvidenceIngestionPersistenceTests();
   await runTiingoFixtureIngestionTests();
   await runCotAdapterTests();
+  await runCentralBankAdapterTests();
+  await runTreasuryAdapterTests();
   console.log('reasoning runtime contract tests passed');
 }
 

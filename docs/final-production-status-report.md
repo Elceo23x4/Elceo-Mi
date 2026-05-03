@@ -145,3 +145,18 @@ Tiingo-compatible provider adapter foundation now exists in reasoning provider-s
 ## C5-A8 note
 - Added fixture-only CFTC COT/public positioning adapter foundation in reasoning provider sources with deterministic request/response normalization and runtime tests.
 - No live CFTC URL integration or scheduler activation is active in this batch; launch blockers and environment requirements remain unchanged.
+
+
+## C5-A9 note
+- Added fixture-only/no-network central-bank adapter foundation () for balance sheet, liquidity operations, and policy rate evidence classes.
+- Added fixture-only/no-network treasury adapter foundation () for real yield series, bond auctions, and debt supply calendar evidence classes.
+- Added strict normalized payload contracts/schemas for central-bank balance sheet points, policy-rate points, and debt-supply calendar items.
+- No live Fed/ECB/BoJ/U.S. Treasury/FRED ingestion, no scraping, and no scheduler activation in this batch.
+- Future live ingestion risks: source revisions, publication lag, and upstream schema/format drift.
+
+## C5-A9 note
+- Added fixture-only/no-network central-bank adapter foundation (services/reasoning/src/provider-sources/central-bank/*) for balance sheet, liquidity operations, and policy rate evidence classes.
+- Added fixture-only/no-network treasury adapter foundation (services/reasoning/src/provider-sources/treasury/*) for real yield series, bond auctions, and debt supply calendar evidence classes.
+- Added strict normalized payload contracts/schemas for central-bank balance sheet points, policy-rate points, and debt-supply calendar items.
+- No live Fed/ECB/BoJ/U.S. Treasury/FRED ingestion, no scraping, and no scheduler activation in this batch.
+- Future live ingestion risks: source revisions, publication lag, and upstream schema/format drift.

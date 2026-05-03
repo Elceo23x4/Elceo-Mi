@@ -5,6 +5,10 @@ export type NormalizedMarketEvidencePayload = { payloadId: string; evidenceTypeI
 export type NormalizedPriceBar = { asset: string; timeframe: string; timestamp: string; open: number; high: number; low: number; close: number; volume: number | null; providerId: string; };
 export type NormalizedCotPositioning = { reportDate: string; marketName: string; asset: string | null; commercialLong: number; commercialShort: number; nonCommercialLong: number; nonCommercialShort: number; netNonCommercial: number; openInterest: number; providerId: string; };
 export type NormalizedFuturesPositioning = { reportDate: string; marketName: string; asset: string | null; leveragedFundsLong: number; leveragedFundsShort: number; assetManagerLong: number; assetManagerShort: number; openInterest: number; providerId: string; };
+
+export type NormalizedCentralBankBalanceSheetPoint = { institution: string; region: string; observedAt: string; metricName: string; value: number; currency: string | null; unit: string; providerId: string; };
+export type NormalizedPolicyRatePoint = { institution: string; region: string; observedAt: string; rateName: string; value: number; providerId: string; };
+export type NormalizedDebtSupplyCalendarItem = { issuer: string; region: string; announcementDate: string; auctionDate: string | null; maturity: string; amountExpected: number | null; currency: string; providerId: string; };
 export type NormalizedCentralBankLiquidity = { institution: string; region: string; operationDate: string; operationType: string; amount: number; currency: string; maturityDays: number | null; providerId: string; };
 export type NormalizedRealYieldPoint = { region: string; maturity: string; observedAt: string; value: number; providerId: string; };
 export type NormalizedBondAuctionResult = { issuer: string; region: string; auctionDate: string; maturity: string; yieldAwarded: number; bidToCover: number | null; amountOffered: number | null; amountAccepted: number | null; providerId: string; };

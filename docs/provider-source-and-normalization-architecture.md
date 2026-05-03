@@ -26,3 +26,9 @@ All remain `launchEnabled=false`.
 
 ## C5-A4 recommended next
 Implement first live/mock adapters and ingestion persistence on top of these contracts after coverage completeness is locked.
+
+## C5-A4 Tiingo-compatible adapter foundation
+- Added `services/reasoning/src/provider-sources/tiingo/*` adapter contracts + fixture-only adapter path.
+- `TiingoMarketDataAdapter` returns deterministic fixture responses for supported market-price capabilities and never performs live network calls.
+- Added strict OHLCV normalization guards (`finite` and `high >= low`) with deterministic errors for malformed payloads.
+- Live activation remains future scope and will require `TIINGO_API_KEY` plus explicit runtime enablement in C5-A5/C5+.

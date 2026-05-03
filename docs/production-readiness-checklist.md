@@ -91,3 +91,9 @@ C5-A1 starts backend market-evidence and SEO/content architecture expansion as a
 
 - [ ] C5-A3 provider source + normalization foundation contracts validated (types/schemas/tests).
 - [ ] Provider capability registry snapshot contract verified with launchEnabled=false descriptors until live integration batch.
+
+
+## C5-A4 readiness note
+- [ ] Tiingo-compatible adapter foundation validated in fixture/no-network mode only.
+- [ ] `TIINGO_API_KEY` is **not required** for current tests/build because live adapter activation is deferred.
+- [ ] Future live activation must add explicit env + scheduler integration checks (C5-A5/C5+).

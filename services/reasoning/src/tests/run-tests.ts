@@ -24,6 +24,7 @@ import { runSeoContentArchitectureTests } from './seo-content-architecture.test.
 import { runMarketEvidencePersistenceTests } from './market-evidence-persistence.test.js';
 import { runSeoContentPersistenceTests } from './seo-content-persistence.test.js';
 import { runProviderSourcesTests } from './provider-sources.test.js';
+import { runTiingoAdapterTests } from './tiingo-adapter.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -52,6 +53,7 @@ async function run(): Promise<void> {
   await runMarketEvidencePersistenceTests();
   await runSeoContentPersistenceTests();
   runProviderSourcesTests();
+  await runTiingoAdapterTests();
   console.log('reasoning runtime contract tests passed');
 }
 

@@ -23,3 +23,8 @@ C5-A3 adds provider source contracts, strict normalization schemas, deterministi
 ## C5-A3 coverage update
 - Provider/normalization foundation now explicitly maps the full MarketEvidenceClass taxonomy to capability + normalization paths (including calculated-internal placeholders where appropriate).
 - Interbank/order-flow/bank-order data remains excluded due licensing complexity and is not reintroduced.
+
+## C5-A4 note
+- Tiingo-compatible market-data adapter foundation is now implemented with fixture/no-network behavior only.
+- Deterministic normalization now produces `NormalizedPriceBar` and base `NormalizedMarketEvidencePayload` records from Tiingo-like OHLCV payloads.
+- Live ingestion scheduler integration remains deferred to C5-A5/C5+ scope.

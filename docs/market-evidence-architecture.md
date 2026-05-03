@@ -105,3 +105,8 @@ C5-A3 adds provider source contracts, strict normalization schemas, deterministi
 ## C5-A14 coverage-audit closure
 - Added deterministic coverage-audit module and tests to prevent silent gaps across evidence classes, launch evidence types, launch assets, providers, normalized payload families, SEO mappings, and explicit exclusions.
 - Coverage completion is contract/audit-only and does not enable live ingestion, quality scoring, or reasoning weighting integration.
+
+## C5-A15 note
+- Added deterministic evidence quality/provenance/freshness/conflict scoring contracts, schemas, runtime scoring service, boundary query-with-quality helpers, and tests.
+- Scoring is pre-weighting quality gating only; trading/reasoning weights are unchanged and remain future C5-A16 scope.
+- Fixture/malformed/partial/stale/failed evidence is downgraded deterministically with explicit reasons.

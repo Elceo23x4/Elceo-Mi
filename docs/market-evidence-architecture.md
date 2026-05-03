@@ -84,3 +84,11 @@ C5-A3 adds provider source contracts, strict normalization schemas, deterministi
 - Normalization maps indicator categories to evidenceType/evidenceClass: inflation_data/inflation, labor_market_data/labor_market, growth_activity_data/growth_activity, economic_indicator/economic_indicator, macro_surprise_history/macro_surprise_history.
 - Operational risks documented: revision lag, delayed releases, consensus quality drift, event-calendar source drift.
 - Future work: wire live official ingestion and scheduler with release revisions and provenance scoring.
+
+
+## C5-A12 Bank/Regulatory/Liquidity adapter foundation
+- Added fixture-only/no-network bank reports adapter (`services/reasoning/src/provider-sources/bank-reports/*`) for bank health + bank earnings metrics.
+- Added fixture-only/no-network regulatory/liquidity adapter (`services/reasoning/src/provider-sources/regulatory-liquidity/*`) for stress tests, regulatory filing references, and institutional liquidity metrics.
+- Added strict normalized payload contracts/schemas for bank earnings, stress test results, regulatory filing references (nullable http(s) URL), and institutional liquidity metrics.
+- No live bank/regulator calls, no scraping, no private/non-public order-flow data, and no scheduler activation in this batch.
+- Risks: filing format drift, reporting lag/revisions/restatements, and institution naming normalization mismatches until live ingestion harmonization.

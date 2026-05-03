@@ -28,3 +28,8 @@ C5-A3 adds provider source contracts, strict normalization schemas, deterministi
 - Tiingo-compatible market-data adapter foundation is now implemented with fixture/no-network behavior only.
 - Deterministic normalization now produces `NormalizedPriceBar` and base `NormalizedMarketEvidencePayload` records from Tiingo-like OHLCV payloads.
 - Live ingestion scheduler integration remains deferred to C5-A5/C5+ scope.
+
+## C5-A5 note
+- Provider source requests/responses and normalized market evidence payloads are now durably persisted with memory+SQL repositories, strict serialization/replay helpers, and adapter-agnostic ingestion persistence services.
+- Tiingo fixture adapter persistence is covered in runtime tests with no external API calls and no secret storage.
+- Live provider scheduling and route exposure remain out of scope for future batches.

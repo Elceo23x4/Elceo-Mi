@@ -1,0 +1,10 @@
+import { validateNormalizedMarketEvidencePayload, validateProviderSourceRequest, validateProviderSourceResponse } from '@elceo/schemas';
+import type { NormalizedMarketEvidencePayload, ProviderSourceRequest, ProviderSourceResponse } from '@elceo/types';
+const parse=(j:string,l:string):unknown=>{try{return JSON.parse(j);}catch{throw new Error(`malformed_json:${l}`);}};
+const assert=<T>(result:{ok:true;value:T}|{ok:false;errors:string[]},l:string):T=>{if(result.ok===false) throw new Error(`invalid_${l}:${result.errors.join(';')}`); return result.value;};
+export const serializeProviderSourceRequest=(r:ProviderSourceRequest)=>JSON.stringify(r);
+export const deserializeProviderSourceRequest=(j:string)=>assert(validateProviderSourceRequest(parse(j,'provider_source_request')),'provider_source_request');
+export const serializeProviderSourceResponse=(r:ProviderSourceResponse)=>JSON.stringify(r);
+export const deserializeProviderSourceResponse=(j:string)=>assert(validateProviderSourceResponse(parse(j,'provider_source_response')),'provider_source_response');
+export const serializeNormalizedMarketEvidencePayload=(p:NormalizedMarketEvidencePayload)=>JSON.stringify(p);
+export const deserializeNormalizedMarketEvidencePayload=(j:string)=>assert(validateNormalizedMarketEvidencePayload(parse(j,'normalized_market_evidence_payload')),'normalized_market_evidence_payload');

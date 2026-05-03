@@ -104,6 +104,7 @@ import * as adminBillingOrchestrationLatestRoute from '../app/api/admin/billing/
 import * as adminBillingOrchestrationRunsRoute from '../app/api/admin/billing/orchestration/runs/route';
 import * as adminBillingOrchestrationSubjectRoute from '../app/api/admin/billing/orchestration/subject/route';
 import * as internalBillingOrchestrationRetryRoute from '../app/api/internal/billing/orchestration/retry/route';
+import * as internalTiingoFixtureIngestRoute from '../app/api/internal/market-evidence/tiingo/fixture-ingest/route';
 
 const subject = { subjectKind: 'user' as const, subjectId: 'user-1', userId: 'user-1' };
 
@@ -308,13 +309,19 @@ const mockNotificationRuntime = {
     processProviderEvent: async (_providerKind?: string, _channel?: string, _rawEvent?: unknown) => ({ accepted: true })
   }
 };
+const mockReasoningRuntime = {
+  marketIntelligence: {
+    runTiingoFixtureIngestion: async (body: { asset: string }) => ({ requestId: 'tiingo-fixture-req-1', providerId: 'tiingo_market_data', capability: 'market_price_history', responseStatus: 'success', payloadCount: 1, persistedPayloadIds: [`payload-${body.asset}`], errors: [] })
+  }
+};
 
 function installMocks(): void {
   setAuthTestOverrides({ subjectResolver: async () => subject, internalToken: 'internal-token' });
   setCompositionTestOverrides({
     applicationStateRuntime: mockApplicationStateRuntime as never,
     analyticsRuntime: mockAnalyticsRuntime as never,
-    notificationRuntime: mockNotificationRuntime as never
+    notificationRuntime: mockNotificationRuntime as never,
+    reasoningRuntime: mockReasoningRuntime as never
   });
 }
 

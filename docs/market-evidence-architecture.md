@@ -33,3 +33,10 @@ C5-A3 adds provider source contracts, strict normalization schemas, deterministi
 - Provider source requests/responses and normalized market evidence payloads are now durably persisted with memory+SQL repositories, strict serialization/replay helpers, and adapter-agnostic ingestion persistence services.
 - Tiingo fixture adapter persistence is covered in runtime tests with no external API calls and no secret storage.
 - Live provider scheduling and route exposure remain out of scope for future batches.
+
+## C5-A6 note
+- Added internal-only fixture ingestion trigger: `POST /api/internal/market-evidence/tiingo/fixture-ingest` (internal token + `admin.ops` + runtime security `internal_mutation`).
+- Trigger executes `runTiingoFixtureIngestion` through canonical market intelligence runtime using fixture-only Tiingo adapter (no live network calls, no `TIINGO_API_KEY`).
+- Ingestion persists provider request/response/normalized payload lifecycle and supports payload query/replay.
+- Future C5-A7 live activation requirements remain: `TIINGO_API_KEY`, provider health checks, scheduler integration, production rate-limit policy, staging smoke validation.
+

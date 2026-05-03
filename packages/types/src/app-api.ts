@@ -6,6 +6,7 @@ import type { SnapshotRefreshTriggerKind } from './refresh-runtime';
 import type { ElceoAccountState, ElceoFeatureKey, ElceoPlanKind } from './entitlements';
 import type { BillingPlanInterval, BillingProviderKind } from './billing';
 import type { BillingExternalProviderKind, StripeLikeWebhookEnvelope } from './payment-providers';
+import type { TradingAssetCoverage } from './market-evidence';
 
 export type ApiSuccessEnvelope<T> = {
   ok: true;
@@ -202,6 +203,7 @@ export type InternalBillingReconcileRequest = { subjectId: string; providerKind?
 export type InternalBillingPolicyEvaluateRequest = { subjectId: string; sourceReconciliationRunId?: string };
 
 export type InternalBillingOrchestrationRetryRequest = { subjectId: string };
+export type InternalTiingoFixtureIngestionRequest = { asset: TradingAssetCoverage; frequency?: string | null; requestedAt?: string | null };
 export type AdminBillingOrchestrationSubjectQuery = { subjectId: string };
 export type AdminBillingOrchestrationRunsQuery = { subjectId: string; limit?: number };
 export type BillingProviderPlanMappingRequest = { providerKind: BillingExternalProviderKind; externalPriceId: string; mappedPlanKind: ElceoPlanKind; interval: BillingPlanInterval };

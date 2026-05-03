@@ -73,3 +73,10 @@ Admin billing mutation surfaces now use canonical route-security enforcement (`a
 - `/api/admin/billing/pause`
 - `/api/admin/billing/resume`
 - `/api/admin/billing/provider-plan-mapping`
+
+## C5-A6 note
+- Added internal-only fixture ingestion trigger: `POST /api/internal/market-evidence/tiingo/fixture-ingest` (internal token + `admin.ops` + runtime security `internal_mutation`).
+- Trigger executes `runTiingoFixtureIngestion` through canonical market intelligence runtime using fixture-only Tiingo adapter (no live network calls, no `TIINGO_API_KEY`).
+- Ingestion persists provider request/response/normalized payload lifecycle and supports payload query/replay.
+- Future C5-A7 live activation requirements remain: `TIINGO_API_KEY`, provider health checks, scheduler integration, production rate-limit policy, staging smoke validation.
+

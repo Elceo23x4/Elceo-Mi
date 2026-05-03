@@ -287,3 +287,10 @@ Coverage intent:
 - Safe read checks for admin and authenticated route families when tokens are provided.
 - Protected POST rejection behavior without auth/internal credentials.
 - Optional mutation-mode checks only when `ELCEO_SMOKE_ALLOW_MUTATIONS=true`.
+
+## C5-A6 note
+- Added internal-only fixture ingestion trigger: `POST /api/internal/market-evidence/tiingo/fixture-ingest` (internal token + `admin.ops` + runtime security `internal_mutation`).
+- Trigger executes `runTiingoFixtureIngestion` through canonical market intelligence runtime using fixture-only Tiingo adapter (no live network calls, no `TIINGO_API_KEY`).
+- Ingestion persists provider request/response/normalized payload lifecycle and supports payload query/replay.
+- Future C5-A7 live activation requirements remain: `TIINGO_API_KEY`, provider health checks, scheduler integration, production rate-limit policy, staging smoke validation.
+

@@ -33,6 +33,10 @@ export function getReasoningRuntime() {
   if (!overrides?.reasoningRuntime) throw new Error('missing_reasoning_runtime_override');
   return overrides.reasoningRuntime;
 }
+export function getMarketIntelligenceRuntime() {
+  if (!overrides?.reasoningRuntime) throw new Error('missing_reasoning_runtime_override');
+  return (overrides.reasoningRuntime as { marketIntelligence: unknown }).marketIntelligence;
+}
 
 export function getWorkspaceRuntime() {
   return (getApplicationStateRuntime() as { workspace: unknown }).workspace;

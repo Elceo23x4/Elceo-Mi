@@ -32,6 +32,8 @@ import { runCentralBankAdapterTests } from './central-bank-adapter.test.js';
 import { runTreasuryAdapterTests } from './treasury-adapter.test.js';
 import { runStressConditionsAdapterTests } from './stress-conditions-adapter.test.js';
 import { runRiskMarketAdapterTests } from './risk-market-adapter.test.js';
+import { runMacroCalendarAdapterTests } from './macro-calendar-adapter.test.js';
+import { runMacroIndicatorAdapterTests } from './macro-indicator-adapter.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -68,6 +70,8 @@ async function run(): Promise<void> {
   await runTreasuryAdapterTests();
   await runStressConditionsAdapterTests();
   await runRiskMarketAdapterTests();
+  await runMacroCalendarAdapterTests();
+  await runMacroIndicatorAdapterTests();
   console.log('reasoning runtime contract tests passed');
 }
 

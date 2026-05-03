@@ -14,3 +14,6 @@ export * from "./replay";
 
 export * from './stress-conditions/index';
 export * from './risk-market-structure/index';
+
+export * from './macro-calendar/index';
+export * from './macro-indicators/index';

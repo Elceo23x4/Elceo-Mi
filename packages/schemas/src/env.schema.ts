@@ -25,6 +25,10 @@ export type ProviderEnv = {
   ELCEO_INTERNAL_API_TOKEN?: string;
   SENTRY_DSN?: string;
   LOG_LEVEL?: 'debug' | 'info' | 'warn' | 'error';
+  TIINGO_API_KEY?: string;
+  TIINGO_LIVE_ENABLED?: string;
+  TIINGO_BASE_URL?: string;
+  TIINGO_TIMEOUT_MS?: string;
 };
 
 export type EnvValidationResult = {
@@ -69,6 +73,10 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   if (env.ELCEO_INTERNAL_API_TOKEN) out.ELCEO_INTERNAL_API_TOKEN = env.ELCEO_INTERNAL_API_TOKEN;
   if (env.SENTRY_DSN) out.SENTRY_DSN = env.SENTRY_DSN;
   if (env.LOG_LEVEL === 'debug' || env.LOG_LEVEL === 'info' || env.LOG_LEVEL === 'warn' || env.LOG_LEVEL === 'error') out.LOG_LEVEL = env.LOG_LEVEL;
+  if (env.TIINGO_API_KEY) out.TIINGO_API_KEY = env.TIINGO_API_KEY;
+  if (env.TIINGO_LIVE_ENABLED) out.TIINGO_LIVE_ENABLED = env.TIINGO_LIVE_ENABLED;
+  if (env.TIINGO_BASE_URL) out.TIINGO_BASE_URL = env.TIINGO_BASE_URL;
+  if (env.TIINGO_TIMEOUT_MS) out.TIINGO_TIMEOUT_MS = env.TIINGO_TIMEOUT_MS;
   return out;
 }
 
@@ -98,6 +106,18 @@ export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
 
   if (env.ENABLE_KAFKA === 'true' && !env.KAFKA_BROKERS) {
     errors.push('KAFKA_BROKERS is required when ENABLE_KAFKA=true');
+  }
+
+  const tiingoLiveEnabled = env.TIINGO_LIVE_ENABLED === 'true' || env.TIINGO_LIVE_ENABLED === '1';
+  if (tiingoLiveEnabled && !env.TIINGO_API_KEY) {
+    errors.push('TIINGO_API_KEY is required when TIINGO_LIVE_ENABLED=true');
+  }
+  if (env.TIINGO_BASE_URL && !isValidAbsoluteHttpUrl(env.TIINGO_BASE_URL)) {
+    errors.push('TIINGO_BASE_URL must be an absolute http(s) URL');
+  }
+  if (env.TIINGO_TIMEOUT_MS) {
+    const timeoutMs = Number(env.TIINGO_TIMEOUT_MS);
+    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) errors.push('TIINGO_TIMEOUT_MS must be a positive number when set');
   }
 
   return {

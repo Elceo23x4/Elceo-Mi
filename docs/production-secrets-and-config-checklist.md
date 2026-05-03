@@ -45,3 +45,12 @@
 - Store production secrets in managed secret manager only.
 - Rotate high-impact secrets (`AUTH_SECRET`, internal API token, Stripe secrets) on a fixed schedule and after incident response.
 - Ensure logs/redaction policies do not emit secret material.
+
+## C5-A7 Live Tiingo activation readiness
+
+- C5-A7 live-readiness update: Tiingo remains fixture-first by default; runtime live adapter defaults to `live_disabled` unless `TIINGO_LIVE_ENABLED=true`.
+- Live mode now requires `TIINGO_API_KEY`; optional `TIINGO_BASE_URL` (default `https://api.tiingo.com`) and `TIINGO_TIMEOUT_MS` are supported.
+- Added provider-health semantics (`configured | disabled | missing_api_key | invalid_config`) via reasoning boundary/service; health never exposes API key values.
+- Tests/build remain no-network by default: live paths are exercised only with injected fake fetch implementations.
+- Staging activation only: set `TIINGO_LIVE_ENABLED=true` + `TIINGO_API_KEY`, verify provider health=`configured`, run internal fixture ingest regression, then execute constrained live smoke manually.
+- Production activation deferred; risks remain provider quota/billing, schema drift, and stale-data monitoring/alerting.

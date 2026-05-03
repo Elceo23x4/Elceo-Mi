@@ -160,3 +160,10 @@ Tiingo-compatible provider adapter foundation now exists in reasoning provider-s
 - Added strict normalized payload contracts/schemas for central-bank balance sheet points, policy-rate points, and debt-supply calendar items.
 - No live Fed/ECB/BoJ/U.S. Treasury/FRED ingestion, no scraping, and no scheduler activation in this batch.
 - Future live ingestion risks: source revisions, publication lag, and upstream schema/format drift.
+
+
+## C5-A10 note
+- Added fixture-only/no-network stress/conditions adapter foundation (`services/reasoning/src/provider-sources/stress-conditions/*`) covering credit stress, financial conditions, liquidity conditions, and dollar liquidity proxies.
+- Added fixture-only/no-network risk/market-structure adapter foundation (`services/reasoning/src/provider-sources/risk-market-structure/*`) covering volatility surface, risk sentiment, equity breadth, and cross-market rates proxies.
+- Added strict normalization + deterministic payload IDs + finite-number guards with runtime tests and no scraping/live calls.
+- Live scheduler/provider activation remains deferred; operational risks remain stale proxy data, source revisions, and format drift.

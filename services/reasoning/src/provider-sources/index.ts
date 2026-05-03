@@ -11,3 +11,6 @@ export * from "./serialization";
 export * from "./ingestion-persistence-service";
 export * from "./query-service";
 export * from "./replay";
+
+export * from './stress-conditions/index';
+export * from './risk-market-structure/index';

@@ -145,3 +145,11 @@ C5-A1 starts backend market-evidence and SEO/content architecture expansion as a
 - Added fixture-only/no-network risk/market-structure adapter foundation (`services/reasoning/src/provider-sources/risk-market-structure/*`) covering volatility surface, risk sentiment, equity breadth, and cross-market rates proxies.
 - Added strict normalization + deterministic payload IDs + finite-number guards with runtime tests and no scraping/live calls.
 - Live scheduler/provider activation remains deferred; operational risks remain stale proxy data, source revisions, and format drift.
+
+
+## C5-A11 Macro Adapter Foundation
+- Added fixture-only macro calendar adapter (`services/reasoning/src/provider-sources/macro-calendar`) for economic calendar events; no live API calls or scraping.
+- Added fixture-only macro indicators/surprise adapter (`services/reasoning/src/provider-sources/macro-indicators`) for inflation, labor, growth/activity, retail sales/PMI/GDP-style series and macro surprise history.
+- Normalization maps indicator categories to evidenceType/evidenceClass: inflation_data/inflation, labor_market_data/labor_market, growth_activity_data/growth_activity, economic_indicator/economic_indicator, macro_surprise_history/macro_surprise_history.
+- Operational risks documented: revision lag, delayed releases, consensus quality drift, event-calendar source drift.
+- Future work: wire live official ingestion and scheduler with release revisions and provenance scoring.

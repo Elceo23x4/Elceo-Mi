@@ -54,3 +54,4 @@ export * from './market-data-providers';
 export * from './market-evidence-payloads';
 
 export * from './market-evidence-quality';
+export * from './reasoning-market-input';

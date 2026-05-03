@@ -11,3 +11,10 @@ C5-A15 adds deterministic evidence quality scoring before reasoning-weight integ
 - Malformed metadata degrades quality and records reasons; evaluation does not crash.
 
 This batch does not change trading signal weighting. C5-A16 should consume these scored payloads in reasoning input boundary weighting.
+
+
+## C5-A16 note
+- Added scored reasoning evidence input boundary integration from persisted normalized payloads + quality scores.
+- Default filter policy excludes blocked, expired, fixture, and below-threshold evidence; deterministic ordering by quality desc, observedAt desc, payloadId asc.
+- Added boundary assembly methods by asset and evidence class with no live/external calls.
+- This batch does not change trading formulas/asset weights; C5-A17 will add weighting engine.

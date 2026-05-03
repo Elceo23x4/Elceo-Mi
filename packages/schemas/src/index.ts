@@ -52,3 +52,4 @@ export * from './market-data-providers.schema';
 export * from './market-evidence-payloads.schema';
 
 export * from './market-evidence-quality.schema';
+export * from './reasoning-market-input.schema';

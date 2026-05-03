@@ -32,3 +32,8 @@ Implement first live/mock adapters and ingestion persistence on top of these con
 - `TiingoMarketDataAdapter` returns deterministic fixture responses for supported market-price capabilities and never performs live network calls.
 - Added strict OHLCV normalization guards (`finite` and `high >= low`) with deterministic errors for malformed payloads.
 - Live activation remains future scope and will require `TIINGO_API_KEY` plus explicit runtime enablement in C5-A5/C5+.
+
+## C5-A5 note
+- Provider source requests/responses and normalized market evidence payloads are now durably persisted with memory+SQL repositories, strict serialization/replay helpers, and adapter-agnostic ingestion persistence services.
+- Tiingo fixture adapter persistence is covered in runtime tests with no external API calls and no secret storage.
+- Live provider scheduling and route exposure remain out of scope for future batches.

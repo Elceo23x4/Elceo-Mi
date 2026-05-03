@@ -97,3 +97,8 @@ C5-A1 starts backend market-evidence and SEO/content architecture expansion as a
 - [ ] Tiingo-compatible adapter foundation validated in fixture/no-network mode only.
 - [ ] `TIINGO_API_KEY` is **not required** for current tests/build because live adapter activation is deferred.
 - [ ] Future live activation must add explicit env + scheduler integration checks (C5-A5/C5+).
+
+## C5-A5 note
+- Provider source requests/responses and normalized market evidence payloads are now durably persisted with memory+SQL repositories, strict serialization/replay helpers, and adapter-agnostic ingestion persistence services.
+- Tiingo fixture adapter persistence is covered in runtime tests with no external API calls and no secret storage.
+- Live provider scheduling and route exposure remain out of scope for future batches.

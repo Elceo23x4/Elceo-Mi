@@ -120,3 +120,8 @@ Market-evidence provider source contracts and normalization foundations are now 
 
 ## C5-A4 note
 Tiingo-compatible provider adapter foundation now exists in reasoning provider-sources with fixture-only deterministic fetch/normalize tests. No live Tiingo API integration is active, and launch blockers/env requirements remain unchanged until future live activation batch (`TIINGO_API_KEY`, scheduler wiring, runtime enablement).
+
+## C5-A5 note
+- Provider source requests/responses and normalized market evidence payloads are now durably persisted with memory+SQL repositories, strict serialization/replay helpers, and adapter-agnostic ingestion persistence services.
+- Tiingo fixture adapter persistence is covered in runtime tests with no external API calls and no secret storage.
+- Live provider scheduling and route exposure remain out of scope for future batches.

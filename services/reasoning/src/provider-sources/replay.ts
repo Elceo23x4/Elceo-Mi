@@ -1,0 +1,6 @@
+import type { NormalizedMarketEvidencePayloadRepository, ProviderSourceRequestRepository, ProviderSourceResponseRepository } from '../persistence/market-evidence-ingestion-repository';
+import { deserializeNormalizedMarketEvidencePayload, deserializeProviderSourceRequest, deserializeProviderSourceResponse, serializeNormalizedMarketEvidencePayload, serializeProviderSourceRequest, serializeProviderSourceResponse } from './serialization';
+export class ProviderSourceReplayService{constructor(private readonly req:ProviderSourceRequestRepository,private readonly res:ProviderSourceResponseRepository,private readonly pay:NormalizedMarketEvidencePayloadRepository){}
+async getProviderSourceRequestReplayById(id:string){const r=await this.req.getRequestById(id); return r?deserializeProviderSourceRequest(serializeProviderSourceRequest(r)):null;}
+async getProviderSourceResponseReplayByRequestId(id:string){const r=await this.res.getResponseByRequestId(id); return r?deserializeProviderSourceResponse(serializeProviderSourceResponse(r)):null;}
+async getNormalizedMarketEvidencePayloadReplayById(id:string){const r=await this.pay.getPayloadById(id); return r?deserializeNormalizedMarketEvidencePayload(serializeNormalizedMarketEvidencePayload(r)):null;}}

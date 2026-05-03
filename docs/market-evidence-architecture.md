@@ -54,3 +54,18 @@ C5-A3 adds provider source contracts, strict normalization schemas, deterministi
 - CFTC COT/public positioning adapter foundation is now implemented with fixture/no-network behavior only.
 - Launch proxy mappings include XAU/USD, EUR/USD, GBP/USD, USD/JPY, BTC/USD, and Nasdaq/S&P futures proxies.
 - No interbank/order-flow data has been introduced. Live CFTC ingestion remains future scope.
+
+
+## C5-A9 note
+- Added fixture-only/no-network central-bank adapter foundation () for balance sheet, liquidity operations, and policy rate evidence classes.
+- Added fixture-only/no-network treasury adapter foundation () for real yield series, bond auctions, and debt supply calendar evidence classes.
+- Added strict normalized payload contracts/schemas for central-bank balance sheet points, policy-rate points, and debt-supply calendar items.
+- No live Fed/ECB/BoJ/U.S. Treasury/FRED ingestion, no scraping, and no scheduler activation in this batch.
+- Future live ingestion risks: source revisions, publication lag, and upstream schema/format drift.
+
+## C5-A9 note
+- Added fixture-only/no-network central-bank adapter foundation (services/reasoning/src/provider-sources/central-bank/*) for balance sheet, liquidity operations, and policy rate evidence classes.
+- Added fixture-only/no-network treasury adapter foundation (services/reasoning/src/provider-sources/treasury/*) for real yield series, bond auctions, and debt supply calendar evidence classes.
+- Added strict normalized payload contracts/schemas for central-bank balance sheet points, policy-rate points, and debt-supply calendar items.
+- No live Fed/ECB/BoJ/U.S. Treasury/FRED ingestion, no scraping, and no scheduler activation in this batch.
+- Future live ingestion risks: source revisions, publication lag, and upstream schema/format drift.

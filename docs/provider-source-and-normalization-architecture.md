@@ -60,3 +60,18 @@ Implement first live/mock adapters and ingestion persistence on top of these con
 - Normalization emits `NormalizedMarketEvidencePayload` (`evidenceTypeId=cot_positioning`) with `cot_positioning` or `futures_positioning` evidence class by report kind.
 - Non-commercial net derivation uses `nonCommercialLong - nonCommercialShort` when present; leveraged/asset-manager fallback is metadata-only and does not invent non-commercial values.
 - Live CFTC ingestion/scheduler wiring remains future scope (C5-A9/C5+).
+
+
+## C5-A9 note
+- Added fixture-only/no-network central-bank adapter foundation () for balance sheet, liquidity operations, and policy rate evidence classes.
+- Added fixture-only/no-network treasury adapter foundation () for real yield series, bond auctions, and debt supply calendar evidence classes.
+- Added strict normalized payload contracts/schemas for central-bank balance sheet points, policy-rate points, and debt-supply calendar items.
+- No live Fed/ECB/BoJ/U.S. Treasury/FRED ingestion, no scraping, and no scheduler activation in this batch.
+- Future live ingestion risks: source revisions, publication lag, and upstream schema/format drift.
+
+## C5-A9 note
+- Added fixture-only/no-network central-bank adapter foundation (services/reasoning/src/provider-sources/central-bank/*) for balance sheet, liquidity operations, and policy rate evidence classes.
+- Added fixture-only/no-network treasury adapter foundation (services/reasoning/src/provider-sources/treasury/*) for real yield series, bond auctions, and debt supply calendar evidence classes.
+- Added strict normalized payload contracts/schemas for central-bank balance sheet points, policy-rate points, and debt-supply calendar items.
+- No live Fed/ECB/BoJ/U.S. Treasury/FRED ingestion, no scraping, and no scheduler activation in this batch.
+- Future live ingestion risks: source revisions, publication lag, and upstream schema/format drift.

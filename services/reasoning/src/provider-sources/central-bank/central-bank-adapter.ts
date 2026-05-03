@@ -1,0 +1,12 @@
+import type { ProviderSourceRequest, ProviderSourceResponse } from '@elceo/types';
+import type { MarketEvidenceProviderAdapter } from '../normalization-contracts';
+import { getProviderDescriptor } from '../provider-capability-registry';
+import { CENTRAL_BANK_FIXTURES } from './fixtures';
+import type { CentralBankFixtureResponse } from './central-bank-contracts';
+import { buildBalanceSheetPayload, buildLiquidityPayload, buildPolicyRatePayload } from './central-bank-normalizer';
+const SUPPORTED=new Set(['central_bank_balance_sheet','central_bank_liquidity_operation','policy_rate_series']);
+export class CentralBankFixtureAdapter implements MarketEvidenceProviderAdapter { descriptor=getProviderDescriptor('federal_reserve') ?? (()=>{throw new Error('missing_central_bank_descriptor')})();
+async fetch(request: ProviderSourceRequest): Promise<ProviderSourceResponse>{ if(!SUPPORTED.has(request.capability)) return {...base(request),status:'unsupported',errorCode:'unsupported_capability',errorMessage:`Unsupported capability: ${request.capability}`}; const institution=(request.providerId==='ecb_public'?'ecb':request.providerId==='boj_public'?'boj':'federal_reserve'); const fixture= CENTRAL_BANK_FIXTURES[institution]; if(!fixture) throw new Error('central_bank_missing_fixture'); return {...base(request),status:'success',sourceUrl:`fixture://central-bank/${institution}`,rawPayloadJson:JSON.stringify({...fixture,request:{...fixture.request,capability:request.capability,requestedAt:request.requestedAt}})}; }
+async normalize(response: ProviderSourceResponse){ if(!response.rawPayloadJson||response.rawPayloadJson.trim()==='') return []; const parsed=JSON.parse(response.rawPayloadJson) as CentralBankFixtureResponse; if(!parsed?.request||!Array.isArray(parsed.balanceSheetRows)||!Array.isArray(parsed.liquidityRows)||!Array.isArray(parsed.policyRateRows)) throw new Error('central_bank_malformed_payload'); return [...parsed.balanceSheetRows.map((x)=>buildBalanceSheetPayload(parsed.request,x,response.providerId)),...parsed.liquidityRows.map((x)=>buildLiquidityPayload(parsed.request,x,response.providerId)),...parsed.policyRateRows.map((x)=>buildPolicyRatePayload(parsed.request,x,response.providerId))]; }
+}
+const base=(r:ProviderSourceRequest):ProviderSourceResponse=>({requestId:r.requestId,providerId:r.providerId,capability:r.capability,status:'failed',fetchedAt:r.requestedAt,sourceUrl:null,rawPayloadJson:null,errorCode:null,errorMessage:null});

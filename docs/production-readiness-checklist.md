@@ -123,3 +123,18 @@ C5-A1 starts backend market-evidence and SEO/content architecture expansion as a
 - [ ] CFTC COT adapter foundation validated in fixture/no-network mode only (`services/reasoning/src/provider-sources/cot/*`).
 - [ ] Confirm no live CFTC URL calls in default test/build paths.
 - [ ] Future live ingestion/scheduler activation remains deferred to C5-A9/C5+ and is not required for current release gate.
+
+
+## C5-A9 note
+- Added fixture-only/no-network central-bank adapter foundation () for balance sheet, liquidity operations, and policy rate evidence classes.
+- Added fixture-only/no-network treasury adapter foundation () for real yield series, bond auctions, and debt supply calendar evidence classes.
+- Added strict normalized payload contracts/schemas for central-bank balance sheet points, policy-rate points, and debt-supply calendar items.
+- No live Fed/ECB/BoJ/U.S. Treasury/FRED ingestion, no scraping, and no scheduler activation in this batch.
+- Future live ingestion risks: source revisions, publication lag, and upstream schema/format drift.
+
+## C5-A9 note
+- Added fixture-only/no-network central-bank adapter foundation (services/reasoning/src/provider-sources/central-bank/*) for balance sheet, liquidity operations, and policy rate evidence classes.
+- Added fixture-only/no-network treasury adapter foundation (services/reasoning/src/provider-sources/treasury/*) for real yield series, bond auctions, and debt supply calendar evidence classes.
+- Added strict normalized payload contracts/schemas for central-bank balance sheet points, policy-rate points, and debt-supply calendar items.
+- No live Fed/ECB/BoJ/U.S. Treasury/FRED ingestion, no scraping, and no scheduler activation in this batch.
+- Future live ingestion risks: source revisions, publication lag, and upstream schema/format drift.

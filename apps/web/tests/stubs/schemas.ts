@@ -85,6 +85,7 @@ export const parseAdminBillingPolicyTransitionsQuery = (url: URL): Ok<{ subjectI
 };
 
 export const validateInternalBillingOrchestrationRetryRequest = (input: unknown) => validation<{ subjectId: string }>(input, ['subjectId']);
+export const validateInternalTiingoFixtureIngestionRequest = (input: unknown) => validation<{ asset: string; frequency?: string | null; requestedAt?: string | null }>(input, ['asset']);
 export const parseAdminBillingOrchestrationSubjectQuery = (url: URL): Ok<{ subjectId: string }> | Fail => {
   const subjectId = url.searchParams.get('subjectId');
   if (!subjectId) return { ok: false, errors: ['subjectId must be non-empty string'] };

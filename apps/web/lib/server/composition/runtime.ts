@@ -47,7 +47,7 @@ import {
   CanonicalSecurityBoundaryService
 } from '@elceo/application-state';
 import { CanonicalAnalyticsBoundaryService, CanonicalCoachingBoundaryService } from '@elceo/analytics';
-import { createReasoningPersistenceRepository } from '@elceo/reasoning';
+import { CanonicalMarketIntelligenceBoundaryService, createReasoningPersistenceRepository, MemoryMarketEvidenceRegistrySnapshotRepository, MemoryNormalizedMarketEvidencePayloadRepository, MemoryProviderSourceRequestRepository, MemoryProviderSourceResponseRepository, MemorySeoContentArchitectureSnapshotRepository, SqlMarketEvidenceRegistrySnapshotRepository, SqlNormalizedMarketEvidencePayloadRepository, SqlProviderSourceRequestRepository, SqlProviderSourceResponseRepository, SqlSeoContentArchitectureSnapshotRepository } from '@elceo/reasoning';
 import {
   CanonicalNotificationDeliveryBoundaryService,
   CanonicalNotificationFeedbackBoundaryService,
@@ -105,6 +105,7 @@ type NotificationRuntime = {
 let applicationStateRuntime: ApplicationStateRuntime | null = null;
 let analyticsRuntime: AnalyticsRuntime | null = null;
 let reasoningRuntime: ReasoningRuntime | null = null;
+let marketIntelligenceRuntime: CanonicalMarketIntelligenceBoundaryService | null = null;
 let notificationRuntime: NotificationRuntime | null = null;
 let compositionTestOverrides: {
   applicationStateRuntime?: ApplicationStateRuntime;
@@ -162,6 +163,28 @@ export function getReasoningRuntime(): ReasoningRuntime {
   if (compositionTestOverrides?.reasoningRuntime) return compositionTestOverrides.reasoningRuntime;
   if (!reasoningRuntime) reasoningRuntime = createReasoningPersistenceRepository(env);
   return reasoningRuntime;
+}
+
+export function getMarketIntelligenceRuntime() {
+  if (marketIntelligenceRuntime) return marketIntelligenceRuntime;
+  if (env.DATABASE_URL) {
+    marketIntelligenceRuntime = new CanonicalMarketIntelligenceBoundaryService(
+      new SqlMarketEvidenceRegistrySnapshotRepository(),
+      new SqlSeoContentArchitectureSnapshotRepository(),
+      new SqlProviderSourceRequestRepository(),
+      new SqlProviderSourceResponseRepository(),
+      new SqlNormalizedMarketEvidencePayloadRepository()
+    );
+    return marketIntelligenceRuntime;
+  }
+  marketIntelligenceRuntime = new CanonicalMarketIntelligenceBoundaryService(
+    new MemoryMarketEvidenceRegistrySnapshotRepository(),
+    new MemorySeoContentArchitectureSnapshotRepository(),
+    new MemoryProviderSourceRequestRepository(),
+    new MemoryProviderSourceResponseRepository(),
+    new MemoryNormalizedMarketEvidencePayloadRepository()
+  );
+  return marketIntelligenceRuntime;
 }
 
 export function getAnalyticsRuntime(): AnalyticsRuntime {

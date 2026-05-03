@@ -192,3 +192,10 @@ Remaining exceptions:
 - Current concrete exceptions are limited to routes not using `completeSecurityDecision(...)` and any future non-JSON/streaming mutation responses, which require explicit replay-contract handling.
 
 Remaining hardening remains unchanged: infra/WAF limits and final penetration/security review.
+
+## C5-A6 note
+- Added internal-only fixture ingestion trigger: `POST /api/internal/market-evidence/tiingo/fixture-ingest` (internal token + `admin.ops` + runtime security `internal_mutation`).
+- Trigger executes `runTiingoFixtureIngestion` through canonical market intelligence runtime using fixture-only Tiingo adapter (no live network calls, no `TIINGO_API_KEY`).
+- Ingestion persists provider request/response/normalized payload lifecycle and supports payload query/replay.
+- Future C5-A7 live activation requirements remain: `TIINGO_API_KEY`, provider health checks, scheduler integration, production rate-limit policy, staging smoke validation.
+

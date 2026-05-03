@@ -19,6 +19,7 @@ import type {
   AdminBillingOperationsLimitQuery,
   AdminBillingOperationsSubjectQuery,
   InternalBillingOrchestrationRetryRequest,
+  InternalTiingoFixtureIngestionRequest,
   AdminBillingOrchestrationSubjectQuery,
   AdminBillingOrchestrationRunsQuery,
   ActionCreateRequest,
@@ -361,6 +362,16 @@ export function validateInternalBillingOrchestrationRetryRequest(i: unknown): Sc
   const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; const v = r.value;
   if (!isNonEmptyString(v.subjectId)) return { ok: false, errors: ['subjectId must be non-empty string'] };
   return { ok: true, value: v as InternalBillingOrchestrationRetryRequest };
+}
+
+export function validateInternalTiingoFixtureIngestionRequest(i: unknown): SchemaValidationResult<InternalTiingoFixtureIngestionRequest> {
+  const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors };
+  const v = r.value; const errors: string[] = [];
+  const validAsset = v.asset === 'xau_usd' || v.asset === 'eur_usd' || v.asset === 'gbp_usd' || v.asset === 'usd_jpy' || v.asset === 'usd_chf' || v.asset === 'aud_usd' || v.asset === 'nzd_usd' || v.asset === 'usd_cad' || v.asset === 'btc_usd' || v.asset === 'nasdaq_100' || v.asset === 'sp500' || v.asset === 'de30';
+  if (!validAsset) errors.push('asset is invalid');
+  if (!(v.frequency === undefined || v.frequency === null || isNonEmptyString(v.frequency))) errors.push('frequency must be non-empty string | null');
+  if (!(v.requestedAt === undefined || v.requestedAt === null || isIsoDateString(v.requestedAt))) errors.push('requestedAt must be ISO timestamp | null');
+  return errors.length ? { ok: false, errors } : { ok: true, value: v as InternalTiingoFixtureIngestionRequest };
 }
 
 export function parseAdminBillingOrchestrationSubjectQuery(url: URL): SchemaValidationResult<AdminBillingOrchestrationSubjectQuery> {

@@ -9,6 +9,10 @@ import type { NormalizedMarketEvidencePayloadRepository, ProviderSourceRequestRe
 import { IngestionPersistenceService } from '../provider-sources/ingestion-persistence-service';
 import { ProviderSourceQueryService } from '../provider-sources/query-service';
 import { ProviderSourceReplayService } from '../provider-sources/replay';
+import { TiingoMarketDataAdapter } from '../provider-sources/tiingo/index';
+import type { TradingAssetCoverage } from '@elceo/types';
+
+export type TiingoFixtureIngestionParams = { asset: TradingAssetCoverage; frequency?: string | null; requestedAt?: string | null };
 
 export class CanonicalMarketIntelligenceBoundaryService {
   private readonly ingestion: IngestionPersistenceService | null = null;
@@ -38,6 +42,35 @@ export class CanonicalMarketIntelligenceBoundaryService {
   listEvidencePayloadsByEvidenceClass(evidenceClass: string, limit?: number) { if (!this.query) throw new Error('missing_ingestion_repositories'); return this.query.listEvidencePayloadsByEvidenceClass(evidenceClass, limit); }
   listEvidencePayloadsByEvidenceType(evidenceTypeId: string, limit?: number) { if (!this.query) throw new Error('missing_ingestion_repositories'); return this.query.listEvidencePayloadsByEvidenceType(evidenceTypeId, limit); }
   getNormalizedMarketEvidencePayloadReplayById(payloadId: string) { if (!this.replay) throw new Error('missing_ingestion_repositories'); return this.replay.getNormalizedMarketEvidencePayloadReplayById(payloadId); }
+  async runTiingoFixtureIngestion(params: TiingoFixtureIngestionParams) {
+    if (!this.ingestion) throw new Error('missing_ingestion_repositories');
+    const supportedAssets = new Set<TradingAssetCoverage>(['xau_usd', 'eur_usd', 'gbp_usd', 'usd_jpy', 'usd_chf', 'aud_usd', 'nzd_usd', 'usd_cad', 'btc_usd', 'nasdaq_100', 'sp500', 'de30']);
+    if (!supportedAssets.has(params.asset)) {
+      return {
+        requestId: `tiingo-fixture-unsupported-${params.asset}`,
+        providerId: 'tiingo_market_data',
+        capability: 'market_price_history',
+        responseStatus: 'unsupported' as const,
+        payloadCount: 0,
+        persistedPayloadIds: [],
+        errors: [`unsupported_asset:${params.asset}`]
+      };
+    }
+    const requestedAt = params.requestedAt ?? '2026-01-10T00:00:00.000Z';
+    const frequency = params.frequency ?? 'daily';
+    const requestId = `tiingo-fixture-${params.asset}-${frequency}-${requestedAt}`;
+    const adapter = new TiingoMarketDataAdapter();
+    return this.ingestion.persistAdapterFetchAndNormalize(adapter, {
+      requestId,
+      providerId: 'tiingo_market_data',
+      capability: 'market_price_history',
+      asset: params.asset,
+      region: 'global',
+      evidenceTypeId: 'market_price_history',
+      requestedAt,
+      paramsJson: JSON.stringify({ mode: 'fixture', frequency })
+    });
+  }
 }
 
 

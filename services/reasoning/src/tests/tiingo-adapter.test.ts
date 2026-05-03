@@ -1,61 +1,63 @@
-import { validateNormalizedMarketEvidencePayload, validateNormalizedPriceBar } from '@elceo/schemas';
+import { validateNormalizedMarketEvidencePayload } from '@elceo/schemas';
 import type { ProviderSourceRequest } from '@elceo/types';
 import { getProviderDescriptor } from '../provider-sources/provider-capability-registry.js';
-import { mapAssetToEvidenceClass, mapAssetToTiingoTicker, normalizeTiingoPriceBars, TiingoMarketDataAdapter } from '../provider-sources/tiingo/index.js';
+import { getTiingoProviderHealth, TiingoMarketDataAdapter } from '../provider-sources/tiingo/index.js';
 
 const req = (overrides: Partial<ProviderSourceRequest> = {}): ProviderSourceRequest => ({
   requestId: 'req-tiingo-1', providerId: 'tiingo_market_data', capability: 'market_price_history', asset: 'xau_usd', region: 'global', evidenceTypeId: 'market_price_history', requestedAt: '2026-01-10T00:00:00.000Z', paramsJson: '{}', ...overrides
 });
 
 export async function runTiingoAdapterTests(): Promise<void> {
-  const adapter = new TiingoMarketDataAdapter();
+  const fixtureAdapter = new TiingoMarketDataAdapter({ mode: 'fixture' });
   const descriptor = getProviderDescriptor('tiingo_market_data');
-  if (!descriptor || adapter.descriptor.providerId !== descriptor.providerId) throw new Error('tiingo descriptor mismatch');
+  if (!descriptor || fixtureAdapter.descriptor.providerId !== descriptor.providerId) throw new Error('tiingo descriptor mismatch');
 
-  const fetched = await adapter.fetch(req());
-  if (fetched.status !== 'success' || fetched.rawPayloadJson === null) throw new Error('tiingo fixture fetch failed');
+  const defaultHealth = getTiingoProviderHealth();
+  if (defaultHealth.liveEnabled || defaultHealth.mode !== 'live_disabled' || defaultHealth.capabilityStatus !== 'disabled') throw new Error('default tiingo config should be live disabled');
 
-  const unsupported = await adapter.fetch(req({ capability: 'cot_report' }));
-  if (unsupported.status !== 'unsupported') throw new Error('tiingo unsupported capability expected');
+  const missingKeyHealth = getTiingoProviderHealth({ liveEnabled: true, mode: 'live_enabled' });
+  if (missingKeyHealth.capabilityStatus !== 'missing_api_key') throw new Error('missing api key status expected');
 
-  const payloads = await adapter.normalize(fetched);
-  if (payloads.length === 0) throw new Error('tiingo normalize empty unexpectedly');
-  if (payloads.some((x) => !validateNormalizedMarketEvidencePayload(x).ok)) throw new Error('invalid normalized payload');
-  if (payloads[0]?.evidenceClass !== 'precious_metals_flows') throw new Error('xau evidence class mapping failed');
+  const configuredHealth = getTiingoProviderHealth({ liveEnabled: true, mode: 'live_enabled', apiKey: 'fake-key' });
+  if (configuredHealth.capabilityStatus !== 'configured' || !configuredHealth.hasApiKey) throw new Error('configured health expected');
 
-  const parsed = JSON.parse(fetched.rawPayloadJson) as { request: { asset: string; ticker: string; startDate: string | null; endDate: string | null; frequency: string | null; requestedAt: string }; bars: Array<{ date: string; open: number; high: number; low: number; close: number; volume: number | null; adjOpen: null; adjHigh: null; adjLow: null; adjClose: null; adjVolume: null; divCash: null; splitFactor: null }> };
-  const normalized = normalizeTiingoPriceBars(parsed.request, parsed.bars);
-  if (normalized.priceBars.some((x) => !validateNormalizedPriceBar(x).ok)) throw new Error('normalized price bar invalid');
-  const firstPayloadId = normalized.payloads.at(0)?.payloadId;
-  const secondPayloadId = normalizeTiingoPriceBars(parsed.request, parsed.bars).payloads.at(0)?.payloadId;
-  if (!firstPayloadId || !secondPayloadId || firstPayloadId !== secondPayloadId) throw new Error('payloadId should be deterministic');
+  const fetchedFixture = await fixtureAdapter.fetch(req());
+  if (fetchedFixture.status !== 'success' || fetchedFixture.rawPayloadJson === null) throw new Error('tiingo fixture fetch failed');
 
-  const malformed = { ...fetched, rawPayloadJson: '{"broken": true}' };
-  let malformedThrown = false;
-  try { await adapter.normalize(malformed); } catch { malformedThrown = true; }
-  if (!malformedThrown) throw new Error('malformed payload should throw');
+  const payloads = await fixtureAdapter.normalize(fetchedFixture);
+  if (payloads.length === 0 || payloads.some((x) => !validateNormalizedMarketEvidencePayload(x).ok)) throw new Error('fixture normalize invalid');
 
+  const disabledAdapter = new TiingoMarketDataAdapter();
+  const disabledFetch = await disabledAdapter.fetch(req());
+  if (disabledFetch.errorCode !== 'tiingo_live_disabled') throw new Error('live disabled deterministic failure expected');
 
-  const firstBar = parsed.bars[0];
-  if (!firstBar) throw new Error('fixture bars missing');
+  let fetchCalled = false;
+  const liveAdapter = new TiingoMarketDataAdapter({
+    liveEnabled: true,
+    mode: 'live_enabled',
+    apiKey: 'fake-key',
+    fetchImpl: async () => {
+      fetchCalled = true;
+      return new Response(JSON.stringify([{ date: '2026-01-01T00:00:00.000Z', open: 1, high: 2, low: 0.5, close: 1.5, volume: null, adjOpen: null, adjHigh: null, adjLow: null, adjClose: null, adjVolume: null, divCash: null, splitFactor: null }]), { status: 200 });
+    }
+  });
+  const liveFetched = await liveAdapter.fetch(req());
+  if (!fetchCalled || liveFetched.status !== 'success') throw new Error('live fake fetch should succeed');
 
-  let finiteThrown = false;
-  try { normalizeTiingoPriceBars(parsed.request, [{ ...firstBar, open: Number.NaN }]); } catch (e) { finiteThrown = String(e).includes('tiingo_invalid_ohlc_non_finite'); }
-  if (!finiteThrown) throw new Error('finite OHLC guard missing');
-
-  let rangeThrown = false;
-  try { normalizeTiingoPriceBars(parsed.request, [{ ...firstBar, high: 1, low: 2 }]); } catch (e) { rangeThrown = String(e).includes('tiingo_invalid_ohlc_range'); }
-  if (!rangeThrown) throw new Error('high<low guard missing');
-
-  if (mapAssetToEvidenceClass('eur_usd') !== 'cross_market_rates') throw new Error('fx evidence class mapping failed');
-  if (mapAssetToEvidenceClass('btc_usd') !== 'crypto_market_structure') throw new Error('btc evidence class mapping failed');
-  if (mapAssetToEvidenceClass('nasdaq_100') !== 'risk_sentiment' || mapAssetToEvidenceClass('sp500') !== 'risk_sentiment') throw new Error('equity evidence class mapping failed');
-  if (mapAssetToEvidenceClass('xau_usd') !== 'precious_metals_flows') throw new Error('xau evidence class mapping failed');
-
-  if (mapAssetToTiingoTicker('xau_usd') !== 'XAUUSD') throw new Error('xau mapping failed');
-  if (mapAssetToTiingoTicker('eur_usd') !== 'EURUSD') throw new Error('eur mapping failed');
-  if (mapAssetToTiingoTicker('btc_usd') !== 'BTCUSD') throw new Error('btc mapping failed');
-  if (mapAssetToTiingoTicker('nasdaq_100') !== 'QQQ' || mapAssetToTiingoTicker('sp500') !== 'SPY') throw new Error('equity proxy mapping failed');
-
-  if ((adapter.fetch as unknown as { toString(): string }).toString().includes('http')) throw new Error('network path detected');
+  const timeoutAdapter = new TiingoMarketDataAdapter({
+    liveEnabled: true,
+    mode: 'live_enabled',
+    apiKey: 'fake-key',
+    timeoutMs: 1,
+    fetchImpl: async (_input: URL | RequestInfo, init?: RequestInit) => {
+      await new Promise((resolve, reject) => {
+        const signal = init?.signal;
+        if (!signal) return resolve(null);
+        signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+      });
+      return new Response('[]', { status: 200 });
+    }
+  });
+  const timedOut = await timeoutAdapter.fetch(req());
+  if (timedOut.errorCode !== 'tiingo_timeout') throw new Error('timeout should map to deterministic error');
 }

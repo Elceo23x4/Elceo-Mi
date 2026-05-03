@@ -53,3 +53,10 @@ Implement first live/mock adapters and ingestion persistence on top of these con
 - Tests/build remain no-network by default: live paths are exercised only with injected fake fetch implementations.
 - Staging activation only: set `TIINGO_LIVE_ENABLED=true` + `TIINGO_API_KEY`, verify provider health=`configured`, run internal fixture ingest regression, then execute constrained live smoke manually.
 - Production activation deferred; risks remain provider quota/billing, schema drift, and stale-data monitoring/alerting.
+
+## C5-A8 COT/public positioning adapter foundation
+- Added `services/reasoning/src/provider-sources/cot/*` with fixture-only/no-network CFTC COT adapter contracts and deterministic normalization.
+- Adapter supports `cot_report`, returns deterministic fixture `ProviderSourceResponse`, and never calls live CFTC URLs in default path.
+- Normalization emits `NormalizedMarketEvidencePayload` (`evidenceTypeId=cot_positioning`) with `cot_positioning` or `futures_positioning` evidence class by report kind.
+- Non-commercial net derivation uses `nonCommercialLong - nonCommercialShort` when present; leveraged/asset-manager fallback is metadata-only and does not invent non-commercial values.
+- Live CFTC ingestion/scheduler wiring remains future scope (C5-A9/C5+).

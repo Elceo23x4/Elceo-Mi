@@ -49,3 +49,8 @@ C5-A3 adds provider source contracts, strict normalization schemas, deterministi
 - Tests/build remain no-network by default: live paths are exercised only with injected fake fetch implementations.
 - Staging activation only: set `TIINGO_LIVE_ENABLED=true` + `TIINGO_API_KEY`, verify provider health=`configured`, run internal fixture ingest regression, then execute constrained live smoke manually.
 - Production activation deferred; risks remain provider quota/billing, schema drift, and stale-data monitoring/alerting.
+
+## C5-A8 note
+- CFTC COT/public positioning adapter foundation is now implemented with fixture/no-network behavior only.
+- Launch proxy mappings include XAU/USD, EUR/USD, GBP/USD, USD/JPY, BTC/USD, and Nasdaq/S&P futures proxies.
+- No interbank/order-flow data has been introduced. Live CFTC ingestion remains future scope.

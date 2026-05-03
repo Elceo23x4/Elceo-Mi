@@ -141,3 +141,7 @@ Tiingo-compatible provider adapter foundation now exists in reasoning provider-s
 - Tests/build remain no-network by default: live paths are exercised only with injected fake fetch implementations.
 - Staging activation only: set `TIINGO_LIVE_ENABLED=true` + `TIINGO_API_KEY`, verify provider health=`configured`, run internal fixture ingest regression, then execute constrained live smoke manually.
 - Production activation deferred; risks remain provider quota/billing, schema drift, and stale-data monitoring/alerting.
+
+## C5-A8 note
+- Added fixture-only CFTC COT/public positioning adapter foundation in reasoning provider sources with deterministic request/response normalization and runtime tests.
+- No live CFTC URL integration or scheduler activation is active in this batch; launch blockers and environment requirements remain unchanged.

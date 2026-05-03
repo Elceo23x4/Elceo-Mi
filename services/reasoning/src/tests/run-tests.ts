@@ -23,6 +23,7 @@ import { runMarketEvidenceRegistryTests } from './market-evidence-registry.test.
 import { runSeoContentArchitectureTests } from './seo-content-architecture.test.js';
 import { runMarketEvidencePersistenceTests } from './market-evidence-persistence.test.js';
 import { runSeoContentPersistenceTests } from './seo-content-persistence.test.js';
+import { runProviderSourcesTests } from './provider-sources.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -50,6 +51,7 @@ async function run(): Promise<void> {
   runSeoContentArchitectureTests();
   await runMarketEvidencePersistenceTests();
   await runSeoContentPersistenceTests();
+  runProviderSourcesTests();
   console.log('reasoning runtime contract tests passed');
 }
 

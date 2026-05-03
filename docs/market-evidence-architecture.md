@@ -14,3 +14,12 @@ C5-A1 defines canonical market evidence classes, strict validation, deterministi
 - Registry snapshots now persist durably via `app_market_evidence_registry_snapshots` with strict JSON serialization and schema-validated replay.
 - Query helpers read persisted rows only (latest/list/by-id replay) and never recompute on read.
 - Snapshot generation remains deterministic and provider-offline; live ingestion/adapters remain deferred to C5-A3.
+
+
+## C5-A3 note
+C5-A3 adds provider source contracts, strict normalization schemas, deterministic provider registry helpers, and runtime tests; live adapters remain disabled.
+
+
+## C5-A3 coverage update
+- Provider/normalization foundation now explicitly maps the full MarketEvidenceClass taxonomy to capability + normalization paths (including calculated-internal placeholders where appropriate).
+- Interbank/order-flow/bank-order data remains excluded due licensing complexity and is not reintroduced.

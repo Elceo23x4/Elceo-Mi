@@ -1,0 +1,26 @@
+export const MARKET_EVIDENCE_DATA_QUALITIES = ['high','medium','low','partial','stale','failed'] as const;
+export type MarketEvidenceDataQuality = (typeof MARKET_EVIDENCE_DATA_QUALITIES)[number];
+
+export type NormalizedMarketEvidencePayload = { payloadId: string; evidenceTypeId: string; evidenceClass: string; providerId: string; sourceId: string | null; region: string; asset: string | null; observedAt: string; publishedAt: string | null; normalizedAt: string; confidenceScore: number; dataQuality: MarketEvidenceDataQuality; valuesJson: string; metadataJson: string; };
+export type NormalizedPriceBar = { asset: string; timeframe: string; timestamp: string; open: number; high: number; low: number; close: number; volume: number | null; providerId: string; };
+export type NormalizedCotPositioning = { reportDate: string; marketName: string; asset: string | null; commercialLong: number; commercialShort: number; nonCommercialLong: number; nonCommercialShort: number; netNonCommercial: number; openInterest: number; providerId: string; };
+export type NormalizedFuturesPositioning = { reportDate: string; marketName: string; asset: string | null; leveragedFundsLong: number; leveragedFundsShort: number; assetManagerLong: number; assetManagerShort: number; openInterest: number; providerId: string; };
+export type NormalizedCentralBankLiquidity = { institution: string; region: string; operationDate: string; operationType: string; amount: number; currency: string; maturityDays: number | null; providerId: string; };
+export type NormalizedRealYieldPoint = { region: string; maturity: string; observedAt: string; value: number; providerId: string; };
+export type NormalizedBondAuctionResult = { issuer: string; region: string; auctionDate: string; maturity: string; yieldAwarded: number; bidToCover: number | null; amountOffered: number | null; amountAccepted: number | null; providerId: string; };
+export type NormalizedCreditStressIndicator = { region: string; indicatorName: string; observedAt: string; value: number; unit: string; providerId: string; };
+export type NormalizedVolatilitySurfacePoint = { asset: string; observedAt: string; expiry: string; tenor: string; strikeDelta: number; impliedVolatility: number; providerId: string; };
+export type NormalizedMacroSurprisePoint = { region: string; indicatorName: string; observedAt: string; actual: number; consensus: number | null; previous: number | null; surprise: number; providerId: string; };
+export type NormalizedBankHealthMetric = { institution: string; region: string; reportDate: string; metricName: string; value: number; unit: string; providerId: string; };
+export type NormalizedFinancialConditionsPoint = { region: string; observedAt: string; indexName: string; value: number; unit: string; providerId: string; };
+export type NormalizedLiquidityConditionPoint = { region: string; observedAt: string; indicatorName: string; value: number; unit: string; providerId: string; };
+export type NormalizedCrossMarketRatePoint = { baseAsset: string; quoteAsset: string; observedAt: string; value: number; providerId: string; };
+export type NormalizedEquityBreadthPoint = { region: string; observedAt: string; indexName: string; advancing: number; declining: number; breadthRatio: number; providerId: string; };
+export type NormalizedCryptoMarketStructurePoint = { asset: string; observedAt: string; metricName: string; value: number; unit: string; providerId: string; };
+export type NormalizedEnergyCommodityPoint = { commodity: string; observedAt: string; price: number; currency: string; providerId: string; };
+export type NormalizedPreciousMetalsFlowPoint = { asset: string; observedAt: string; flowAmount: number; unit: string; providerId: string; };
+export type NormalizedRiskSentimentPoint = { region: string; observedAt: string; indicatorName: string; score: number; providerId: string; };
+export type NormalizedGeopoliticalRiskEvent = { eventId: string; region: string; publishedAt: string; severity: 'low'|'medium'|'high'|'critical'; title: string; providerId: string; };
+export type NormalizedEarningsMacroPoint = { region: string; observedAt: string; metricName: string; value: number; unit: string; providerId: string; };
+export type NormalizedPositioningSentimentPoint = { asset: string; observedAt: string; longPercent: number; shortPercent: number; netSkew: number; providerId: string; };
+export type NormalizedMarketNewsItem = { newsId: string; providerId: string; title: string; url: string | null; publishedAt: string; sourceName: string; relatedAssets: string[]; relatedEvidenceClasses: string[]; sentiment: number | null; importanceScore: number; };

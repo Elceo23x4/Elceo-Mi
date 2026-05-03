@@ -116,3 +116,7 @@ C5-A2 adds durable/replayable market evidence registry and SEO architecture snap
 
 ## C5-A3 note
 Market-evidence provider source contracts and normalization foundations are now in place (no live fetching yet). This improves backend readiness but does not remove launch blockers tied to env/migrations/security smoke.
+
+
+## C5-A4 note
+Tiingo-compatible provider adapter foundation now exists in reasoning provider-sources with fixture-only deterministic fetch/normalize tests. No live Tiingo API integration is active, and launch blockers/env requirements remain unchanged until future live activation batch (`TIINGO_API_KEY`, scheduler wiring, runtime enablement).

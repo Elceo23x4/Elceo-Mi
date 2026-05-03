@@ -110,3 +110,8 @@ Implement first live/mock adapters and ingestion persistence on top of these con
 
 ## C5-A14 coverage-audit closure
 - Provider descriptors are now audited deterministically for schema validity, known capabilities, non-empty capability lists, and rationale completeness.
+
+## C5-A15 note
+- Added deterministic evidence quality/provenance/freshness/conflict scoring contracts, schemas, runtime scoring service, boundary query-with-quality helpers, and tests.
+- Scoring is pre-weighting quality gating only; trading/reasoning weights are unchanged and remain future C5-A16 scope.
+- Fixture/malformed/partial/stale/failed evidence is downgraded deterministically with explicit reasons.

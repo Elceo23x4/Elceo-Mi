@@ -50,3 +50,5 @@ export * from './seo-content.schema';
 
 export * from './market-data-providers.schema';
 export * from './market-evidence-payloads.schema';
+
+export * from './market-evidence-quality.schema';

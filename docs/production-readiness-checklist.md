@@ -173,3 +173,8 @@ C5-A1 starts backend market-evidence and SEO/content architecture expansion as a
 
 ## C5-A14 checklist note
 - [ ] Run deterministic market-evidence coverage audit tests to confirm no silent evidence/provider/payload/asset/SEO gaps.
+
+## C5-A15 note
+- Added deterministic evidence quality/provenance/freshness/conflict scoring contracts, schemas, runtime scoring service, boundary query-with-quality helpers, and tests.
+- Scoring is pre-weighting quality gating only; trading/reasoning weights are unchanged and remain future C5-A16 scope.
+- Fixture/malformed/partial/stale/failed evidence is downgraded deterministically with explicit reasons.

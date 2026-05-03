@@ -195,3 +195,8 @@ Tiingo-compatible provider adapter foundation now exists in reasoning provider-s
 
 ## C5-A14 note
 - Added deterministic market-evidence coverage audit/closure checks (evidence/provider/payload/asset/SEO/exclusion) to harden backend launch-confidence before weighting integration.
+
+## C5-A15 note
+- Added deterministic evidence quality/provenance/freshness/conflict scoring contracts, schemas, runtime scoring service, boundary query-with-quality helpers, and tests.
+- Scoring is pre-weighting quality gating only; trading/reasoning weights are unchanged and remain future C5-A16 scope.
+- Fixture/malformed/partial/stale/failed evidence is downgraded deterministically with explicit reasons.

@@ -1,0 +1,3 @@
+import type { EvidenceConflictInput, EvidenceConflictStatus } from '@elceo/types';
+export const scoreConflict=(inputs:EvidenceConflictInput[]):number=>{ if(inputs.length<2) return 0; const vals=inputs.map(i=>i.numericValue); const max=Math.max(...vals); const min=Math.min(...vals); const avg=Math.max(1e-9,Math.abs(vals.reduce((a,b)=>a+b,0)/vals.length)); const tolerance=Math.max(1e-9,inputs.reduce((a,b)=>a+b.tolerance,0)/inputs.length); const deviation=(max-min)/Math.max(avg,tolerance); return Math.max(0,Math.min(100,Math.round(deviation*100)));};
+export const deriveConflictStatus=(score:number):EvidenceConflictStatus=>score<15?'none':score<35?'mild':score<65?'material':score<=100?'severe':'unknown';

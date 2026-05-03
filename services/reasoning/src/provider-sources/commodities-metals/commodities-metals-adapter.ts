@@ -1,0 +1,11 @@
+import type { ProviderSourceRequest, ProviderSourceResponse } from '@elceo/types';
+import type { MarketEvidenceProviderAdapter } from '../normalization-contracts';
+import { getProviderDescriptor } from '../provider-capability-registry';
+import { COMMODITIES_METALS_FIXTURE } from './fixtures';
+import { buildEnergyCommodityPayload, buildPreciousMetalsFlowPayload } from './commodities-metals-normalizer';
+const SUPPORTED=new Set(['energy_commodity_series','precious_metals_flow_indicator']);
+const base=(r:ProviderSourceRequest):ProviderSourceResponse=>({requestId:r.requestId,providerId:r.providerId,capability:r.capability,status:'failed',fetchedAt:r.requestedAt,sourceUrl:null,rawPayloadJson:null,errorCode:'not_fetched',errorMessage:'not fetched'});
+export class CommoditiesMetalsFixtureAdapter implements MarketEvidenceProviderAdapter { descriptor=getProviderDescriptor('energy_public_market_data')??(()=>{throw new Error('missing_commodities_metals_descriptor')})();
+async fetch(request:ProviderSourceRequest): Promise<ProviderSourceResponse>{ if(!SUPPORTED.has(request.capability)) return {...base(request),status:'unsupported',errorCode:'unsupported_capability',errorMessage:`Unsupported capability: ${request.capability}`}; const fixture={...COMMODITIES_METALS_FIXTURE,request:{providerId:request.providerId,region:request.region,asset:request.asset,capability:request.capability as 'energy_commodity_series'|'precious_metals_flow_indicator',requestedAt:request.requestedAt}}; return {...base(request),status:'success',sourceUrl:`fixture://commodities-metals/${request.capability}`,rawPayloadJson:JSON.stringify(fixture),errorCode:null,errorMessage:null}; }
+async normalize(response:ProviderSourceResponse){ if(!response.rawPayloadJson) throw new Error('commodities_metals_missing_payload'); let parsed:typeof COMMODITIES_METALS_FIXTURE; try{parsed=JSON.parse(response.rawPayloadJson) as typeof COMMODITIES_METALS_FIXTURE;}catch{throw new Error('commodities_metals_malformed_payload');} if(response.capability==='energy_commodity_series') return parsed.energyRows.map((x)=>buildEnergyCommodityPayload(parsed.request,x)); if(response.capability==='precious_metals_flow_indicator') return parsed.metalsFlowRows.map((x)=>buildPreciousMetalsFlowPayload(parsed.request,x)); return []; }
+}

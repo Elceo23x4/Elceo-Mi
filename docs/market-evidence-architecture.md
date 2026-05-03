@@ -92,3 +92,11 @@ C5-A3 adds provider source contracts, strict normalization schemas, deterministi
 - Added strict normalized payload contracts/schemas for bank earnings, stress test results, regulatory filing references (nullable http(s) URL), and institutional liquidity metrics.
 - No live bank/regulator calls, no scraping, no private/non-public order-flow data, and no scheduler activation in this batch.
 - Risks: filing format drift, reporting lag/revisions/restatements, and institution naming normalization mismatches until live ingestion harmonization.
+
+
+## C5-A13 note
+- Added fixture-only/no-network commodities+metals adapter foundation (`services/reasoning/src/provider-sources/commodities-metals/*`) covering `energy_commodity_series` and `precious_metals_flow_indicator`.
+- Added fixture-only/no-network crypto+earnings+geopolitical adapter foundation (`services/reasoning/src/provider-sources/crypto-earnings-geopolitical/*`) covering `crypto_market_structure_indicator`, `earnings_macro_indicator`, and `geopolitical_risk_event`.
+- Normalization enforces finite numeric values, ISO timestamps, deterministic payload IDs, and explicit geopolitical sourceUrl http(s)-or-null validation.
+- No live external calls, scraping, scheduler activation, secrets, or private/non-public datasets were introduced in this batch.
+- Future live-ingestion/scheduler risks: source drift, proxy quality limits, benchmark revisions, news/event classification risk, and crypto market-data integrity variance.

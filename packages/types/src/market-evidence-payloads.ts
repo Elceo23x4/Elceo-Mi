@@ -18,6 +18,7 @@ export type NormalizedMacroSurprisePoint = { region: string; indicatorName: stri
 export type NormalizedBankHealthMetric = { institution: string; region: string; reportDate: string; metricName: string; value: number; unit: string; providerId: string; };
 export type NormalizedFinancialConditionsPoint = { region: string; observedAt: string; indexName: string; value: number; unit: string; providerId: string; };
 export type NormalizedLiquidityConditionPoint = { region: string; observedAt: string; indicatorName: string; value: number; unit: string; providerId: string; };
+export type NormalizedDollarLiquidityPoint = { region: string; observedAt: string; indicatorName: string; value: number; unit: string; providerId: string; };
 export type NormalizedCrossMarketRatePoint = { baseAsset: string; quoteAsset: string; observedAt: string; value: number; providerId: string; };
 export type NormalizedEquityBreadthPoint = { region: string; observedAt: string; indexName: string; advancing: number; declining: number; breadthRatio: number; providerId: string; };
 export type NormalizedCryptoMarketStructurePoint = { asset: string; observedAt: string; metricName: string; value: number; unit: string; providerId: string; };

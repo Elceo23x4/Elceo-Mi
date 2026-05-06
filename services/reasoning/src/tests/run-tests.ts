@@ -40,6 +40,7 @@ import { runReasoningMarketInputTests } from './reasoning-market-input.test.js';
 import { runEvidenceWeightingTests } from './evidence-weighting.test.js';
 import { runMarketCognitionTests } from './market-cognition.test.js';
 import { runSeoContentFeedTests } from './seo-content-feed.test.js';
+import { runProviderLiveReadinessTests } from './provider-live-readiness.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -84,6 +85,7 @@ async function run(): Promise<void> {
   await runEvidenceWeightingTests();
   await runMarketCognitionTests();
   runSeoContentFeedTests();
+  await runProviderLiveReadinessTests();
   console.log('reasoning runtime contract tests passed');
 }
 

@@ -95,3 +95,9 @@ Track API errors, security audit events, billing/notification runtime metrics, a
 
 ## Final status and go/no-go reference (C4-M8D)
 - Before launch approval, review `docs/final-production-status-report.md` for consolidated blocker vs non-blocker criteria and final readiness posture.
+
+## C5-A21 live adapter activation planning
+- Added provider live activation policy/readiness/quota/smoke-plan contracts and validators.
+- Added staging-only live fetch gating helpers; production remains blocked by default.
+- No scheduler/live ingestion activation in this batch; no secrets exposed in readiness outputs.
+

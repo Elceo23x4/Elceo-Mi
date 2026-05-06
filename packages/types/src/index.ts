@@ -61,3 +61,5 @@ export * from './market-evidence-weighting';
 export * from './market-cognition-signals';
 
 export * from './seo-content-feed';
+
+export * from './provider-live-readiness';

@@ -59,3 +59,5 @@ export * from './market-evidence-weighting.schema';
 export * from './market-cognition-signals.schema';
 
 export * from './seo-content-feed.schema';
+
+export * from './provider-live-readiness.schema';

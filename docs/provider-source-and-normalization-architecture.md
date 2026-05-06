@@ -115,3 +115,9 @@ Implement first live/mock adapters and ingestion persistence on top of these con
 - Added deterministic evidence quality/provenance/freshness/conflict scoring contracts, schemas, runtime scoring service, boundary query-with-quality helpers, and tests.
 - Scoring is pre-weighting quality gating only; trading/reasoning weights are unchanged and remain future C5-A16 scope.
 - Fixture/malformed/partial/stale/failed evidence is downgraded deterministically with explicit reasons.
+
+## C5-A21 live adapter activation planning
+- Added provider live activation policy/readiness/quota/smoke-plan contracts and validators.
+- Added staging-only live fetch gating helpers; production remains blocked by default.
+- No scheduler/live ingestion activation in this batch; no secrets exposed in readiness outputs.
+

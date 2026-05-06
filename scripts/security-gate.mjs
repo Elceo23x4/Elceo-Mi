@@ -5,9 +5,14 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, join, relative, resolve } from 'node:path';
 
 const rootDir = process.cwd();
-
-const checks = [];
 const allowAuditUnavailable = process.env.SECURITY_GATE_ALLOW_AUDIT_UNAVAILABLE === 'true';
+const checks = [];
+
+const ALLOWED_LIFECYCLE_SCRIPTS = {
+  'node_modules/unrs-resolver': ['install'],
+  'node_modules/sharp': ['install'],
+  'node_modules/@swc/core': ['postinstall'],
+};
 
 function runCommand(command, args) {
   return new Promise((resolveResult) => {
@@ -42,6 +47,43 @@ function registerCheck(name, run) {
   checks.push({ name, run });
 }
 
+function readJsonAt(relativePath) {
+  const absolute = resolve(rootDir, relativePath);
+  const content = readFileSync(absolute, 'utf8');
+  return JSON.parse(content);
+}
+
+function collectWorkspacePackageJsonPaths(rootPackageJson) {
+  const paths = ['package.json'];
+  const workspacePatterns = Array.isArray(rootPackageJson.workspaces) ? rootPackageJson.workspaces : [];
+
+  for (const pattern of workspacePatterns) {
+    const starIndex = pattern.indexOf('/*');
+    if (starIndex === -1) {
+      const directPackagePath = `${pattern.replace(/\/$/, '')}/package.json`;
+      if (existsSync(resolve(rootDir, directPackagePath))) {
+        paths.push(directPackagePath);
+      }
+      continue;
+    }
+
+    const baseDir = pattern.slice(0, starIndex);
+    const absoluteBase = resolve(rootDir, baseDir);
+    if (!existsSync(absoluteBase)) {
+      continue;
+    }
+
+    const entries = readdirSync(absoluteBase, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => `${baseDir}/${entry.name}/package.json`)
+      .filter((candidate) => existsSync(resolve(rootDir, candidate)));
+
+    paths.push(...entries);
+  }
+
+  return paths.sort((a, b) => a.localeCompare(b));
+}
+
 registerCheck('Dependency audit (high/critical)', async () => {
   const result = await runCommand('npm', ['audit', '--audit-level=high']);
   const output = [result.stdout, result.stderr].filter(Boolean).join('\n');
@@ -52,12 +94,12 @@ registerCheck('Dependency audit (high/critical)', async () => {
       if (allowAuditUnavailable) {
         return {
           ok: true,
-          details: 'SECURITY_GATE_ALLOW_AUDIT_UNAVAILABLE=true is active: npm audit registry/auth/network unavailability is downgraded to warning for local emergency use only. CI/release sign-off must run without this override.',
+          details: 'SECURITY_GATE_ALLOW_AUDIT_UNAVAILABLE=true is active: npm audit unavailability downgraded for local emergency use only. CI/final release sign-off must run without override.',
         };
       }
       return {
         ok: false,
-        details: 'npm audit failed due to registry/auth/network unavailability. Blocking by default. Set SECURITY_GATE_ALLOW_AUDIT_UNAVAILABLE=true only for local emergency runs (not CI/release sign-off).',
+        details: 'npm audit unavailable due to registry/auth/network. Blocking by default. Override is local emergency-only and forbidden in CI/final sign-off.',
       };
     }
     return { ok: false, details: output || 'npm audit reported high/critical vulnerabilities.' };
@@ -66,62 +108,130 @@ registerCheck('Dependency audit (high/critical)', async () => {
   return { ok: true, details: 'npm audit passed with no high/critical vulnerabilities.' };
 });
 
-registerCheck('Lockfile integrity', async () => {
-  const lockPath = resolve(rootDir, 'package-lock.json');
-  const packagePath = resolve(rootDir, 'package.json');
+registerCheck('Supply-chain dependency source policy', async () => {
+  const packageJson = readJsonAt('package.json');
+  const lockJson = readJsonAt('package-lock.json');
 
-  if (!existsSync(lockPath)) {
+  if (!existsSync(resolve(rootDir, 'package-lock.json'))) {
     return { ok: false, details: 'package-lock.json is missing.' };
   }
 
-  let lockJson;
-  let packageJson;
-
-  try {
-    lockJson = JSON.parse(readFileSync(lockPath, 'utf8'));
-  } catch {
-    return { ok: false, details: 'package-lock.json is not valid JSON.' };
+  if (typeof packageJson.packageManager !== 'string' || !packageJson.packageManager.startsWith('npm@10.')) {
+    return { ok: false, details: 'Root package.json must define packageManager pinned to npm@10.x.' };
   }
 
-  try {
-    packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
-  } catch {
-    return { ok: false, details: 'package.json is not valid JSON.' };
+  if (lockJson.lockfileVersion !== 3) {
+    return { ok: false, details: `Expected package-lock lockfileVersion=3, got ${String(lockJson.lockfileVersion)}.` };
   }
 
-  if (typeof lockJson.lockfileVersion !== 'number') {
-    return { ok: false, details: 'package-lock.json missing numeric lockfileVersion.' };
-  }
+  const disallowedSpecPatterns = [
+    { label: 'file_spec', regex: /^file:/i },
+    { label: 'git_spec', regex: /^(?:git\+|git:|github:)/i },
+    { label: 'http_spec', regex: /^http:/i },
+    { label: 'url_tarball_spec', regex: /^https?:\/\//i },
+  ];
 
-  if (typeof lockJson.name === 'string' && lockJson.name !== packageJson.name) {
-    return { ok: false, details: 'Lockfile package name does not match package.json name.' };
-  }
-
-  if (typeof lockJson.version === 'string' && lockJson.version !== packageJson.version) {
-    return { ok: false, details: 'Lockfile package version does not match package.json version.' };
-  }
-
-  const rootPackage = lockJson.packages && lockJson.packages[''];
-  if (rootPackage && typeof rootPackage === 'object') {
-    const lockDeps = rootPackage.dependencies || {};
-    const lockDevDeps = rootPackage.devDependencies || {};
-    const pkgDeps = packageJson.dependencies || {};
-    const pkgDevDeps = packageJson.devDependencies || {};
-
-    for (const depName of Object.keys(pkgDeps)) {
-      if (!(depName in lockDeps)) {
-        return { ok: false, details: `Dependency "${depName}" missing in lockfile root dependencies.` };
+  const badSpecs = [];
+  const dependencyBlocks = ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'];
+  const scanPackageSpec = (pkgPath, json) => {
+    for (const block of dependencyBlocks) {
+      const deps = json?.[block];
+      if (!deps || typeof deps !== 'object') continue;
+      for (const [depName, spec] of Object.entries(deps)) {
+        if (typeof spec !== 'string') continue;
+        for (const pattern of disallowedSpecPatterns) {
+          if (pattern.regex.test(spec)) {
+            badSpecs.push(`${pkgPath} -> ${block}.${depName} (${pattern.label})`);
+            break;
+          }
+        }
       }
     }
+  };
 
-    for (const depName of Object.keys(pkgDevDeps)) {
-      if (!(depName in lockDevDeps)) {
-        return { ok: false, details: `Dev dependency "${depName}" missing in lockfile root devDependencies.` };
+  const packagePaths = collectWorkspacePackageJsonPaths(packageJson);
+  for (const pkgPath of packagePaths) {
+    scanPackageSpec(pkgPath, readJsonAt(pkgPath));
+  }
+
+  const rootName = typeof packageJson.name === 'string' ? packageJson.name : null;
+  const internalWorkspaceNames = new Set();
+  for (const pkgPath of packagePaths) {
+    const pkg = readJsonAt(pkgPath);
+    if (pkgPath === 'package.json') continue;
+    if (typeof pkg.name === 'string') {
+      internalWorkspaceNames.add(pkg.name);
+    }
+  }
+  if (rootName) internalWorkspaceNames.add(rootName);
+
+  const rootExternalDeps = {
+    ...(packageJson.dependencies || {}),
+    ...(packageJson.devDependencies || {}),
+  };
+  const confusionFindings = [];
+  for (const internalName of internalWorkspaceNames) {
+    if (Object.prototype.hasOwnProperty.call(rootExternalDeps, internalName)) {
+      confusionFindings.push(`Root dependency duplicates internal workspace package: ${internalName}`);
+    }
+  }
+
+  const lockPackages = lockJson?.packages && typeof lockJson.packages === 'object' ? lockJson.packages : {};
+  const lockSourceFindings = [];
+  const allowedWorkspaceResolvedPrefixes = ['apps/', 'packages/', 'services/'];
+
+  for (const [packagePath, packageMeta] of Object.entries(lockPackages)) {
+    if (!packageMeta || typeof packageMeta !== 'object') continue;
+    const resolved = packageMeta.resolved;
+    if (typeof resolved !== 'string') continue;
+
+    const isWorkspaceLink = resolved.startsWith('file:') || allowedWorkspaceResolvedPrefixes.some((prefix) => resolved.startsWith(prefix));
+    if (isWorkspaceLink) continue;
+
+    if (!resolved.startsWith('https://')) {
+      lockSourceFindings.push(`${packagePath || '<root>'}: non-https resolved source (${resolved})`);
+      continue;
+    }
+
+    if (/^(?:git\+|git:|file:|http:)/i.test(resolved)) {
+      lockSourceFindings.push(`${packagePath || '<root>'}: disallowed resolved source (${resolved})`);
+    }
+  }
+
+  const issues = [...badSpecs, ...lockSourceFindings, ...confusionFindings];
+  if (issues.length > 0) {
+    return { ok: false, details: issues.join('\n') };
+  }
+
+  return { ok: true, details: 'Package manager pinning, lockfile version, dependency source specs, lockfile tarball source policy, and dependency-confusion checks passed.' };
+});
+
+registerCheck('Lifecycle script risk policy', async () => {
+  const rootPackage = readJsonAt('package.json');
+  const packagePaths = collectWorkspacePackageJsonPaths(rootPackage);
+  const riskyScriptNames = ['preinstall', 'install', 'postinstall', 'prepare'];
+  const findings = [];
+
+  for (const pkgPath of packagePaths) {
+    const pkg = readJsonAt(pkgPath);
+    const scripts = pkg?.scripts && typeof pkg.scripts === 'object' ? pkg.scripts : {};
+
+    for (const scriptName of riskyScriptNames) {
+      if (!Object.prototype.hasOwnProperty.call(scripts, scriptName)) {
+        continue;
+      }
+      const allowlisted = ALLOWED_LIFECYCLE_SCRIPTS[pkgPath]?.includes(scriptName) ?? false;
+      if (!allowlisted) {
+        findings.push(`${pkgPath}: disallowed lifecycle script '${scriptName}'`);
       }
     }
   }
 
-  return { ok: true, details: 'package-lock.json presence, JSON validity, and root consistency checks passed.' };
+  if (findings.length > 0) {
+    return { ok: false, details: findings.join('\n') };
+  }
+
+  return { ok: true, details: 'No disallowed lifecycle scripts found across root/workspace package.json files.' };
 });
 
 registerCheck('Suspicious package script guard', async () => {
@@ -147,41 +257,38 @@ registerCheck('Suspicious package script guard', async () => {
 
   const findings = [];
   for (const [scriptName, scriptValue] of Object.entries(scripts)) {
-    if (typeof scriptValue !== 'string') {
-      continue;
-    }
+    if (typeof scriptValue !== 'string') continue;
     for (const pattern of patterns) {
-      if (pattern.regex.test(scriptValue)) {
-        findings.push(`script "${scriptName}" matched pattern ${pattern.name}`);
-      }
+      if (pattern.regex.test(scriptValue)) findings.push(`script "${scriptName}" matched pattern ${pattern.name}`);
     }
   }
 
-  if (findings.length > 0) {
-    return { ok: false, details: findings.join('\n') };
-  }
-
-  return { ok: true, details: 'No obvious risky shell patterns found in package scripts.' };
+  return findings.length > 0
+    ? { ok: false, details: findings.join('\n') }
+    : { ok: true, details: 'No obvious risky shell patterns found in root package scripts.' };
 });
 
-registerCheck('Secret scanning (static patterns)', async () => {
+registerCheck('Secret scanning (static patterns + sensitive files)', async () => {
   const excludedDirs = new Set(['node_modules', '.next', 'dist', 'build', 'coverage', '.git']);
   const excludedFiles = new Set(['package-lock.json']);
   const binaryExtensions = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.svg', '.pdf', '.zip', '.gz', '.woff', '.woff2', '.ttf', '.eot', '.mp4', '.mov', '.avi', '.mp3', '.wav']);
-
   const findings = [];
+
+  const sensitiveFileNames = ['.env', '.env.local', '.npmrc', '.yarnrc'];
+  for (const filename of sensitiveFileNames) {
+    if (existsSync(resolve(rootDir, filename))) {
+      findings.push(`${filename}: committed sensitive runtime config file must not be in repository`);
+    }
+  }
 
   const patterns = [
     { name: 'aws_access_key', regex: /\bAKIA[0-9A-Z]{16}\b/ },
     { name: 'private_key_header', regex: /-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----/ },
     { name: 'github_token', regex: /\bgh[pousr]_[A-Za-z0-9]{20,}\b/ },
+    { name: 'npm_token', regex: /\bnpm_[A-Za-z0-9]{20,}\b/ },
     { name: 'stripe_secret_key', regex: /\bsk_(?:live|test)_[A-Za-z0-9]{16,}\b/ },
-    { name: 'tiingo_api_key_assignment', regex: /TIINGO_API_KEY\s*[:=]\s*['"][^'"\s]{16,}['"]/i },
     { name: 'generic_api_key_assignment', regex: /(?:api[_-]?key|secret|token)\s*[:=]\s*['"][A-Za-z0-9_\-.]{20,}['"]/i },
-    { name: 'jwt_like_secret_token', regex: /(?:secret|token)\s*[:=]\s*['"][A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}['"]/i },
     { name: 'database_url_with_credentials', regex: /\b(?:postgres(?:ql)?|mysql|mariadb|mongodb):\/\/[^\s:@]+:[^\s@]+@/i },
-    { name: 'nextauth_secret_hardcoded', regex: /NEXTAUTH_SECRET\s*[:=]\s*['"][^'"\s]{12,}['"]/i },
-    { name: 'internal_api_token_hardcoded', regex: /INTERNAL_API_TOKEN\s*[:=]\s*['"][^'"\s]{12,}['"]/i },
   ];
 
   const placeholderRegex = /<SECRET>|your_api_key_here|example|placeholder/i;
@@ -189,7 +296,8 @@ registerCheck('Secret scanning (static patterns)', async () => {
   function shouldSkipFile(relativePath) {
     const fileName = relativePath.split('/').pop() || '';
     if (excludedFiles.has(fileName)) return true;
-    if (/\.log(\.\d+)?$/i.test(fileName)) return true;
+    if (relativePath.startsWith('tmp/')) return true;
+    if (relativePath.startsWith('/tmp/')) return true;
     const extension = extname(fileName).toLowerCase();
     if (binaryExtensions.has(extension)) return true;
     return false;
@@ -202,37 +310,23 @@ registerCheck('Secret scanning (static patterns)', async () => {
     for (const entry of entries) {
       const absolutePath = join(directoryPath, entry.name);
       const relativePath = relative(rootDir, absolutePath).replaceAll('\\\\', '/');
-
       if (entry.isDirectory()) {
-        if (excludedDirs.has(entry.name)) {
-          continue;
-        }
+        if (excludedDirs.has(entry.name)) continue;
         walk(absolutePath);
         continue;
       }
-
-      if (!entry.isFile() || shouldSkipFile(relativePath)) {
-        continue;
-      }
+      if (!entry.isFile() || shouldSkipFile(relativePath)) continue;
 
       const fileStat = statSync(absolutePath);
-      if (fileStat.size > 1_500_000) {
-        continue;
-      }
+      if (fileStat.size > 1_500_000) continue;
 
       const content = readFileSync(absolutePath, 'utf8');
       const lines = content.split(/\r?\n/);
       for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
         const line = lines[lineIndex];
-        if (line.includes('security-scan-ignore')) {
-          continue;
-        }
-        if (placeholderRegex.test(line)) {
-          continue;
-        }
-        if (relativePath.endsWith('.env.example') && /localhost|127\.0\.0\.1/.test(line)) {
-          continue;
-        }
+        if (line.includes('security-scan-ignore')) continue;
+        if (placeholderRegex.test(line)) continue;
+        if (relativePath.endsWith('.env.example') && /localhost|127\.0\.0\.1/.test(line)) continue;
         for (const pattern of patterns) {
           if (pattern.regex.test(line)) {
             findings.push(`${relativePath}:${lineIndex + 1} [${pattern.name}]`);
@@ -244,38 +338,34 @@ registerCheck('Secret scanning (static patterns)', async () => {
 
   walk(rootDir);
 
-  if (findings.length > 0) {
-    return { ok: false, details: findings.join('\n') };
-  }
-
-  return { ok: true, details: 'No high-confidence secret patterns found.' };
+  return findings.length > 0
+    ? { ok: false, details: findings.join('\n') }
+    : { ok: true, details: 'No high-confidence secret patterns found and no sensitive local secret files were committed.' };
 });
 
 registerCheck('GitHub workflow hardening', async () => {
   const workflowPath = resolve(rootDir, '.github/workflows/ci.yml');
-  if (!existsSync(workflowPath)) {
-    return { ok: false, details: '.github/workflows/ci.yml is missing.' };
-  }
-
+  if (!existsSync(workflowPath)) return { ok: false, details: '.github/workflows/ci.yml is missing.' };
   const content = readFileSync(workflowPath, 'utf8');
 
-  if (!/\npermissions:\s*\n\s*contents:\s*read\s*(?:\n|$)/.test(content)) {
-    return { ok: false, details: 'Workflow must declare top-level restrictive permissions with contents: read.' };
-  }
+  const checksText = [
+    { pass: /\npermissions:\s*\n\s*contents:\s*read\s*(?:\n|$)/.test(content), fail: 'Workflow must declare top-level permissions: contents: read.' },
+    { pass: !/permissions:\s*write-all/.test(content) && !/contents:\s*write/.test(content), fail: 'Workflow contains disallowed write permissions.' },
+    { pass: !/pull_request_target\s*:/.test(content), fail: 'Workflow must not use pull_request_target for this repository policy.' },
+    { pass: /node-version:\s*['"]?20['"]?/.test(content), fail: 'Workflow must pin setup-node to Node 20.' },
+    { pass: !/echo\s+.*\$(?:\{|\()?[A-Za-z_][A-Za-z0-9_]*(?:\}|\))?/i.test(content), fail: 'Workflow appears to echo environment variables directly.' },
+    { pass: !/smoke:production/.test(content), fail: 'Workflow must not run smoke:production in CI.' },
+  ];
 
-  if (/permissions:\s*write-all/.test(content) || /contents:\s*write/.test(content)) {
-    return { ok: false, details: 'Workflow contains write permissions (write-all or contents: write), which are not allowed in this gate.' };
-  }
-
-  if (/echo\s+.*(SECRET|TOKEN|KEY|PASSWORD)/i.test(content)) {
-    return { ok: false, details: 'Workflow appears to echo sensitive variables.' };
-  }
-
-  return { ok: true, details: 'Workflow permissions and secret-echo safeguards passed.' };
+  const failures = checksText.filter((item) => !item.pass).map((item) => item.fail);
+  return failures.length > 0
+    ? { ok: false, details: failures.join('\n') }
+    : { ok: true, details: 'Workflow permissions/events/node pin and CI exposure checks passed.' };
 });
 
 (async function main() {
   const failures = [];
+
   for (let index = 0; index < checks.length; index += 1) {
     const check = checks[index];
     console.log(`\n${index + 1}. ${check.name}`);

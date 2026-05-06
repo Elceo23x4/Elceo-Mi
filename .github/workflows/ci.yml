@@ -57,5 +57,7 @@ jobs:
       - name: Run security gate
         run: npm run security:gate
 
-      - name: Post-CI note
-        run: echo "Staging smoke tests are manual/post-deploy via ELCEO_SMOKE_BASE_URL and npm run smoke:production"
+      - name: Security posture note
+        run: |
+          echo "CI runs without production credentials and without provider live calls."
+          echo "Production smoke testing stays manual/post-deploy via ELCEO_SMOKE_BASE_URL after staging deploy."

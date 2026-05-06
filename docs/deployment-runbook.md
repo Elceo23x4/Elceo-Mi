@@ -101,3 +101,8 @@ Track API errors, security audit events, billing/notification runtime metrics, a
 - Added staging-only live fetch gating helpers; production remains blocked by default.
 - No scheduler/live ingestion activation in this batch; no secrets exposed in readiness outputs.
 
+
+## C5-A22 note
+- Added scheduled ingestion orchestration foundation with dry-run fixture jobs, persisted run records, query/replay helpers, deterministic retry/staleness helpers, and production-live blocked by default.
+- No cron deployment and no live provider calls by default in this batch.
+

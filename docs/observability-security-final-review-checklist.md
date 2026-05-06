@@ -59,3 +59,9 @@
 - Run `npm run security:gate` locally before release handoff.
 - Confirm CI executes `npm run security:gate` with restrictive workflow permissions (`contents: read`).
 - Treat any high-confidence secret-scan finding as release-blocking unless explicitly allowlisted using same-line `security-scan-ignore`.
+
+## S2 IDOR/authorization verification note
+- Added `docs/security-idor-authorization-matrix.md` with representative route family gate classification and expected subject boundaries.
+- Route-runtime coverage now includes representative cross-subject denial checks (journal/portfolio), admin/internal gate denial checks (billing/admin/internal/market-evidence/scheduled-ingestion), and mutation security action-kind regression assertions.
+- This does not replace external pentest or staging attack drill sign-off.
+- Next security phase remains S3 input abuse/injection adversarial testing.

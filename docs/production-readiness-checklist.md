@@ -234,3 +234,9 @@ Added protected read-only admin query surfaces under /api/admin/market-evidence/
 - [ ] CI workflow permissions restricted to `contents: read`.
 - [ ] No unresolved high/critical `npm audit` findings.
 - [ ] No `SECURITY_GATE_ALLOW_AUDIT_UNAVAILABLE` usage in CI or release sign-off.
+
+## S2 IDOR/authorization verification note
+- Added `docs/security-idor-authorization-matrix.md` with representative route family gate classification and expected subject boundaries.
+- Route-runtime coverage now includes representative cross-subject denial checks (journal/portfolio), admin/internal gate denial checks (billing/admin/internal/market-evidence/scheduled-ingestion), and mutation security action-kind regression assertions.
+- This does not replace external pentest or staging attack drill sign-off.
+- Next security phase remains S3 input abuse/injection adversarial testing.

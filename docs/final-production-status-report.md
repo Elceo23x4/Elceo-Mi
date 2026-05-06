@@ -256,3 +256,9 @@ Added protected read-only admin query surfaces under /api/admin/market-evidence/
 - CI now runs `npm run check:c5-readiness` and `npm run security:gate` with top-level workflow permissions set to `contents: read`.
 - npm audit unavailability (registry/auth/network) now blocks by default; local override `SECURITY_GATE_ALLOW_AUDIT_UNAVAILABLE=true` is emergency-only and not acceptable for CI/final release sign-off.
 - This improves baseline launch defensibility but is not a full security certification and does not replace S2-S6/security review requirements.
+
+## S2 IDOR/authorization verification note
+- Added `docs/security-idor-authorization-matrix.md` with representative route family gate classification and expected subject boundaries.
+- Route-runtime coverage now includes representative cross-subject denial checks (journal/portfolio), admin/internal gate denial checks (billing/admin/internal/market-evidence/scheduled-ingestion), and mutation security action-kind regression assertions.
+- This does not replace external pentest or staging attack drill sign-off.
+- Next security phase remains S3 input abuse/injection adversarial testing.

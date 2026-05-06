@@ -145,7 +145,10 @@ const mockApplicationStateRuntime = {
     listJournalCases: async () => [journalCase],
     createDraftCaseFromReasoningContext: async () => journalCase,
     createDraftCase: async () => journalCase,
-    planCase: async () => journalCase,
+    planCase: async (caseId: string) => {
+      if (caseId === 'case-foreign') throw new Error('not_found');
+      return journalCase;
+    },
     adjustExecution: async () => journalCase,
     markExecuted: async () => journalCase,
     markPartiallyClosed: async () => journalCase,
@@ -161,13 +164,19 @@ const mockApplicationStateRuntime = {
   portfolio: {
     listCurrentWatchlist: async () => [],
     createWatchlistEntry: async () => ({ entryId: 'entry-1' }),
-    updateWatchlistEntry: async () => ({ entryId: 'entry-1' }),
+    updateWatchlistEntry: async (entryId: string) => {
+      if (entryId === 'entry-foreign') throw new Error('forbidden');
+      return { entryId: 'entry-1' };
+    },
     changeWatchlistStatus: async () => ({ entryId: 'entry-1' }),
     changeWatchlistThesisHealth: async () => ({ entryId: 'entry-1' }),
     archiveWatchlistEntry: async () => ({ entryId: 'entry-1' }),
     listOpenPositions: async () => [],
     createProposedPosition: async () => ({ positionId: 'pos-1' }),
-    openPosition: async () => ({ positionId: 'pos-1' }),
+    openPosition: async (positionId: string) => {
+      if (positionId === 'pos-foreign') throw new Error('forbidden');
+      return { positionId: 'pos-1' };
+    },
     closePosition: async () => ({ positionId: 'pos-1' }),
     listOpenActionQueue: async () => [],
     createActionItem: async () => ({ actionId: 'act-1' }),
@@ -307,7 +316,12 @@ const mockNotificationRuntime = {
     getNotificationOperationalSummaryForSubject: async () => ({ inboxUnreadCount: 0 }),
     listInbox: async () => [],
     registerOrUpdateTarget: async () => ({ targetId: 'target-1' }),
-    registerOrUpdateSubscription: async () => ({ subscriptionId: 'sub-1' })
+    registerOrUpdateSubscription: async () => ({ subscriptionId: 'sub-1' }),
+    enableTarget: async (targetId: string) => { if (targetId === 'target-foreign') throw new Error('forbidden'); },
+    disableTarget: async (targetId: string) => { if (targetId === 'target-foreign') throw new Error('forbidden'); },
+    enableSubscription: async (subscriptionId: string) => { if (subscriptionId === 'sub-foreign') throw new Error('forbidden'); },
+    disableSubscription: async (subscriptionId: string) => { if (subscriptionId === 'sub-foreign') throw new Error('forbidden'); },
+    updateSubscriptionThreshold: async (subscriptionId: string) => { if (subscriptionId === 'sub-foreign') throw new Error('forbidden'); }
   },
   verification: {
     issueTargetVerification: async () => ({ verificationId: 'v-1' }),
@@ -435,6 +449,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   const journalPlanOk = await journalPlanRoute.POST(request('https://x/api/journal/cases/case-1/plan', { method: 'POST', body: JSON.stringify({ thesis: 'x' }) }), { params: Promise.resolve({ caseId: 'case-1' }) });
   assert.equal(journalPlanOk.status, 200);
   assert.equal((await readJson(journalPlanOk)).ok, true);
+  assert.deepEqual(await readJson(await journalPlanRoute.POST(request('https://x/api/journal/cases/case-foreign/plan', { method: 'POST', body: JSON.stringify({ thesis: 'x' }) }), { params: Promise.resolve({ caseId: 'case-foreign' }) })), { ok: false, error: { code: 'not_found', message: 'Not found' } });
   assert.equal(latestSecurityActionKind, 'journal_case_lifecycle');
   securityDecisionMode = 'rate_limited';
   const journalPlanRateLimited = await journalPlanRoute.POST(request('https://x/api/journal/cases/case-1/plan', { method: 'POST', body: JSON.stringify({ thesis: 'x' }) }), { params: Promise.resolve({ caseId: 'case-1' }) });
@@ -472,12 +487,14 @@ export async function runRouteRuntimeTests(): Promise<void> {
 
   assert.equal((await readJson(await watchlistRoute.POST(request('https://x/api/portfolio/watchlist', { method: 'POST', body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', priority: 'high' }) })))).ok, true);
   assert.equal((await readJson(await watchlistEntryRoute.PATCH(request('https://x/api/portfolio/watchlist/entry-1', { method: 'PATCH', body: JSON.stringify({ note: 'n' }) }), { params: Promise.resolve({ entryId: 'entry-1' }) }))).ok, true);
+  assert.deepEqual(await readJson(await watchlistEntryRoute.PATCH(request('https://x/api/portfolio/watchlist/entry-foreign', { method: 'PATCH', body: JSON.stringify({ note: 'n' }) }), { params: Promise.resolve({ entryId: 'entry-foreign' }) })), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
   assert.equal((await readJson(await watchlistStatusRoute.POST(request('https://x/api/portfolio/watchlist/entry-1/status', { method: 'POST', body: JSON.stringify({ status: 'archived' }) }), { params: Promise.resolve({ entryId: 'entry-1' }) }))).ok, true);
   assert.equal((await readJson(await watchlistThesisRoute.POST(request('https://x/api/portfolio/watchlist/entry-1/thesis-health', { method: 'POST', body: JSON.stringify({ thesisHealth: 'weakening' }) }), { params: Promise.resolve({ entryId: 'entry-1' }) }))).ok, true);
   assert.equal((await readJson(await watchlistArchiveRoute.POST(request('https://x/api/portfolio/watchlist/entry-1/archive', { method: 'POST' }), { params: Promise.resolve({ entryId: 'entry-1' }) }))).ok, true);
 
   assert.equal((await readJson(await positionsRoute.POST(request('https://x/api/portfolio/positions', { method: 'POST', body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', direction: 'long' }) })))).ok, true);
   assert.equal((await readJson(await positionOpenRoute.POST(request('https://x/api/portfolio/positions/pos-1/open', { method: 'POST', body: JSON.stringify({ openedAt: '2026-01-01T00:00:00.000Z' }) }), { params: Promise.resolve({ positionId: 'pos-1' }) }))).ok, true);
+  assert.deepEqual(await readJson(await positionOpenRoute.POST(request('https://x/api/portfolio/positions/pos-foreign/open', { method: 'POST', body: JSON.stringify({ openedAt: '2026-01-01T00:00:00.000Z' }) }), { params: Promise.resolve({ positionId: 'pos-foreign' }) })), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
   assert.equal((await readJson(await positionCloseRoute.POST(request('https://x/api/portfolio/positions/pos-1/close', { method: 'POST', body: JSON.stringify({ closedAt: '2026-01-01T00:00:00.000Z' }) }), { params: Promise.resolve({ positionId: 'pos-1' }) }))).ok, true);
 
   assert.equal((await readJson(await actionsRoute.POST(request('https://x/api/portfolio/actions', { method: 'POST', body: JSON.stringify({ kind: 'review_thesis', priority: 'high', headline: 'h', rationale: 'r' }) })))).ok, true);
@@ -557,6 +574,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   securityDecisionMode = 'rate_limited';
   assert.deepEqual(await readJson(await notificationsSubscriptionRoute.PATCH(request('https://x/api/notifications/subscriptions/sub-1', { method: 'PATCH', body: JSON.stringify({ isEnabled: false }) }), { params: Promise.resolve({ subscriptionId: 'sub-1' }) })), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
   securityDecisionMode = 'allowed';
+  assert.deepEqual(await readJson(await notificationsSubscriptionRoute.PATCH(request('https://x/api/notifications/subscriptions/sub-foreign', { method: 'PATCH', body: JSON.stringify({ isEnabled: false }) }), { params: Promise.resolve({ subscriptionId: 'sub-foreign' }) })), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
   assert.equal(latestSecurityActionKind, 'notification_subscription_write');
   const notificationVerificationIssueOk = await notificationsVerificationIssueRoute.POST(request('https://x/api/notifications/verification/issue', { method: 'POST', headers: { 'Idempotency-Key': 'notification-issue-ok' }, body: JSON.stringify({ targetId: 'target-1' }) }));
   assert.equal(notificationVerificationIssueOk.status, 200);
@@ -623,6 +641,9 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await accountUsageRoute.GET())).ok, true);
   assert.equal((await readJson(await accountAccessDecisionsRoute.GET(request('https://x/api/account/access-decisions?limit=5')))).ok, true);
   assert.equal((await readJson(await accountAccessCheckRoute.POST(request('https://x/api/account/access-check', { method: 'POST', body: JSON.stringify({ feature: 'workspace.refresh' }) })))).ok, true);
+  const accountAccessCrossSubjectProbe = await readJson(await accountAccessCheckRoute.POST(request('https://x/api/account/access-check', { method: 'POST', body: JSON.stringify({ feature: 'workspace.refresh', subjectId: 'user-2' }) })));
+  assert.equal(accountAccessCrossSubjectProbe.ok, true);
+  assert.equal((((accountAccessCrossSubjectProbe.data as { decision?: { subjectId?: string } }).decision?.subjectId) ?? null), 'user-1');
 
   setAuthTestOverrides({ subjectResolver: async () => null });
   const accountBillingUnauthorized = await accountBillingRoute.GET();
@@ -862,6 +883,10 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.deepEqual(await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ jobId: 'job-1' }) }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
   securityDecisionMode = 'allowed';
   assert.equal((await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'sched-dry-run' }, body: JSON.stringify({ jobId: 'job-1' }) })))).ok, true);
+  assert.equal(latestSecurityActionKind, 'internal_mutation');
+  assert.deepEqual(await readJson(await internalTiingoFixtureIngestRoute.POST(request('https://x/api/internal/market-evidence/tiingo/fixture-ingest', { method: 'POST', body: JSON.stringify({ asset: 'xau_usd' }) }))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
+  assert.equal((await readJson(await internalTiingoFixtureIngestRoute.POST(request('https://x/api/internal/market-evidence/tiingo/fixture-ingest', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'fixture-ingest-ok' }, body: JSON.stringify({ asset: 'xau_usd' }) })))).ok, true);
+  assert.equal(latestSecurityActionKind, 'internal_mutation');
 
 
   assert.deepEqual(await readJson(await internalBillingOrchestrationRetryRoute.POST(request('https://x/api/internal/billing/orchestration/retry', { method: 'POST', body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });

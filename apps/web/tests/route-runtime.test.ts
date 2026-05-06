@@ -116,6 +116,10 @@ import * as adminSeoSitemapRoute from '../app/api/admin/seo/sitemap/route';
 import * as adminBillingOrchestrationSubjectRoute from '../app/api/admin/billing/orchestration/subject/route';
 import * as internalBillingOrchestrationRetryRoute from '../app/api/internal/billing/orchestration/retry/route';
 import * as internalTiingoFixtureIngestRoute from '../app/api/internal/market-evidence/tiingo/fixture-ingest/route';
+import * as scheduledIngestionPoliciesRoute from '../app/api/admin/market-evidence/scheduled-ingestion/policies/route';
+import * as scheduledIngestionRunsRoute from '../app/api/admin/market-evidence/scheduled-ingestion/runs/route';
+import * as scheduledIngestionReplayRoute from '../app/api/admin/market-evidence/scheduled-ingestion/replay/route';
+import * as scheduledIngestionDryRunRoute from '../app/api/admin/market-evidence/scheduled-ingestion/dry-run/route';
 
 const subject = { subjectKind: 'user' as const, subjectId: 'user-1', userId: 'user-1' };
 
@@ -323,6 +327,12 @@ const mockNotificationRuntime = {
 const mockReasoningRuntime = {
   marketIntelligence: {
     runTiingoFixtureIngestion: async (body: { asset: string }) => ({ requestId: 'tiingo-fixture-req-1', providerId: 'tiingo_market_data', capability: 'market_price_history', responseStatus: 'success', payloadCount: 1, persistedPayloadIds: [`payload-${body.asset}`], errors: [] }),
+    getScheduledIngestionPolicySnapshot: (asOfIso?: string) => ({ generatedAt: asOfIso ?? '2026-01-01T00:00:00.000Z', policies: [{ jobId: 'job-1', providerId: 'tiingo_market_data' }] }),
+    runScheduledIngestionDryRun: async (jobId: string) => ({ generatedAt: '2026-01-01T00:00:00.000Z', pass: true, warnings: [], run: { runId: `run-${jobId}` } }),
+    getScheduledIngestionRunById: async () => null,
+    listScheduledIngestionRunsByProvider: async () => ([]),
+    listScheduledIngestionRunsByStatus: async () => ([]),
+    getScheduledIngestionRunReplay: async () => null,
     listEvidencePayloadsByAsset: async () => ([]),
     listEvidencePayloadsByEvidenceClass: async () => ([]),
     listEvidencePayloadsByEvidenceType: async () => ([]),
@@ -831,6 +841,27 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await adminSeoFeedRoute.GET(request('https://x/api/admin/seo/feed', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
   assert.equal((await readJson(await adminSeoFeedRoute.GET(request('https://x/api/admin/seo/feed?slug=test', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
   assert.equal((await readJson(await adminSeoSitemapRoute.GET(request('https://x/api/admin/seo/sitemap', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+  assert.deepEqual(await readJson(await scheduledIngestionPoliciesRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/policies'))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
+  assert.equal((await readJson(await scheduledIngestionPoliciesRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/policies?providerId=&generatedAt=bad', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.equal((await readJson(await scheduledIngestionPoliciesRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/policies', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+  assert.equal((await readJson(await scheduledIngestionPoliciesRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/policies?providerId=tiingo_market_data', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+  assert.deepEqual(await readJson(await scheduledIngestionRunsRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/runs'))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
+  assert.equal((await readJson(await scheduledIngestionRunsRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/runs?status=bad', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.equal((await readJson(await scheduledIngestionRunsRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/runs?providerId=tiingo_market_data&capability=not_a_capability', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.deepEqual(await readJson(await scheduledIngestionRunsRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/runs?runId=run-1', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { mode: 'runId', run: null } });
+  assert.deepEqual(await readJson(await scheduledIngestionRunsRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/runs?providerId=tiingo_market_data&capability=market_price_history', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { mode: 'provider', runs: [] } });
+  assert.deepEqual(await readJson(await scheduledIngestionRunsRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/runs?providerId=tiingo_market_data&capability=cot_report', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { mode: 'provider', runs: [] } });
+  assert.deepEqual(await readJson(await scheduledIngestionRunsRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/runs?status=failed', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { mode: 'status', runs: [] } });
+  assert.equal((await readJson(await scheduledIngestionReplayRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/replay', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.deepEqual(await readJson(await scheduledIngestionReplayRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/replay?runId=run-1', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { replay: null } });
+  assert.deepEqual(await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', body: JSON.stringify({ jobId: 'job-1' }) }))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
+  assert.equal((await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({}) })))).ok, false);
+  assert.equal((await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ jobId: 'job-1', production_live: true }) })))).ok, false);
+  assert.equal((await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ jobId: 'job-1', providerApiKey: 'secret' }) })))).ok, false);
+  securityDecisionMode = 'rate_limited';
+  assert.deepEqual(await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ jobId: 'job-1' }) }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
+  securityDecisionMode = 'allowed';
+  assert.equal((await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'sched-dry-run' }, body: JSON.stringify({ jobId: 'job-1' }) })))).ok, true);
 
 
   assert.deepEqual(await readJson(await internalBillingOrchestrationRetryRoute.POST(request('https://x/api/internal/billing/orchestration/retry', { method: 'POST', body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });

@@ -202,3 +202,9 @@ Remaining hardening remains unchanged: infra/WAF limits and final penetration/se
 
 ## C5-A20 market evidence + SEO admin/internal query routes
 Added protected read-only admin query surfaces under /api/admin/market-evidence/* and /api/admin/seo/* (internal token + admin.read). These routes expose persisted payload/replay/quality/reasoning-input/weighted/cognition/SEO feed/sitemap views with strict query validation, no live provider fetches, and no public SEO pages.
+
+## C5-A23 note
+- Added protected internal/admin scheduled-ingestion routes: policies/runs/replay (GET) and dry-run (POST).
+- Dry-run POST is internal+admin.ops gated with mutation security decision, idempotency, rate-limit, audit, and response-envelope completion.
+- Route input rejects production_live override and provider API key fields; fixture dry-run only.
+- No public routes, no cron deployment, and no live provider calls in this batch.

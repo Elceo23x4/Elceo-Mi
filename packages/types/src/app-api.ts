@@ -213,5 +213,13 @@ export type AdminBillingPolicyTransitionsQuery = { subjectId: string; limit?: nu
 export type BillingProviderEventIngestRequest = StripeLikeWebhookEnvelope;
 export type AdminBillingOccurredAtRequest = { subjectId: string; occurredAt: string };
 
+
+export type MarketEvidencePayloadQuery = { asset: TradingAssetCoverage | null; evidenceClass: import('./market-evidence').MarketEvidenceClass | null; evidenceTypeId: string | null; providerId: string | null; region: import('./market-evidence').MarketEvidenceRegion | null; limit: number | null };
+export type ProviderReplayQuery = { requestId: string };
+export type EvidenceQualityQuery = { asset: TradingAssetCoverage | null; evidenceClass: import('./market-evidence').MarketEvidenceClass | null; limit: number | null; evaluatedAt: string | null };
+export type ReasoningInputQuery = { asset: TradingAssetCoverage | null; evidenceClass: import('./market-evidence').MarketEvidenceClass | null; limit: number | null; evaluatedAt: string | null; includeFixtureEvidence: boolean | null; includeExpiredEvidence: boolean | null; includeBlockedEvidence: boolean | null; minFinalQualityScore: number | null };
+export type WeightedEvidenceQuery = { asset: TradingAssetCoverage; horizon: import('./market-evidence-weighting').EvidenceWeightHorizon; limit: number | null; evaluatedAt: string | null };
+export type MarketCognitionQuery = { asset: TradingAssetCoverage; horizon: import('./market-evidence-weighting').EvidenceWeightHorizon; limit: number | null; evaluatedAt: string | null };
+export type SeoFeedQuery = { pageKind: import('./seo-content').SeoPageKind | null; asset: TradingAssetCoverage | null; evidenceClass: import('./market-evidence').MarketEvidenceClass | null; slug: string | null; limit: number | null; generatedAt: string | null };
 export type AdminBillingOperationsLimitQuery = { limit?: number };
 export type AdminBillingOperationsSubjectQuery = { subjectId: string };

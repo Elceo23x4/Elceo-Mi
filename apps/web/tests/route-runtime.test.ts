@@ -102,6 +102,17 @@ import * as adminBillingOperationsSubjectRoute from '../app/api/admin/billing/op
 import * as internalBillingReconcileRetryRoute from '../app/api/internal/billing/reconcile/retry/route';
 import * as adminBillingOrchestrationLatestRoute from '../app/api/admin/billing/orchestration/latest/route';
 import * as adminBillingOrchestrationRunsRoute from '../app/api/admin/billing/orchestration/runs/route';
+
+import * as marketEvidencePayloadsRoute from '../app/api/admin/market-evidence/payloads/route';
+import * as marketEvidenceProviderRequestRoute from '../app/api/admin/market-evidence/provider-request/route';
+import * as marketEvidenceProviderResponseRoute from '../app/api/admin/market-evidence/provider-response/route';
+import * as marketEvidencePayloadReplayRoute from '../app/api/admin/market-evidence/payload-replay/route';
+import * as marketEvidenceQualityRoute from '../app/api/admin/market-evidence/quality/route';
+import * as marketEvidenceReasoningInputRoute from '../app/api/admin/market-evidence/reasoning-input/route';
+import * as marketEvidenceWeightedRoute from '../app/api/admin/market-evidence/weighted/route';
+import * as marketEvidenceCognitionRoute from '../app/api/admin/market-evidence/cognition/route';
+import * as adminSeoFeedRoute from '../app/api/admin/seo/feed/route';
+import * as adminSeoSitemapRoute from '../app/api/admin/seo/sitemap/route';
 import * as adminBillingOrchestrationSubjectRoute from '../app/api/admin/billing/orchestration/subject/route';
 import * as internalBillingOrchestrationRetryRoute from '../app/api/internal/billing/orchestration/retry/route';
 import * as internalTiingoFixtureIngestRoute from '../app/api/internal/market-evidence/tiingo/fixture-ingest/route';
@@ -311,7 +322,24 @@ const mockNotificationRuntime = {
 };
 const mockReasoningRuntime = {
   marketIntelligence: {
-    runTiingoFixtureIngestion: async (body: { asset: string }) => ({ requestId: 'tiingo-fixture-req-1', providerId: 'tiingo_market_data', capability: 'market_price_history', responseStatus: 'success', payloadCount: 1, persistedPayloadIds: [`payload-${body.asset}`], errors: [] })
+    runTiingoFixtureIngestion: async (body: { asset: string }) => ({ requestId: 'tiingo-fixture-req-1', providerId: 'tiingo_market_data', capability: 'market_price_history', responseStatus: 'success', payloadCount: 1, persistedPayloadIds: [`payload-${body.asset}`], errors: [] }),
+    listEvidencePayloadsByAsset: async () => ([]),
+    listEvidencePayloadsByEvidenceClass: async () => ([]),
+    listEvidencePayloadsByEvidenceType: async () => ([]),
+    getProviderSourceRequestById: async () => null,
+    getProviderSourceResponseByRequestId: async () => null,
+    getNormalizedMarketEvidencePayloadReplayById: async () => null,
+    listEvidencePayloadsByAssetWithQuality: async () => ([]),
+    listEvidencePayloadsByEvidenceClassWithQuality: async () => ([]),
+    getReasoningEvidenceInputByAsset: async () => ({ generatedAt: '2026-01-01T00:00:00.000Z', asset: 'xau_usd', evidenceClass: null, filterPolicy: null, items: [] }),
+    getReasoningEvidenceInputByEvidenceClass: async () => ({ generatedAt: '2026-01-01T00:00:00.000Z', asset: null, evidenceClass: 'macro_calendar', filterPolicy: null, items: [] }),
+    getWeightedEvidenceByAsset: async () => ({ generatedAt: '2026-01-01T00:00:00.000Z', asset: 'xau_usd', horizon: 'intraday', entries: [] }),
+    getMarketCognitionByAsset: async () => ({ generatedAt: '2026-01-01T00:00:00.000Z', asset: 'xau_usd', horizon: 'intraday', scorecard: null, signals: [], narrative: '' }),
+    buildSeoContentFeedSnapshot: () => ({ generatedAt: '2026-01-01T00:00:00.000Z', items: [], sitemapRecords: [] }),
+    listSeoContentFeedItemsByPageKind: () => ([]),
+    listSeoContentFeedItemsForAsset: () => ([]),
+    listSeoContentFeedItemsForEvidenceClass: () => ([]),
+    getSeoContentFeedItemBySlug: () => null
   }
 };
 
@@ -776,6 +804,34 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.deepEqual(await readJson(await adminBillingOrchestrationSubjectRoute.GET(request('https://x/api/admin/billing/orchestration/subject'))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
   assert.deepEqual(await readJson(await adminBillingOrchestrationSubjectRoute.GET(request('https://x/api/admin/billing/orchestration/subject', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: false, error: { code: 'validation_error', message: 'Validation failed', details: ['subjectId must be non-empty string'] } });
   assert.deepEqual(await readJson(await adminBillingOrchestrationSubjectRoute.GET(request('https://x/api/admin/billing/orchestration/subject?subjectId=user-2', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { snapshot: await mockApplicationStateRuntime.billingOrchestration.getBillingOrchestrationSubjectSnapshot('user', 'user-2') } });
+
+  assert.deepEqual(await readJson(await marketEvidencePayloadsRoute.GET(request('https://x/api/admin/market-evidence/payloads'))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
+  assert.equal((await readJson(await marketEvidencePayloadsRoute.GET(request('https://x/api/admin/market-evidence/payloads?asset=bad', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.equal((await readJson(await marketEvidencePayloadsRoute.GET(request('https://x/api/admin/market-evidence/payloads?asset=xau_usd&limit=bad', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.equal((await readJson(await marketEvidencePayloadsRoute.GET(request('https://x/api/admin/market-evidence/payloads?asset=xau_usd', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+  assert.equal((await readJson(await marketEvidenceProviderRequestRoute.GET(request('https://x/api/admin/market-evidence/provider-request', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.deepEqual(await readJson(await marketEvidenceProviderRequestRoute.GET(request('https://x/api/admin/market-evidence/provider-request?requestId=req-1', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { request: null } });
+  assert.equal((await readJson(await marketEvidenceProviderResponseRoute.GET(request('https://x/api/admin/market-evidence/provider-response', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.deepEqual(await readJson(await marketEvidenceProviderResponseRoute.GET(request('https://x/api/admin/market-evidence/provider-response?requestId=req-1', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { response: null } });
+  assert.equal((await readJson(await marketEvidencePayloadReplayRoute.GET(request('https://x/api/admin/market-evidence/payload-replay', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.deepEqual(await readJson(await marketEvidencePayloadReplayRoute.GET(request('https://x/api/admin/market-evidence/payload-replay?payloadId=p-1', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { replay: null } });
+  assert.equal((await readJson(await marketEvidenceQualityRoute.GET(request('https://x/api/admin/market-evidence/quality?evidenceClass=bad', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.equal((await readJson(await marketEvidenceQualityRoute.GET(request('https://x/api/admin/market-evidence/quality?evaluatedAt=bad', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.equal((await readJson(await marketEvidenceQualityRoute.GET(request('https://x/api/admin/market-evidence/quality?asset=xau_usd', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+  assert.equal((await readJson(await marketEvidenceReasoningInputRoute.GET(request('https://x/api/admin/market-evidence/reasoning-input?minFinalQualityScore=bad', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.equal((await readJson(await marketEvidenceReasoningInputRoute.GET(request('https://x/api/admin/market-evidence/reasoning-input?asset=xau_usd', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+  assert.equal((await readJson(await marketEvidenceWeightedRoute.GET(request('https://x/api/admin/market-evidence/weighted?asset=xau_usd&horizon=bad', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.equal((await readJson(await marketEvidenceWeightedRoute.GET(request('https://x/api/admin/market-evidence/weighted', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.equal((await readJson(await marketEvidenceWeightedRoute.GET(request('https://x/api/admin/market-evidence/weighted?asset=xau_usd&horizon=intraday', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+  assert.equal((await readJson(await marketEvidenceCognitionRoute.GET(request('https://x/api/admin/market-evidence/cognition?asset=xau_usd&horizon=bad', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.equal((await readJson(await marketEvidenceCognitionRoute.GET(request('https://x/api/admin/market-evidence/cognition', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.equal((await readJson(await marketEvidenceCognitionRoute.GET(request('https://x/api/admin/market-evidence/cognition?asset=xau_usd&horizon=intraday', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+  assert.deepEqual(await readJson(await adminSeoFeedRoute.GET(request('https://x/api/admin/seo/feed'))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
+  assert.equal((await readJson(await adminSeoFeedRoute.GET(request('https://x/api/admin/seo/feed?pageKind=bad', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.equal((await readJson(await adminSeoFeedRoute.GET(request('https://x/api/admin/seo/feed', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+  assert.equal((await readJson(await adminSeoFeedRoute.GET(request('https://x/api/admin/seo/feed?slug=test', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+  assert.equal((await readJson(await adminSeoSitemapRoute.GET(request('https://x/api/admin/seo/sitemap', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+
 
   assert.deepEqual(await readJson(await internalBillingOrchestrationRetryRoute.POST(request('https://x/api/internal/billing/orchestration/retry', { method: 'POST', body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
   assert.deepEqual(await readJson(await internalBillingOrchestrationRetryRoute.POST(request('https://x/api/internal/billing/orchestration/retry', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({}) }))), { ok: false, error: { code: 'validation_error', message: 'Validation failed', details: ['subjectId required'] } });

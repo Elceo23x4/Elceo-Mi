@@ -126,3 +126,6 @@ C5-A3 adds provider source contracts, strict normalization schemas, deterministi
 - Added deterministic market cognition signal builder foundation from weighted evidence snapshots (pressure families, contradiction flags, freshness warnings, confidence decomposition, narrative summary).
 - Explicit non-goal remains trade recommendations/buy/sell/hold outputs.
 - Next step C5-A19 can prioritize SEO content data feed/programmatic page backend or deeper cognition decomposition.
+
+## C5-A20 market evidence + SEO admin/internal query routes
+Added protected read-only admin query surfaces under /api/admin/market-evidence/* and /api/admin/seo/* (internal token + admin.read). These routes expose persisted payload/replay/quality/reasoning-input/weighted/cognition/SEO feed/sitemap views with strict query validation, no live provider fetches, and no public SEO pages.

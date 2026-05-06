@@ -80,3 +80,6 @@ Admin billing mutation surfaces now use canonical route-security enforcement (`a
 - Ingestion persists provider request/response/normalized payload lifecycle and supports payload query/replay.
 - Future C5-A7 live activation requirements remain: `TIINGO_API_KEY`, provider health checks, scheduler integration, production rate-limit policy, staging smoke validation.
 
+
+## C5-A20 market evidence + SEO admin/internal query routes
+Added protected read-only admin query surfaces under /api/admin/market-evidence/* and /api/admin/seo/* (internal token + admin.read). These routes expose persisted payload/replay/quality/reasoning-input/weighted/cognition/SEO feed/sitemap views with strict query validation, no live provider fetches, and no public SEO pages.

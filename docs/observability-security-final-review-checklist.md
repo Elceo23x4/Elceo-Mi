@@ -72,3 +72,8 @@
 - This is not security certification and does not replace DAST/fuzzing/pentest.
 - S4 (supply-chain/CI), S5 (infra/WAF), and S6 (staging attack drill) remain required.
 
+## S4 supply-chain/CI review additions
+- Verify branch protection is active on `main` (PR review + required CI + required `security:gate` + force-push disabled).
+- Verify CI workflow remains read-only (`permissions: contents: read`) and does not run `pull_request_target` or production smoke tests.
+- Verify release sign-off does not use `SECURITY_GATE_ALLOW_AUDIT_UNAVAILABLE=true`.
+- Confirm S5 (infra/WAF) and S6 (staging attack drill) are still open requirements.

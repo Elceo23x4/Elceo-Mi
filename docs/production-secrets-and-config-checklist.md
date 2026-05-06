@@ -73,3 +73,9 @@
 - `npm run security:gate` performs static secret scanning and blocks high-confidence patterns.
 - Use same-line `security-scan-ignore` only for intentional non-secret fixtures/placeholders and document why in review notes.
 - Keep placeholder examples explicit (`<SECRET>`, `your_api_key_here`) to avoid false alarms.
+
+## S4 supply-chain secret-exposure safeguards
+- `.env`, `.env.local`, `.npmrc`, and `.yarnrc` must not be committed in repository root.
+- Keep CI secret handling non-interactive and avoid echoing variables with secret-like names.
+- Treat any `security:gate` secret-scan finding as release-blocking unless explicitly reviewed/allowlisted.
+- Local audit-unavailable override is not valid for CI or final release sign-off.

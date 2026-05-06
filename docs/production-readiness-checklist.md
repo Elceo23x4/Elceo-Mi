@@ -247,3 +247,9 @@ Added protected read-only admin query surfaces under /api/admin/market-evidence/
 - This is not security certification and does not replace DAST/fuzzing/pentest.
 - S4 (supply-chain/CI), S5 (infra/WAF), and S6 (staging attack drill) remain required.
 
+## 14) S4 supply-chain and CI/CD hardening
+- [ ] `docs/supply-chain-cicd-hardening.md` reviewed and accepted.
+- [ ] Branch protection enabled: PR review required, CI required, `security:gate` required, force-push disabled.
+- [ ] `security:gate` passes without audit-unavailable override for release sign-off.
+- [ ] CI workflow retains read-only permissions and no production smoke/provider live calls.
+- [ ] S5 infra/WAF hardening and S6 staging attack drill remain tracked as release prerequisites.

@@ -269,3 +269,8 @@ Added protected read-only admin query surfaces under /api/admin/market-evidence/
 - This is not security certification and does not replace DAST/fuzzing/pentest.
 - S4 (supply-chain/CI), S5 (infra/WAF), and S6 (staging attack drill) remain required.
 
+## S4 note: supply-chain and CI/CD hardening
+- Added dedicated S4 policy doc: `docs/supply-chain-cicd-hardening.md`.
+- `security:gate` now validates package-manager/lockfile policy, dependency-source restrictions, lifecycle-script controls, lockfile resolved-source policy, dependency-confusion guardrails, and strengthened workflow checks.
+- CI remains least-privilege (`permissions: contents: read`) with no production smoke or production secret requirements.
+- This hardening improves posture but is not supply-chain certification; S5 and S6 remain required before final launch approval.

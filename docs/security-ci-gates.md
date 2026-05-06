@@ -28,3 +28,9 @@ CI runs `npm run security:gate` after typecheck/test/build/lint/migration/c5-rea
 - Static regex scanning is not a replacement for professional secret scanning.
 - `npm audit` may include false positives/negatives.
 - Additional hardening batches S2/S3/S4/S5/S6 remain required before launch.
+
+## S4 supply-chain extensions
+- `security:gate` now enforces npm package-manager pinning (`npm@10.x`), lockfile version policy, dependency source restrictions, lifecycle install-script restrictions, lockfile resolved-source restrictions, and dependency-confusion checks.
+- CI workflow hardening checks now also assert: no `pull_request_target`, Node 20 pinning, no `smoke:production` in CI, and no secret echo patterns.
+- Root sensitive config files (`.env`, `.env.local`, `.npmrc`, `.yarnrc`) are treated as failures if present in repository root.
+- See `docs/supply-chain-cicd-hardening.md` for policy details and branch-protection checklist.

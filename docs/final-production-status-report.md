@@ -222,3 +222,6 @@ Tiingo-compatible provider adapter foundation now exists in reasoning provider-s
 - Added backend-only SEO content feed contracts/schemas/builders (canonical metadata, sitemap-ready records, JSON-LD-ready payloads, internal linking graph) with runtime tests.
 - No frontend/public SEO routes are live yet; no article-body generation; keyword stuffing remains disallowed.
 - C5-A20 can prioritize internal/admin feed query routes or market-evidence internal APIs based on launch priority.
+
+## C5-A20 market evidence + SEO admin/internal query routes
+Added protected read-only admin query surfaces under /api/admin/market-evidence/* and /api/admin/seo/* (internal token + admin.read). These routes expose persisted payload/replay/quality/reasoning-input/weighted/cognition/SEO feed/sitemap views with strict query validation, no live provider fetches, and no public SEO pages.

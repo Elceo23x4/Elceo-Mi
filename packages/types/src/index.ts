@@ -55,3 +55,5 @@ export * from './market-evidence-payloads';
 
 export * from './market-evidence-quality';
 export * from './reasoning-market-input';
+
+export * from './market-evidence-weighting';

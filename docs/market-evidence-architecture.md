@@ -117,3 +117,6 @@ C5-A3 adds provider source contracts, strict normalization schemas, deterministi
 - Default filter policy excludes blocked, expired, fixture, and below-threshold evidence; deterministic ordering by quality desc, observedAt desc, payloadId asc.
 - Added boundary assembly methods by asset and evidence class with no live/external calls.
 - This batch does not change trading formulas/asset weights; C5-A17 will add weighting engine.
+
+## C5-A17 note
+- Added deterministic asset evidence weighting foundation (contracts/schemas/policies/helpers/boundary/tests) with quality-adjusted weights and no buy/sell/hold outputs.

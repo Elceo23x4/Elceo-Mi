@@ -216,3 +216,9 @@ Tiingo-compatible provider adapter foundation now exists in reasoning provider-s
 - Added deterministic market cognition signal builder foundation from weighted evidence snapshots (pressure families, contradiction flags, freshness warnings, confidence decomposition, narrative summary).
 - Explicit non-goal remains trade recommendations/buy/sell/hold outputs.
 - Next step C5-A19 can prioritize SEO content data feed/programmatic page backend or deeper cognition decomposition.
+
+
+## C5-A19 note
+- Added backend-only SEO content feed contracts/schemas/builders (canonical metadata, sitemap-ready records, JSON-LD-ready payloads, internal linking graph) with runtime tests.
+- No frontend/public SEO routes are live yet; no article-body generation; keyword stuffing remains disallowed.
+- C5-A20 can prioritize internal/admin feed query routes or market-evidence internal APIs based on launch priority.

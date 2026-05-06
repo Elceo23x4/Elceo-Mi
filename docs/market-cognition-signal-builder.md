@@ -16,3 +16,9 @@ C5-A18 adds deterministic, explainable market cognition signal assembly from wei
 
 ## Forward path
 - C5-A19 may prioritize SEO content feed/programmatic page backend integration, or deepen pressure decomposition detail.
+
+
+## C5-A19 note
+- Added backend-only SEO content feed contracts/schemas/builders (canonical metadata, sitemap-ready records, JSON-LD-ready payloads, internal linking graph) with runtime tests.
+- No frontend/public SEO routes are live yet; no article-body generation; keyword stuffing remains disallowed.
+- C5-A20 can prioritize internal/admin feed query routes or market-evidence internal APIs based on launch priority.

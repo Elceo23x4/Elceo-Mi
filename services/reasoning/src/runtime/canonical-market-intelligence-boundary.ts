@@ -12,10 +12,12 @@ import { ProviderSourceReplayService } from '../provider-sources/replay';
 import { getTiingoProviderHealth, TiingoMarketDataAdapter, type TiingoRuntimeConfig } from '../provider-sources/tiingo/index';
 import { buildEvidenceQualityReport, evaluateEvidencePayloadQuality, evaluateEvidencePayloadsQuality } from '../evidence-quality/index';
 import { assembleReasoningEvidenceInputSnapshot as assembleSnapshot, buildReasoningEvidenceInputAssemblyReport as buildSnapshotReport } from '../reasoning-input/index';
-import type { ReasoningEvidenceFilterPolicy, ReasoningEvidenceInputSnapshot, ReasoningEvidenceInputAssemblyReport, MarketEvidenceClass, EvidenceWeightHorizon, WeightedEvidenceSnapshot, WeightedEvidenceAssemblyReport, WeightedEvidencePolicySnapshot, MarketCognitionAssemblyReport, MarketCognitionSnapshot } from '@elceo/types';
+import type { ReasoningEvidenceFilterPolicy, ReasoningEvidenceInputSnapshot, ReasoningEvidenceInputAssemblyReport, MarketEvidenceClass, EvidenceWeightHorizon, WeightedEvidenceSnapshot, WeightedEvidenceAssemblyReport, WeightedEvidencePolicySnapshot, MarketCognitionAssemblyReport, MarketCognitionSnapshot, SeoContentFeedAssemblyReport, SeoContentFeedSnapshot, SeoPageKind, SeoContentFeedItem } from '@elceo/types';
 import type { TradingAssetCoverage } from '@elceo/types';
 import { buildWeightedEvidenceAssemblyReport, buildWeightedEvidenceSnapshot, getWeightedEvidencePolicySnapshot } from '../evidence-weighting/index';
 import { buildMarketCognitionAssemblyReport as buildCognitionReport, buildMarketCognitionSnapshot as buildCognitionSnapshot } from '../market-cognition/index';
+import { buildSeoContentFeedAssemblyReport as buildSeoFeedReport, buildSeoContentFeedSnapshot as buildSeoFeedSnapshot } from '../seo-feed/index';
+import { getSeoContentArchitectureSnapshot, listSeoPagesForAsset, listSeoPagesForEvidenceClass } from '../seo-content/index';
 
 export type TiingoFixtureIngestionParams = { asset: TradingAssetCoverage; frequency?: string | null; requestedAt?: string | null };
 
@@ -68,6 +70,14 @@ export class CanonicalMarketIntelligenceBoundaryService {
   buildEvidenceQualityReport(payloads: Parameters<typeof buildEvidenceQualityReport>[0], evaluatedAt?: string) { return buildEvidenceQualityReport(payloads, evaluatedAt); }
   async listEvidencePayloadsByAssetWithQuality(asset: string, limit?: number, evaluatedAt?: string) { const payloads=await this.listEvidencePayloadsByAsset(asset, limit); return payloads.map((payload)=>({ payload, score: evaluateEvidencePayloadQuality(payload, evaluatedAt) })); }
   async listEvidencePayloadsByEvidenceClassWithQuality(evidenceClass: string, limit?: number, evaluatedAt?: string) { const payloads=await this.listEvidencePayloadsByEvidenceClass(evidenceClass, limit); return payloads.map((payload)=>({ payload, score: evaluateEvidencePayloadQuality(payload, evaluatedAt) })); }
+
+  buildSeoContentFeedSnapshot(generatedAt?: string): SeoContentFeedSnapshot { return buildSeoFeedSnapshot(getSeoContentArchitectureSnapshot(generatedAt??new Date().toISOString()), generatedAt); }
+  buildSeoContentFeedAssemblyReport(snapshot: SeoContentFeedSnapshot): SeoContentFeedAssemblyReport { return buildSeoFeedReport(snapshot); }
+  listSeoContentFeedItemsByPageKind(pageKind: SeoPageKind, generatedAt?: string): SeoContentFeedItem[] { const snap=this.buildSeoContentFeedSnapshot(generatedAt); return snap.items.filter((x)=>x.pageKind===pageKind); }
+  listSeoContentFeedItemsForAsset(asset: TradingAssetCoverage, generatedAt?: string): SeoContentFeedItem[] { const ids=new Set(listSeoPagesForAsset(asset).map((x)=>x.pageId)); return this.buildSeoContentFeedSnapshot(generatedAt).items.filter((x)=>ids.has(x.pageId)); }
+  listSeoContentFeedItemsForEvidenceClass(evidenceClass: MarketEvidenceClass, generatedAt?: string): SeoContentFeedItem[] { const ids=new Set(listSeoPagesForEvidenceClass(evidenceClass).map((x)=>x.pageId)); return this.buildSeoContentFeedSnapshot(generatedAt).items.filter((x)=>ids.has(x.pageId)); }
+  getSeoContentFeedItemBySlug(slug: string, generatedAt?: string): SeoContentFeedItem | null { return this.buildSeoContentFeedSnapshot(generatedAt).items.find((x)=>x.slug===slug)??null; }
+
   async runTiingoFixtureIngestion(params: TiingoFixtureIngestionParams) {
     if (!this.ingestion) throw new Error('missing_ingestion_repositories');
     const supportedAssets = new Set<TradingAssetCoverage>(['xau_usd', 'eur_usd', 'gbp_usd', 'usd_jpy', 'usd_chf', 'aud_usd', 'nzd_usd', 'usd_cad', 'btc_usd', 'nasdaq_100', 'sp500', 'de30']);

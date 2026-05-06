@@ -136,6 +136,15 @@ let securityFailedCount = 0;
 let securityAuditCount = 0;
 let latestSecurityActionKind: string | null = null;
 
+function assertNoSensitiveLeak(response: unknown): void {
+  const serialized = JSON.stringify(response).toLowerCase();
+  assert.equal(serialized.includes('select * from users'), false);
+  assert.equal(serialized.includes("password='secret'"), false);
+  assert.equal(serialized.includes('at object.<anonymous>'), false);
+  assert.equal(serialized.includes('sk_test_'), false);
+  assert.equal(serialized.includes('elceo_internal_api_token='), false);
+}
+
 const journalCase = {
   identity: { caseId: 'case-1', subjectKind: 'user' as const, subjectId: subject.subjectId, asset: 'XAU/USD', timeframe: 'H1', title: 'T' }
 };
@@ -840,6 +849,12 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await marketEvidencePayloadsRoute.GET(request('https://x/api/admin/market-evidence/payloads?asset=bad', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
   assert.equal((await readJson(await marketEvidencePayloadsRoute.GET(request('https://x/api/admin/market-evidence/payloads?asset=xau_usd&limit=bad', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
   assert.equal((await readJson(await marketEvidencePayloadsRoute.GET(request('https://x/api/admin/market-evidence/payloads?asset=xau_usd', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+  const marketEvidenceInjection = await readJson(await marketEvidencePayloadsRoute.GET(request("https://x/api/admin/market-evidence/payloads?asset=' OR 1=1 --", { headers: { 'x-elceo-internal-token': 'internal-token' } })));
+  assert.deepEqual(marketEvidenceInjection, { ok: false, error: { code: 'validation_error', message: 'Validation failed', details: ['asset is invalid'] } });
+  assertNoSensitiveLeak(marketEvidenceInjection);
+  const marketEvidenceLimitAbuse = await readJson(await marketEvidencePayloadsRoute.GET(request('https://x/api/admin/market-evidence/payloads?asset=xau_usd&limit=999999', { headers: { 'x-elceo-internal-token': 'internal-token' } })));
+  assert.deepEqual(marketEvidenceLimitAbuse, { ok: false, error: { code: 'validation_error', message: 'Validation failed', details: ['limit must be integer 1..100'] } });
+
   assert.equal((await readJson(await marketEvidenceProviderRequestRoute.GET(request('https://x/api/admin/market-evidence/provider-request', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
   assert.deepEqual(await readJson(await marketEvidenceProviderRequestRoute.GET(request('https://x/api/admin/market-evidence/provider-request?requestId=req-1', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { request: null } });
   assert.equal((await readJson(await marketEvidenceProviderResponseRoute.GET(request('https://x/api/admin/market-evidence/provider-response', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
@@ -861,6 +876,9 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await adminSeoFeedRoute.GET(request('https://x/api/admin/seo/feed?pageKind=bad', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
   assert.equal((await readJson(await adminSeoFeedRoute.GET(request('https://x/api/admin/seo/feed', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
   assert.equal((await readJson(await adminSeoFeedRoute.GET(request('https://x/api/admin/seo/feed?slug=test', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+  assert.equal((await readJson(await adminSeoFeedRoute.GET(request('https://x/api/admin/seo/feed?slug=../../etc/passwd', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.equal((await readJson(await adminSeoFeedRoute.GET(request('https://x/api/admin/seo/feed?pageKind=<script>', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+
   assert.equal((await readJson(await adminSeoSitemapRoute.GET(request('https://x/api/admin/seo/sitemap', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
   assert.deepEqual(await readJson(await scheduledIngestionPoliciesRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/policies'))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
   assert.equal((await readJson(await scheduledIngestionPoliciesRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/policies?providerId=&generatedAt=bad', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
@@ -873,12 +891,22 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.deepEqual(await readJson(await scheduledIngestionRunsRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/runs?providerId=tiingo_market_data&capability=market_price_history', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { mode: 'provider', runs: [] } });
   assert.deepEqual(await readJson(await scheduledIngestionRunsRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/runs?providerId=tiingo_market_data&capability=cot_report', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { mode: 'provider', runs: [] } });
   assert.deepEqual(await readJson(await scheduledIngestionRunsRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/runs?status=failed', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { mode: 'status', runs: [] } });
+  const scheduledRunIdInjection = await readJson(await scheduledIngestionRunsRoute.GET(request("https://x/api/admin/market-evidence/scheduled-ingestion/runs?runId=' OR '1'='1", { headers: { 'x-elceo-internal-token': 'internal-token' } })));
+  assert.deepEqual(scheduledRunIdInjection, { ok: false, error: { code: 'validation_error', message: 'Validation failed', details: ['runId is invalid'] } });
+  assertNoSensitiveLeak(scheduledRunIdInjection);
+  assert.equal((await readJson(await scheduledIngestionRunsRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/runs?providerId=tiingo_market_data&capability=market_price_history; DROP TABLE x', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+  assert.equal((await readJson(await scheduledIngestionRunsRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/runs?status=<script>', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
+
   assert.equal((await readJson(await scheduledIngestionReplayRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/replay', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
   assert.deepEqual(await readJson(await scheduledIngestionReplayRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/replay?runId=run-1', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { replay: null } });
   assert.deepEqual(await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', body: JSON.stringify({ jobId: 'job-1' }) }))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
   assert.equal((await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({}) })))).ok, false);
   assert.equal((await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ jobId: 'job-1', production_live: true }) })))).ok, false);
   assert.equal((await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ jobId: 'job-1', providerApiKey: 'secret' }) })))).ok, false);
+  const scheduledInvalidJson = await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: '{"jobId":' })));
+  assert.deepEqual(scheduledInvalidJson, { ok: false, error: { code: 'bad_request', message: 'Bad request', details: ['invalid_json'] } });
+  assert.equal((await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ jobId: "job-1'; DROP TABLE x --" }) })))).ok, false);
+
   securityDecisionMode = 'rate_limited';
   assert.deepEqual(await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ jobId: 'job-1' }) }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
   securityDecisionMode = 'allowed';
@@ -886,6 +914,10 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal(latestSecurityActionKind, 'internal_mutation');
   assert.deepEqual(await readJson(await internalTiingoFixtureIngestRoute.POST(request('https://x/api/internal/market-evidence/tiingo/fixture-ingest', { method: 'POST', body: JSON.stringify({ asset: 'xau_usd' }) }))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
   assert.equal((await readJson(await internalTiingoFixtureIngestRoute.POST(request('https://x/api/internal/market-evidence/tiingo/fixture-ingest', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'fixture-ingest-ok' }, body: JSON.stringify({ asset: 'xau_usd' }) })))).ok, true);
+  const tiingoInvalidJson = await readJson(await internalTiingoFixtureIngestRoute.POST(request('https://x/api/internal/market-evidence/tiingo/fixture-ingest', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: '{"asset":' })));
+  assert.deepEqual(tiingoInvalidJson, { ok: false, error: { code: 'bad_request', message: 'Bad request', details: ['invalid_json'] } });
+  assert.equal((await readJson(await internalTiingoFixtureIngestRoute.POST(request('https://x/api/internal/market-evidence/tiingo/fixture-ingest', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ asset: "' OR 1=1 --" }) })))).ok, false);
+
   assert.equal(latestSecurityActionKind, 'internal_mutation');
 
 
@@ -899,7 +931,15 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.deepEqual(await readJson(await internalBillingOrchestrationRetryRoute.POST(request('https://x/api/internal/billing/orchestration/retry', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'idem-replay-miss' }, body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: false, error: { code: 'conflict', message: 'Replay unavailable', details: ['replay_unavailable', 'no_completed_response'] } });
   replayMode = 'malformed';
   assert.deepEqual(await readJson(await internalBillingOrchestrationRetryRoute.POST(request('https://x/api/internal/billing/orchestration/retry', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'idem-replay-bad' }, body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: false, error: { code: 'internal_error', message: 'Replay response parse failure', details: ['replay_response_malformed'] } });
-  securityDecisionMode = 'allowed';
+  
+  const previousGetPolicy = mockReasoningRuntime.marketIntelligence.getScheduledIngestionPolicySnapshot;
+  mockReasoningRuntime.marketIntelligence.getScheduledIngestionPolicySnapshot = () => { throw new Error("select * from users where password='secret' at Object.<anonymous> sk_test_123 ELCEO_INTERNAL_API_TOKEN=abc"); };
+  const redacted = await readJson(await scheduledIngestionPoliciesRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/policies?providerId=tiingo_market_data', { headers: { 'x-elceo-internal-token': 'internal-token' } })));
+  assert.deepEqual(redacted, { ok: false, error: { code: 'internal_error', message: 'Internal server error' } });
+  assertNoSensitiveLeak(redacted);
+  mockReasoningRuntime.marketIntelligence.getScheduledIngestionPolicySnapshot = previousGetPolicy;
+
+securityDecisionMode = 'allowed';
 
   clearMocks();
 }

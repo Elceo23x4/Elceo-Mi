@@ -203,3 +203,9 @@ C5-A1 starts backend market-evidence and SEO/content architecture expansion as a
 
 ## C5-A20 market evidence + SEO admin/internal query routes
 Added protected read-only admin query surfaces under /api/admin/market-evidence/* and /api/admin/seo/* (internal token + admin.read). These routes expose persisted payload/replay/quality/reasoning-input/weighted/cognition/SEO feed/sitemap views with strict query validation, no live provider fetches, and no public SEO pages.
+
+## C5-A21 live adapter activation planning
+- Added provider live activation policy/readiness/quota/smoke-plan contracts and validators.
+- Added staging-only live fetch gating helpers; production remains blocked by default.
+- No scheduler/live ingestion activation in this batch; no secrets exposed in readiness outputs.
+

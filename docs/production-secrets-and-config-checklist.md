@@ -54,3 +54,9 @@
 - Tests/build remain no-network by default: live paths are exercised only with injected fake fetch implementations.
 - Staging activation only: set `TIINGO_LIVE_ENABLED=true` + `TIINGO_API_KEY`, verify provider health=`configured`, run internal fixture ingest regression, then execute constrained live smoke manually.
 - Production activation deferred; risks remain provider quota/billing, schema drift, and stale-data monitoring/alerting.
+
+## C5-A21 live adapter activation planning
+- Added provider live activation policy/readiness/quota/smoke-plan contracts and validators.
+- Added staging-only live fetch gating helpers; production remains blocked by default.
+- No scheduler/live ingestion activation in this batch; no secrets exposed in readiness outputs.
+

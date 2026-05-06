@@ -10,6 +10,7 @@ import { IngestionPersistenceService } from '../provider-sources/ingestion-persi
 import { ProviderSourceQueryService } from '../provider-sources/query-service';
 import { ProviderSourceReplayService } from '../provider-sources/replay';
 import { getTiingoProviderHealth, TiingoMarketDataAdapter, type TiingoRuntimeConfig } from '../provider-sources/tiingo/index';
+import { buildProviderLiveSmokePlan, getProviderLiveActivationPolicy, getProviderLiveReadinessSnapshot, type RuntimeReadinessConfig } from '../provider-live-readiness/index';
 import { buildEvidenceQualityReport, evaluateEvidencePayloadQuality, evaluateEvidencePayloadsQuality } from '../evidence-quality/index';
 import { assembleReasoningEvidenceInputSnapshot as assembleSnapshot, buildReasoningEvidenceInputAssemblyReport as buildSnapshotReport } from '../reasoning-input/index';
 import type { ReasoningEvidenceFilterPolicy, ReasoningEvidenceInputSnapshot, ReasoningEvidenceInputAssemblyReport, MarketEvidenceClass, EvidenceWeightHorizon, WeightedEvidenceSnapshot, WeightedEvidenceAssemblyReport, WeightedEvidencePolicySnapshot, MarketCognitionAssemblyReport, MarketCognitionSnapshot, SeoContentFeedAssemblyReport, SeoContentFeedSnapshot, SeoPageKind, SeoContentFeedItem } from '@elceo/types';
@@ -50,6 +51,9 @@ export class CanonicalMarketIntelligenceBoundaryService {
   listEvidencePayloadsByEvidenceType(evidenceTypeId: string, limit?: number) { if (!this.query) throw new Error('missing_ingestion_repositories'); return this.query.listEvidencePayloadsByEvidenceType(evidenceTypeId, limit); }
   getNormalizedMarketEvidencePayloadReplayById(payloadId: string) { if (!this.replay) throw new Error('missing_ingestion_repositories'); return this.replay.getNormalizedMarketEvidencePayloadReplayById(payloadId); }
   getTiingoProviderHealth(config?: TiingoRuntimeConfig) { return getTiingoProviderHealth(config); }
+  getProviderLiveActivationPolicy(providerId: string, environment: 'local'|'staging'|'production') { return getProviderLiveActivationPolicy(providerId, environment); }
+  getProviderLiveReadinessSnapshot(environment: 'local'|'staging'|'production', config?: RuntimeReadinessConfig) { return getProviderLiveReadinessSnapshot(environment, config); }
+  buildProviderLiveSmokePlan(providerId: string, environment: 'local'|'staging'|'production', config?: RuntimeReadinessConfig) { return buildProviderLiveSmokePlan(providerId, environment, config); }
 
 
   assembleReasoningEvidenceInputSnapshot(params:{payloads: Parameters<typeof assembleSnapshot>[0]['payloads']; qualityScores?: Parameters<typeof assembleSnapshot>[0]['qualityScores']; generatedAt: string; asset?: TradingAssetCoverage|null; evidenceClass?: MarketEvidenceClass|null; filterPolicy?: ReasoningEvidenceFilterPolicy;}): ReasoningEvidenceInputSnapshot { return assembleSnapshot(params); }

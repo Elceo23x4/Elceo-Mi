@@ -223,3 +223,9 @@ export type MarketCognitionQuery = { asset: TradingAssetCoverage; horizon: impor
 export type SeoFeedQuery = { pageKind: import('./seo-content').SeoPageKind | null; asset: TradingAssetCoverage | null; evidenceClass: import('./market-evidence').MarketEvidenceClass | null; slug: string | null; limit: number | null; generatedAt: string | null };
 export type AdminBillingOperationsLimitQuery = { limit?: number };
 export type AdminBillingOperationsSubjectQuery = { subjectId: string };
+
+
+export type ScheduledIngestionPolicyQuery = { providerId: string | null; generatedAt: string | null };
+export type ScheduledIngestionRunQuery = { runId: string | null; jobId: string | null; providerId: string | null; capability: import('./market-data-providers').ProviderCapabilityKind | null; asset: TradingAssetCoverage | null; region: import('./market-evidence').MarketEvidenceRegion | null; status: import('./market-evidence-ingestion-schedule').ScheduledIngestionJobStatus | null; stalenessStatus: import('./market-evidence-ingestion-schedule').ScheduledIngestionStalenessStatus | null; limit: number | null };
+export type ScheduledIngestionReplayQuery = { runId: string };
+export type InternalScheduledIngestionDryRunRequest = { jobId: string; startedAt?: string | null };

@@ -21,3 +21,5 @@ export function createReasoningPersistenceRepository(env: Record<string, string 
 export * from './registry-snapshot-repository';
 
 export * from "./market-evidence-ingestion-repository";
+
+export * from './scheduled-ingestion-repository';

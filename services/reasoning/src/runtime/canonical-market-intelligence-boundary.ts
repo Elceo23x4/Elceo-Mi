@@ -19,6 +19,8 @@ import { buildWeightedEvidenceAssemblyReport, buildWeightedEvidenceSnapshot, get
 import { buildMarketCognitionAssemblyReport as buildCognitionReport, buildMarketCognitionSnapshot as buildCognitionSnapshot } from '../market-cognition/index';
 import { buildSeoContentFeedAssemblyReport as buildSeoFeedReport, buildSeoContentFeedSnapshot as buildSeoFeedSnapshot } from '../seo-feed/index';
 import { getSeoContentArchitectureSnapshot, listSeoPagesForAsset, listSeoPagesForEvidenceClass } from '../seo-content/index';
+import { ScheduledIngestionService, ScheduledIngestionQueryService, getScheduledIngestionPolicySnapshot, getScheduledIngestionRunReplay } from '../scheduled-ingestion/index';
+import type { ScheduledIngestionRunRepository } from '../persistence/scheduled-ingestion-repository';
 
 export type TiingoFixtureIngestionParams = { asset: TradingAssetCoverage; frequency?: string | null; requestedAt?: string | null };
 
@@ -26,12 +28,20 @@ export class CanonicalMarketIntelligenceBoundaryService {
   private readonly ingestion: IngestionPersistenceService | null = null;
   private readonly query: ProviderSourceQueryService | null = null;
   private readonly replay: ProviderSourceReplayService | null = null;
-  constructor(private readonly marketEvidenceRepository: MarketEvidenceRegistrySnapshotRepository, private readonly seoRepository: SeoContentArchitectureSnapshotRepository, requestRepository?: ProviderSourceRequestRepository, responseRepository?: ProviderSourceResponseRepository, payloadRepository?: NormalizedMarketEvidencePayloadRepository) {
+  private readonly scheduledIngestionService: ScheduledIngestionService | null = null;
+  private readonly scheduledIngestionQuery: ScheduledIngestionQueryService | null = null;
+  private readonly scheduledIngestionRepository: ScheduledIngestionRunRepository | null = null;
+  constructor(private readonly marketEvidenceRepository: MarketEvidenceRegistrySnapshotRepository, private readonly seoRepository: SeoContentArchitectureSnapshotRepository, requestRepository?: ProviderSourceRequestRepository, responseRepository?: ProviderSourceResponseRepository, payloadRepository?: NormalizedMarketEvidencePayloadRepository, scheduledIngestionRepository?: ScheduledIngestionRunRepository) {
+    this.scheduledIngestionRepository = scheduledIngestionRepository ?? null;
     if (requestRepository && responseRepository && payloadRepository) {
       this.ingestion = new IngestionPersistenceService(requestRepository, responseRepository, payloadRepository);
       this.query = new ProviderSourceQueryService(requestRepository, responseRepository, payloadRepository);
       this.replay = new ProviderSourceReplayService(requestRepository, responseRepository, payloadRepository);
+      if (this.scheduledIngestionRepository) {
+        this.scheduledIngestionService = new ScheduledIngestionService(this.ingestion, this.scheduledIngestionRepository);
+      }
     }
+    if (this.scheduledIngestionRepository) this.scheduledIngestionQuery = new ScheduledIngestionQueryService(this.scheduledIngestionRepository);
   }
   generateAndPersistMarketEvidenceRegistrySnapshot(asOfIso?: string) { return generateAndPersistMarketEvidenceRegistrySnapshot(this.marketEvidenceRepository, asOfIso); }
   getLatestMarketEvidenceRegistrySnapshot() { return getLatestMarketEvidenceRegistrySnapshot(this.marketEvidenceRepository); }
@@ -75,6 +85,14 @@ export class CanonicalMarketIntelligenceBoundaryService {
   async listEvidencePayloadsByAssetWithQuality(asset: string, limit?: number, evaluatedAt?: string) { const payloads=await this.listEvidencePayloadsByAsset(asset, limit); return payloads.map((payload)=>({ payload, score: evaluateEvidencePayloadQuality(payload, evaluatedAt) })); }
   async listEvidencePayloadsByEvidenceClassWithQuality(evidenceClass: string, limit?: number, evaluatedAt?: string) { const payloads=await this.listEvidencePayloadsByEvidenceClass(evidenceClass, limit); return payloads.map((payload)=>({ payload, score: evaluateEvidencePayloadQuality(payload, evaluatedAt) })); }
 
+
+  getScheduledIngestionPolicySnapshot(asOfIso?: string) { return getScheduledIngestionPolicySnapshot(asOfIso); }
+  runScheduledIngestionDryRun(jobId: string, startedAt?: string) { if (!this.scheduledIngestionService) throw new Error('missing_scheduled_ingestion_repository'); return this.scheduledIngestionService.runScheduledIngestionDryRun(jobId, startedAt); }
+  runScheduledIngestionJob(jobId: string, modeOverride?: Parameters<ScheduledIngestionService['runScheduledIngestionJob']>[1], startedAt?: string) { if (!this.scheduledIngestionService) throw new Error('missing_scheduled_ingestion_repository'); return this.scheduledIngestionService.runScheduledIngestionJob(jobId, modeOverride, startedAt); }
+  getScheduledIngestionRunById(runId: string) { if (!this.scheduledIngestionQuery) throw new Error('missing_scheduled_ingestion_repository'); return this.scheduledIngestionQuery.getScheduledIngestionRunById(runId); }
+  listScheduledIngestionRunsByProvider(providerId: string, capability?: string, limit?: number) { if (!this.scheduledIngestionQuery) throw new Error('missing_scheduled_ingestion_repository'); return this.scheduledIngestionQuery.listScheduledIngestionRunsByProvider(providerId, capability, limit); }
+  listScheduledIngestionRunsByStatus(status: Parameters<ScheduledIngestionRunRepository['listRunsByStatus']>[0], limit?: number) { if (!this.scheduledIngestionQuery) throw new Error('missing_scheduled_ingestion_repository'); return this.scheduledIngestionQuery.listScheduledIngestionRunsByStatus(status, limit); }
+  getScheduledIngestionRunReplay(runId: string) { if (!this.scheduledIngestionRepository) throw new Error('missing_scheduled_ingestion_repository'); return getScheduledIngestionRunReplay(this.scheduledIngestionRepository, runId); }
   buildSeoContentFeedSnapshot(generatedAt?: string): SeoContentFeedSnapshot { return buildSeoFeedSnapshot(getSeoContentArchitectureSnapshot(generatedAt??new Date().toISOString()), generatedAt); }
   buildSeoContentFeedAssemblyReport(snapshot: SeoContentFeedSnapshot): SeoContentFeedAssemblyReport { return buildSeoFeedReport(snapshot); }
   listSeoContentFeedItemsByPageKind(pageKind: SeoPageKind, generatedAt?: string): SeoContentFeedItem[] { const snap=this.buildSeoContentFeedSnapshot(generatedAt); return snap.items.filter((x)=>x.pageKind===pageKind); }

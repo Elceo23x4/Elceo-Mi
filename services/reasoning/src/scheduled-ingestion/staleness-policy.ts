@@ -1,0 +1,2 @@
+import type { ScheduledIngestionStalenessStatus } from '@elceo/types';
+export const deriveStalenessStatus=(latestObservedAt:string|null,evaluatedAt:string,staleAfterMinutes:number,expiresAfterMinutes:number):ScheduledIngestionStalenessStatus=>{if(!latestObservedAt)return'unknown'; const age=(Date.parse(evaluatedAt)-Date.parse(latestObservedAt))/60000; if(age>=expiresAfterMinutes)return'expired'; if(age>=staleAfterMinutes)return'stale'; return 'fresh';};

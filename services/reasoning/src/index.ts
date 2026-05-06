@@ -18,3 +18,5 @@ export * from './reasoning-input';
 
 export * from './market-cognition/index';
 export * from './provider-live-readiness';
+
+export * from './scheduled-ingestion';

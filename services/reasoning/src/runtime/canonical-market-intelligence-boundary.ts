@@ -12,9 +12,10 @@ import { ProviderSourceReplayService } from '../provider-sources/replay';
 import { getTiingoProviderHealth, TiingoMarketDataAdapter, type TiingoRuntimeConfig } from '../provider-sources/tiingo/index';
 import { buildEvidenceQualityReport, evaluateEvidencePayloadQuality, evaluateEvidencePayloadsQuality } from '../evidence-quality/index';
 import { assembleReasoningEvidenceInputSnapshot as assembleSnapshot, buildReasoningEvidenceInputAssemblyReport as buildSnapshotReport } from '../reasoning-input/index';
-import type { ReasoningEvidenceFilterPolicy, ReasoningEvidenceInputSnapshot, ReasoningEvidenceInputAssemblyReport, MarketEvidenceClass, EvidenceWeightHorizon, WeightedEvidenceSnapshot, WeightedEvidenceAssemblyReport, WeightedEvidencePolicySnapshot } from '@elceo/types';
+import type { ReasoningEvidenceFilterPolicy, ReasoningEvidenceInputSnapshot, ReasoningEvidenceInputAssemblyReport, MarketEvidenceClass, EvidenceWeightHorizon, WeightedEvidenceSnapshot, WeightedEvidenceAssemblyReport, WeightedEvidencePolicySnapshot, MarketCognitionAssemblyReport, MarketCognitionSnapshot } from '@elceo/types';
 import type { TradingAssetCoverage } from '@elceo/types';
 import { buildWeightedEvidenceAssemblyReport, buildWeightedEvidenceSnapshot, getWeightedEvidencePolicySnapshot } from '../evidence-weighting/index';
+import { buildMarketCognitionAssemblyReport as buildCognitionReport, buildMarketCognitionSnapshot as buildCognitionSnapshot } from '../market-cognition/index';
 
 export type TiingoFixtureIngestionParams = { asset: TradingAssetCoverage; frequency?: string | null; requestedAt?: string | null };
 
@@ -58,6 +59,10 @@ export class CanonicalMarketIntelligenceBoundaryService {
   buildWeightedEvidenceSnapshot(inputSnapshot: ReasoningEvidenceInputSnapshot, asset: TradingAssetCoverage, horizon: EvidenceWeightHorizon, generatedAt?: string): WeightedEvidenceSnapshot { return buildWeightedEvidenceSnapshot(inputSnapshot, asset, horizon, generatedAt); }
   buildWeightedEvidenceAssemblyReport(snapshot: WeightedEvidenceSnapshot): WeightedEvidenceAssemblyReport { return buildWeightedEvidenceAssemblyReport(snapshot); }
   async getWeightedEvidenceByAsset(asset: TradingAssetCoverage, horizon: EvidenceWeightHorizon, limit?: number, evaluatedAt?: string, filterPolicy?: ReasoningEvidenceFilterPolicy) { const input=await this.getReasoningEvidenceInputByAsset(asset, limit, evaluatedAt, filterPolicy); return buildWeightedEvidenceSnapshot(input, asset, horizon, evaluatedAt); }
+  buildMarketCognitionSnapshot(weightedSnapshot: WeightedEvidenceSnapshot, generatedAt?: string): MarketCognitionSnapshot { return buildCognitionSnapshot(weightedSnapshot, generatedAt); }
+  buildMarketCognitionAssemblyReport(snapshot: MarketCognitionSnapshot): MarketCognitionAssemblyReport { return buildCognitionReport(snapshot); }
+  async getMarketCognitionByAsset(asset: TradingAssetCoverage, horizon: EvidenceWeightHorizon, limit?: number, evaluatedAt?: string, filterPolicy?: ReasoningEvidenceFilterPolicy) { const weighted = await this.getWeightedEvidenceByAsset(asset, horizon, limit, evaluatedAt, filterPolicy); return buildCognitionSnapshot(weighted, evaluatedAt); }
+
   evaluateEvidencePayloadQuality(payload: Parameters<typeof evaluateEvidencePayloadQuality>[0], evaluatedAt?: string) { return evaluateEvidencePayloadQuality(payload, evaluatedAt); }
   evaluateEvidencePayloadsQuality(payloads: Parameters<typeof evaluateEvidencePayloadsQuality>[0], evaluatedAt?: string) { return evaluateEvidencePayloadsQuality(payloads, evaluatedAt); }
   buildEvidenceQualityReport(payloads: Parameters<typeof buildEvidenceQualityReport>[0], evaluatedAt?: string) { return buildEvidenceQualityReport(payloads, evaluatedAt); }

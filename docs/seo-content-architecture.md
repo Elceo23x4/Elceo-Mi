@@ -18,3 +18,9 @@ Backend SEO architecture foundation for canonical keyword clusters, page contrac
 
 ## C5-A14 coverage-audit closure
 - Launch SEO families are now checked for slug uniqueness, required asset/evidence mapping, and internal-link target validity as part of deterministic coverage closure.
+
+
+## C5-A19 note
+- Added backend-only SEO content feed contracts/schemas/builders (canonical metadata, sitemap-ready records, JSON-LD-ready payloads, internal linking graph) with runtime tests.
+- No frontend/public SEO routes are live yet; no article-body generation; keyword stuffing remains disallowed.
+- C5-A20 can prioritize internal/admin feed query routes or market-evidence internal APIs based on launch priority.

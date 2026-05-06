@@ -250,3 +250,9 @@ Added protected read-only admin query surfaces under /api/admin/market-evidence/
 - Production go/no-go still requires security verification track, staging smoke, and production smoke.
 - DB migrations must be applied in strict lexicographic order (including `0032`, `0033`, `0034`).
 - Known non-blocking warnings remain tracked; do not treat them as launch-complete signals.
+
+## C5-S1 security CI gates and supply-chain guardrails
+- Added `security:gate` script (`scripts/security-gate.mjs`) with npm audit high/critical check, lockfile integrity checks, suspicious package-script guard, static secret scanning, and CI workflow permission hardening validation.
+- CI now runs `npm run check:c5-readiness` and `npm run security:gate` with top-level workflow permissions set to `contents: read`.
+- npm audit unavailability (registry/auth/network) now blocks by default; local override `SECURITY_GATE_ALLOW_AUDIT_UNAVAILABLE=true` is emergency-only and not acceptable for CI/final release sign-off.
+- This improves baseline launch defensibility but is not a full security certification and does not replace S2-S6/security review requirements.

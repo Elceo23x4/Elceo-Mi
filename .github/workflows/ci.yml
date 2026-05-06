@@ -6,6 +6,9 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -47,6 +50,12 @@ jobs:
 
       - name: Check DB migration ordering
         run: npm run check:migrations
+
+      - name: Check C5 readiness
+        run: npm run check:c5-readiness
+
+      - name: Run security gate
+        run: npm run security:gate
 
       - name: Post-CI note
         run: echo "Staging smoke tests are manual/post-deploy via ELCEO_SMOKE_BASE_URL and npm run smoke:production"

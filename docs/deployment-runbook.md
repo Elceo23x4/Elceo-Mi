@@ -120,3 +120,8 @@ Track API errors, security audit events, billing/notification runtime metrics, a
 - Production go/no-go still requires security verification track, staging smoke, and production smoke.
 - DB migrations must be applied in strict lexicographic order (including `0032`, `0033`, `0034`).
 - Known non-blocking warnings remain tracked; do not treat them as launch-complete signals.
+
+## S1 security gate requirement
+- Include `npm run security:gate` in local pre-deploy validation and CI pass criteria.
+- CI workflow permissions must stay restricted to `contents: read` unless a justified exception is added with explicit review.
+- `npm audit` registry/auth/network unavailability blocks by default; `SECURITY_GATE_ALLOW_AUDIT_UNAVAILABLE=true` is local emergency-only and not valid for CI or production release sign-off.

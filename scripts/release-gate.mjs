@@ -13,6 +13,7 @@ const steps = [
   { label: 'npm run -w @elceo/notifications lint', command: 'npm', args: ['run', '-w', '@elceo/notifications', 'lint'] },
   { label: 'npm run -w apps/web lint', command: 'npm', args: ['run', '-w', 'apps/web', 'lint'] },
   { label: 'npm run check:migrations', command: 'npm', args: ['run', 'check:migrations'] },
+  { label: 'npm run security:gate', command: 'npm', args: ['run', 'security:gate'] },
 ];
 
 function runStep(step, index, total) {

@@ -54,3 +54,8 @@
 - Production go/no-go still requires security verification track, staging smoke, and production smoke.
 - DB migrations must be applied in strict lexicographic order (including `0032`, `0033`, `0034`).
 - Known non-blocking warnings remain tracked; do not treat them as launch-complete signals.
+
+## S1 security CI gates
+- Run `npm run security:gate` locally before release handoff.
+- Confirm CI executes `npm run security:gate` with restrictive workflow permissions (`contents: read`).
+- Treat any high-confidence secret-scan finding as release-blocking unless explicitly allowlisted using same-line `security-scan-ignore`.

@@ -60,3 +60,11 @@
 - Added staging-only live fetch gating helpers; production remains blocked by default.
 - No scheduler/live ingestion activation in this batch; no secrets exposed in readiness outputs.
 
+\n\n## C5-A24 backend consolidation linkage\n- See  for consolidated C5 backend readiness truth source.\n- Live ingestion remains blocked-by-default; cron deployment and public SEO route launch remain deferred.\n- Production go/no-go still requires security verification track, staging smoke, and production smoke.\n- DB migrations must be applied in strict lexicographic order (including , , ).\n- Known non-blocking warnings remain tracked; do not treat them as launch-complete signals.
+
+## C5-A24 backend consolidation linkage
+- See `docs/c5-market-evidence-backend-readiness-report.md` for consolidated C5 backend readiness truth source.
+- Live ingestion remains blocked-by-default; cron deployment and public SEO route launch remain deferred.
+- Production go/no-go still requires security verification track, staging smoke, and production smoke.
+- DB migrations must be applied in strict lexicographic order (including `0032`, `0033`, `0034`).
+- Known non-blocking warnings remain tracked; do not treat them as launch-complete signals.

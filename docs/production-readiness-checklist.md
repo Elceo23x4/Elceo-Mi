@@ -188,3 +188,9 @@ C5-A1 starts backend market-evidence and SEO/content architecture expansion as a
 
 ## C5-A17 note
 - Added deterministic asset evidence weighting foundation (contracts/schemas/policies/helpers/boundary/tests) with quality-adjusted weights and no buy/sell/hold outputs.
+
+
+## C5-A18 note
+- Added deterministic market cognition signal builder foundation from weighted evidence snapshots (pressure families, contradiction flags, freshness warnings, confidence decomposition, narrative summary).
+- Explicit non-goal remains trade recommendations/buy/sell/hold outputs.
+- Next step C5-A19 can prioritize SEO content data feed/programmatic page backend or deeper cognition decomposition.

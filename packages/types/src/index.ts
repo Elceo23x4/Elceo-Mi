@@ -57,3 +57,5 @@ export * from './market-evidence-quality';
 export * from './reasoning-market-input';
 
 export * from './market-evidence-weighting';
+
+export * from './market-cognition-signals';

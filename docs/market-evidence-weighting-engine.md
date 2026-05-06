@@ -20,3 +20,9 @@ Illustrative emphasis:
 - Indices (Nasdaq/S&P/DE30): high risk sentiment, rates/real yields, earnings_macro, financial_conditions, breadth, vol surface.
 
 This batch does **not** generate buy/sell/hold recommendations. C5-A18 should build market cognition/narrative signals using this weighted evidence layer.
+
+
+## C5-A18 note
+- Added deterministic market cognition signal builder foundation from weighted evidence snapshots (pressure families, contradiction flags, freshness warnings, confidence decomposition, narrative summary).
+- Explicit non-goal remains trade recommendations/buy/sell/hold outputs.
+- Next step C5-A19 can prioritize SEO content data feed/programmatic page backend or deeper cognition decomposition.

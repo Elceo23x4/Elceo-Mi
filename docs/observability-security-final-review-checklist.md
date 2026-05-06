@@ -65,3 +65,10 @@
 - Route-runtime coverage now includes representative cross-subject denial checks (journal/portfolio), admin/internal gate denial checks (billing/admin/internal/market-evidence/scheduled-ingestion), and mutation security action-kind regression assertions.
 - This does not replace external pentest or staging attack drill sign-off.
 - Next security phase remains S3 input abuse/injection adversarial testing.
+
+## S3 injection/input-abuse hardening note
+- Added representative input-abuse matrix: `docs/security-input-abuse-hardening-matrix.md`.
+- Added representative route-runtime tests for query injection/abuse, malformed JSON/body abuse, and internal-error redaction checks.
+- This is not security certification and does not replace DAST/fuzzing/pentest.
+- S4 (supply-chain/CI), S5 (infra/WAF), and S6 (staging attack drill) remain required.
+

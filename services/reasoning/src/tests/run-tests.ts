@@ -37,6 +37,7 @@ import { runMacroIndicatorAdapterTests } from './macro-indicator-adapter.test.js
 import { runMarketEvidenceCoverageAuditTests } from './market-evidence-coverage-audit.test.js';
 import { runEvidenceQualityTests } from './evidence-quality.test.js';
 import { runReasoningMarketInputTests } from './reasoning-market-input.test.js';
+import { runEvidenceWeightingTests } from './evidence-weighting.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -78,6 +79,7 @@ async function run(): Promise<void> {
   runMarketEvidenceCoverageAuditTests();
   await runEvidenceQualityTests();
   await runReasoningMarketInputTests();
+  await runEvidenceWeightingTests();
   console.log('reasoning runtime contract tests passed');
 }
 

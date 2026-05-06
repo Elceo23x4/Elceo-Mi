@@ -53,3 +53,5 @@ export * from './market-evidence-payloads.schema';
 
 export * from './market-evidence-quality.schema';
 export * from './reasoning-market-input.schema';
+
+export * from './market-evidence-weighting.schema';

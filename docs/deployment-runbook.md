@@ -139,3 +139,12 @@ Track API errors, security audit events, billing/notification runtime metrics, a
 - Confirms backup/restore, DB/network isolation, IAM least-privilege, and secret rotation are launch blockers.
 - Staging verification is required before launch; S6 attack drill remains mandatory.
 - This update is policy hardening only and is not security certification.
+
+
+## S6 staging attack drill and final sign-off update
+- S6 status: framework defined in `docs/staging-attack-drill-and-security-signoff.md`; staging execution evidence remains required before production promotion.
+- Final sign-off report: `docs/final-security-signoff-report.md`.
+- Security and release gates must pass **without** audit-unavailable override for CI/final sign-off.
+- Required sequence before production deploy: staging smoke + staging attack drill.
+- Required sequence after production deploy: production smoke.
+- Public/frontend launch remains blocked until security sign-off is complete.

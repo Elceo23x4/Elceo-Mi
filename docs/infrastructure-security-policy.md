@@ -97,3 +97,12 @@ Before production launch, staging must verify:
 - WAF/rate-limit policies trigger correctly for abusive patterns.
 - Restore drill and IAM rotation rehearsal completed.
 - S6 attack-drill validation remains required and is not replaced by S5.
+
+
+## S6 staging attack drill and final sign-off update
+- S6 status: framework defined in `docs/staging-attack-drill-and-security-signoff.md`; staging execution evidence remains required before production promotion.
+- Final sign-off report: `docs/final-security-signoff-report.md`.
+- Security and release gates must pass **without** audit-unavailable override for CI/final sign-off.
+- Required sequence before production deploy: staging smoke + staging attack drill.
+- Required sequence after production deploy: production smoke.
+- Public/frontend launch remains blocked until security sign-off is complete.

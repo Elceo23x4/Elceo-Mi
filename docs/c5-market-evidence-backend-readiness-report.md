@@ -86,3 +86,12 @@ NO-GO if any are true:
 - Route-runtime coverage now includes representative cross-subject denial checks (journal/portfolio), admin/internal gate denial checks (billing/admin/internal/market-evidence/scheduled-ingestion), and mutation security action-kind regression assertions.
 - This does not replace external pentest or staging attack drill sign-off.
 - Next security phase remains S3 input abuse/injection adversarial testing.
+
+
+## S6 staging attack drill and final sign-off update
+- S6 status: framework defined in `docs/staging-attack-drill-and-security-signoff.md`; staging execution evidence remains required before production promotion.
+- Final sign-off report: `docs/final-security-signoff-report.md`.
+- Security and release gates must pass **without** audit-unavailable override for CI/final sign-off.
+- Required sequence before production deploy: staging smoke + staging attack drill.
+- Required sequence after production deploy: production smoke.
+- Public/frontend launch remains blocked until security sign-off is complete.

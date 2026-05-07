@@ -1,0 +1,11 @@
+import { mkdir } from 'node:fs/promises';
+import { chromium } from 'playwright';
+const baseUrl=process.env.ELCEO_LANDING_QA_URL ?? 'http://localhost:3000';
+const out='artifacts/elceo-landing-fullpage.png';
+await mkdir('artifacts',{recursive:true});
+const browser=await chromium.launch();
+const page=await browser.newPage({ viewport: { width: 1440, height: 2600 } });
+await page.goto(baseUrl, { waitUntil: 'networkidle' });
+await page.screenshot({ path: out, fullPage: true });
+await browser.close();
+console.log(`Saved ${out}`);

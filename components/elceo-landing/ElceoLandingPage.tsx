@@ -1,5 +1,5 @@
 import { LandingShell } from './LandingShell';
 
-export function ElceoLandingPage(): JSX.Element {
+export function ElceoLandingPage() {
   return <LandingShell />;
 }

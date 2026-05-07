@@ -1,18 +1,6 @@
-import { LandingSections } from '../../components/branding/LandingSections';
-import { GsapOrchestrator } from '../../components/motion/GsapOrchestrator';
-import { PublicTopNav } from '../../components/shell/PublicTopNav';
-import { CinematicAtmosphere } from '../../components/visual/CinematicAtmosphere';
+import { ElceoLandingPage } from '../../../../components/elceo-landing/ElceoLandingPage';
+import '../../../../styles/elceo-landing.css';
 
 export default function LandingPage() {
-  return (
-    <main id="main-content" className="elceo-public-page elceo-public-cinematic">
-      <GsapOrchestrator mode="landing" />
-      <div className="elceo-atmosphere elceo-atmosphere-a" aria-hidden="true" />
-      <div className="elceo-atmosphere elceo-atmosphere-b" aria-hidden="true" />
-      <div className="elceo-atmosphere elceo-atmosphere-c" aria-hidden="true" />
-      <CinematicAtmosphere className="elceo-cinematic-atmosphere-landing" variant="landing" />
-      <PublicTopNav />
-      <LandingSections />
-    </main>
-  );
+  return <ElceoLandingPage />;
 }

@@ -1,1 +1,1 @@
-export function ElceoBadgeStamp(): JSX.Element { return <section>ElceoBadgeStamp placeholder</section>; }
+export function ElceoBadgeStamp() { return <div className="elceo-badge-stamp">ELCEO — MARKET REASONING OS</div>; }

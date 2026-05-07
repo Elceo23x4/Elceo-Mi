@@ -1,1 +1,1 @@
-export function AboutPocket(): JSX.Element { return <section>AboutPocket placeholder</section>; }
+export function AboutPocket() { return <article><h3>About ELCEO</h3><p>ELCEO is a Market Reasoning OS.</p><p>It transforms market evidence into explainable context.</p><p>Decision support, not a promise of profit.</p></article>; }

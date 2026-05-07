@@ -1,1 +1,1 @@
-export function MacroContextPocket(): JSX.Element { return <section>MacroContextPocket placeholder</section>; }
+export function MacroContextPocket() { return <article><h3>Real-Time Macro Context</h3><ul><li>CPI 3.2</li><li>10Y Yield 4.28</li><li>DXY Index 104.2</li><li>VIX 17.9</li><li>Liquidity Tightening</li></ul><p>Updated: 2026-05-07 12:00 UTC</p></article>; }

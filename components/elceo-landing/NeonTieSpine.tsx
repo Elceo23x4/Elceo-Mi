@@ -1,1 +1,1 @@
-export function NeonTieSpine(): JSX.Element { return <section>NeonTieSpine placeholder</section>; }
+export function NeonTieSpine() { return <div className="elceo-tie" aria-hidden="true"><div className="tieEdgeGlow" /></div>; }

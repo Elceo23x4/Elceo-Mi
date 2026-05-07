@@ -131,3 +131,11 @@ Track API errors, security audit events, billing/notification runtime metrics, a
 - Do not run `smoke:production` in CI; smoke remains post-deploy only with `ELCEO_SMOKE_BASE_URL`.
 - Do not use `SECURITY_GATE_ALLOW_AUDIT_UNAVAILABLE=true` for CI or production release sign-off.
 - Enforce branch protection on `main` before production release approvals.
+
+
+## S5 infrastructure/WAF/deployment policy update
+- Added and adopted `docs/infrastructure-security-policy.md` as required pre-launch policy source.
+- Confirms app-level headers baseline and deployment-level enforcement for HTTPS/HSTS/CSP/CORS/WAF.
+- Confirms backup/restore, DB/network isolation, IAM least-privilege, and secret rotation are launch blockers.
+- Staging verification is required before launch; S6 attack drill remains mandatory.
+- This update is policy hardening only and is not security certification.

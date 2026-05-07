@@ -34,3 +34,11 @@ CI runs `npm run security:gate` after typecheck/test/build/lint/migration/c5-rea
 - CI workflow hardening checks now also assert: no `pull_request_target`, Node 20 pinning, no `smoke:production` in CI, and no secret echo patterns.
 - Root sensitive config files (`.env`, `.env.local`, `.npmrc`, `.yarnrc`) are treated as failures if present in repository root.
 - See `docs/supply-chain-cicd-hardening.md` for policy details and branch-protection checklist.
+
+
+## S5 infrastructure/WAF/deployment policy update
+- Added and adopted `docs/infrastructure-security-policy.md` as required pre-launch policy source.
+- Confirms app-level headers baseline and deployment-level enforcement for HTTPS/HSTS/CSP/CORS/WAF.
+- Confirms backup/restore, DB/network isolation, IAM least-privilege, and secret rotation are launch blockers.
+- Staging verification is required before launch; S6 attack drill remains mandatory.
+- This update is policy hardening only and is not security certification.

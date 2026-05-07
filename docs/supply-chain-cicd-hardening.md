@@ -43,3 +43,11 @@ This S4 batch hardens repository supply-chain and CI/CD controls beyond S1 basel
 ## Deferred security phases
 - S5 infrastructure/WAF hardening remains required.
 - S6 staging attack drill and incident-response rehearsal remains required.
+
+
+## S5 infrastructure/WAF/deployment policy update
+- Added and adopted `docs/infrastructure-security-policy.md` as required pre-launch policy source.
+- Confirms app-level headers baseline and deployment-level enforcement for HTTPS/HSTS/CSP/CORS/WAF.
+- Confirms backup/restore, DB/network isolation, IAM least-privilege, and secret rotation are launch blockers.
+- Staging verification is required before launch; S6 attack drill remains mandatory.
+- This update is policy hardening only and is not security certification.

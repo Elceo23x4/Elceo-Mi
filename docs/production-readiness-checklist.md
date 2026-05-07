@@ -253,3 +253,11 @@ Added protected read-only admin query surfaces under /api/admin/market-evidence/
 - [ ] `security:gate` passes without audit-unavailable override for release sign-off.
 - [ ] CI workflow retains read-only permissions and no production smoke/provider live calls.
 - [ ] S5 infra/WAF hardening and S6 staging attack drill remain tracked as release prerequisites.
+
+
+## S5 infrastructure/WAF/deployment policy update
+- Added and adopted `docs/infrastructure-security-policy.md` as required pre-launch policy source.
+- Confirms app-level headers baseline and deployment-level enforcement for HTTPS/HSTS/CSP/CORS/WAF.
+- Confirms backup/restore, DB/network isolation, IAM least-privilege, and secret rotation are launch blockers.
+- Staging verification is required before launch; S6 attack drill remains mandatory.
+- This update is policy hardening only and is not security certification.

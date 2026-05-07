@@ -79,3 +79,11 @@
 - Keep CI secret handling non-interactive and avoid echoing variables with secret-like names.
 - Treat any `security:gate` secret-scan finding as release-blocking unless explicitly reviewed/allowlisted.
 - Local audit-unavailable override is not valid for CI or final release sign-off.
+
+
+## S5 infrastructure/WAF/deployment policy update
+- Added and adopted `docs/infrastructure-security-policy.md` as required pre-launch policy source.
+- Confirms app-level headers baseline and deployment-level enforcement for HTTPS/HSTS/CSP/CORS/WAF.
+- Confirms backup/restore, DB/network isolation, IAM least-privilege, and secret rotation are launch blockers.
+- Staging verification is required before launch; S6 attack drill remains mandatory.
+- This update is policy hardening only and is not security certification.

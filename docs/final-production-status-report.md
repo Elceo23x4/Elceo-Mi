@@ -274,3 +274,11 @@ Added protected read-only admin query surfaces under /api/admin/market-evidence/
 - `security:gate` now validates package-manager/lockfile policy, dependency-source restrictions, lifecycle-script controls, lockfile resolved-source policy, dependency-confusion guardrails, and strengthened workflow checks.
 - CI remains least-privilege (`permissions: contents: read`) with no production smoke or production secret requirements.
 - This hardening improves posture but is not supply-chain certification; S5 and S6 remain required before final launch approval.
+
+
+## S5 infrastructure/WAF/deployment policy update
+- Added and adopted `docs/infrastructure-security-policy.md` as required pre-launch policy source.
+- Confirms app-level headers baseline and deployment-level enforcement for HTTPS/HSTS/CSP/CORS/WAF.
+- Confirms backup/restore, DB/network isolation, IAM least-privilege, and secret rotation are launch blockers.
+- Staging verification is required before launch; S6 attack drill remains mandatory.
+- This update is policy hardening only and is not security certification.

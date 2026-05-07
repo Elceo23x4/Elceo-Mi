@@ -20,7 +20,8 @@
     "check:migrations": "node scripts/check-db-migrations.mjs",
     "release:gate": "node scripts/release-gate.mjs",
     "check:c5-readiness": "node scripts/check-c5-readiness.mjs",
-    "security:gate": "node scripts/security-gate.mjs"
+    "security:gate": "node scripts/security-gate.mjs",
+    "check:infra-security": "node scripts/check-infra-security-policy.mjs"
   },
   "engines": {
     "node": ">=20.0.0"

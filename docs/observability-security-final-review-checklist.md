@@ -77,3 +77,11 @@
 - Verify CI workflow remains read-only (`permissions: contents: read`) and does not run `pull_request_target` or production smoke tests.
 - Verify release sign-off does not use `SECURITY_GATE_ALLOW_AUDIT_UNAVAILABLE=true`.
 - Confirm S5 (infra/WAF) and S6 (staging attack drill) are still open requirements.
+
+
+## S5 infrastructure/WAF/deployment policy update
+- Added and adopted `docs/infrastructure-security-policy.md` as required pre-launch policy source.
+- Confirms app-level headers baseline and deployment-level enforcement for HTTPS/HSTS/CSP/CORS/WAF.
+- Confirms backup/restore, DB/network isolation, IAM least-privilege, and secret rotation are launch blockers.
+- Staging verification is required before launch; S6 attack drill remains mandatory.
+- This update is policy hardening only and is not security certification.

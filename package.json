@@ -22,7 +22,9 @@
     "check:c5-readiness": "node scripts/check-c5-readiness.mjs",
     "security:gate": "node scripts/security-gate.mjs",
     "check:infra-security": "node scripts/check-infra-security-policy.mjs",
-    "attack-drill:staging": "node scripts/staging-attack-drill.mjs"
+    "attack-drill:staging": "node scripts/staging-attack-drill.mjs",
+    "check:landing-assets": "node scripts/check-elceo-landing-assets.mjs",
+    "qa:landing:screenshot": "node scripts/capture-elceo-landing.mjs"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -36,5 +38,22 @@
     "@typescript-eslint/parser": "^8.58.2",
     "@typescript-eslint/eslint-plugin": "^8.58.2",
     "eslint-config-next": "15.5.15"
+  },
+  "dependencies": {
+    "@gsap/react": "^2.1.2",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "embla-carousel-react": "^8.6.0",
+    "gsap": "^3.15.0",
+    "lenis": "^1.3.23",
+    "tailwind-merge": "^3.5.0",
+    "three": "^0.184.0"
+  },
+  "devDependencies": {
+    "@svgr/webpack": "^8.1.0",
+    "playwright": "^1.59.1",
+    "svgo": "^4.0.1"
   }
 }

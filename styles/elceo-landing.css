@@ -1,0 +1,11 @@
+:root {
+  --elceo-black: #030303; --elceo-ink: #080808; --elceo-charcoal: #121212; --elceo-panel: #0b0b0b; --elceo-panel-2: #101010; --elceo-orange: #e6600c; --elceo-orange-soft: #ff8a1f; --elceo-orange-dark: #9f3d05; --elceo-muted-orange: #b95614; --elceo-blue: #1f9bff; --elceo-red: #ff2a1f; --elceo-cream: #e9c98e; --elceo-gray: #747474; --elceo-radius-card: 26px; --elceo-stroke-thin: 1px; --elceo-stroke-mid: 1.5px; --elceo-glow-orange: 0 0 16px rgba(230, 96, 12, 0.75); --elceo-glow-blue: 0 0 22px rgba(31, 155, 255, 0.95); --elceo-safe-x: clamp(24px, 4vw, 72px);
+}
+.elceo-landing-root{} .elceo-reduced-motion *{animation:none!important;transition:none!important;}
+.elceo-font-display{font-family:var(--elceo-font-display, 'Arial Black', sans-serif);}
+.elceo-font-bitmap{font-family:var(--elceo-font-bitmap, 'Courier New', monospace);}
+.elceo-font-sans{font-family:var(--elceo-font-sans, 'Inter', sans-serif);}
+.elceo-glow-orange{box-shadow:var(--elceo-glow-orange);} .elceo-glow-blue{box-shadow:var(--elceo-glow-blue);}
+.elceo-panel-border{border:var(--elceo-stroke-thin) solid color-mix(in srgb, var(--elceo-orange) 45%, transparent);}
+.elceo-hud-text{font-size:0.75rem;letter-spacing:0.08em;text-transform:uppercase;}
+.elceo-focus-ring:focus-visible{outline:2px solid var(--elceo-blue);outline-offset:2px;}

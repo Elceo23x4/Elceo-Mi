@@ -1,0 +1,2 @@
+export const ELCEO_MOTION_SELECTORS = { wheelOuterRings: '[data-wheel-outer-rings]', wheelActiveArcs: '[data-wheel-active-arcs]', wheelNodes: '[data-wheel-nodes]', tieEdgeGlow: '[data-tie-edge-glow]', beltMarquee: '[data-belt-marquee]', pocketPanel: '[data-pocket-panel]', trouserPanels: '[data-trouser-panels]' } as const;
+export const ELCEO_PREFERS_REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';

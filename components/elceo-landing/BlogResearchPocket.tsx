@@ -1,1 +1,1 @@
-export function BlogResearchPocket(): JSX.Element { return <section>BlogResearchPocket placeholder</section>; }
+export function BlogResearchPocket() { return <article><h3>Market Intelligence Log</h3><p>Latest macro explainer</p><p>Asset intelligence note</p><a href="#">Read Research</a></article>; }

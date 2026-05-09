@@ -1,1 +1,1 @@
-export function ExploreCta(): JSX.Element { return <button type="button">Explore CTA placeholder</button>; }
+export function ExploreCta() { return <a href="#" className="elceo-explore-cta">Explore ELCEO</a>; }

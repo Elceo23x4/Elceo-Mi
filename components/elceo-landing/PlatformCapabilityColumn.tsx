@@ -1,1 +1,1 @@
-export function PlatformCapabilityColumn(): JSX.Element { return <section>PlatformCapabilityColumn placeholder</section>; }
+export function PlatformCapabilityColumn() { return <div><h3>Platform Capability</h3><ul><li>Multi-Asset Intelligence</li><li>Real-Time Reasoning</li><li>Evidence Quality Scoring</li><li>Risk/Pressure Mapping</li><li>Journal + Portfolio Context</li></ul></div>; }

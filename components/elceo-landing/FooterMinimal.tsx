@@ -1,1 +1,1 @@
-export function FooterMinimal(): JSX.Element { return <section>FooterMinimal placeholder</section>; }
+export function FooterMinimal() { return <footer className="elceo-footer"><p>CONTACT PRIVACY DISCLAIMER LEGAL TERMS X TELEGRAM</p><p>© 2026 ELCEO     MADE WITH ♥ BY 8DAT</p></footer>; }

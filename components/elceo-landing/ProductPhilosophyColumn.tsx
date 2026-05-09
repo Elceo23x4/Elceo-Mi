@@ -1,1 +1,1 @@
-export function ProductPhilosophyColumn(): JSX.Element { return <section>ProductPhilosophyColumn placeholder</section>; }
+export function ProductPhilosophyColumn() { return <div><h3>Product Philosophy</h3><p>Not a signal seller.</p><p>Not a profit promise.</p><p>A reasoning layer for serious traders.</p><a href="#">Explore ELCEO</a><a href="#">Read the Market Log</a></div>; }

@@ -2978,3 +2978,48 @@ a {
     transition: none;
   }
 }
+
+@font-face {
+  font-family: 'Tribes Regular';
+  src: url('/elceo/fonts/Tribes-Regular.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'OffBit DotBold';
+  src: url('/elceo/fonts/OffBit-DotBold.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+.elceo-f2a-root {
+  min-height: 100svh;
+  background: #000;
+}
+
+.elceo-f2a-hero {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #000;
+}
+
+.elceo-master-hero-svg {
+  width: min(100vw, calc(100svh * 1440 / 1327));
+  max-height: 100svh;
+}
+
+.elceo-master-hero-svg svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.elceo-master-hero-svg text,
+.elceo-master-hero-svg tspan {
+  font-family: 'OffBit DotBold', 'Tribes Regular', monospace;
+}

@@ -1,0 +1,104 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" id="belt_divider" width="1442" height="172" viewBox="0 0 1442 172" role="img" aria-labelledby="title desc" version="1.1" data-name="belt_divider">
+  <title id="title">belt_divider</title>
+  <desc id="desc">Editable standalone SVG element: belt_divider</desc>
+  <defs id="defs19">
+    <style id="style1">
+    :root { --font-ui: 'Tribes Regular','Tribes','Space Mono','Share Tech Mono','IBM Plex Mono',monospace; --font-dot: 'OffBit DotBold','OffBit','Courier New',monospace; }
+    .ui { font-family: var(--font-ui); letter-spacing: .04em; }
+    .tiny { font-family: var(--font-ui); letter-spacing: .06em; }
+    .section-label { font-family: var(--font-ui); letter-spacing: .08em; }
+    .editable-note { pointer-events:none; }
+    .stitch { stroke-dasharray: 10 10; stroke-linecap: round; }
+    .fine-stitch { stroke-dasharray: 5 8; stroke-linecap: round; }
+    .ring { fill:none; stroke-linecap: butt; }
+  </style>
+    <radialGradient id="bgGlow" cx="0.5" cy="0.12" r="0.69999999">
+      <stop offset="0" stop-color="#19120b" stop-opacity="1" id="stop1"/>
+      <stop offset="0.45" stop-color="#050505" stop-opacity="1" id="stop2"/>
+      <stop offset="1" stop-color="#000" stop-opacity="1" id="stop3"/>
+    </radialGradient>
+    <radialGradient id="globeGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffb05a" stop-opacity="0.92" id="stop4"/>
+      <stop offset="0.42" stop-color="#ff6a00" stop-opacity="0.72" id="stop5"/>
+      <stop offset="0.72" stop-color="#7a2d00" stop-opacity="0.52" id="stop6"/>
+      <stop offset="1" stop-color="#050301" stop-opacity="1" id="stop7"/>
+    </radialGradient>
+    <linearGradient id="orangeFlat" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ff7a12" id="stop8"/>
+      <stop offset="1" stop-color="#ec4a00" id="stop9"/>
+    </linearGradient>
+    <linearGradient id="beltFlat" x1="-0.3453676" x2="497.67471" gradientTransform="scale(2.8954656,0.3453676)" y1="-2.8954656" y2="-2.8954656" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#060606" id="stop10"/>
+      <stop offset="0.5" stop-color="#111111" id="stop11"/>
+      <stop offset="1" stop-color="#060606" id="stop12"/>
+    </linearGradient>
+    <filter id="orangeGlow" x="0.038076885" y="-0.04675835" width="1.0125955" height="0.93438113">
+      <feGaussianBlur stdDeviation="7" result="blur" id="feGaussianBlur12"/>
+      <feFlood flood-color="#ff6a00" flood-opacity="0.9" id="feFlood12"/>
+      <feComposite in2="blur" operator="in" id="feComposite12"/>
+      <feMerge id="feMerge13">
+        <feMergeNode id="feMergeNode12"/>
+        <feMergeNode in="SourceGraphic" id="feMergeNode13"/>
+      </feMerge>
+    </filter>
+    <filter id="blueOutGlow" x="-0.13136362" y="-0.025395431" width="1.2627271" height="1.0507907">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="11" result="outerBlur" id="feGaussianBlur13"/>
+      <feFlood flood-color="#008cff" flood-opacity="0.95" result="blue" id="feFlood13"/>
+      <feComposite in="blue" in2="outerBlur" operator="in" result="blueBlur" id="feComposite13"/>
+      <feMerge id="feMerge15">
+        <feMergeNode in="blueBlur" id="feMergeNode14"/>
+        <feMergeNode in="SourceGraphic" id="feMergeNode15"/>
+      </feMerge>
+    </filter>
+    <filter id="softShadow" x="-0.0013681743" y="0" width="1.0027363" height="1.0007139">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity="0.55"/>
+    </filter>
+    <pattern id="microGrid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.1" fill="#222" opacity="0.7" id="circle15"/>
+    </pattern>
+    <pattern id="globeDots" width="10" height="10" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="3" r="1.7" fill="#ff8a1c" opacity="0.92" id="circle16"/>
+    </pattern>
+    <clipPath id="globeClip">
+      <circle cx="720" cy="520" r="210" id="circle17"/>
+    </clipPath>
+    <symbol id="pocket-tile" viewBox="0 0 380 260">
+      <path d="M 18,18 H 362 V 172 L 190,246 18,172 Z" fill="#030303" stroke="#f4f4f4" stroke-width="3" id="path17"/>
+      <path d="M 42,42 H 338 V 158 L 190,220 42,158 Z" fill="none" stroke="#f4f4f4" stroke-width="2.6" stroke-dasharray="10, 9" stroke-linecap="round" opacity="0.95" id="path18"/>
+      <circle cx="42" cy="42" r="10" fill="#040404" stroke="#ff9300" stroke-width="5" id="circle18"/>
+      <circle cx="338" cy="42" r="10" fill="#040404" stroke="#ff9300" stroke-width="5" id="circle19"/>
+    </symbol>
+  </defs>
+  <g id="flat-sketch-belt-divider" transform="translate(1,1)">
+    <rect x="0" y="0" width="1440" height="170" rx="0" fill="url(#beltFlat)" stroke="#3a3a3a" stroke-width="2" opacity="1" id="rect206" style="fill:url(#beltFlat)"/>
+    <line x1="0" y1="24" x2="1440" y2="24" stroke="#f4f4f4" stroke-width="2" opacity="0.8" stroke-dasharray="13, 18" id="line206"/>
+    <line x1="0" y1="145" x2="1440" y2="145" stroke="#f4f4f4" stroke-width="2" opacity="0.8" stroke-dasharray="13, 18" id="line207"/>
+    <circle cx="110" cy="86" r="15" fill="#050505" stroke="#e9e9e9" stroke-width="2.6" opacity="0.95" id="circle207"/>
+    <circle cx="110" cy="86" r="8" fill="#020202" opacity="1" id="circle208"/>
+    <circle cx="200" cy="86" r="15" fill="#050505" stroke="#e9e9e9" stroke-width="2.6" opacity="0.95" id="circle209"/>
+    <circle cx="200" cy="86" r="8" fill="#020202" opacity="1" id="circle210"/>
+    <circle cx="290" cy="86" r="15" fill="#050505" stroke="#e9e9e9" stroke-width="2.6" opacity="0.95" id="circle211"/>
+    <circle cx="290" cy="86" r="8" fill="#020202" opacity="1" id="circle212"/>
+    <circle cx="380" cy="86" r="15" fill="#050505" stroke="#e9e9e9" stroke-width="2.6" opacity="0.95" id="circle213"/>
+    <circle cx="380" cy="86" r="8" fill="#020202" opacity="1" id="circle214"/>
+    <circle cx="470" cy="86" r="15" fill="#050505" stroke="#e9e9e9" stroke-width="2.6" opacity="0.95" id="circle215"/>
+    <circle cx="470" cy="86" r="8" fill="#020202" opacity="1" id="circle216"/>
+    <circle cx="930" cy="86" r="15" fill="#050505" stroke="#e9e9e9" stroke-width="2.6" opacity="0.95" id="circle217"/>
+    <circle cx="930" cy="86" r="8" fill="#020202" opacity="1" id="circle218"/>
+    <circle cx="1020" cy="86" r="15" fill="#050505" stroke="#e9e9e9" stroke-width="2.6" opacity="0.95" id="circle219"/>
+    <circle cx="1020" cy="86" r="8" fill="#020202" opacity="1" id="circle220"/>
+    <circle cx="1110" cy="86" r="15" fill="#050505" stroke="#e9e9e9" stroke-width="2.6" opacity="0.95" id="circle221"/>
+    <circle cx="1110" cy="86" r="8" fill="#020202" opacity="1" id="circle222"/>
+    <circle cx="1200" cy="86" r="15" fill="#050505" stroke="#e9e9e9" stroke-width="2.6" opacity="0.95" id="circle223"/>
+    <circle cx="1200" cy="86" r="8" fill="#020202" opacity="1" id="circle224"/>
+    <circle cx="1290" cy="86" r="15" fill="#050505" stroke="#e9e9e9" stroke-width="2.6" opacity="0.95" id="circle225"/>
+    <circle cx="1290" cy="86" r="8" fill="#020202" opacity="1" id="circle226"/>
+    <g id="flat-orange-red-buckle" transform="translate(475,-14)">
+      <path d="m 0,56 h 70 v 76 H 0 L -36,102 V 86 Z" fill="#050505" stroke="#ff4d00" stroke-width="5" id="path226"/>
+      <path d="m 490,56 h -70 v 76 h 70 l 36,-30 V 86 Z" fill="#050505" stroke="#ff4d00" stroke-width="5" id="path227"/>
+      <path d="m 78,28 h 334 l 38,36 v 78 l -38,36 H 78 L 40,142 V 64 Z" fill="#050505" stroke="#ff4d00" stroke-width="7" id="path228"/>
+      <path d="m 112,58 h 266 l 30,28 v 34 l -30,28 H 112 L 82,120 V 86 Z" fill="none" stroke="#ff8a1c" stroke-width="3" opacity="0.85" id="path229"/>
+    </g>
+  </g>
+</svg>

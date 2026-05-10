@@ -24,12 +24,12 @@ export function ElceoLandingPage() {
           </nav>
 
           <button type="button" aria-label="Open ELCEO explainer video" className="elceo-f2a-retro-button">
-            <InlineAssetSvg assetFile="retro_computer_logo.svg" className="elceo-f2a-retro-logo" />
+            <InlineAssetSvg assetName="retro_computer_logo" className="elceo-f2a-retro-logo" />
           </button>
 
-          <InlineAssetSvg assetFile="vertical_logo.svg" className="elceo-f2a-vertical-logo" />
-          <InlineAssetSvg assetFile="hero_wheel.svg" className="elceo-f2a-wheel" />
-          <InlineAssetSvg assetFile="hero_side_copy.svg" className="elceo-f2a-side-copy" />
+          <InlineAssetSvg assetName="vertical_logo" className="elceo-f2a-vertical-logo" />
+          <InlineAssetSvg assetName="hero_wheel" className="elceo-f2a-wheel" />
+          <InlineAssetSvg assetName="hero_side_copy" className="elceo-f2a-side-copy" />
 
           <Link className="elceo-f2a-cta-hitbox" href="/demo" aria-label="Explore ELCEO" />
 

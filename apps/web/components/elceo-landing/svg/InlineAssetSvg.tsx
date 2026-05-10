@@ -1,24 +1,19 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { INLINE_HERO_SVGS, type InlineHeroAssetName } from './generated/inline-hero-svgs';
 
 type InlineAssetSvgProps = {
-  assetFile: string;
+  assetName: InlineHeroAssetName;
   className: string;
-  ariaHidden?: boolean;
 };
 
-function buildInlineSvgMarkup(assetFile: string, className: string, ariaHidden: boolean) {
-  const svgPath = join(process.cwd(), 'apps/web/public/elceo/assets/source', assetFile);
-  const raw = readFileSync(svgPath, 'utf8');
+export function InlineAssetSvg({ assetName, className }: InlineAssetSvgProps) {
+  const markup = INLINE_HERO_SVGS[assetName];
 
-  return raw.replace(
-    '<svg',
-    `<svg class="${className}" draggable="false" focusable="false" ${ariaHidden ? 'aria-hidden="true"' : ''}`
+  return (
+    <span
+      className={`elceo-inline-svg-wrap ${className}`}
+      aria-hidden="true"
+      draggable={false}
+      dangerouslySetInnerHTML={{ __html: markup }}
+    />
   );
-}
-
-export function InlineAssetSvg({ assetFile, className, ariaHidden = true }: InlineAssetSvgProps) {
-  const markup = buildInlineSvgMarkup(assetFile, className, ariaHidden);
-
-  return <span className="elceo-inline-svg-wrap" dangerouslySetInnerHTML={{ __html: markup }} />;
 }

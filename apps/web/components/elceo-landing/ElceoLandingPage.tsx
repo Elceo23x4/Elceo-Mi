@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { InlineAssetSvg } from './svg/InlineAssetSvg';
+
 const navLinks = [
   { href: '/', label: 'Home' },
   { href: '/pricing', label: 'Pricing' },
@@ -21,19 +23,15 @@ export function ElceoLandingPage() {
             ))}
           </nav>
 
-          <img src="/elceo/assets/source/vertical_logo.svg" alt="ELCEO vertical logo" className="elceo-f2a-vertical-logo" />
-          <img src="/elceo/assets/source/hero_wheel.svg" alt="ELCEO hero wheel" className="elceo-f2a-wheel" />
-          <img src="/elceo/assets/source/retro_computer_logo.svg" alt="ELCEO retro computer mark" className="elceo-f2a-retro-logo" />
-          <img src="/elceo/assets/source/hero_side_copy.svg" alt="ELCEO hero side copy" className="elceo-f2a-side-copy" />
+          <button type="button" aria-label="Open ELCEO explainer video" className="elceo-f2a-retro-button">
+            <InlineAssetSvg assetFile="retro_computer_logo.svg" className="elceo-f2a-retro-logo" />
+          </button>
 
-          <div className="elceo-f2a-core" aria-hidden="true">
-            <img src="/elceo/assets/source/orange_world_globe.svg" alt="" className="elceo-f2a-globe" />
-            <span className="elceo-f2a-core-label">MARKET CORE</span>
-          </div>
+          <InlineAssetSvg assetFile="vertical_logo.svg" className="elceo-f2a-vertical-logo" />
+          <InlineAssetSvg assetFile="hero_wheel.svg" className="elceo-f2a-wheel" />
+          <InlineAssetSvg assetFile="hero_side_copy.svg" className="elceo-f2a-side-copy" />
 
-          <Link className="elceo-f2a-cta" href="/demo">
-            Explore ELCEO
-          </Link>
+          <Link className="elceo-f2a-cta-hitbox" href="/demo" aria-label="Explore ELCEO" />
 
           <div className="elceo-f2a-proof" aria-hidden="true">F2A-PROOF-MARKER</div>
         </div>

@@ -3013,27 +3013,28 @@ a {
 .elceo-f2a-nav-link { color: #ffd36a; text-decoration: none; font-size: clamp(0.92rem, 1.1vw, 1.12rem); }
 .elceo-f2a-nav-link:hover { color: #ffbf2e; }
 
-.elceo-f2a-vertical-logo { position: absolute; left: clamp(-26px, -1.5vw, -10px); top: clamp(95px, 13svh, 130px); height: clamp(520px, 70svh, 760px); width: auto; z-index: 12; object-fit: contain; pointer-events: none; }
-.elceo-f2a-wheel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: clamp(680px, 54vw, 820px); aspect-ratio: 1 / 1; z-index: 18; object-fit: contain; filter: saturate(1.1) contrast(1.1) brightness(1.05); }
-.elceo-f2a-retro-logo { position: absolute; right: clamp(42px, 5vw, 90px); top: clamp(70px, 9svh, 112px); width: clamp(80px, 7vw, 128px); z-index: 20; object-fit: contain; }
-.elceo-f2a-side-copy { position: absolute; right: clamp(48px, 8vw, 140px); top: 50%; transform: translateY(-50%); width: clamp(260px, 21vw, 360px); z-index: 21; object-fit: contain; }
+.elceo-f2a-vertical-logo { position: absolute; left: clamp(10px, 1.5vw, 28px); top: clamp(98px, 13svh, 132px); width: clamp(74px, 6.5vw, 120px); height: auto; z-index: 12; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.elceo-f2a-wheel { position: absolute; left: 53%; top: clamp(54%, 57svh, 60%); transform: translate(-50%, -50%); width: clamp(620px, 49vw, 790px); z-index: 18; user-select: none; -webkit-user-drag: none; pointer-events: none; filter: saturate(1.08) contrast(1.08) brightness(1.04); }
+.elceo-f2a-retro-button { position: absolute; right: clamp(42px, 5vw, 90px); top: clamp(20px, 3svh, 36px); z-index: 52; background: transparent; border: 0; padding: 0; cursor: pointer; }
+.elceo-f2a-retro-logo { width: clamp(78px, 6vw, 120px); height: auto; user-select: none; -webkit-user-drag: none; }
+.elceo-f2a-side-copy { position: absolute; left: clamp(61%, 63vw, 66%); top: clamp(56%, 58svh, 62%); transform: translate(-8%, -50%); width: clamp(220px, 18vw, 320px); z-index: 21; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 
-.elceo-f2a-core { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: clamp(150px, 11vw, 190px); z-index: 30; text-align: center; }
-.elceo-f2a-globe { width: 100%; height: auto; object-fit: contain; filter: drop-shadow(0 0 20px rgba(255, 191, 46, 0.6)); }
-.elceo-f2a-core-label { font-family: 'IBM Plex Mono', 'SFMono-Regular', Menlo, Consolas, monospace; color: #ffbf2e; font-size: 0.68rem; letter-spacing: 0.18em; }
-.elceo-f2a-cta { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 60px); z-index: 35; font-family: 'Eurostile', 'Bank Gothic', 'Arial Narrow', 'Segoe UI', sans-serif; text-decoration: none; color: #030303; background: #ffd36a; padding: 0.72rem 1.35rem; border: 1px solid #ffbf2e; text-transform: uppercase; letter-spacing: 0.08em; }
+.elceo-f2a-cta-hitbox { position: absolute; left: 53%; top: clamp(61%, 64svh, 67%); transform: translate(-50%, -50%); width: clamp(170px, 12vw, 210px); height: clamp(46px, 3.4vw, 58px); z-index: 35; background: transparent; border: 0; color: transparent; text-indent: -9999px; overflow: hidden; }
+.elceo-f2a-cta-hitbox:focus-visible { outline: 2px solid #ffbf2e; outline-offset: 3px; }
 .elceo-f2a-proof { position: absolute; bottom: 20px; right: 24px; z-index: 40; color: #f5a900; font-family: 'IBM Plex Mono', 'SFMono-Regular', Menlo, Consolas, monospace; font-size: 12px; letter-spacing: 0.16em; }
+.elceo-inline-svg-wrap svg { display: block; max-width: 100%; height: auto; }
 
 @media (max-width: 1024px) {
-  .elceo-hero-stage { min-height: 680px; }
-  .elceo-f2a-wheel { width: min(84vw, 700px); }
-  .elceo-f2a-side-copy { width: clamp(180px, 26vw, 280px); right: 20px; }
+  .elceo-hero-stage { min-height: 700px; }
+  .elceo-f2a-wheel { width: min(76vw, 700px); left: 56%; top: 60%; }
+  .elceo-f2a-side-copy { width: clamp(170px, 23vw, 270px); left: 64%; top: 60%; }
 }
 
 @media (max-width: 768px) {
   .elceo-f2a-nav { width: min(92vw, 520px); justify-content: center; flex-wrap: wrap; gap: 12px 16px; }
-  .elceo-f2a-vertical-logo { height: clamp(340px, 56svh, 520px); top: 120px; }
-  .elceo-f2a-wheel { width: min(92vw, 600px); }
-  .elceo-f2a-retro-logo { width: 82px; top: 100px; right: 16px; }
+  .elceo-f2a-vertical-logo { width: clamp(62px, 10vw, 88px); top: 140px; left: 8px; }
+  .elceo-f2a-wheel { width: min(88vw, 560px); left: 56%; top: 62%; }
+  .elceo-f2a-retro-button { right: 16px; }
+  .elceo-f2a-retro-logo { width: 82px; }
   .elceo-f2a-side-copy { display: none; }
 }

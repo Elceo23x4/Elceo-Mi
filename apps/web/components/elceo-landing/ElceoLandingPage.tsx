@@ -29,7 +29,6 @@ export function ElceoLandingPage() {
 
           <InlineAssetSvg assetName="vertical_logo" className="elceo-f2a-vertical-logo" />
           <InlineAssetSvg assetName="hero_wheel" className="elceo-f2a-wheel" />
-          <InlineAssetSvg assetName="hero_side_copy" className="elceo-f2a-side-copy" />
 
           <Link className="elceo-f2a-cta-hitbox" href="/demo" aria-label="Explore ELCEO" />
 

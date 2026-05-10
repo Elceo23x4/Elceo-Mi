@@ -14,6 +14,14 @@ const servedWebAssets = [
   'apps/web/public/elceo/assets/source/retro_computer_logo.svg',
   'apps/web/public/elceo/assets/source/hero_side_copy.svg',
   'apps/web/public/elceo/assets/source/orange_world_globe.svg',
+  'apps/web/public/elceo/assets/source/section_2_layout.svg',
+  'apps/web/public/elceo/assets/source/tie.svg',
+  'apps/web/public/elceo/assets/source/pocket_tile_1.svg',
+  'apps/web/public/elceo/assets/source/pocket_tile_2.svg',
+  'apps/web/public/elceo/assets/source/pocket_tile_3.svg',
+  'apps/web/public/elceo/assets/source/pocket_tile_4.svg',
+  'apps/web/public/elceo/assets/source/pocket_tile_5.svg',
+  'apps/web/public/elceo/assets/source/pocket_tile_6.svg',
 ];
 
 const missingReference = referenceAssets.filter((file) => !existsSync(file));

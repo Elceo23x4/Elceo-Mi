@@ -3038,3 +3038,32 @@ a {
   .elceo-f2a-retro-logo { width: 82px; }
   .elceo-f2a-side-copy { display: none; }
 }
+
+.elceo-f2a-page { scroll-snap-type: y mandatory; overflow-y: auto; height: 100svh; }
+.elceo-hero-section, .elceo-section-two { scroll-snap-align: start; scroll-snap-stop: always; }
+.elceo-section-two { position: relative; width: 100vw; min-height: 100svh; overflow: hidden; background: #050505; color: #f4ecdc; }
+.elceo-section-two-stage { position: relative; width: 100vw; height: 100svh; min-height: 760px; max-width: 1720px; margin: 0 auto; overflow: hidden; }
+.elceo-section-two-layout-guide { position: absolute; inset: 0; opacity: .08; z-index: 1; }
+.elceo-section-two-layout-guide svg { width: 100%; height: 100%; }
+.elceo-section-two-tie { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); height: clamp(720px, 92svh, 1160px); width: auto; z-index: 16; filter: drop-shadow(0 0 28px #0498ff) drop-shadow(0 0 60px #007eff); }
+.elceo-section-two-pocket { position: absolute; width: clamp(360px, 28vw, 500px); z-index: 21; }
+.elceo-section-two-pocket-frame svg { width: 100%; height: auto; }
+.elceo-section-two-pocket-content { position: absolute; inset: 0; padding: clamp(22px,2vw,36px); display: flex; flex-direction: column; gap: 8px; font-family: 'IBM Plex Sans', Arial, sans-serif; }
+.elceo-section-two-pocket-eyebrow { margin: 0; color: #ff8e1a; font-family: 'OffBit DotBold','Courier New',monospace; letter-spacing: .12em; font-size: .72rem; }
+.elceo-section-two-pocket h3 { margin: 0; color: #ffe2b7; font-family: 'Tribes Regular','Space Mono',monospace; font-size: clamp(1rem,1.3vw,1.35rem); }
+.elceo-section-two-pocket p, .elceo-section-two-pocket li { margin: 0; color: #f5ead8; font-size: clamp(.86rem, .9vw, 1rem); line-height: 1.3; }
+.elceo-section-two-pocket ul { margin: 0; padding-left: 1rem; display: grid; gap: 2px; }
+.elceo-section-two-pocket .mini, .elceo-section-two-pocket .cta { color: #ffb25e; font-family: 'OffBit DotBold','Courier New',monospace; letter-spacing: .06em; }
+.slot-left-top { left: clamp(70px, 8vw, 150px); top: clamp(100px, 13svh, 150px); }
+.slot-right-top { right: clamp(70px, 8vw, 150px); top: clamp(100px, 13svh, 150px); }
+.slot-left-middle { left: clamp(70px, 8vw, 150px); top: 50%; transform: translateY(-50%); }
+.slot-right-middle { right: clamp(70px, 8vw, 150px); top: 50%; transform: translateY(-50%); }
+.slot-left-bottom { left: clamp(70px, 8vw, 150px); bottom: clamp(70px, 8svh, 110px); }
+.slot-right-bottom { right: clamp(70px, 8vw, 150px); bottom: clamp(70px, 8svh, 110px); }
+.elceo-f2b-proof { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 30; color: #ff7a00; font: 12px 'IBM Plex Mono', monospace; letter-spacing: .2em; }
+@media (max-width: 1200px) { .elceo-section-two-stage { height: auto; min-height: 100svh; overflow-y: auto; } .elceo-section-two-pocket { width: clamp(320px, 38vw, 440px);} }
+@media (max-width: 900px) {
+  .elceo-section-two-stage { height: auto; min-height: 100svh; padding: 30px 0 60px; display: grid; gap: 24px; justify-items: center; }
+  .elceo-section-two-tie { position: relative; left: auto; top: auto; transform: none; height: 220px; }
+  .elceo-section-two-pocket { position: relative; left: auto; right: auto; top: auto; bottom: auto; transform: none; width: min(92vw, 480px); }
+}

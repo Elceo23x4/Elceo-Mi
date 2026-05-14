@@ -22,6 +22,7 @@ import { getSeoContentArchitectureSnapshot, listSeoPagesForAsset, listSeoPagesFo
 import { ScheduledIngestionService, ScheduledIngestionQueryService, getScheduledIngestionPolicySnapshot, getScheduledIngestionRunReplay } from '../scheduled-ingestion/index';
 import type { ScheduledIngestionRunRepository } from '../persistence/scheduled-ingestion-repository';
 import { buildProviderActivationChecklist, getProviderSourceDescriptor, getProviderSourceRegistrySnapshot, listProviderSourceGaps, listProviderSourcesByFamily, listProviderSourcesForAsset } from '../provider-source-registry/index';
+import { buildFixtureEvidenceForScenario, buildFixtureExpectedOutput, getLaunchAssetFixtureAssetPack, getLaunchAssetFixtureCoverageReport, getLaunchAssetFixtureLibrary, getLaunchAssetFixtureScenario, listLaunchAssetFixtureScenarios } from '../launch-asset-fixtures/index';
 
 export type TiingoFixtureIngestionParams = { asset: TradingAssetCoverage; frequency?: string | null; requestedAt?: string | null };
 
@@ -69,6 +70,14 @@ export class CanonicalMarketIntelligenceBoundaryService {
   getProviderSourceDescriptor(sourceId: Parameters<typeof getProviderSourceDescriptor>[0]) { return getProviderSourceDescriptor(sourceId); }
   listProviderSourceGaps() { return listProviderSourceGaps(); }
   buildProviderActivationChecklist(sourceId: Parameters<typeof buildProviderActivationChecklist>[0]) { return buildProviderActivationChecklist(sourceId); }
+
+  getLaunchAssetFixtureLibrary() { return getLaunchAssetFixtureLibrary(); }
+  getLaunchAssetFixtureAssetPack(asset: Parameters<typeof getLaunchAssetFixtureAssetPack>[0]) { return getLaunchAssetFixtureAssetPack(asset); }
+  listLaunchAssetFixtureScenarios(asset?: Parameters<typeof listLaunchAssetFixtureScenarios>[0]) { return listLaunchAssetFixtureScenarios(asset); }
+  getLaunchAssetFixtureScenario(scenarioId: Parameters<typeof getLaunchAssetFixtureScenario>[0]) { return getLaunchAssetFixtureScenario(scenarioId); }
+  getLaunchAssetFixtureCoverageReport() { return getLaunchAssetFixtureCoverageReport(); }
+  buildFixtureEvidenceForScenario(scenarioId: Parameters<typeof buildFixtureEvidenceForScenario>[0]) { return buildFixtureEvidenceForScenario(scenarioId); }
+  buildFixtureExpectedOutput(scenarioId: Parameters<typeof buildFixtureExpectedOutput>[0]) { return buildFixtureExpectedOutput(scenarioId); }
 
   getProviderLiveActivationPolicy(providerId: string, environment: 'local'|'staging'|'production') { return getProviderLiveActivationPolicy(providerId, environment); }
   getProviderLiveReadinessSnapshot(environment: 'local'|'staging'|'production', config?: RuntimeReadinessConfig) { return getProviderLiveReadinessSnapshot(environment, config); }

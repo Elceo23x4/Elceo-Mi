@@ -11,3 +11,9 @@ C6-A1 delivers a canonical provider/source registry and deterministic fixture/dr
 
 ## C6-A2 fixture scenario library
 C6-A2 adds deterministic launch-asset fixture scenarios only, with no live provider calls and no API keys. These scenarios are used for reasoning tests and mock contracts. C6-A3 will expand official macro adapter/schema shells.
+
+## C6-A3 official macro shell update (2026-05-14)
+- Added official macro source types/schemas + adapter shells for US, Eurozone/Germany, UK, Japan, and global institutions.
+- Fixture/dry-run only; no live provider calls and no API keys.
+- Live activation remains blocked-by-default for all official macro sources.
+- C6-A4 remains next for news/extraction/filings shell expansion.

@@ -24,3 +24,4 @@ export * from './scheduled-ingestion';
 export * from './provider-source-registry';
 
 export * from './launch-asset-fixtures';
+export * from './official-macro-sources';

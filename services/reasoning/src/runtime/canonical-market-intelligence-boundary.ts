@@ -23,6 +23,7 @@ import { ScheduledIngestionService, ScheduledIngestionQueryService, getScheduled
 import type { ScheduledIngestionRunRepository } from '../persistence/scheduled-ingestion-repository';
 import { buildProviderActivationChecklist, getProviderSourceDescriptor, getProviderSourceRegistrySnapshot, listProviderSourceGaps, listProviderSourcesByFamily, listProviderSourcesForAsset } from '../provider-source-registry/index';
 import { buildFixtureEvidenceForScenario, buildFixtureExpectedOutput, getLaunchAssetFixtureAssetPack, getLaunchAssetFixtureCoverageReport, getLaunchAssetFixtureLibrary, getLaunchAssetFixtureScenario, listLaunchAssetFixtureScenarios } from '../launch-asset-fixtures/index';
+import { assertOfficialMacroSourceIdsInProviderSnapshot, getOfficialMacroAdapterReadiness, getOfficialMacroCoverageReport, getOfficialMacroFixturePayload, getOfficialMacroSourceDescriptor, getOfficialMacroSourceRegistry, listOfficialMacroFixturePayloads, listOfficialMacroReleaseDescriptors, listOfficialMacroSourcesByRegion, normalizeOfficialMacroFixturePayload } from '../official-macro-sources/index';
 
 export type TiingoFixtureIngestionParams = { asset: TradingAssetCoverage; frequency?: string | null; requestedAt?: string | null };
 
@@ -70,6 +71,17 @@ export class CanonicalMarketIntelligenceBoundaryService {
   getProviderSourceDescriptor(sourceId: Parameters<typeof getProviderSourceDescriptor>[0]) { return getProviderSourceDescriptor(sourceId); }
   listProviderSourceGaps() { return listProviderSourceGaps(); }
   buildProviderActivationChecklist(sourceId: Parameters<typeof buildProviderActivationChecklist>[0]) { return buildProviderActivationChecklist(sourceId); }
+
+  getOfficialMacroSourceRegistry() { return getOfficialMacroSourceRegistry(); }
+  getOfficialMacroSourceDescriptor(sourceId: Parameters<typeof getOfficialMacroSourceDescriptor>[0]) { return getOfficialMacroSourceDescriptor(sourceId); }
+  listOfficialMacroSourcesByRegion(region: Parameters<typeof listOfficialMacroSourcesByRegion>[0]) { return listOfficialMacroSourcesByRegion(region); }
+  listOfficialMacroReleaseDescriptors(sourceId?: Parameters<typeof listOfficialMacroReleaseDescriptors>[0]) { return listOfficialMacroReleaseDescriptors(sourceId); }
+  listOfficialMacroFixturePayloads(sourceId?: Parameters<typeof listOfficialMacroFixturePayloads>[0]) { return listOfficialMacroFixturePayloads(sourceId); }
+  getOfficialMacroFixturePayload(sourceId: Parameters<typeof getOfficialMacroFixturePayload>[0], fixtureId: Parameters<typeof getOfficialMacroFixturePayload>[1]) { return getOfficialMacroFixturePayload(sourceId, fixtureId); }
+  normalizeOfficialMacroFixturePayload(payload: Parameters<typeof normalizeOfficialMacroFixturePayload>[0]) { return normalizeOfficialMacroFixturePayload(payload); }
+  getOfficialMacroAdapterReadiness(sourceId: Parameters<typeof getOfficialMacroAdapterReadiness>[0]) { return getOfficialMacroAdapterReadiness(sourceId); }
+  getOfficialMacroCoverageReport() { return getOfficialMacroCoverageReport(); }
+  assertOfficialMacroSourceIdsInProviderSnapshot() { return assertOfficialMacroSourceIdsInProviderSnapshot(); }
 
   getLaunchAssetFixtureLibrary() { return getLaunchAssetFixtureLibrary(); }
   getLaunchAssetFixtureAssetPack(asset: Parameters<typeof getLaunchAssetFixtureAssetPack>[0]) { return getLaunchAssetFixtureAssetPack(asset); }

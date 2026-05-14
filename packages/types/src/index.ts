@@ -65,3 +65,5 @@ export * from './seo-content-feed';
 export * from './provider-live-readiness';
 
 export * from './market-evidence-ingestion-schedule';
+
+export * from './provider-source-registry';

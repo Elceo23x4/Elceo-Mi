@@ -295,3 +295,4 @@ Added protected read-only admin query surfaces under /api/admin/market-evidence/
 ## C6-A0 backend foundation audit update (2026-05-13)
 - Added `docs/backend-foundation-completion-map.md` as the canonical gap-audit and completion-sequencing map for pre-key/pre-hosting backend foundation closure.
 - Status remains fixture-first and live-blocked by default; no provider activation was performed in C6-A0.
+\n## C6-A1 update (2026-05-14)\n- Added canonical provider/source registry snapshot + validators + boundary methods.\n- Registry is fixture/dry-run readiness only; no live calls and no API keys.\n- Live activation remains blocked-by-default for every source.\n- C6-A2 remains the next step for launch-asset fixture expansion.\n

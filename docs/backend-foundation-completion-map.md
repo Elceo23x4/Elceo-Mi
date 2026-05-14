@@ -145,3 +145,4 @@ After this foundation phase, remaining work should primarily be:
 - End-to-end live ingestion verification and operational tuning.
 - Frontend integration polish and UI completion.
 - Full live-system validation and release hardening.
+\n## C6-A1 update (2026-05-14)\n- Added canonical provider/source registry snapshot + validators + boundary methods.\n- Registry is fixture/dry-run readiness only; no live calls and no API keys.\n- Live activation remains blocked-by-default for every source.\n- C6-A2 remains the next step for launch-asset fixture expansion.\n

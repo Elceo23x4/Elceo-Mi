@@ -28,3 +28,4 @@ C5-A21 introduces staging-only live provider activation planning gates.
 - Production go/no-go still requires security verification track, staging smoke, and production smoke.
 - DB migrations must be applied in strict lexicographic order (including `0032`, `0033`, `0034`).
 - Known non-blocking warnings remain tracked; do not treat them as launch-complete signals.
+\n## C6-A1 update (2026-05-14)\n- Added canonical provider/source registry snapshot + validators + boundary methods.\n- Registry is fixture/dry-run readiness only; no live calls and no API keys.\n- Live activation remains blocked-by-default for every source.\n- C6-A2 remains the next step for launch-asset fixture expansion.\n

@@ -63,3 +63,5 @@ export * from './seo-content-feed.schema';
 export * from './provider-live-readiness.schema';
 
 export * from './market-evidence-ingestion-schedule.schema';
+
+export * from './provider-source-registry.schema';

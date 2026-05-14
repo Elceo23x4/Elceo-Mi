@@ -163,3 +163,5 @@ C6-A2 adds deterministic launch-asset fixture scenarios only, with no live provi
 - Live activation remains blocked by default; C6-A4 continues with news/extraction/filings shells.
 
 - C6-A4: added fixture/dry-run news/extraction/filings shells (no live calls, no API keys, live-blocked by default; C6-A5 handles next expansion).
+
+- C6-A5: Added crypto/risk/liquidity fixture shells (dry-run only, no live calls, no API keys; C6-A6 reserved for golden scenario tests).

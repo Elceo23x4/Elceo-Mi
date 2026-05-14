@@ -44,6 +44,7 @@ import { runProviderLiveReadinessTests } from './provider-live-readiness.test.js
 import { runScheduledIngestionTests } from './scheduled-ingestion.test.js';
 import { runProviderSourceRegistryTests } from './provider-source-registry.test.js';
 import { runNewsExtractionFilingsTests } from './news-extraction-filings.test.js';
+import { runCryptoRiskLiquidityTests } from './crypto-risk-liquidity.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -92,6 +93,7 @@ async function run(): Promise<void> {
   await runScheduledIngestionTests();
   await runProviderSourceRegistryTests();
   runNewsExtractionFilingsTests();
+  runCryptoRiskLiquidityTests();
   console.log('reasoning runtime contract tests passed');
 }
 

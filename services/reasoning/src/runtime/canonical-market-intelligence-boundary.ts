@@ -24,6 +24,7 @@ import type { ScheduledIngestionRunRepository } from '../persistence/scheduled-i
 import { buildProviderActivationChecklist, getProviderSourceDescriptor, getProviderSourceRegistrySnapshot, listProviderSourceGaps, listProviderSourcesByFamily, listProviderSourcesForAsset } from '../provider-source-registry/index';
 import { buildFixtureEvidenceForScenario, buildFixtureExpectedOutput, getLaunchAssetFixtureAssetPack, getLaunchAssetFixtureCoverageReport, getLaunchAssetFixtureLibrary, getLaunchAssetFixtureScenario, listLaunchAssetFixtureScenarios } from '../launch-asset-fixtures/index';
 import { assertOfficialMacroSourceIdsInProviderSnapshot, getOfficialMacroAdapterReadiness, getOfficialMacroCoverageReport, getOfficialMacroFixturePayload, getOfficialMacroSourceDescriptor, getOfficialMacroSourceRegistry, listOfficialMacroFixturePayloads, listOfficialMacroReleaseDescriptors, listOfficialMacroSourcesByRegion, normalizeOfficialMacroFixturePayload } from '../official-macro-sources/index';
+import { getCryptoRiskLiquidityAdapterReadiness, getCryptoRiskLiquidityCoverageReport, getCryptoRiskLiquidityFixturePayload, getCryptoRiskLiquiditySourceDescriptor, getCryptoRiskLiquiditySourceRegistry, listCreditStressFixturePayloads, listCryptoDerivativesFixturePayloads, listCryptoRiskLiquidityFixturePayloads, listCryptoRiskLiquiditySourcesByFamily, listLiquidityFixturePayloads, listMarketBreadthFixturePayloads, listRiskRegimeFixturePayloads, listVolatilityFixturePayloads, normalizeCryptoRiskLiquidityFixturePayload } from '../crypto-risk-liquidity/index';
 import { getNewsExtractionAdapterReadiness, getNewsExtractionCoverageReport, getNewsExtractionFixturePayload, getNewsExtractionSourceDescriptor, getNewsExtractionSourceRegistry, listEtfFlowFixturePayloads, listFilingFixturePayloads, listNarrativeClusterFixturePayloads, listNewsExtractionFixturePayloads, listNewsExtractionSourcesByFamily, normalizeNewsExtractionFixturePayload } from '../news-extraction-filings/index';
 
 export type TiingoFixtureIngestionParams = { asset: TradingAssetCoverage; frequency?: string | null; requestedAt?: string | null };
@@ -84,6 +85,22 @@ export class CanonicalMarketIntelligenceBoundaryService {
   getOfficialMacroCoverageReport() { return getOfficialMacroCoverageReport(); }
   assertOfficialMacroSourceIdsInProviderSnapshot() { return assertOfficialMacroSourceIdsInProviderSnapshot(); }
 
+
+
+  getCryptoRiskLiquiditySourceRegistry() { return getCryptoRiskLiquiditySourceRegistry(); }
+  getCryptoRiskLiquiditySourceDescriptor(sourceId: Parameters<typeof getCryptoRiskLiquiditySourceDescriptor>[0]) { return getCryptoRiskLiquiditySourceDescriptor(sourceId); }
+  listCryptoRiskLiquiditySourcesByFamily(family: Parameters<typeof listCryptoRiskLiquiditySourcesByFamily>[0]) { return listCryptoRiskLiquiditySourcesByFamily(family); }
+  listCryptoRiskLiquidityFixturePayloads(sourceId?: Parameters<typeof listCryptoRiskLiquidityFixturePayloads>[0]) { return listCryptoRiskLiquidityFixturePayloads(sourceId); }
+  getCryptoRiskLiquidityFixturePayload(sourceId: Parameters<typeof getCryptoRiskLiquidityFixturePayload>[0], fixtureId: Parameters<typeof getCryptoRiskLiquidityFixturePayload>[1]) { return getCryptoRiskLiquidityFixturePayload(sourceId, fixtureId); }
+  normalizeCryptoRiskLiquidityFixturePayload(payload: Parameters<typeof normalizeCryptoRiskLiquidityFixturePayload>[0]) { return normalizeCryptoRiskLiquidityFixturePayload(payload); }
+  listCryptoDerivativesFixturePayloads(asset?: Parameters<typeof listCryptoDerivativesFixturePayloads>[0]) { return listCryptoDerivativesFixturePayloads(asset); }
+  listVolatilityFixturePayloads(asset?: Parameters<typeof listVolatilityFixturePayloads>[0]) { return listVolatilityFixturePayloads(asset); }
+  listCreditStressFixturePayloads(asset?: Parameters<typeof listCreditStressFixturePayloads>[0]) { return listCreditStressFixturePayloads(asset); }
+  listLiquidityFixturePayloads(asset?: Parameters<typeof listLiquidityFixturePayloads>[0]) { return listLiquidityFixturePayloads(asset); }
+  listMarketBreadthFixturePayloads(asset?: Parameters<typeof listMarketBreadthFixturePayloads>[0]) { return listMarketBreadthFixturePayloads(asset); }
+  listRiskRegimeFixturePayloads(asset?: Parameters<typeof listRiskRegimeFixturePayloads>[0]) { return listRiskRegimeFixturePayloads(asset); }
+  getCryptoRiskLiquidityAdapterReadiness(sourceId: Parameters<typeof getCryptoRiskLiquidityAdapterReadiness>[0]) { return getCryptoRiskLiquidityAdapterReadiness(sourceId); }
+  getCryptoRiskLiquidityCoverageReport() { return getCryptoRiskLiquidityCoverageReport(); }
 
   getNewsExtractionSourceRegistry() { return getNewsExtractionSourceRegistry(); }
   getNewsExtractionSourceDescriptor(sourceId: Parameters<typeof getNewsExtractionSourceDescriptor>[0]) { return getNewsExtractionSourceDescriptor(sourceId); }

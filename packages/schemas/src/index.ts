@@ -69,3 +69,5 @@ export * from './provider-source-registry.schema';
 export * from './launch-asset-fixtures.schema';
 export * from './official-macro-sources.schema';
 export * from './news-extraction-filings.schema';
+
+export * from './crypto-risk-liquidity.schema';

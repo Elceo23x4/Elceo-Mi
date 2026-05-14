@@ -14,7 +14,7 @@ add('cftc_cot','positioning','CFTC COT',['aud_usd','btc_usd','eur_usd','gbp_usd'
 ['marketaux_news','newsapi_news','gdelt_news','finnhub_news','firecrawl_extraction'].forEach((id)=>add(id as ProviderSourceId,'news_extraction',id,launchAssets));
 ['sec_edgar','etf_flows_shell','earnings_filings_shell'].forEach((id)=>add(id as ProviderSourceId,'filings_company_etf',id,['btc_usd','nasdaq_100','sp500','xau_usd']));
 ['crypto_exchange_public','crypto_onchain_public','crypto_derivatives_shell'].forEach((id)=>add(id as ProviderSourceId,'crypto',id,['btc_usd']));
-['volatility_metric_source','credit_stress_source','liquidity_condition_source','financial_conditions_source'].forEach((id)=>add(id as ProviderSourceId,'risk_liquidity',id,['btc_usd','de30','dxy','nasdaq_100','sp500','vix','xau_usd']));
+['volatility_metric_source','credit_stress_source','liquidity_condition_source','financial_conditions_source','equity_index_breadth_indicator','public_equity_breadth_sources','calculated_internal_conditions'].forEach((id)=>add(id as ProviderSourceId,'risk_liquidity',id,['aud_usd','btc_usd','de30','dxy','eur_usd','gbp_usd','nasdaq_100','nzd_usd','sp500','usd_cad','usd_chf','usd_jpy','vix','xau_usd']));
 
 providerSources.sort((a,b)=>a.sourceId.localeCompare(b.sourceId));
 

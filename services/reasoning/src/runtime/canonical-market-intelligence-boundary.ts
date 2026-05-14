@@ -26,6 +26,7 @@ import { buildProviderActivationChecklist, getProviderSourceDescriptor, getProvi
 import { buildFixtureEvidenceForScenario, buildFixtureExpectedOutput, getLaunchAssetFixtureAssetPack, getLaunchAssetFixtureCoverageReport, getLaunchAssetFixtureLibrary, getLaunchAssetFixtureScenario, listLaunchAssetFixtureScenarios } from '../launch-asset-fixtures/index';
 import { assertOfficialMacroSourceIdsInProviderSnapshot, getOfficialMacroAdapterReadiness, getOfficialMacroCoverageReport, getOfficialMacroFixturePayload, getOfficialMacroSourceDescriptor, getOfficialMacroSourceRegistry, listOfficialMacroFixturePayloads, listOfficialMacroReleaseDescriptors, listOfficialMacroSourcesByRegion, normalizeOfficialMacroFixturePayload } from '../official-macro-sources/index';
 import { getCryptoRiskLiquidityAdapterReadiness, getCryptoRiskLiquidityCoverageReport, getCryptoRiskLiquidityFixturePayload, getCryptoRiskLiquiditySourceDescriptor, getCryptoRiskLiquiditySourceRegistry, listCreditStressFixturePayloads, listCryptoDerivativesFixturePayloads, listCryptoRiskLiquidityFixturePayloads, listCryptoRiskLiquiditySourcesByFamily, listLiquidityFixturePayloads, listMarketBreadthFixturePayloads, listRiskRegimeFixturePayloads, listVolatilityFixturePayloads, normalizeCryptoRiskLiquidityFixturePayload } from '../crypto-risk-liquidity/index';
+import { checkCognitionGuardrails, decomposeConfidence, detectEvidenceContradictions, getAssetEvidenceWeights, getCognitionCalibrationCoverageReport, runAllCognitionCalibrationScenarios, runCognitionCalibrationForScenario, scoreEvidenceFreshness, scoreEvidenceQuality, scorePressureForAsset, scoreSourceCredibility, weightEvidenceForAsset } from '../cognition-calibration/index';
 import { getNewsExtractionAdapterReadiness, getNewsExtractionCoverageReport, getNewsExtractionFixturePayload, getNewsExtractionSourceDescriptor, getNewsExtractionSourceRegistry, listEtfFlowFixturePayloads, listFilingFixturePayloads, listNarrativeClusterFixturePayloads, listNewsExtractionFixturePayloads, listNewsExtractionSourcesByFamily, normalizeNewsExtractionFixturePayload } from '../news-extraction-filings/index';
 
 export type TiingoFixtureIngestionParams = { asset: TradingAssetCoverage; frequency?: string | null; requestedAt?: string | null };
@@ -153,6 +154,19 @@ export class CanonicalMarketIntelligenceBoundaryService {
   evaluateEvidencePayloadQuality(payload: Parameters<typeof evaluateEvidencePayloadQuality>[0], evaluatedAt?: string) { return evaluateEvidencePayloadQuality(payload, evaluatedAt); }
   evaluateEvidencePayloadsQuality(payloads: Parameters<typeof evaluateEvidencePayloadsQuality>[0], evaluatedAt?: string) { return evaluateEvidencePayloadsQuality(payloads, evaluatedAt); }
   buildEvidenceQualityReport(payloads: Parameters<typeof buildEvidenceQualityReport>[0], evaluatedAt?: string) { return buildEvidenceQualityReport(payloads, evaluatedAt); }
+
+  scoreEvidenceQuality(input: Parameters<typeof scoreEvidenceQuality>[0]) { return scoreEvidenceQuality(input); }
+  scoreEvidenceFreshness(observedAt: string, evaluatedAt: string) { return scoreEvidenceFreshness(observedAt, evaluatedAt); }
+  scoreSourceCredibility(sourceId: string) { return scoreSourceCredibility(sourceId); }
+  getAssetEvidenceWeights(asset: Parameters<typeof getAssetEvidenceWeights>[0], horizon?: Parameters<typeof getAssetEvidenceWeights>[1]) { return getAssetEvidenceWeights(asset, horizon); }
+  weightEvidenceForAsset(asset: Parameters<typeof weightEvidenceForAsset>[0], evidenceItems: Parameters<typeof weightEvidenceForAsset>[1], horizon?: Parameters<typeof weightEvidenceForAsset>[2]) { return weightEvidenceForAsset(asset, evidenceItems, horizon); }
+  scorePressureForAsset(asset: Parameters<typeof scorePressureForAsset>[0], weightedEvidence: Parameters<typeof scorePressureForAsset>[1]) { return scorePressureForAsset(asset, weightedEvidence); }
+  detectEvidenceContradictions(asset: Parameters<typeof detectEvidenceContradictions>[0], weightedEvidence: Parameters<typeof detectEvidenceContradictions>[1]) { return detectEvidenceContradictions(asset, weightedEvidence); }
+  decomposeConfidence(asset: Parameters<typeof decomposeConfidence>[0], weightedEvidence: Parameters<typeof decomposeConfidence>[1], contradictions: Parameters<typeof decomposeConfidence>[2], freshness: Parameters<typeof decomposeConfidence>[3]) { return decomposeConfidence(asset, weightedEvidence, contradictions, freshness); }
+  checkCognitionGuardrails(textOrResult: Parameters<typeof checkCognitionGuardrails>[0]) { return checkCognitionGuardrails(textOrResult); }
+  runCognitionCalibrationForScenario(scenarioId: string) { return runCognitionCalibrationForScenario(scenarioId); }
+  runAllCognitionCalibrationScenarios() { return runAllCognitionCalibrationScenarios(); }
+  getCognitionCalibrationCoverageReport() { return getCognitionCalibrationCoverageReport(); }
   async listEvidencePayloadsByAssetWithQuality(asset: string, limit?: number, evaluatedAt?: string) { const payloads=await this.listEvidencePayloadsByAsset(asset, limit); return payloads.map((payload)=>({ payload, score: evaluateEvidencePayloadQuality(payload, evaluatedAt) })); }
   async listEvidencePayloadsByEvidenceClassWithQuality(evidenceClass: string, limit?: number, evaluatedAt?: string) { const payloads=await this.listEvidencePayloadsByEvidenceClass(evidenceClass, limit); return payloads.map((payload)=>({ payload, score: evaluateEvidencePayloadQuality(payload, evaluatedAt) })); }
 

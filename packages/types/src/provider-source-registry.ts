@@ -20,7 +20,7 @@ export type ProviderCredentialRequirement = typeof PROVIDER_CREDENTIAL_REQUIREME
 export const PROVIDER_SOURCE_STATUSES = ['fixture_ready','dry_run_ready','live_blocked','not_started'] as const;
 export type ProviderSourceStatus = typeof PROVIDER_SOURCE_STATUSES[number];
 
-export type LaunchAsset = 'xau_usd'|'eur_usd'|'gbp_usd'|'usd_jpy'|'btc_usd'|'nasdaq_100'|'sp500'|'de30'|'dxy'|'vix';
+export type LaunchAsset = 'xau_usd'|'eur_usd'|'gbp_usd'|'usd_jpy'|'aud_usd'|'usd_chf'|'nzd_usd'|'usd_cad'|'btc_usd'|'nasdaq_100'|'sp500'|'de30'|'dxy'|'vix';
 
 export type ProviderCapabilityDescriptor = {
   capabilityKind: ProviderSourceCapabilityKind; evidenceTypeId: string; activationStage: ProviderActivationStage; fixtureReadiness: ProviderFixtureReadiness; dryRunSupported: boolean; liveActivationMode: ProviderLiveActivationMode;

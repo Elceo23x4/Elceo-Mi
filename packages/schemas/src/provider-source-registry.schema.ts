@@ -2,7 +2,7 @@ import type { ProviderAssetCoverageDescriptor, ProviderCapabilityDescriptor, Pro
 import { PROVIDER_ACTIVATION_STAGES, PROVIDER_SOURCE_CAPABILITY_KINDS, PROVIDER_CREDENTIAL_REQUIREMENTS, PROVIDER_FIXTURE_READINESS, PROVIDER_LIVE_ACTIVATION_MODES, PROVIDER_SOURCE_FAMILIES, PROVIDER_SOURCE_IDS, PROVIDER_SOURCE_STATUSES } from '@elceo/types';
 import { isEnumValue, isIsoDateString, isNonEmptyString, isObjectRecord, isStringArray, type SchemaValidationResult } from './validation-utils';
 
-const LAUNCH_ASSETS = ['xau_usd','eur_usd','gbp_usd','usd_jpy','btc_usd','nasdaq_100','sp500','de30','dxy','vix'] as const;
+const LAUNCH_ASSETS = ['xau_usd','eur_usd','gbp_usd','usd_jpy','aud_usd','usd_chf','nzd_usd','usd_cad','btc_usd','nasdaq_100','sp500','de30','dxy','vix'] as const;
 const SECRET_LIKE = /(api[_-]?key|client[_-]?secret|access[_-]?token|password)/i;
 const deterministic=(a:string[])=>a.every((v,i)=>{ if(i===0) return true; const prev=a[i-1]; return typeof prev==='string' && prev<=v; });
 

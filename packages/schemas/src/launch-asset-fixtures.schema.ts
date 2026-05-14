@@ -1,7 +1,7 @@
 import type { LaunchAssetFixtureAssetPack, LaunchAssetFixtureCoverageReport, LaunchAssetFixtureEvidenceItem, LaunchAssetFixtureExpectedOutput, LaunchAssetFixtureLibrary, LaunchAssetFixtureScenario } from '@elceo/types';
 import { LAUNCH_ASSET_FIXTURE_EXPECTED_CONFIDENCE_BANDS, LAUNCH_ASSET_FIXTURE_EXPECTED_PRESSURES, LAUNCH_ASSET_FIXTURE_REGIMES, LAUNCH_ASSET_FIXTURE_SCENARIO_KINDS, LAUNCH_ASSET_FIXTURE_SEVERITIES, PROVIDER_SOURCE_CAPABILITY_KINDS, PROVIDER_SOURCE_FAMILIES, PROVIDER_SOURCE_IDS } from '@elceo/types';
 import { isEnumValue, isIsoDateString, isNonEmptyString, isObjectRecord, isStringArray, type SchemaValidationResult } from './validation-utils';
-const ASSETS=['xau_usd','eur_usd','gbp_usd','usd_jpy','btc_usd','nasdaq_100','sp500','de30','dxy','vix'] as const;
+const ASSETS=['xau_usd','eur_usd','gbp_usd','usd_jpy','aud_usd','usd_chf','nzd_usd','usd_cad','btc_usd','nasdaq_100','sp500','de30','dxy','vix'] as const;
 const BAD=/(buy|sell|hold)/i; const SECRET=/(api[_-]?key|token|secret|password)/i;
 const sorted=(x:string[])=>x.every((v,i)=>i===0||(x[i-1]??'')<=v);
 export function validateLaunchAssetFixtureEvidenceItem(input:unknown,p=''):SchemaValidationResult<LaunchAssetFixtureEvidenceItem>{const e:string[]=[]; if(!isObjectRecord(input)) return {ok:false,errors:[`${p}evidence item object required`]}; for(const k of Object.keys(input)) if(SECRET.test(k)) e.push(`${p}${k} forbidden`);

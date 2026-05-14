@@ -18,6 +18,7 @@ export async function runProviderSourceRegistryTests(){
   assert.equal(listProviderSourcesByFamily('macro_official').length>0,true);
   assert.equal(getProviderSourceDescriptor('tiingo_market_data')?.sourceId,'tiingo_market_data');
   assert.equal(listProviderSourcesForAsset('xau_usd').length>0,true);
+  ['aud_usd','usd_chf','nzd_usd','usd_cad'].forEach((asset)=>assert.equal(listProviderSourcesForAsset(asset as any).length>0,true));
   const boundary = new CanonicalMarketIntelligenceBoundaryService(new MemoryMarketEvidenceRegistrySnapshotRepository(),new MemorySeoContentArchitectureSnapshotRepository());
   assert.equal(boundary.getProviderSourceRegistrySnapshot('2026-01-01T00:00:00.000Z').generatedAt,'2026-01-01T00:00:00.000Z');
   assert.equal(boundary.listProviderSourcesByFamily('crypto').length>0,true);

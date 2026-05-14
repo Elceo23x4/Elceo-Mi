@@ -8,7 +8,8 @@ describe('launch asset fixtures',()=>{
     const lib=getLaunchAssetFixtureLibrary();
     const valid=validateLaunchAssetFixtureLibrary(lib);
     assert.equal(valid.ok,true);
-    assert.equal(lib.assets.length,10);
+    assert.equal(lib.assets.length,14);
+    ['aud_usd','usd_chf','nzd_usd','usd_cad'].forEach((asset)=>assert.ok(lib.assets.some((p)=>p.asset===asset)));
     lib.assets.forEach((p)=>assert.ok(p.scenarios.length>=5));
     const cov=getLaunchAssetFixtureCoverageReport();
     assert.equal(cov.dxyComplete,true); assert.equal(cov.vixComplete,true);

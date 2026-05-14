@@ -73,3 +73,5 @@ export * from './official-macro-sources';
 export * from './news-extraction-filings';
 
 export * from './crypto-risk-liquidity';
+
+export * from './golden-scenario-reasoning';

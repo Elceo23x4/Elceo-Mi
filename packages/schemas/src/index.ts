@@ -71,3 +71,5 @@ export * from './official-macro-sources.schema';
 export * from './news-extraction-filings.schema';
 
 export * from './crypto-risk-liquidity.schema';
+
+export * from './golden-scenario-reasoning.schema';

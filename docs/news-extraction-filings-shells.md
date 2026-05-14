@@ -10,3 +10,4 @@ C6-A4 adds fixture/dry-run backend shells for news, extraction, SEC/EDGAR filing
 - C6-A5 will expand crypto/risk/liquidity shells.
 
 - C6-A5: Added crypto/risk/liquidity fixture shells (dry-run only, no live calls, no API keys; C6-A6 reserved for golden scenario tests).
+\n## C6-A6 update\nGolden scenario reasoning tests are fixture-driven and deterministic only (no live provider calls, no API keys). They prohibit recommendations and profit-language and serve backend reasoning validation (not financial advice). C6-A7 remains pending for calibration hardening.

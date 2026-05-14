@@ -24,3 +24,5 @@ Scope:
 
 Next:
 - C6-A4 continues with news/extraction/filings shells.
+
+- C6-A4: added fixture/dry-run news/extraction/filings shells (no live calls, no API keys, live-blocked by default; C6-A5 handles next expansion).

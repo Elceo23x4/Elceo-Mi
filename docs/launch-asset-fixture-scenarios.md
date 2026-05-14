@@ -19,3 +19,5 @@ This document defines the C6-A2 fixture-only scenario library for launch assets.
 - Added fixture/source coverage for Tier 1B major FX expansion assets: AUD/USD, USD/CHF, NZD/USD, USD/CAD.
 - Coverage remains fixture/dry-run only; no live API calls and no API keys connected.
 - Live activation remains blocked by default; C6-A4 continues with news/extraction/filings shells.
+
+- C6-A4: added fixture/dry-run news/extraction/filings shells (no live calls, no API keys, live-blocked by default; C6-A5 handles next expansion).

@@ -70,3 +70,4 @@ export * from './provider-source-registry';
 
 export * from './launch-asset-fixtures';
 export * from './official-macro-sources';
+export * from './news-extraction-filings';

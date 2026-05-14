@@ -24,6 +24,7 @@ import type { ScheduledIngestionRunRepository } from '../persistence/scheduled-i
 import { buildProviderActivationChecklist, getProviderSourceDescriptor, getProviderSourceRegistrySnapshot, listProviderSourceGaps, listProviderSourcesByFamily, listProviderSourcesForAsset } from '../provider-source-registry/index';
 import { buildFixtureEvidenceForScenario, buildFixtureExpectedOutput, getLaunchAssetFixtureAssetPack, getLaunchAssetFixtureCoverageReport, getLaunchAssetFixtureLibrary, getLaunchAssetFixtureScenario, listLaunchAssetFixtureScenarios } from '../launch-asset-fixtures/index';
 import { assertOfficialMacroSourceIdsInProviderSnapshot, getOfficialMacroAdapterReadiness, getOfficialMacroCoverageReport, getOfficialMacroFixturePayload, getOfficialMacroSourceDescriptor, getOfficialMacroSourceRegistry, listOfficialMacroFixturePayloads, listOfficialMacroReleaseDescriptors, listOfficialMacroSourcesByRegion, normalizeOfficialMacroFixturePayload } from '../official-macro-sources/index';
+import { getNewsExtractionAdapterReadiness, getNewsExtractionCoverageReport, getNewsExtractionFixturePayload, getNewsExtractionSourceDescriptor, getNewsExtractionSourceRegistry, listEtfFlowFixturePayloads, listFilingFixturePayloads, listNarrativeClusterFixturePayloads, listNewsExtractionFixturePayloads, listNewsExtractionSourcesByFamily, normalizeNewsExtractionFixturePayload } from '../news-extraction-filings/index';
 
 export type TiingoFixtureIngestionParams = { asset: TradingAssetCoverage; frequency?: string | null; requestedAt?: string | null };
 
@@ -82,6 +83,19 @@ export class CanonicalMarketIntelligenceBoundaryService {
   getOfficialMacroAdapterReadiness(sourceId: Parameters<typeof getOfficialMacroAdapterReadiness>[0]) { return getOfficialMacroAdapterReadiness(sourceId); }
   getOfficialMacroCoverageReport() { return getOfficialMacroCoverageReport(); }
   assertOfficialMacroSourceIdsInProviderSnapshot() { return assertOfficialMacroSourceIdsInProviderSnapshot(); }
+
+
+  getNewsExtractionSourceRegistry() { return getNewsExtractionSourceRegistry(); }
+  getNewsExtractionSourceDescriptor(sourceId: Parameters<typeof getNewsExtractionSourceDescriptor>[0]) { return getNewsExtractionSourceDescriptor(sourceId); }
+  listNewsExtractionSourcesByFamily(family: Parameters<typeof listNewsExtractionSourcesByFamily>[0]) { return listNewsExtractionSourcesByFamily(family); }
+  listNewsExtractionFixturePayloads(sourceId?: Parameters<typeof listNewsExtractionFixturePayloads>[0]) { return listNewsExtractionFixturePayloads(sourceId); }
+  getNewsExtractionFixturePayload(sourceId: Parameters<typeof getNewsExtractionFixturePayload>[0], fixtureId: Parameters<typeof getNewsExtractionFixturePayload>[1]) { return getNewsExtractionFixturePayload(sourceId, fixtureId); }
+  normalizeNewsExtractionFixturePayload(payload: Parameters<typeof normalizeNewsExtractionFixturePayload>[0]) { return normalizeNewsExtractionFixturePayload(payload); }
+  listFilingFixturePayloads(asset?: Parameters<typeof listFilingFixturePayloads>[0]) { return listFilingFixturePayloads(asset); }
+  listEtfFlowFixturePayloads(asset?: Parameters<typeof listEtfFlowFixturePayloads>[0]) { return listEtfFlowFixturePayloads(asset); }
+  listNarrativeClusterFixturePayloads(asset?: Parameters<typeof listNarrativeClusterFixturePayloads>[0]) { return listNarrativeClusterFixturePayloads(asset); }
+  getNewsExtractionAdapterReadiness(sourceId: Parameters<typeof getNewsExtractionAdapterReadiness>[0]) { return getNewsExtractionAdapterReadiness(sourceId); }
+  getNewsExtractionCoverageReport() { return getNewsExtractionCoverageReport(); }
 
   getLaunchAssetFixtureLibrary() { return getLaunchAssetFixtureLibrary(); }
   getLaunchAssetFixtureAssetPack(asset: Parameters<typeof getLaunchAssetFixtureAssetPack>[0]) { return getLaunchAssetFixtureAssetPack(asset); }

@@ -291,3 +291,7 @@ Added protected read-only admin query surfaces under /api/admin/market-evidence/
 - Required sequence before production deploy: staging smoke + staging attack drill.
 - Required sequence after production deploy: production smoke.
 - Public/frontend launch remains blocked until security sign-off is complete.
+
+## C6-A0 backend foundation audit update (2026-05-13)
+- Added `docs/backend-foundation-completion-map.md` as the canonical gap-audit and completion-sequencing map for pre-key/pre-hosting backend foundation closure.
+- Status remains fixture-first and live-blocked by default; no provider activation was performed in C6-A0.

@@ -1,0 +1,147 @@
+# C6-A0 — Backend Foundation Gap Audit and Completion Map
+
+## 1) Executive summary
+This audit confirms ELCEO has a strong fixture-first backend foundation across provider adapter shells, normalized evidence contracts, scheduled ingestion dry-runs, persistence, admin/internal inspection surfaces, and deterministic reasoning pipelines. Live provider activation is intentionally blocked and must remain blocked in this batch. The remaining completion work is primarily coverage closure, fixture breadth expansion, golden scenario depth, admin ergonomics, and activation/runbook readiness before key/hosting/live toggles.
+
+## 2) Current implemented foundations
+- Fixture-first provider-source adapter architecture in `services/reasoning/src/provider-sources/*` with contracts, fixtures, normalizers, and adapter shells.
+- Normalized evidence schemas and payload validation in `packages/types` + `packages/schemas`.
+- Market evidence persistence, replay/query, and scheduled ingestion repositories in `services/reasoning/src/persistence/*`.
+- Evidence quality scoring, weighting, and market cognition assembly in `services/reasoning/src/evidence-quality`, `pipeline`, and `market-cognition`.
+- Admin/internal API surfaces for provider responses, cognition outputs, scheduled-ingestion controls, and SEO feed/sitemap backend routes.
+- Security/release gating scripts and migration/readiness checks in `scripts/*`.
+
+## 3) Missing implementation areas
+- Full source universe closure (many official institutions and news/filings providers are still shell-level or absent in provider-sources runtime wiring).
+- Launch-asset fixture completeness by evidence class is uneven (core assets present, but per-asset class breadth varies).
+- Golden scenario coverage for cross-asset multi-regime reasoning needs deeper deterministic regression packs.
+- Scheduled-ingestion live deployment and cron orchestration are intentionally deferred.
+- Provider live activation and quota/error-budget runtime calibration are deferred.
+
+## 4) Fixture/dry-run readiness matrix
+| Area | Status | Notes |
+|---|---|---|
+| Provider adapters | Partial-complete | Broad shell coverage with deterministic fixtures; not all target sources represented as first-class adapters |
+| Ingestion dry-run | Complete (fixture) | Admin dry-run + replay routes present; live path blocked |
+| Persistence replay | Complete | Request/response + normalized payload query paths exist |
+| Runtime reasoning assembly | Complete | Deterministic fixture-first assembly supported |
+
+## 5) Provider/source readiness matrix
+Legend: **Ready-fixture**, **Shell-only/partial**, **Missing**.
+
+| Source | Readiness |
+|---|---|
+| Tiingo | Ready-fixture |
+| Exchange/public market prices | Shell-only/partial |
+| Index/futures source shells | Shell-only/partial |
+| FRED | Shell-only/partial |
+| US Treasury | Ready-fixture |
+| Federal Reserve | Shell-only/partial |
+| ECB | Shell-only/partial |
+| BoE | Shell-only/partial |
+| BoJ | Shell-only/partial |
+| Eurostat | Missing |
+| BLS | Missing |
+| BEA | Missing |
+| Census | Missing |
+| ONS | Missing |
+| Destatis | Missing |
+| Ifo | Missing |
+| ZEW | Missing |
+| ISM | Shell-only/partial |
+| CFTC COT | Ready-fixture |
+| Marketaux | Shell-only/partial |
+| NewsAPI | Shell-only/partial |
+| GDELT | Shell-only/partial |
+| Finnhub | Shell-only/partial |
+| Firecrawl | Shell-only/partial |
+| SEC/EDGAR | Missing |
+| ETF flows/holdings shell | Missing |
+| Earnings/filings shell | Shell-only/partial |
+| Crypto public exchange | Shell-only/partial |
+| Public on-chain metrics | Missing |
+| Derivatives/funding/OI proxy shell | Shell-only/partial |
+| Volatility metric source | Ready-fixture |
+| Credit stress source | Ready-fixture |
+| Liquidity condition source | Ready-fixture |
+| Financial conditions source | Ready-fixture |
+
+## 6) Evidence schema readiness matrix
+- **Implemented:** market evidence, normalized provider payloads, quality scoring, weighting snapshots, cognition signals, scheduled-ingestion/runtime schemas.
+- **Gap:** provider-specific schema packs for every deferred institution/source above.
+
+## 7) Launch asset fixture readiness matrix
+| Asset | Fixture readiness |
+|---|---|
+| XAU/USD | Ready-fixture |
+| EUR/USD | Ready-fixture |
+| GBP/USD | Ready-fixture |
+| USD/JPY | Ready-fixture |
+| BTC/USD | Ready-fixture |
+| Nasdaq 100 | Ready-fixture |
+| S&P 500 | Ready-fixture |
+| DE30 | Ready-fixture |
+| DXY | Partial |
+| VIX | Partial |
+
+## 8) Golden scenario test readiness matrix
+- **Present:** reasoning/runtime tests and route runtime checks.
+- **Partial:** scenario packs for regime transitions, contradictory evidence bursts, stale-evidence fallback behavior, and asset-specific confidence drift guardrails.
+
+## 9) Scheduled ingestion readiness matrix
+- Policy contracts and retry/staleness policy modules are implemented.
+- Dry-run admin controls and run history querying are implemented.
+- Live scheduler deployment remains intentionally deferred.
+
+## 10) Admin/internal surface readiness matrix
+- Admin routes exist for provider response inspection, scheduled ingestion run/policy/replay/dry-run, cognition outputs, and SEO feed/sitemap.
+- Internal market-evidence fixture ingest route exists.
+- Gap: richer operational drill-down dashboards remain backend-accessible but not fully operationalized for live SRE workflows.
+
+## 11) Frontend data contract readiness matrix
+- Type/schema contracts are present in `packages/types` and `packages/schemas`.
+- App API route surface covers admin/internal/read models required for integration.
+- Gap: consolidated mock payload packs for every launch asset + evidence class combination.
+
+## 12) Observability/security/logging readiness matrix
+- Security gate, infra policy check, release gate, migration gate, and smoke/attack-drill scripts are present.
+- Security runtime schema and audit/dependency checks exist.
+- Gap: live-provider telemetry/error-budget dashboards can only finalize after activation.
+
+## 13) Env/provider activation readiness matrix
+- Live activation docs and schemas exist (`provider-live-readiness`, secrets/config checklist).
+- Env templates/checklists exist but must remain non-secret and non-live in this batch.
+- Gap: per-provider staged key validation and quota guardrail verification.
+
+## 14) SEO/content feed readiness matrix
+- Backend SEO feed/sitemap routes and schemas are implemented.
+- Content feed backend is fixture-compatible.
+- Gap: full programmatic content runtime tuning and public release sequence remains deferred.
+
+## 15) Explicit skipped item
+**Legal/compliance copy intentionally deferred** for C6-A0.
+
+## 16) Recommended implementation sequence (C6-A1 to C6-A12)
+- **C6-A1:** Provider/source gap closure plan finalization + canonical source registry completion.
+- **C6-A2:** Launch-asset fixture expansion for DXY/VIX and under-covered evidence classes.
+- **C6-A3:** Official macro provider schema and adapter shell completion (Eurostat/BLS/BEA/Census/ONS/Destatis/Ifo/ZEW/ISM depth).
+- **C6-A4:** News/extraction/filings shell completion (Marketaux/NewsAPI/GDELT/Finnhub/Firecrawl/EDGAR/ETF/earnings).
+- **C6-A5:** Crypto/risk/liquidity source shell completion (on-chain + derivatives proxy formalization).
+- **C6-A6:** Golden scenario reasoning test pack v1 (asset + regime matrix).
+- **C6-A7:** Evidence quality/weighting/cognition calibration scenario hardening.
+- **C6-A8:** Scheduled ingestion dry-run matrix completion + deterministic replay packs.
+- **C6-A9:** Admin/internal inspection surface completion and operator workflow docs.
+- **C6-A10:** Frontend contract + mock payload completeness pack.
+- **C6-A11:** Observability/audit/logging live-readiness instrumentation closure (still fixture mode).
+- **C6-A12:** Final backend readiness report refresh and go/no-go pre-activation review.
+
+## 17) Definition of done for “backend/product foundation complete”
+Backend/product foundation is complete when all launch assets have fixture-complete evidence coverage, all required provider/source shells and schemas are in place, scheduled ingestion dry-runs and replay are deterministic, golden reasoning scenarios pass, admin/internal inspection surfaces are operational, contracts/mocks are integration-ready, and readiness docs accurately separate fixture-ready vs live-blocked states.
+
+## 18) What remains after API keys and hosting
+After this foundation phase, remaining work should primarily be:
+- API key connection and staged provider activation.
+- Hosting/staging rollout and live scheduler enablement.
+- End-to-end live ingestion verification and operational tuning.
+- Frontend integration polish and UI completion.
+- Full live-system validation and release hardening.

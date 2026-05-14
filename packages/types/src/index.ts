@@ -67,3 +67,5 @@ export * from './provider-live-readiness';
 export * from './market-evidence-ingestion-schedule';
 
 export * from './provider-source-registry';
+
+export * from './launch-asset-fixtures';

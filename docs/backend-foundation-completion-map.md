@@ -146,3 +146,6 @@ After this foundation phase, remaining work should primarily be:
 - Frontend integration polish and UI completion.
 - Full live-system validation and release hardening.
 \n## C6-A1 update (2026-05-14)\n- Added canonical provider/source registry snapshot + validators + boundary methods.\n- Registry is fixture/dry-run readiness only; no live calls and no API keys.\n- Live activation remains blocked-by-default for every source.\n- C6-A2 remains the next step for launch-asset fixture expansion.\n
+
+## C6-A2 fixture scenario library
+C6-A2 adds deterministic launch-asset fixture scenarios only, with no live provider calls and no API keys. These scenarios are used for reasoning tests and mock contracts. C6-A3 will expand official macro adapter/schema shells.

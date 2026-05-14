@@ -22,3 +22,5 @@ export * from './provider-live-readiness';
 export * from './scheduled-ingestion';
 
 export * from './provider-source-registry';
+
+export * from './launch-asset-fixtures';

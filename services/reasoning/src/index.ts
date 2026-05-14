@@ -20,3 +20,5 @@ export * from './market-cognition/index';
 export * from './provider-live-readiness';
 
 export * from './scheduled-ingestion';
+
+export * from './provider-source-registry';

@@ -1,0 +1,52 @@
+import type { LaunchAsset, ProviderSourceActivationChecklistItem, ProviderSourceDescriptor, ProviderSourceGap, ProviderSourceId, ProviderSourceRegistrySnapshot, ProviderSourceFamily, ProviderAssetCoverageDescriptor } from '@elceo/types';
+import { PROVIDER_SOURCE_IDS } from '@elceo/types';
+
+const launchAssets: LaunchAsset[]=['xau_usd','eur_usd','gbp_usd','usd_jpy','btc_usd','nasdaq_100','sp500','de30','dxy','vix'];
+const src=(x:ProviderSourceDescriptor)=>x;
+export const providerSources: ProviderSourceDescriptor[] = [
+src({sourceId:'tiingo_market_data',family:'market_data',displayName:'Tiingo',status:'fixture_ready',activationStage:'fixture_ready',fixtureReadiness:'ready',liveActivationMode:'blocked_by_default',credentialRequirement:'api_key_required',capabilities:[{capabilityKind:'market_price',evidenceTypeId:'market_price_history',activationStage:'fixture_ready',fixtureReadiness:'ready',dryRunSupported:true,liveActivationMode:'blocked_by_default'}],assets:['btc_usd','de30','eur_usd','gbp_usd','nasdaq_100','sp500','usd_jpy','xau_usd'],notes:'Fixture-only adapter in place; live remains blocked.'}),
+src({sourceId:'public_market_price_exchange',family:'market_data',displayName:'Public exchange market prices',status:'dry_run_ready',activationStage:'dry_run_ready',fixtureReadiness:'partial',liveActivationMode:'blocked_by_default',credentialRequirement:'none',capabilities:[{capabilityKind:'market_price',evidenceTypeId:'public_exchange_prices',activationStage:'dry_run_ready',fixtureReadiness:'partial',dryRunSupported:true,liveActivationMode:'blocked_by_default'}],assets:['btc_usd','eur_usd','gbp_usd','usd_jpy'],notes:'Dry-run orchestration standard only.'}),
+src({sourceId:'index_futures_shell',family:'market_data',displayName:'Index/futures source shell',status:'not_started',activationStage:'not_started',fixtureReadiness:'none',liveActivationMode:'blocked_by_default',credentialRequirement:'unknown',capabilities:[{capabilityKind:'index_futures_proxy',evidenceTypeId:'index_futures_proxy',activationStage:'not_started',fixtureReadiness:'none',dryRunSupported:false,liveActivationMode:'blocked_by_default'}],assets:['dxy','nasdaq_100','sp500','vix'],notes:'Shell only; fixture and dry-run pending.'}),
+];
+const add=(id:ProviderSourceId,family:ProviderSourceFamily,name:string,assets:LaunchAsset[])=>providerSources.push(src({sourceId:id,family,displayName:name,status:'not_started',activationStage:'not_started',fixtureReadiness:'none',liveActivationMode:'blocked_by_default',credentialRequirement:'unknown',capabilities:[{capabilityKind:'macro_timeseries',evidenceTypeId:id,activationStage:'not_started',fixtureReadiness:'none',dryRunSupported:false,liveActivationMode:'blocked_by_default'}],assets:[...assets].sort(),notes:'Registry-only placeholder.'}));
+['fred_macro','us_treasury_official','federal_reserve_official','ecb_official','boe_official','boj_official','eurostat_official','bls_official','bea_official','census_official','ons_official','destatis_official','ifo_shell','zew_shell','ism_shell'].forEach((id)=>add(id as ProviderSourceId,'macro_official',id,['de30','dxy','eur_usd','gbp_usd','nasdaq_100','sp500','usd_jpy','xau_usd']));
+add('cftc_cot','positioning','CFTC COT',['btc_usd','eur_usd','gbp_usd','usd_jpy','xau_usd']);
+['marketaux_news','newsapi_news','gdelt_news','finnhub_news','firecrawl_extraction'].forEach((id)=>add(id as ProviderSourceId,'news_extraction',id,launchAssets));
+['sec_edgar','etf_flows_shell','earnings_filings_shell'].forEach((id)=>add(id as ProviderSourceId,'filings_company_etf',id,['btc_usd','nasdaq_100','sp500','xau_usd']));
+['crypto_exchange_public','crypto_onchain_public','crypto_derivatives_shell'].forEach((id)=>add(id as ProviderSourceId,'crypto',id,['btc_usd']));
+['volatility_metric_source','credit_stress_source','liquidity_condition_source','financial_conditions_source'].forEach((id)=>add(id as ProviderSourceId,'risk_liquidity',id,['btc_usd','de30','dxy','nasdaq_100','sp500','vix','xau_usd']));
+
+providerSources.sort((a,b)=>a.sourceId.localeCompare(b.sourceId));
+
+const coverage = (asset:LaunchAsset,sourceIds:ProviderSourceId[],themes:string[]): ProviderAssetCoverageDescriptor => ({asset,sourceIds:[...sourceIds].sort(),themes:[...themes]});
+const launchAssetCoverage: ProviderAssetCoverageDescriptor[] = [
+coverage('xau_usd',['tiingo_market_data','us_treasury_official','federal_reserve_official','cftc_cot','etf_flows_shell','marketaux_news'],['market_price','real_yields','fed_policy','usd_context','cot_gold','etf_holdings','safe_haven_news']),
+coverage('eur_usd',['tiingo_market_data','ecb_official','eurostat_official','destatis_official','federal_reserve_official','cftc_cot','newsapi_news'],['ecb_policy','euro_macro','german_macro','fed_us','cot_eur','yield_differentials','political_news']),
+coverage('gbp_usd',['tiingo_market_data','boe_official','ons_official','federal_reserve_official','cftc_cot','newsapi_news'],['boe_policy','uk_macro','fed_us','gilt_context','cot_gbp']),
+coverage('usd_jpy',['tiingo_market_data','boj_official','us_treasury_official','federal_reserve_official','cftc_cot','marketaux_news'],['boj_policy','japan_macro','us_yields','fed_policy','cot_yen','intervention_risk']),
+coverage('btc_usd',['tiingo_market_data','crypto_exchange_public','crypto_onchain_public','crypto_derivatives_shell','etf_flows_shell','finnhub_news','liquidity_condition_source'],['market_price','exchange_data','onchain_metrics','funding_oi','etf_regulatory_news','risk_liquidity']),
+coverage('nasdaq_100',['tiingo_market_data','index_futures_shell','federal_reserve_official','credit_stress_source','volatility_metric_source','earnings_filings_shell','etf_flows_shell'],['index_prices','fed_yields_inflation','credit_stress','volatility','earnings','etf_flows','breadth']),
+coverage('sp500',['tiingo_market_data','index_futures_shell','federal_reserve_official','credit_stress_source','volatility_metric_source','earnings_filings_shell','etf_flows_shell'],['index_prices','fed_yields_inflation','credit_stress','volatility','earnings','etf_flows','risk_sentiment']),
+coverage('de30',['tiingo_market_data','ecb_official','destatis_official','ifo_shell','zew_shell','newsapi_news','credit_stress_source'],['german_macro','ecb_policy','euro_pmi','energy_industrial_news','bund_yields','euro_credit']),
+coverage('dxy',['index_futures_shell','federal_reserve_official','bls_official','bea_official','liquidity_condition_source','financial_conditions_source'],['usd_context','fed_policy','us_macro','yield_differentials','global_risk']),
+coverage('vix',['volatility_metric_source','index_futures_shell','credit_stress_source','marketaux_news'],['volatility_metric','options_stress','equity_stress','credit_stress','macro_risk_events'])
+];
+
+const baseChecklist=(sourceId:ProviderSourceId):ProviderSourceActivationChecklistItem[]=>[
+{checklistItemId:`${sourceId}:spec`,sourceId,order:1,description:'Registry descriptor verified',required:true,done:true,blocked:false},
+{checklistItemId:`${sourceId}:fixture`,sourceId,order:2,description:'Fixture coverage confirmed',required:true,done:false,blocked:false},
+{checklistItemId:`${sourceId}:dryrun`,sourceId,order:3,description:'Dry-run adapter path validated',required:true,done:false,blocked:false},
+{checklistItemId:`${sourceId}:live_gate`,sourceId,order:4,description:'Live activation remains blocked-by-default',required:true,done:true,blocked:false}
+];
+
+export const getDefaultProviderSourceRegistry=():ProviderSourceDescriptor[]=>providerSources.map((x)=>({...x,capabilities:x.capabilities.map((c)=>({...c})),assets:[...x.assets]}));
+export const getProviderSourceRegistrySnapshot=(asOfIso?:string):ProviderSourceRegistrySnapshot=>{
+const gaps:ProviderSourceGap[]=providerSources.filter((x)=>x.status!=='fixture_ready').map((x)=>({gapId:`gap:${x.sourceId}`,sourceId:x.sourceId,asset:'all',severity:x.status==='not_started'?'high':'medium',reason:x.status==='not_started'?'Implementation not started':'Fixture/dry-run incomplete',blockedBy:x.status==='not_started'?'integration_not_started':'fixture_missing'}));
+const activationChecklistBySource = Object.fromEntries(PROVIDER_SOURCE_IDS.map((id)=>[id,baseChecklist(id)])) as ProviderSourceRegistrySnapshot['activationChecklistBySource'];
+return {generatedAt:asOfIso ?? new Date().toISOString(),sources:getDefaultProviderSourceRegistry(),launchAssetCoverage:[...launchAssetCoverage],gaps,activationChecklistBySource};
+};
+export const listProviderSourcesByFamily=(family:ProviderSourceFamily)=>getDefaultProviderSourceRegistry().filter((x)=>x.family===family);
+export const getProviderSourceDescriptor=(sourceId:ProviderSourceId)=>getDefaultProviderSourceRegistry().find((x)=>x.sourceId===sourceId)??null;
+export const listProviderSourcesForAsset=(asset:LaunchAsset)=>{const row=launchAssetCoverage.find((x)=>x.asset===asset); return row?row.sourceIds.map((id)=>getProviderSourceDescriptor(id as ProviderSourceId)).filter(Boolean) as ProviderSourceDescriptor[]:[];};
+export const listProviderSourceGaps=()=>getProviderSourceRegistrySnapshot('2026-01-01T00:00:00.000Z').gaps;
+export const buildProviderActivationChecklist=(sourceId:ProviderSourceId)=>baseChecklist(sourceId);

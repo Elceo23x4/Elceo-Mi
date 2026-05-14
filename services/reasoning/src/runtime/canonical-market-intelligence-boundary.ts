@@ -21,6 +21,7 @@ import { buildSeoContentFeedAssemblyReport as buildSeoFeedReport, buildSeoConten
 import { getSeoContentArchitectureSnapshot, listSeoPagesForAsset, listSeoPagesForEvidenceClass } from '../seo-content/index';
 import { ScheduledIngestionService, ScheduledIngestionQueryService, getScheduledIngestionPolicySnapshot, getScheduledIngestionRunReplay } from '../scheduled-ingestion/index';
 import type { ScheduledIngestionRunRepository } from '../persistence/scheduled-ingestion-repository';
+import { buildProviderActivationChecklist, getProviderSourceDescriptor, getProviderSourceRegistrySnapshot, listProviderSourceGaps, listProviderSourcesByFamily, listProviderSourcesForAsset } from '../provider-source-registry/index';
 
 export type TiingoFixtureIngestionParams = { asset: TradingAssetCoverage; frequency?: string | null; requestedAt?: string | null };
 
@@ -61,6 +62,14 @@ export class CanonicalMarketIntelligenceBoundaryService {
   listEvidencePayloadsByEvidenceType(evidenceTypeId: string, limit?: number) { if (!this.query) throw new Error('missing_ingestion_repositories'); return this.query.listEvidencePayloadsByEvidenceType(evidenceTypeId, limit); }
   getNormalizedMarketEvidencePayloadReplayById(payloadId: string) { if (!this.replay) throw new Error('missing_ingestion_repositories'); return this.replay.getNormalizedMarketEvidencePayloadReplayById(payloadId); }
   getTiingoProviderHealth(config?: TiingoRuntimeConfig) { return getTiingoProviderHealth(config); }
+
+  getProviderSourceRegistrySnapshot(asOfIso?: string) { return getProviderSourceRegistrySnapshot(asOfIso); }
+  listProviderSourcesByFamily(family: Parameters<typeof listProviderSourcesByFamily>[0]) { return listProviderSourcesByFamily(family); }
+  listProviderSourcesForAsset(asset: Parameters<typeof listProviderSourcesForAsset>[0]) { return listProviderSourcesForAsset(asset); }
+  getProviderSourceDescriptor(sourceId: Parameters<typeof getProviderSourceDescriptor>[0]) { return getProviderSourceDescriptor(sourceId); }
+  listProviderSourceGaps() { return listProviderSourceGaps(); }
+  buildProviderActivationChecklist(sourceId: Parameters<typeof buildProviderActivationChecklist>[0]) { return buildProviderActivationChecklist(sourceId); }
+
   getProviderLiveActivationPolicy(providerId: string, environment: 'local'|'staging'|'production') { return getProviderLiveActivationPolicy(providerId, environment); }
   getProviderLiveReadinessSnapshot(environment: 'local'|'staging'|'production', config?: RuntimeReadinessConfig) { return getProviderLiveReadinessSnapshot(environment, config); }
   buildProviderLiveSmokePlan(providerId: string, environment: 'local'|'staging'|'production', config?: RuntimeReadinessConfig) { return buildProviderLiveSmokePlan(providerId, environment, config); }

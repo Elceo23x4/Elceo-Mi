@@ -1,3 +1,4 @@
+import { assertGoldenScenarioResult, getGoldenScenarioCoverageReport, getGoldenScenarioDefinition, getGoldenScenarioDefinitions, listGoldenScenariosByAsset, listGoldenScenariosByFamily, runAllGoldenScenarios, runGoldenScenario } from '../golden-scenario-reasoning/index';
 import { generateAndPersistMarketEvidenceRegistrySnapshot } from '../evidence-registry/snapshot-service';
 import { getLatestMarketEvidenceRegistrySnapshot, listMarketEvidenceRegistrySnapshots } from '../evidence-registry/query-service';
 import { getMarketEvidenceRegistryReplayById } from '../evidence-registry/replay';
@@ -119,6 +120,15 @@ export class CanonicalMarketIntelligenceBoundaryService {
   listLaunchAssetFixtureScenarios(asset?: Parameters<typeof listLaunchAssetFixtureScenarios>[0]) { return listLaunchAssetFixtureScenarios(asset); }
   getLaunchAssetFixtureScenario(scenarioId: Parameters<typeof getLaunchAssetFixtureScenario>[0]) { return getLaunchAssetFixtureScenario(scenarioId); }
   getLaunchAssetFixtureCoverageReport() { return getLaunchAssetFixtureCoverageReport(); }
+
+  getGoldenScenarioDefinitions() { return getGoldenScenarioDefinitions(); }
+  getGoldenScenarioDefinition(scenarioId: Parameters<typeof getGoldenScenarioDefinition>[0]) { return getGoldenScenarioDefinition(scenarioId); }
+  listGoldenScenariosByAsset(asset: Parameters<typeof listGoldenScenariosByAsset>[0]) { return listGoldenScenariosByAsset(asset); }
+  listGoldenScenariosByFamily(family: Parameters<typeof listGoldenScenariosByFamily>[0]) { return listGoldenScenariosByFamily(family); }
+  runGoldenScenario(scenarioId: Parameters<typeof runGoldenScenario>[0]) { return runGoldenScenario(scenarioId); }
+  runAllGoldenScenarios() { return runAllGoldenScenarios(); }
+  assertGoldenScenarioResult(scenarioId: Parameters<typeof assertGoldenScenarioResult>[0]) { return assertGoldenScenarioResult(scenarioId); }
+  getGoldenScenarioCoverageReport() { return getGoldenScenarioCoverageReport(); }
   buildFixtureEvidenceForScenario(scenarioId: Parameters<typeof buildFixtureEvidenceForScenario>[0]) { return buildFixtureEvidenceForScenario(scenarioId); }
   buildFixtureExpectedOutput(scenarioId: Parameters<typeof buildFixtureExpectedOutput>[0]) { return buildFixtureExpectedOutput(scenarioId); }
 

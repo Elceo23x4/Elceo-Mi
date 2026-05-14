@@ -45,6 +45,7 @@ import { runScheduledIngestionTests } from './scheduled-ingestion.test.js';
 import { runProviderSourceRegistryTests } from './provider-source-registry.test.js';
 import { runNewsExtractionFilingsTests } from './news-extraction-filings.test.js';
 import { runCryptoRiskLiquidityTests } from './crypto-risk-liquidity.test.js';
+import './golden-scenario-reasoning.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();

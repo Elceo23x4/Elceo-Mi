@@ -23,3 +23,4 @@ This document defines the C6-A2 fixture-only scenario library for launch assets.
 - C6-A4: added fixture/dry-run news/extraction/filings shells (no live calls, no API keys, live-blocked by default; C6-A5 handles next expansion).
 
 - C6-A5: Added crypto/risk/liquidity fixture shells (dry-run only, no live calls, no API keys; C6-A6 reserved for golden scenario tests).
+\n## C6-A6 update\nGolden scenario reasoning tests are fixture-driven and deterministic only (no live provider calls, no API keys). They prohibit recommendations and profit-language and serve backend reasoning validation (not financial advice). C6-A7 remains pending for calibration hardening.

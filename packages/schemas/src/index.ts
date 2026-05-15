@@ -81,3 +81,5 @@ export * from './commercial-entitlements.schema';
 export * from './super-admin-commercial-controls.schema';
 
 export * from './korapay-payment-readiness.schema';
+
+export * from './super-admin-metrics.schema';

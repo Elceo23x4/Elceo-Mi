@@ -79,3 +79,5 @@ export * from './frontend-contracts.schema';
 export * from './commercial-entitlements.schema';
 
 export * from './super-admin-commercial-controls.schema';
+
+export * from './korapay-payment-readiness.schema';

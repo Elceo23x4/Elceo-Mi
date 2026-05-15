@@ -169,3 +169,8 @@ C6-A2 adds deterministic launch-asset fixture scenarios only, with no live provi
 
 ## C6-A7 update
 Deterministic fixture-only cognition calibration hardening added (no live providers, no API keys, no financial advice output). C6-A8 remains pending for scheduled-ingestion fixture/replay completion.
+
+## C6-A8A update (2026-05-14)
+- Initial C6-A8 implementation attempt surfaced that scheduled-ingestion contracts/types already existed and duplicate additions caused type/export collisions.
+- A dedicated existing-contract audit and safe extension plan was completed before resuming C6-A8 implementation.
+- No live providers were activated, no API keys were added, and C6-A8 proper remains pending additive extension work only.

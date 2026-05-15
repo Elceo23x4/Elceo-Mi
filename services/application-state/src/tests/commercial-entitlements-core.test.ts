@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import { checkCommercialPaymentReadiness, evaluateCommercialFeatureAccess, getCommercialPlanCatalog, getFocusPlanDescriptor, getKickOffTrialDescriptor } from '../commercial-entitlements/index';
+
+export async function runCommercialEntitlementsCoreTests(): Promise<void> {
+  const catalog=getCommercialPlanCatalog();
+  assert.equal(catalog.plans[0].planCode,'kick_off'); assert.equal(catalog.plans[1].planCode,'focus_plan');
+  assert.equal(getKickOffTrialDescriptor().trialDurationDays,3);
+  const focus=getFocusPlanDescriptor(); assert.equal(focus.monthlyPrice.amount,70); assert.equal(focus.monthlyPrice.currency,'USD');
+  assert.equal(focus.quarterlyPrice.status,'pending_price_config'); assert.equal(focus.yearlyPrice.status,'pending_price_config');
+
+  const activeTrial={userId:'u1',nowIso:'2026-05-15T00:00:00.000Z',trialStartedAt:'2026-05-14T00:00:00.000Z',activePlanCode:'kick_off' as const,subscriptionActive:false,socialIdentifiers:[]};
+  for (const f of ['dashboard.chart','dashboard.evidence_score','dashboard.macro_headlines','journal.page'] as const){ assert.equal(evaluateCommercialFeatureAccess({snapshot:activeTrial,featureKey:f}).decision,'allow'); }
+  assert.equal(evaluateCommercialFeatureAccess({snapshot:activeTrial,featureKey:'premium.full_access'}).reason,'feature_not_in_trial_allowlist');
+
+  const expired={...activeTrial,trialStartedAt:'2026-05-10T00:00:00.000Z'};
+  assert.equal(evaluateCommercialFeatureAccess({snapshot:expired,featureKey:'dashboard.chart'}).status,'subscription_required');
+
+  const focusActive={...activeTrial,activePlanCode:'focus_plan' as const,subscriptionActive:true,trialStartedAt:null};
+  assert.equal(evaluateCommercialFeatureAccess({snapshot:focusActive,featureKey:'premium.full_access'}).decision,'allow');
+  const focusInactive={...focusActive,subscriptionActive:false};
+  assert.equal(evaluateCommercialFeatureAccess({snapshot:focusInactive,featureKey:'premium.full_access'}).decision,'deny');
+
+  assert.equal(checkCommercialPaymentReadiness({identifiers:[]}).status,'blocked');
+  assert.equal(checkCommercialPaymentReadiness({identifiers:[{kind:'linkedin_address',value:'linkedin.com/in/user'}]}).status,'eligible');
+  assert.equal(checkCommercialPaymentReadiness({identifiers:[{kind:'telegram_id',value:'@user'}]}).status,'eligible');
+  assert.equal(checkCommercialPaymentReadiness({identifiers:[{kind:'x_username',value:'@userx'}]}).status,'eligible');
+  assert.equal(checkCommercialPaymentReadiness({identifiers:[{kind:'x_username',value:'<script>'}]}).status,'blocked');
+}

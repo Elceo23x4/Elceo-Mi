@@ -1,0 +1,25 @@
+export type KoraPayActivationStatus = 'not_activated' | 'blocked_until_keys_configured' | 'live_activation_required';
+export type KoraPayEnvironmentMode = 'fixture' | 'sandbox_template' | 'live_template';
+export type KoraPayCheckoutReadinessStatus = 'ready_for_draft' | 'blocked';
+export type KoraPayWebhookVerificationStatus = 'verified' | 'failed' | 'skipped_fixture_only' | 'live_config_missing';
+export type KoraPayPaymentEventKind = 'payment_success' | 'payment_failed' | 'subscription_payment_success' | 'subscription_payment_failed' | 'refund_or_reversal' | 'unknown_event';
+export type KoraPayNormalizedPaymentStatus = 'succeeded' | 'failed' | 'reversed' | 'unknown';
+export type KoraPaySubscriptionInterval = 'monthly' | 'quarterly' | 'yearly';
+export type KoraPayEntitlementGrantStatus = 'grant_focus_plan' | 'block' | 'ignore' | 'require_manual_review';
+export type KoraPayProviderCapability = 'checkout_draft' | 'webhook_fixture_verification' | 'event_normalization' | 'entitlement_decision' | 'idempotency_key_derivation';
+export type KoraPayWebhookFailureReason = 'invalid_signature' | 'missing_signature_strategy' | 'fixture_verification_only' | 'duplicate_event' | 'malformed_payload' | 'missing_required_fields';
+
+export type KoraPayProviderDescriptor = { provider: 'korapay'; activationStatus: KoraPayActivationStatus; capabilities: KoraPayProviderCapability[]; liveActivationRequired: true; notes: string[] };
+export type KoraPayEnvironmentTemplate = { provider: 'korapay'; mode: KoraPayEnvironmentMode; publicKeyTemplate: string; secretKeyTemplate: string; webhookSecretTemplate: string; checkoutBaseUrlTemplate: string; liveActivationRequired: true };
+export type KoraPayCheckoutReadinessRequest = { userId: string; planCode: 'focus_plan'; billingInterval: KoraPaySubscriptionInterval; socialIdentifierReady: boolean; socialIdentifiers: Array<{ kind: 'linkedin_address' | 'telegram_id' | 'x_username'; value: string }>; nowIso: string };
+export type KoraPayCheckoutSessionDraft = { provider: 'korapay'; userId: string; planCode: 'focus_plan'; billingInterval: KoraPaySubscriptionInterval; amount: number | null; currency: 'USD' | null; referenceDraft: string; metadata: { socialIdentifierKinds: string[]; providerActivationRequired: true }; activationStatus: 'blocked_until_keys_configured'; liveCreated: false };
+export type KoraPayCheckoutReadinessResult = { status: KoraPayCheckoutReadinessStatus; reasons: string[]; checkoutSessionDraft: KoraPayCheckoutSessionDraft | null };
+export type KoraPayWebhookVerificationConfig = { mode: 'fixture' | 'live'; signatureStrategy: 'fixture_only' | 'live_docs_verification_required'; liveActivationRequired: true };
+export type KoraPayWebhookVerificationInput = { rawBody: string; headers: Record<string, string>; receivedAt: string; fixtureMode: boolean };
+export type KoraPayWebhookVerificationResult = { status: KoraPayWebhookVerificationStatus; failureReason: KoraPayWebhookFailureReason | null; eventId: string | null; receivedAt: string; signatureStrategy: KoraPayWebhookVerificationConfig['signatureStrategy'] };
+export type KoraPayRawWebhookEventFixture = { fixtureId: string; eventId: string; eventKind: KoraPayPaymentEventKind; userId: string | null; planCode: string | null; billingInterval: KoraPaySubscriptionInterval | null; amount: number | null; currency: string | null; transactionReference: string | null; providerReference: string | null; occurredAt: string; payload: Record<string, unknown> };
+export type KoraPayNormalizedPaymentEvent = { provider: 'korapay'; eventId: string; eventKind: KoraPayPaymentEventKind; normalizedStatus: KoraPayNormalizedPaymentStatus; userId: string | null; planCode: string | null; billingInterval: KoraPaySubscriptionInterval | null; amount: number | null; currency: string | null; transactionReference: string | null; providerReference: string | null; occurredAt: string; verificationStatus: KoraPayWebhookVerificationStatus; idempotencyKey: string; rawFixtureId: string; safeSummary: string; duplicateDetected: boolean };
+export type KoraPayEntitlementGrantDecision = { status: KoraPayEntitlementGrantStatus; reason: string; targetPlanCode: 'focus_plan' | null; userId: string | null };
+export type KoraPayWebhookProcessingResult = { verification: KoraPayWebhookVerificationResult; normalizedEvent: KoraPayNormalizedPaymentEvent | null; decision: KoraPayEntitlementGrantDecision; duplicateDetected: boolean };
+export type KoraPayProviderReadinessReport = { provider: 'korapay'; activationStatus: KoraPayActivationStatus; supportsLiveCheckout: false; supportsLiveWebhookGrant: false; requiresOfficialDocsVerification: true; knownPricing: { monthlyUsd: 70; quarterly: 'pending_price_config'; yearly: 'pending_price_config' } };
+export type KoraPayPaymentCoverageReport = { provider: 'korapay'; supportedPlans: ['focus_plan']; supportedIntervals: KoraPaySubscriptionInterval[]; supportedEventKinds: KoraPayPaymentEventKind[]; deterministicOrdering: true; providerCallsPerformed: false };

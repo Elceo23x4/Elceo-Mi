@@ -18,7 +18,7 @@ export type FocusPlanDescriptor = CommercialPlanDescriptor & { planCode: 'focus_
 export type CommercialPlanCatalog = { plans: [KickOffTrialDescriptor, FocusPlanDescriptor] };
 
 export type CommercialProfileSocialIdentifier = { kind: CommercialProfileSocialIdentifierKind; value: string };
-export type UserCommercialEntitlementSnapshot = { userId: string; nowIso: string; trialStartedAt: string | null; activePlanCode: CommercialPlanCode | null; subscriptionActive: boolean; socialIdentifiers: CommercialProfileSocialIdentifier[] };
+export type UserCommercialEntitlementSnapshot = { userId: string; nowIso: string; trialStartedAt: string | null; activePlanCode: CommercialPlanCode | null; subscriptionActive: boolean; socialIdentifiers: CommercialProfileSocialIdentifier[]; superAdminGift?: { status: 'active' | 'retracted' | 'expired'; endsAt: string } | null; userRestrictionStatus?: 'none' | 'suspended' | 'banned' };
 export type CommercialFeatureAccessRequest = { snapshot: UserCommercialEntitlementSnapshot; featureKey: CommercialFeatureKey };
 export type CommercialSubscriptionWallResult = { required: boolean; reason: CommercialSubscriptionWallReason; targetPlanCode: 'focus_plan' };
 export type CommercialFeatureAccessResult = { decision: CommercialAccessDecision; status: CommercialEntitlementStatus; reason: 'feature_allowed' | CommercialSubscriptionWallReason; subscriptionWall: CommercialSubscriptionWallResult | null };

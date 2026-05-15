@@ -40,3 +40,5 @@
 ## Deferred to later batches
 - C6-A11C: Super Admin gift/retract/user-ban/2FA controls.
 - C6-A11D: KoraPay readiness and integration.
+
+- C6-A11C implemented Super Admin Focus Plan gift/retract + user ban/suspension with mandatory step-up verification fixture contract, full audit payloads, and explicit IP-ban withdrawal; no KoraPay/live payment wiring in this batch.

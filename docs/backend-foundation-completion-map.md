@@ -193,3 +193,5 @@ Deterministic fixture-only cognition calibration hardening added (no live provid
 - Server-side entitlement guard added to prevent subscription-wall bypass from direct API access.
 - Super Admin gift/retract/user-ban/2FA deferred to C6-A11C.
 - KoraPay readiness deferred to C6-A11D.
+
+- C6-A11C implemented Super Admin Focus Plan gift/retract + user ban/suspension with mandatory step-up verification fixture contract, full audit payloads, and explicit IP-ban withdrawal; no KoraPay/live payment wiring in this batch.

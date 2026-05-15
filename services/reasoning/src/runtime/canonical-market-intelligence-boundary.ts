@@ -15,7 +15,7 @@ import { buildProviderLiveSmokePlan, getProviderLiveActivationPolicy, getProvide
 import { buildEvidenceQualityReport, evaluateEvidencePayloadQuality, evaluateEvidencePayloadsQuality } from '../evidence-quality/index';
 import { assembleReasoningEvidenceInputSnapshot as assembleSnapshot, buildReasoningEvidenceInputAssemblyReport as buildSnapshotReport } from '../reasoning-input/index';
 import type { ReasoningEvidenceFilterPolicy, ReasoningEvidenceInputSnapshot, ReasoningEvidenceInputAssemblyReport, MarketEvidenceClass, EvidenceWeightHorizon, WeightedEvidenceSnapshot, WeightedEvidenceAssemblyReport, WeightedEvidencePolicySnapshot, MarketCognitionAssemblyReport, MarketCognitionSnapshot, SeoContentFeedAssemblyReport, SeoContentFeedSnapshot, SeoPageKind, SeoContentFeedItem } from '@elceo/types';
-import type { TradingAssetCoverage } from '@elceo/types';
+import type { LaunchAsset, TradingAssetCoverage } from '@elceo/types';
 import { buildWeightedEvidenceAssemblyReport, buildWeightedEvidenceSnapshot, getWeightedEvidencePolicySnapshot } from '../evidence-weighting/index';
 import { buildMarketCognitionAssemblyReport as buildCognitionReport, buildMarketCognitionSnapshot as buildCognitionSnapshot } from '../market-cognition/index';
 import { buildSeoContentFeedAssemblyReport as buildSeoFeedReport, buildSeoContentFeedSnapshot as buildSeoFeedSnapshot } from '../seo-feed/index';
@@ -28,6 +28,7 @@ import { assertOfficialMacroSourceIdsInProviderSnapshot, getOfficialMacroAdapter
 import { getCryptoRiskLiquidityAdapterReadiness, getCryptoRiskLiquidityCoverageReport, getCryptoRiskLiquidityFixturePayload, getCryptoRiskLiquiditySourceDescriptor, getCryptoRiskLiquiditySourceRegistry, listCreditStressFixturePayloads, listCryptoDerivativesFixturePayloads, listCryptoRiskLiquidityFixturePayloads, listCryptoRiskLiquiditySourcesByFamily, listLiquidityFixturePayloads, listMarketBreadthFixturePayloads, listRiskRegimeFixturePayloads, listVolatilityFixturePayloads, normalizeCryptoRiskLiquidityFixturePayload } from '../crypto-risk-liquidity/index';
 import { checkCognitionGuardrails, decomposeConfidence, detectEvidenceContradictions, getAssetEvidenceWeights, getCognitionCalibrationCoverageReport, runAllCognitionCalibrationScenarios, runCognitionCalibrationForScenario, scoreEvidenceFreshness, scoreEvidenceQuality, scorePressureForAsset, scoreSourceCredibility, weightEvidenceForAsset } from '../cognition-calibration/index';
 import { getNewsExtractionAdapterReadiness, getNewsExtractionCoverageReport, getNewsExtractionFixturePayload, getNewsExtractionSourceDescriptor, getNewsExtractionSourceRegistry, listEtfFlowFixturePayloads, listFilingFixturePayloads, listNarrativeClusterFixturePayloads, listNewsExtractionFixturePayloads, listNewsExtractionSourcesByFamily, normalizeNewsExtractionFixturePayload } from '../news-extraction-filings/index';
+import { getFrontendAssetDashboardPayload, getFrontendContractCoverageReport, getFrontendContradictionPanelPayload, getFrontendConfidenceDecompositionPayload, getFrontendEvidenceFeedPayload, getFrontendGoldenScenarioPreviewPayload, getFrontendJournalPortfolioContextPlaceholder, getFrontendMacroContextPayload, getFrontendMarketCognitionSnapshot, getFrontendMarketOverviewPayload, getFrontendMockPayloadRegistry, getFrontendNewsNarrativePayload, getFrontendProviderReadinessPayload, getFrontendRiskLiquidityPayload, getFrontendScheduledIngestionStatusPayload, getFrontendSupportedAssets } from '../frontend-contracts/index';
 
 export type TiingoFixtureIngestionParams = { asset: TradingAssetCoverage; frequency?: string | null; requestedAt?: string | null };
 
@@ -235,6 +236,22 @@ export class CanonicalMarketIntelligenceBoundaryService {
     if (section === 'full') return { section, asset, summary };
     return { section, asset, summary: { [section]: (summary as Record<string, unknown>)[section === 'provider_registry' ? 'providerRegistry' : section === 'launch_asset_fixtures' ? 'launchAssetFixtures' : section === 'official_macro' ? 'officialMacro' : section === 'news_extraction_filings' ? 'newsExtractionFilings' : section === 'crypto_risk_liquidity' ? 'cryptoRiskLiquidity' : section === 'golden_scenarios' ? 'goldenScenarios' : section === 'cognition_calibration' ? 'cognitionCalibration' : 'scheduledIngestion'] } };
   }
+  getFrontendSupportedAssets() { return getFrontendSupportedAssets(); }
+  getFrontendMarketOverviewPayload() { return getFrontendMarketOverviewPayload(); }
+  getFrontendAssetDashboardPayload(asset: LaunchAsset) { return getFrontendAssetDashboardPayload(asset); }
+  getFrontendMarketCognitionSnapshot(asset: LaunchAsset) { return getFrontendMarketCognitionSnapshot(asset); }
+  getFrontendEvidenceFeedPayload(asset?: LaunchAsset) { return getFrontendEvidenceFeedPayload(asset); }
+  getFrontendMacroContextPayload(asset?: LaunchAsset) { return getFrontendMacroContextPayload(asset); }
+  getFrontendNewsNarrativePayload(asset?: LaunchAsset) { return getFrontendNewsNarrativePayload(asset); }
+  getFrontendRiskLiquidityPayload(asset?: LaunchAsset) { return getFrontendRiskLiquidityPayload(asset); }
+  getFrontendConfidenceDecompositionPayload(asset: LaunchAsset) { return getFrontendConfidenceDecompositionPayload(asset); }
+  getFrontendContradictionPanelPayload(asset: LaunchAsset) { return getFrontendContradictionPanelPayload(asset); }
+  getFrontendProviderReadinessPayload() { return getFrontendProviderReadinessPayload(); }
+  getFrontendScheduledIngestionStatusPayload() { return getFrontendScheduledIngestionStatusPayload(); }
+  getFrontendGoldenScenarioPreviewPayload(asset?: LaunchAsset) { return getFrontendGoldenScenarioPreviewPayload(asset); }
+  getFrontendJournalPortfolioContextPlaceholder(asset?: LaunchAsset) { return getFrontendJournalPortfolioContextPlaceholder(asset); }
+  getFrontendMockPayloadRegistry() { return getFrontendMockPayloadRegistry(); }
+  getFrontendContractCoverageReport() { return getFrontendContractCoverageReport(); }
 
   buildSeoContentFeedSnapshot(generatedAt?: string): SeoContentFeedSnapshot { return buildSeoFeedSnapshot(getSeoContentArchitectureSnapshot(generatedAt??new Date().toISOString()), generatedAt); }
   buildSeoContentFeedAssemblyReport(snapshot: SeoContentFeedSnapshot): SeoContentFeedAssemblyReport { return buildSeoFeedReport(snapshot); }

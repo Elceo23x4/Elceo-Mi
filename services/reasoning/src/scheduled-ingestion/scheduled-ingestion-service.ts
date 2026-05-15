@@ -25,41 +25,38 @@ export class ScheduledIngestionService {
     const at = startedAt ?? new Date().toISOString();
     if (!policy) return this.persistSimple(jobId, 'dry_run_fixture', at, 'skipped', 'unsupported_job_id');
 
-    let report: IngestionPersistenceReport | null = null;
-    if (policy.providerId === 'tiingo_market_data') {
-      report = await this.ingestion.persistAdapterFetchAndNormalize(new TiingoMarketDataAdapter({ mode: 'fixture' }), this.buildRequest(policy, at, 'market_price_history'));
-    } else if (policy.providerId === 'cftc_cot') {
-      report = await this.ingestion.persistAdapterFetchAndNormalize(new CftcCotAdapter(), this.buildRequest(policy, at, 'cot_report'));
-    }
-
-    if (!report) return this.persistSimple(jobId, 'dry_run_fixture', at, 'skipped', 'fixture_adapter_not_wired', policy);
-
-    const status: ScheduledIngestionRunRecord['status'] = report.errors.length > 0 ? 'failed' : 'succeeded';
-    const run: ScheduledIngestionRunRecord = {
-      runId: `run-${jobId}-${at}`,
-      jobId,
-      providerId: policy.providerId,
-      capability: policy.capability,
-      asset: policy.asset,
-      region: policy.region,
-      runMode: 'dry_run_fixture',
-      status,
-      startedAt: at,
-      completedAt: new Date().toISOString(),
-      requestId: report.requestId,
-      responseStatus: report.responseStatus,
-      payloadCount: report.payloadCount,
-      persistedPayloadIds: report.persistedPayloadIds,
-      errorCode: report.errors.length > 0 ? 'ingestion_error' : null,
-      errorMessage: report.errors[0] ?? null,
-      retryStatus: deriveRetryStatus(status, 0, policy.maxRetries),
-      retryCount: 0,
-      nextRetryAt: null,
-      stalenessStatus: deriveStalenessStatus(at, at, policy.staleAfterMinutes, policy.expiresAfterMinutes),
-      warnings: report.errors
-    };
+    const run = await this.executeFixtureDryRun(policy, at, `run-${jobId}-${at}`);
     await this.runs.saveRun(run);
     return this.buildScheduledIngestionRunReport(run);
+  }
+
+  async replayScheduledIngestionRun(runId: string, replayMode: ScheduledIngestionRunMode = 'dry_run_fixture', startedAt?: string): Promise<ScheduledIngestionRunReport> {
+    const original = await this.runs.getRunById(runId);
+    const at = startedAt ?? new Date().toISOString();
+    if (!original) return this.persistReplayBlocked('unknown_replay_run_id', runId, replayMode, at);
+    if (replayMode !== 'dry_run_fixture') return this.persistReplayBlocked('unsupported_replay_mode', runId, replayMode, at, original);
+    if (original.runMode !== 'dry_run_fixture') return this.persistReplayBlocked('original_run_not_replayable', runId, replayMode, at, original);
+    if (original.status === 'blocked' && original.errorCode === 'production_live_blocked') return this.persistReplayBlocked('original_run_live_blocked', runId, replayMode, at, original);
+    if (!original.jobId || !original.providerId || !original.capability) return this.persistReplayBlocked('original_run_metadata_missing', runId, replayMode, at, original);
+
+    const policy = getScheduledIngestionPolicy(original.jobId);
+    if (!policy) return this.persistReplayBlocked('original_job_descriptor_missing', runId, replayMode, at, original);
+
+    const replayRunId = `run-${original.jobId}-${at}-replay-${original.runId}`;
+    const duplicate = await this.runs.getRunById(replayRunId);
+    if (duplicate) return this.buildScheduledIngestionRunReport(duplicate);
+
+    const replayRun = await this.executeFixtureDryRun(policy, at, replayRunId);
+    replayRun.warnings = [...replayRun.warnings, 'replay_duplicate_decision:created'];
+    replayRun.replayOfRunId = original.runId;
+    replayRun.originalJobId = original.jobId;
+    replayRun.originalExecutionMode = original.runMode;
+    replayRun.replayMode = replayMode;
+    replayRun.replayedAt = at;
+    replayRun.originalSourceRef = original.originalSourceRef ?? original.requestId ?? null;
+    replayRun.operatorNote = `replay_of:${original.runId}`;
+    await this.runs.saveRun(replayRun);
+    return this.buildScheduledIngestionRunReport(replayRun);
   }
 
   buildScheduledIngestionRunReport(run: ScheduledIngestionRunRecord): ScheduledIngestionRunReport { return { generatedAt: new Date().toISOString(), run, pass: run.status === 'succeeded' || run.status === 'skipped', warnings: run.warnings }; }
@@ -72,13 +69,52 @@ export class ScheduledIngestionService {
     return { generatedAt: now, providerId: policy.providerId, capability: policy.capability, asset: policy.asset, region: policy.region, latestObservedAt: latest, stalenessStatus: deriveStalenessStatus(latest, now, policy.staleAfterMinutes, policy.expiresAfterMinutes), reasons: latest ? [] : ['no_payloads_observed'] };
   }
 
+  private async executeFixtureDryRun(policy: ScheduledIngestionJobPolicy, requestedAt: string, runId: string): Promise<ScheduledIngestionRunRecord> {
+    let report: IngestionPersistenceReport | null = null;
+    if (policy.providerId === 'tiingo_market_data') {
+      report = await this.ingestion.persistAdapterFetchAndNormalize(new TiingoMarketDataAdapter({ mode: 'fixture' }), this.buildRequest(policy, requestedAt, 'market_price_history'));
+    } else if (policy.providerId === 'cftc_cot') {
+      report = await this.ingestion.persistAdapterFetchAndNormalize(new CftcCotAdapter(), this.buildRequest(policy, requestedAt, 'cot_report'));
+    }
+
+    if (!report) {
+      return this.buildSimpleRun(runId, policy.jobId, 'dry_run_fixture', requestedAt, 'skipped', 'fixture_adapter_not_wired', policy);
+    }
+
+    const status: ScheduledIngestionRunRecord['status'] = report.errors.length > 0 ? 'failed' : 'succeeded';
+    return {
+      runId,
+      jobId: policy.jobId,
+      providerId: policy.providerId,
+      capability: policy.capability,
+      asset: policy.asset,
+      region: policy.region,
+      runMode: 'dry_run_fixture',
+      status,
+      startedAt: requestedAt,
+      completedAt: new Date().toISOString(),
+      requestId: report.requestId,
+      responseStatus: report.responseStatus,
+      payloadCount: report.payloadCount,
+      persistedPayloadIds: report.persistedPayloadIds,
+      errorCode: report.errors.length > 0 ? 'ingestion_error' : null,
+      errorMessage: report.errors[0] ?? null,
+      retryStatus: deriveRetryStatus(status, 0, policy.maxRetries),
+      retryCount: 0,
+      nextRetryAt: null,
+      stalenessStatus: deriveStalenessStatus(requestedAt, requestedAt, policy.staleAfterMinutes, policy.expiresAfterMinutes),
+      warnings: report.errors,
+      originalSourceRef: report.requestId
+    };
+  }
+
   private buildRequest(policy: ScheduledIngestionJobPolicy, requestedAt: string, evidenceTypeId: string): ProviderSourceRequest {
     return { requestId: `${policy.jobId}-${requestedAt}`, providerId: policy.providerId, capability: policy.capability, asset: policy.asset, region: policy.region, evidenceTypeId, requestedAt, paramsJson: JSON.stringify({ mode: 'fixture', scheduled: true }) };
   }
 
-  private async persistSimple(jobId: string, runMode: ScheduledIngestionRunMode, startedAt: string, status: ScheduledIngestionRunRecord['status'], reason: string, policy?: ScheduledIngestionJobPolicy): Promise<ScheduledIngestionRunReport> {
-    const run: ScheduledIngestionRunRecord = {
-      runId: `run-${jobId}-${startedAt}`,
+  private buildSimpleRun(runId: string, jobId: string, runMode: ScheduledIngestionRunMode, startedAt: string, status: ScheduledIngestionRunRecord['status'], reason: string, policy?: ScheduledIngestionJobPolicy): ScheduledIngestionRunRecord {
+    return {
+      runId,
       jobId,
       providerId: policy?.providerId ?? 'unknown_provider',
       capability: policy?.capability ?? 'market_price_history',
@@ -100,6 +136,25 @@ export class ScheduledIngestionService {
       stalenessStatus: 'unknown',
       warnings: [reason]
     };
+  }
+
+  private async persistSimple(jobId: string, runMode: ScheduledIngestionRunMode, startedAt: string, status: ScheduledIngestionRunRecord['status'], reason: string, policy?: ScheduledIngestionJobPolicy): Promise<ScheduledIngestionRunReport> {
+    const run = this.buildSimpleRun(`run-${jobId}-${startedAt}`, jobId, runMode, startedAt, status, reason, policy);
+    await this.runs.saveRun(run);
+    return this.buildScheduledIngestionRunReport(run);
+  }
+
+  private async persistReplayBlocked(reason: string, replayOfRunId: string, replayMode: ScheduledIngestionRunMode, startedAt: string, original?: ScheduledIngestionRunRecord): Promise<ScheduledIngestionRunReport> {
+    const jobId = original?.jobId ?? 'unknown_job';
+    const runId = `run-${jobId}-${startedAt}-replay-${replayOfRunId}`;
+    const run = this.buildSimpleRun(runId, jobId, 'dry_run_fixture', startedAt, 'blocked', reason, getScheduledIngestionPolicy(jobId) ?? undefined);
+    run.replayOfRunId = replayOfRunId;
+    run.originalJobId = original?.jobId ?? null;
+    run.originalExecutionMode = original?.runMode ?? null;
+    run.replayMode = replayMode;
+    run.replayedAt = startedAt;
+    run.duplicateDecision = 'blocked';
+    run.operatorNote = `replay_blocked:${reason}`;
     await this.runs.saveRun(run);
     return this.buildScheduledIngestionRunReport(run);
   }

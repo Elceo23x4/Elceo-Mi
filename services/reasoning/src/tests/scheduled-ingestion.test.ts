@@ -33,9 +33,26 @@ export async function runScheduledIngestionTests(){
   let malformed=false; try{deserializeScheduledIngestionRunRecord('{');}catch{malformed=true;} assert.equal(malformed,true);
   const replay=await svc.getScheduledIngestionRunReplay(ti.run.runId); assert.equal(replay?.runId,ti.run.runId);
 
+  const replayExec=await svc.replayScheduledIngestionRun(ti.run.runId,'dry_run_fixture','2026-01-06T00:00:00.000Z');
+  assert.equal(replayExec.run.replayOfRunId,ti.run.runId);
+  assert.equal(replayExec.run.originalJobId,ti.run.jobId);
+  assert.equal(replayExec.run.originalExecutionMode,'dry_run_fixture');
+  assert.equal(replayExec.run.replayMode,'dry_run_fixture');
+  assert.equal(replayExec.run.status,'succeeded');
+  assert.ok(replayExec.run.runId.includes('-replay-'));
+  const replayMissing=await svc.replayScheduledIngestionRun('run-missing','dry_run_fixture','2026-01-07T00:00:00.000Z');
+  assert.equal(replayMissing.run.status,'blocked');
+  assert.equal(replayMissing.run.errorCode,'unknown_replay_run_id');
+  const replayLiveModeBlocked=await svc.replayScheduledIngestionRun(ti.run.runId,'production_live','2026-01-08T00:00:00.000Z');
+  assert.equal(replayLiveModeBlocked.run.status,'blocked');
+  assert.equal(replayLiveModeBlocked.run.errorCode,'unsupported_replay_mode');
+  assert.equal(replayLiveModeBlocked.run.operatorNote,'replay_blocked:unsupported_replay_mode');
+
+
   const boundary = new CanonicalMarketIntelligenceBoundaryService({} as never, {} as never, reqRepo, resRepo, payRepo, runRepo);
   const bRun=await boundary.runScheduledIngestionDryRun(tiJob,'2026-01-05T00:00:00.000Z'); assert.equal(bRun.run.providerId,'tiingo_market_data');
   const byId=await boundary.getScheduledIngestionRunById(bRun.run.runId); assert.equal(byId?.runId,bRun.run.runId);
   const byStatus=await boundary.listScheduledIngestionRunsByStatus('succeeded'); assert.ok(byStatus.length>0);
   const rep=await boundary.getScheduledIngestionRunReplay(bRun.run.runId); assert.equal(rep?.runId,bRun.run.runId);
+  const boundaryReplay=await boundary.replayScheduledIngestionRun(bRun.run.runId,'dry_run_fixture','2026-01-09T00:00:00.000Z'); assert.equal(boundaryReplay.run.replayOfRunId,bRun.run.runId);
 }

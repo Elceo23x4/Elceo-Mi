@@ -174,3 +174,5 @@ Deterministic fixture-only cognition calibration hardening added (no live provid
 - Initial C6-A8 implementation attempt surfaced that scheduled-ingestion contracts/types already existed and duplicate additions caused type/export collisions.
 - A dedicated existing-contract audit and safe extension plan was completed before resuming C6-A8 implementation.
 - No live providers were activated, no API keys were added, and C6-A8 proper remains pending additive extension work only.
+
+- C6-A8B complete: scheduled-ingestion replay execution now performs deterministic fixture re-run via existing contracts; live remains blocked.

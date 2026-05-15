@@ -178,3 +178,8 @@ Deterministic fixture-only cognition calibration hardening added (no live provid
 - C6-A8B complete: scheduled-ingestion replay execution now performs deterministic fixture re-run via existing contracts; live remains blocked.
 \n- C6-A9: admin/internal market-evidence operator inspection snapshot added (read-only, fixture/dry-run only, no live provider calls, no API keys, no public exposure, live activation blocked). C6-A10 focuses on frontend contracts + mock payload completion.
 \n## C6-A10 Update (2026-05-15)\nFrontend contracts + mock payloads added for fixture-only UI integration. No live provider calls, no API keys, and enforced public/admin_internal separation. C6-A11 deferred to observability/audit/structured logging readiness.
+
+## C6-A11A note (2026-05-15)
+- Added billing/subscription/entitlement/Super Admin/payment/notification foundation audit in `docs/billing-entitlement-superadmin-audit.md`.
+- This batch is audit/documentation only; no billing/payment/entitlement logic changes and no KoraPay integration were introduced.
+- IP ban remains withdrawn; user ban/suspension only is retained as target policy.

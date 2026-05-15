@@ -199,3 +199,5 @@ Avoid introducing these exact new top-level names to prevent future confusion/co
 - Replay remains fixture/dry-run only; live replay modes remain blocked.
 - Existing persistence backends (memory + SQL) remain unchanged and continue to support run history.
 - No API keys and no live provider calls were added.
+
+- C6-A8C update: admin/internal replay execution is now exposed via POST replay route, with security decision + audit; operator inspection snapshot route is read-only and live activation remains blocked.

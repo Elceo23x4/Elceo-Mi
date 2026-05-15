@@ -7,3 +7,4 @@ Deterministic fixture-based calibration layer for scoring, weighting, contradict
 - No API keys.
 - Not a trade recommendation engine and not financial advice.
 - C6-A8 will complete scheduled-ingestion fixture/dry-run/replay completion.
+\n- C6-A9: admin/internal market-evidence operator inspection snapshot added (read-only, fixture/dry-run only, no live provider calls, no API keys, no public exposure, live activation blocked). C6-A10 focuses on frontend contracts + mock payload completion.

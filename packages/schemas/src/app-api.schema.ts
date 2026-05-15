@@ -332,6 +332,17 @@ export function validateBillingProviderEventReplayRequest(i: unknown): SchemaVal
   return { ok: true, value: r.value as BillingProviderEventReplayRequest };
 }
 
+const MARKET_EVIDENCE_INSPECTION_SECTIONS = ['full','provider_registry','launch_asset_fixtures','official_macro','news_extraction_filings','crypto_risk_liquidity','golden_scenarios','cognition_calibration','scheduled_ingestion'] as const;
+export function validateInternalMarketEvidenceInspectionQuery(i: unknown): SchemaValidationResult<import('@elceo/types').InternalMarketEvidenceInspectionQuery> {
+  const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors };
+  const section = r.value.section;
+  const asset = r.value.asset;
+  const errors: string[] = [];
+  if (!(section === undefined || section === null || isEnumValue(section, MARKET_EVIDENCE_INSPECTION_SECTIONS))) errors.push('section is invalid');
+  if (!(asset === undefined || asset === null || isEnumValue(asset, VALID_ASSETS))) errors.push('asset is invalid');
+  return errors.length ? { ok: false, errors } : { ok: true, value: { section: (section ?? 'full') as import('@elceo/types').InternalMarketEvidenceInspectionSection, asset: (asset ?? null) as import('@elceo/types').TradingAssetCoverage | null } };
+}
+
 
 export function validateInternalBillingReconcileRequest(i: unknown): SchemaValidationResult<InternalBillingReconcileRequest> {
   const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; const v = r.value; const errors: string[] = [];

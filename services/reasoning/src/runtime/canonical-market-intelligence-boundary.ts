@@ -208,6 +208,34 @@ export class CanonicalMarketIntelligenceBoundaryService {
       liveActivationStatus: 'blocked'
     };
   }
+
+  async getMarketEvidenceOperatorInspectionSnapshot(options?: { section?: import('@elceo/types').InternalMarketEvidenceInspectionSection; asset?: TradingAssetCoverage | null }) {
+    const section = options?.section ?? 'full';
+    const asset = options?.asset ?? null;
+    const provider = this.getProviderSourceRegistrySnapshot();
+    const fixture = this.getLaunchAssetFixtureCoverageReport();
+    const macro = this.getOfficialMacroCoverageReport();
+    const news = this.getNewsExtractionCoverageReport();
+    const crypto = this.getCryptoRiskLiquidityCoverageReport();
+    const golden = this.getGoldenScenarioCoverageReport();
+    const cognition = this.getCognitionCalibrationCoverageReport();
+    const scheduled = await this.getScheduledIngestionOperatorInspectionSnapshot();
+    const sourcesByFamily = provider.sources.reduce((acc, source) => ({ ...acc, [source.family]: (acc[source.family] ?? 0) + 1 }), {} as Record<string, number>);
+    const summary = {
+      providerRegistry: { totalSources: provider.sources.length, sourcesByFamily, fixtureReadyDryRunReadyLiveBlocked: { fixtureReady: provider.sources.filter((x) => x.fixtureReadiness === 'ready').length, dryRunReady: provider.sources.filter((x) => x.activationStage === 'dry_run_ready').length, liveBlocked: provider.sources.filter((x) => x.liveActivationMode === 'blocked_by_default').length }, sourceGaps: provider.gaps.length, liveActivationStatus: 'blocked' },
+      launchAssetFixtures: { tier1AAssetCount: 10, tier1BAssetCount: 4, scenarioCount: fixture.totalScenarioCount, hasDxy: fixture.dxyComplete, hasVix: fixture.vixComplete, freshnessScenarioCount: fixture.staleScenarioCount },
+      officialMacro: { sourceCount: macro.sources.length, regionsCovered: [...new Set(macro.sources.map((x) => x.region))].sort(), fixturePayloadCount: macro.fixtures.reduce((a, b) => a + b.fixtureCount, 0), normalizedEvidenceSampleCount: this.listOfficialMacroFixturePayloads().slice(0, 10).length, liveActivationStatus: 'blocked' },
+      newsExtractionFilings: { sourceCount: news.sources.length, fixturePayloadCount: this.listNewsExtractionFixturePayloads().length, filingFixtureCount: this.listFilingFixturePayloads(asset ?? undefined).length, etfFlowFixtureCount: this.listEtfFlowFixturePayloads(asset ?? undefined).length, narrativeClusterCount: this.listNarrativeClusterFixturePayloads(asset ?? undefined).length, liveActivationStatus: 'blocked' },
+      cryptoRiskLiquidity: { sourceCount: crypto.sources.length, fixturePayloadCount: this.listCryptoRiskLiquidityFixturePayloads().length, coverageByFamily: crypto.sources.reduce((acc, x) => ({ ...acc, [x.family]: (acc[x.family] ?? 0) + 1 }), {} as Record<string, number>), affectedAssetCoverageCount: crypto.assetsCovered.length, liveActivationStatus: 'blocked' },
+      goldenScenarios: { scenarioCount: golden.totalScenarios, tier1ARepresented: golden.tier1AAssetsCovered.length, tier1BRepresented: golden.tier1BAssetsCovered.length, crossAssetScenarios: golden.crossAssetScenarioIds.length, staleScenarioPresence: golden.freshnessScenarioIds.length > 0, assertionPassCount: null },
+      cognitionCalibration: { scenarioCount: cognition.scenarioCount, guardrailStatus: cognition.statusBreakdown.fail === 0 ? 'pass' : 'review', contradictionCoverage: true, confidenceDecompositionCoverage: true, liveActivationStatus: 'blocked' },
+      scheduledIngestion: scheduled,
+      operatorNotes: ['no live providers', 'no API keys', 'fixture/dry-run only', 'remaining activation steps deferred']
+    };
+    if (section === 'full') return { section, asset, summary };
+    return { section, asset, summary: { [section]: (summary as Record<string, unknown>)[section === 'provider_registry' ? 'providerRegistry' : section === 'launch_asset_fixtures' ? 'launchAssetFixtures' : section === 'official_macro' ? 'officialMacro' : section === 'news_extraction_filings' ? 'newsExtractionFilings' : section === 'crypto_risk_liquidity' ? 'cryptoRiskLiquidity' : section === 'golden_scenarios' ? 'goldenScenarios' : section === 'cognition_calibration' ? 'cognitionCalibration' : 'scheduledIngestion'] } };
+  }
+
   buildSeoContentFeedSnapshot(generatedAt?: string): SeoContentFeedSnapshot { return buildSeoFeedSnapshot(getSeoContentArchitectureSnapshot(generatedAt??new Date().toISOString()), generatedAt); }
   buildSeoContentFeedAssemblyReport(snapshot: SeoContentFeedSnapshot): SeoContentFeedAssemblyReport { return buildSeoFeedReport(snapshot); }
   listSeoContentFeedItemsByPageKind(pageKind: SeoPageKind, generatedAt?: string): SeoContentFeedItem[] { const snap=this.buildSeoContentFeedSnapshot(generatedAt); return snap.items.filter((x)=>x.pageKind===pageKind); }

@@ -230,3 +230,5 @@ export type ScheduledIngestionRunQuery = { runId: string | null; jobId: string |
 export type ScheduledIngestionReplayQuery = { runId: string };
 export type InternalScheduledIngestionDryRunRequest = { jobId: string; startedAt?: string | null };
 export type InternalScheduledIngestionReplayRequest = { runId: string; replayMode?: import('./market-evidence-ingestion-schedule').ScheduledIngestionRunMode | null; startedAt?: string | null };
+export type InternalMarketEvidenceInspectionSection = 'full' | 'provider_registry' | 'launch_asset_fixtures' | 'official_macro' | 'news_extraction_filings' | 'crypto_risk_liquidity' | 'golden_scenarios' | 'cognition_calibration' | 'scheduled_ingestion';
+export type InternalMarketEvidenceInspectionQuery = { section: InternalMarketEvidenceInspectionSection; asset: TradingAssetCoverage | null };

@@ -8,3 +8,4 @@
 - Persistence remains memory + SQL where already supported.
 
 - C6-A8C: Added admin/internal POST replay trigger at `/api/admin/market-evidence/scheduled-ingestion/replay` (fixture/dry-run only), and read-only operator inspection snapshot at `/api/admin/market-evidence/scheduled-ingestion/inspection`. Live replay remains blocked; no API keys/live providers.
+\n- C6-A9: admin/internal market-evidence operator inspection snapshot added (read-only, fixture/dry-run only, no live provider calls, no API keys, no public exposure, live activation blocked). C6-A10 focuses on frontend contracts + mock payload completion.

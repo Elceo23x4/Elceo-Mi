@@ -176,3 +176,4 @@ Deterministic fixture-only cognition calibration hardening added (no live provid
 - No live providers were activated, no API keys were added, and C6-A8 proper remains pending additive extension work only.
 
 - C6-A8B complete: scheduled-ingestion replay execution now performs deterministic fixture re-run via existing contracts; live remains blocked.
+\n- C6-A9: admin/internal market-evidence operator inspection snapshot added (read-only, fixture/dry-run only, no live provider calls, no API keys, no public exposure, live activation blocked). C6-A10 focuses on frontend contracts + mock payload completion.

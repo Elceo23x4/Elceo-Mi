@@ -229,3 +229,4 @@ export type ScheduledIngestionPolicyQuery = { providerId: string | null; generat
 export type ScheduledIngestionRunQuery = { runId: string | null; jobId: string | null; providerId: string | null; capability: import('./market-data-providers').ProviderCapabilityKind | null; asset: TradingAssetCoverage | null; region: import('./market-evidence').MarketEvidenceRegion | null; status: import('./market-evidence-ingestion-schedule').ScheduledIngestionJobStatus | null; stalenessStatus: import('./market-evidence-ingestion-schedule').ScheduledIngestionStalenessStatus | null; limit: number | null };
 export type ScheduledIngestionReplayQuery = { runId: string };
 export type InternalScheduledIngestionDryRunRequest = { jobId: string; startedAt?: string | null };
+export type InternalScheduledIngestionReplayRequest = { runId: string; replayMode?: import('./market-evidence-ingestion-schedule').ScheduledIngestionRunMode | null; startedAt?: string | null };

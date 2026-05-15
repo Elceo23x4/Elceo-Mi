@@ -6,3 +6,5 @@
 - Replay failure states are deterministic and persisted as blocked runs with explicit error codes.
 - Live replay modes remain blocked; no API key or live-provider paths were introduced.
 - Persistence remains memory + SQL where already supported.
+
+- C6-A8C: Added admin/internal POST replay trigger at `/api/admin/market-evidence/scheduled-ingestion/replay` (fixture/dry-run only), and read-only operator inspection snapshot at `/api/admin/market-evidence/scheduled-ingestion/inspection`. Live replay remains blocked; no API keys/live providers.

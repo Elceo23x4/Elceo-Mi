@@ -179,6 +179,35 @@ export class CanonicalMarketIntelligenceBoundaryService {
   listScheduledIngestionRunsByStatus(status: Parameters<ScheduledIngestionRunRepository['listRunsByStatus']>[0], limit?: number) { if (!this.scheduledIngestionQuery) throw new Error('missing_scheduled_ingestion_repository'); return this.scheduledIngestionQuery.listScheduledIngestionRunsByStatus(status, limit); }
   getScheduledIngestionRunReplay(runId: string) { if (!this.scheduledIngestionRepository) throw new Error('missing_scheduled_ingestion_repository'); return getScheduledIngestionRunReplay(this.scheduledIngestionRepository, runId); }
   replayScheduledIngestionRun(runId: string, replayMode?: Parameters<ScheduledIngestionService['replayScheduledIngestionRun']>[1], startedAt?: string) { if (!this.scheduledIngestionService) throw new Error('missing_scheduled_ingestion_repository'); return this.scheduledIngestionService.replayScheduledIngestionRun(runId, replayMode, startedAt); }
+  async getScheduledIngestionOperatorInspectionSnapshot() {
+    if (!this.scheduledIngestionRepository) throw new Error('missing_scheduled_ingestion_repository');
+    const [blocked, failed, skipped, succeeded, pending, running] = await Promise.all([
+      this.scheduledIngestionRepository.listRunsByStatus('blocked', 200),
+      this.scheduledIngestionRepository.listRunsByStatus('failed', 200),
+      this.scheduledIngestionRepository.listRunsByStatus('skipped', 200),
+      this.scheduledIngestionRepository.listRunsByStatus('succeeded', 200),
+      this.scheduledIngestionRepository.listRunsByStatus('pending', 200),
+      this.scheduledIngestionRepository.listRunsByStatus('running', 200)
+    ]);
+    const recentRuns = [...blocked, ...failed, ...skipped, ...succeeded, ...pending, ...running]
+      .sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt))
+      .slice(0, 20);
+    const replayRuns = recentRuns.filter((run) => Boolean(run.replayOfRunId));
+    return {
+      runCountsByStatus: { blocked: blocked.length, failed: failed.length, skipped: skipped.length, succeeded: succeeded.length, pending: pending.length, running: running.length },
+      recentRuns,
+      dryRunCount: recentRuns.filter((run) => run.runMode === 'dry_run_fixture').length,
+      replayCount: replayRuns.length,
+      blockedLiveCount: [...blocked, ...skipped].filter((run) => String(run.errorCode ?? '').includes('live')).length,
+      staleEvidenceWarningCount: recentRuns.filter((run) => run.warnings.some((w) => w.includes('stale'))).length,
+      duplicateDecisionSummary: { created: replayRuns.filter((run) => run.duplicateDecision === 'created').length, skipped: replayRuns.filter((run) => run.duplicateDecision === 'skipped').length, blocked: replayRuns.filter((run) => run.duplicateDecision === 'blocked').length },
+      providerSourceReadinessSummary: { mode: 'fixture_only', providerCalls: 'blocked_live' },
+      latestRunTimestamp: recentRuns[0]?.startedAt ?? null,
+      latestReplayTimestamp: replayRuns.sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt))[0]?.startedAt ?? null,
+      operatorNotes: replayRuns.map((run) => run.operatorNote).filter((note): note is string => Boolean(note)).slice(0, 10),
+      liveActivationStatus: 'blocked'
+    };
+  }
   buildSeoContentFeedSnapshot(generatedAt?: string): SeoContentFeedSnapshot { return buildSeoFeedSnapshot(getSeoContentArchitectureSnapshot(generatedAt??new Date().toISOString()), generatedAt); }
   buildSeoContentFeedAssemblyReport(snapshot: SeoContentFeedSnapshot): SeoContentFeedAssemblyReport { return buildSeoFeedReport(snapshot); }
   listSeoContentFeedItemsByPageKind(pageKind: SeoPageKind, generatedAt?: string): SeoContentFeedItem[] { const snap=this.buildSeoContentFeedSnapshot(generatedAt); return snap.items.filter((x)=>x.pageKind===pageKind); }

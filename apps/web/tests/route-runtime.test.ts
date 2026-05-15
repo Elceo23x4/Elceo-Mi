@@ -120,6 +120,7 @@ import * as scheduledIngestionPoliciesRoute from '../app/api/admin/market-eviden
 import * as scheduledIngestionRunsRoute from '../app/api/admin/market-evidence/scheduled-ingestion/runs/route';
 import * as scheduledIngestionReplayRoute from '../app/api/admin/market-evidence/scheduled-ingestion/replay/route';
 import * as scheduledIngestionDryRunRoute from '../app/api/admin/market-evidence/scheduled-ingestion/dry-run/route';
+import * as scheduledIngestionInspectionRoute from '../app/api/admin/market-evidence/scheduled-ingestion/inspection/route';
 
 const subject = { subjectKind: 'user' as const, subjectId: 'user-1', userId: 'user-1' };
 
@@ -356,6 +357,8 @@ const mockReasoningRuntime = {
     listScheduledIngestionRunsByProvider: async () => ([]),
     listScheduledIngestionRunsByStatus: async () => ([]),
     getScheduledIngestionRunReplay: async () => null,
+    replayScheduledIngestionRun: async (runId: string) => ({ generatedAt: '2026-01-01T00:00:00.000Z', pass: true, warnings: [], run: { runId: `run-replay-${runId}`, replayOfRunId: runId } }),
+    getScheduledIngestionOperatorInspectionSnapshot: async () => ({ runCountsByStatus: { blocked: 1, failed: 0, skipped: 0, succeeded: 1, pending: 0, running: 0 }, recentRuns: [], dryRunCount: 2, replayCount: 1, blockedLiveCount: 1, staleEvidenceWarningCount: 0, duplicateDecisionSummary: { created: 1, skipped: 0, blocked: 0 }, providerSourceReadinessSummary: { mode: 'fixture_only', providerCalls: 'blocked_live' }, latestRunTimestamp: '2026-01-01T00:00:00.000Z', latestReplayTimestamp: '2026-01-01T00:00:00.000Z', operatorNotes: ['replay_of:run-1'], liveActivationStatus: 'blocked' }),
     listEvidencePayloadsByAsset: async () => ([]),
     listEvidencePayloadsByEvidenceClass: async () => ([]),
     listEvidencePayloadsByEvidenceType: async () => ([]),
@@ -899,7 +902,13 @@ export async function runRouteRuntimeTests(): Promise<void> {
 
   assert.equal((await readJson(await scheduledIngestionReplayRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/replay', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, false);
   assert.deepEqual(await readJson(await scheduledIngestionReplayRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/replay?runId=run-1', { headers: { 'x-elceo-internal-token': 'internal-token' } }))), { ok: true, data: { replay: null } });
-  assert.deepEqual(await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', body: JSON.stringify({ jobId: 'job-1' }) }))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
+  
+  assert.deepEqual(await readJson(await scheduledIngestionReplayRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/replay', { method: 'POST', body: JSON.stringify({ runId: 'run-1' }) }))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
+  assert.equal((await readJson(await scheduledIngestionReplayRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/replay', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({}) })))).ok, false);
+  assert.equal((await readJson(await scheduledIngestionReplayRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/replay', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ runId: 'run-1', replayMode: 'production_live' }) })))).ok, false);
+  assert.equal((await readJson(await scheduledIngestionReplayRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/replay', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'sched-replay' }, body: JSON.stringify({ runId: 'run-1' }) })))).ok, true);
+  assert.equal((await readJson(await scheduledIngestionInspectionRoute.GET(request('https://x/api/admin/market-evidence/scheduled-ingestion/inspection', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+assert.deepEqual(await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', body: JSON.stringify({ jobId: 'job-1' }) }))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
   assert.equal((await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({}) })))).ok, false);
   assert.equal((await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ jobId: 'job-1', production_live: true }) })))).ok, false);
   assert.equal((await readJson(await scheduledIngestionDryRunRoute.POST(request('https://x/api/admin/market-evidence/scheduled-ingestion/dry-run', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ jobId: 'job-1', providerApiKey: 'secret' }) })))).ok, false);

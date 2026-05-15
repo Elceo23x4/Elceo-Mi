@@ -1,0 +1,26 @@
+export type UserNotificationChannel = 'email' | 'whatsapp';
+export type UserNotificationTopic = 'macro_summary' | 'evidence_score_change' | 'market_reasoning_update' | 'risk_contradiction_alert' | 'scheduled_digest';
+export type UserNotificationPreferenceStatus = 'active' | 'inactive' | 'unsubscribed';
+export type UserNotificationDigestFrequency = 'daily' | 'weekly' | 'market_session';
+export type UserNotificationDeliveryStatus = 'draft' | 'queued_fixture_only' | 'suppressed' | 'deferred' | 'failed' | 'delivered';
+export type UserNotificationProviderActivationStatus = 'disabled' | 'shell_only' | 'ready_for_activation';
+export type UserNotificationEventKind = UserNotificationTopic;
+export type UserNotificationPriority = 'low' | 'normal' | 'high' | 'critical';
+export type UserNotificationFailureReason = 'rate_limited' | 'quiet_hours' | 'duplicate_event' | 'below_threshold' | 'channel_disabled' | 'topic_disabled' | 'asset_disabled' | 'unsubscribed' | 'unknown';
+export type UserNotificationQuietHoursMode = 'disabled' | 'suppress' | 'defer';
+
+export type UserNotificationChannelPreference = { channel: UserNotificationChannel; enabled: boolean; status: UserNotificationPreferenceStatus; contactVerified: boolean; };
+export type UserNotificationTopicPreference = { topic: UserNotificationTopic; enabled: boolean; evidenceScoreThreshold: number | null; };
+export type UserAssetNotificationPreference = { assetId: string; topic: UserNotificationTopic; enabled: boolean; };
+export type UserNotificationQuietHours = { mode: UserNotificationQuietHoursMode; timezone: string; startLocalTime: string; endLocalTime: string; };
+export type UserNotificationPreferenceSnapshot = { userId: string; globalEnabled: boolean; unsubscribed: boolean; channels: UserNotificationChannelPreference[]; topics: UserNotificationTopicPreference[]; assetPreferences: UserAssetNotificationPreference[]; digestFrequency: UserNotificationDigestFrequency; quietHours: UserNotificationQuietHours; updatedAt: string; };
+export type UserNotificationPreferenceUpdateRequest = Partial<Pick<UserNotificationPreferenceSnapshot,'globalEnabled'|'unsubscribed'|'digestFrequency'|'quietHours'>> & { channels?: UserNotificationChannelPreference[]; topics?: UserNotificationTopicPreference[]; assetPreferences?: UserAssetNotificationPreference[]; };
+export type UserNotificationEventTrigger = { userId: string; eventId: string; eventKind: UserNotificationEventKind; topic: UserNotificationTopic; assetId?: string | null; channel: UserNotificationChannel; createdAt: string; importantUpdate?: boolean; scoreBefore?: number; scoreAfter?: number; contradictionSeverity?: number; riskSeverity?: number; };
+export type UserNotificationDeliveryDraft = { userId: string; eventId: string; eventKind: UserNotificationEventKind; topic: UserNotificationTopic; channel: UserNotificationChannel; assetId: string | null; title: string; safeSummary: string; priority: UserNotificationPriority; createdAt: string; providerActivationStatus: UserNotificationProviderActivationStatus; deliveryStatus: UserNotificationDeliveryStatus; redacted: true; };
+export type UserNotificationOutboxItem = { outboxId: string; deliveryDraft: UserNotificationDeliveryDraft; status: UserNotificationDeliveryStatus; retryCount: number; maxRetries: number; nextAttemptAt: string | null; lastFailureReason: UserNotificationFailureReason | null; };
+export type UserNotificationDeliveryLog = { deliveryId: string; outboxId: string; userId: string; channel: UserNotificationChannel; status: UserNotificationDeliveryStatus; provider: 'email_shell' | 'whatsapp_shell'; attemptedAt: string; safeSummary: string; failureReason: UserNotificationFailureReason | null; };
+export type UserNotificationProviderDescriptor = { channel: UserNotificationChannel; provider: 'email_shell' | 'whatsapp_shell'; activationStatus: UserNotificationProviderActivationStatus; liveSendsEnabled: false; requirements: string[]; };
+export type EmailNotificationProviderReadiness = UserNotificationProviderDescriptor & { channel: 'email'; };
+export type WhatsAppNotificationProviderReadiness = UserNotificationProviderDescriptor & { channel: 'whatsapp'; };
+export type UserNotificationRateLimitDecision = { allowed: boolean; reason: UserNotificationFailureReason | null; suppressUntil: string | null; };
+export type UserNotificationCoverageReport = { userId: string; globalEnabled: boolean; enabledChannels: UserNotificationChannel[]; enabledTopics: UserNotificationTopic[]; hasQuietHours: boolean; digestEnabled: boolean; };

@@ -15,3 +15,5 @@ export * from './verification';
 export * from './providers';
 export * from './orchestration';
 export * from './feedback';
+
+export * from './user-preferences/foundation';

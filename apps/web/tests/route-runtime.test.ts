@@ -64,6 +64,7 @@ import * as adminFreshnessRoute from '../app/api/admin/freshness/route';
 import * as adminOpsRoute from '../app/api/admin/ops/route';
 import * as adminProvidersRoute from '../app/api/admin/providers/route';
 import * as adminAuditRoute from '../app/api/admin/audit/route';
+import * as adminCommercialMetricsRoute from '../app/api/admin/commercial/metrics/route';
 import * as accountEntitlementsRoute from '../app/api/account/entitlements/route';
 import * as accountUsageRoute from '../app/api/account/usage/route';
 import * as accountAccessDecisionsRoute from '../app/api/account/access-decisions/route';
@@ -747,6 +748,30 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await adminProvidersRoute.GET(request('https://x/api/admin/providers', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
   assert.equal((await readJson(await adminAuditRoute.GET(request('https://x/api/admin/audit?limit=5', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
 
+  const metricsUnauthorized = await adminCommercialMetricsRoute.GET(request('https://x/api/admin/commercial/metrics'));
+  assert.equal(metricsUnauthorized.status, 403);
+  assert.equal((await readJson(metricsUnauthorized)).ok, false);
+  blockedFeatures = new Set(['admin.read']);
+  const metricsBlocked = await adminCommercialMetricsRoute.GET(request('https://x/api/admin/commercial/metrics', { headers: { 'x-elceo-internal-token': 'internal-token' } }));
+  assert.equal(metricsBlocked.status, 403);
+  assert.equal((await readJson(metricsBlocked)).ok, false);
+  blockedFeatures = new Set();
+  const metricsOk = await adminCommercialMetricsRoute.GET(request('https://x/api/admin/commercial/metrics', { headers: { 'x-elceo-internal-token': 'internal-token' } }));
+  assert.equal(metricsOk.status, 200);
+  const metricsOkJson = await readJson(metricsOk);
+  assert.equal(metricsOkJson.ok, true);
+  const metricsSerialized = JSON.stringify(metricsOkJson).toLowerCase();
+  assert.equal(metricsSerialized.includes('ip_ban'), false);
+  assert.equal(metricsSerialized.includes('raw provider payload'), false);
+  assert.equal(metricsSerialized.includes('token'), false);
+  assert.equal(metricsSerialized.includes('session'), false);
+  assert.equal(metricsSerialized.includes('auth'), false);
+  assertNoSensitiveLeak(metricsOkJson);
+  const revenueStatus = (((metricsOkJson.data as { snapshot?: { revenue?: { dataStatus?: string; }; }; }).snapshot?.revenue?.dataStatus) ?? '');
+  assert.equal(['fixture_only', 'estimated'].includes(revenueStatus), true);
+  const metricsInvalid = await adminCommercialMetricsRoute.GET(request('https://x/api/admin/commercial/metrics?period=invalid_period&asOf=nope', { headers: { 'x-elceo-internal-token': 'internal-token' } }));
+  assert.equal(metricsInvalid.status, 400);
+  assert.deepEqual(await readJson(metricsInvalid), { ok: false, error: { code: 'validation_error', message: 'Validation failed', details: ['query invalid'] } });
 
 
   const reconcileForbidden = await internalBillingReconcileRoute.POST(request('https://x/api/internal/billing/reconcile', { method: 'POST', body: JSON.stringify({ providerKind: 'stripe', sourceEventId: 'evt-1' }) }));

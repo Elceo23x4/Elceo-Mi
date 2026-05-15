@@ -13,7 +13,9 @@ const expired=(trialStartedAt:string,nowIso:string)=>new Date(nowIso).getTime()>
 export const buildSubscriptionWallResult=(snapshot:UserCommercialEntitlementSnapshot):CommercialSubscriptionWallResult=>({required:true,reason:snapshot.activePlanCode==='focus_plan'?'focus_plan_inactive':'subscription_required',targetPlanCode:'focus_plan'});
 
 export const evaluateUserCommercialEntitlement=(snapshot:UserCommercialEntitlementSnapshot):CommercialFeatureAccessResult['status']=>{
-  if(snapshot.activePlanCode==='focus_plan') return snapshot.subscriptionActive?'active':'subscription_required';
+  if(snapshot.userRestrictionStatus==='suspended'||snapshot.userRestrictionStatus==='banned') return 'subscription_required';
+  if(snapshot.activePlanCode==='focus_plan'&&snapshot.subscriptionActive) return 'active';
+  if(snapshot.superAdminGift?.status==='active'&&new Date(snapshot.nowIso).getTime()<new Date(snapshot.superAdminGift.endsAt).getTime()) return 'active';
   if(snapshot.activePlanCode==='kick_off' && snapshot.trialStartedAt && !expired(snapshot.trialStartedAt,snapshot.nowIso)) return 'trial_active';
   return 'subscription_required';
 };

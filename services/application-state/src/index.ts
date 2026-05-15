@@ -40,3 +40,5 @@ export * from './security';
 export * from './runtime/canonical-security-boundary';
 
 export * from './commercial-entitlements';
+
+export * from './super-admin-commercial-controls';

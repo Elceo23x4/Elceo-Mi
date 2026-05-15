@@ -1,0 +1,23 @@
+export type SuperAdminCommercialActionKind='focus_plan_gift'|'focus_plan_gift_retract'|'user_restriction';
+export type SuperAdminCommercialControlStatus='success'|'blocked'|'failed';
+export type SuperAdminFocusPlanGiftDuration='two_weeks'|'one_month';
+export type SuperAdminGiftStatus='active'|'expired'|'retracted';
+export type SuperAdminUserRestrictionStatus='active'|'lifted';
+export type SuperAdminUserRestrictionKind='suspended'|'banned';
+export type SuperAdminActionReasonCode='commercial_support'|'abuse_prevention'|'fraud_risk'|'security_risk'|'policy_violation'|'operator_correction';
+export type SuperAdminStepUpStatus='verified'|'rejected'|'missing';
+export type SuperAdminStepUpMethod='totp'|'webauthn'|'fixture_only';
+export type SuperAdminCommercialControlFailureReason='step_up_required'|'invalid_duration'|'missing_actor'|'missing_target'|'gift_not_found'|'gift_not_active'|'unsupported_action';
+
+export type SuperAdminStepUpVerification={status:SuperAdminStepUpStatus;method:SuperAdminStepUpMethod;verifiedAt:string|null;challengeId:string|null;providerStatus:'fixture_only'|'live_provider_required';};
+export type SuperAdminFocusPlanGiftRequest={actorSuperAdminId:string;targetUserId:string;duration:SuperAdminFocusPlanGiftDuration;reasonCode:SuperAdminActionReasonCode;operatorNote:string;stepUpVerification:SuperAdminStepUpVerification;idempotencyKey:string|null;requestedAt:string;};
+export type SuperAdminFocusPlanGiftRecord={giftRecordId:string;actorSuperAdminId:string;targetUserId:string;planCode:'focus_plan';duration:SuperAdminFocusPlanGiftDuration;status:SuperAdminGiftStatus;startsAt:string;endsAt:string;reasonCode:SuperAdminActionReasonCode;operatorNote:string;stepUpStatus:SuperAdminStepUpStatus;idempotencyKey:string|null;createdAt:string;updatedAt:string;};
+export type SuperAdminFocusPlanGiftResult={status:SuperAdminCommercialControlStatus;failureReason:SuperAdminCommercialControlFailureReason|null;giftRecord:SuperAdminFocusPlanGiftRecord|null;resultingEntitlementState:'focus_plan_active'|'subscription_required';};
+export type SuperAdminRetractGiftRequest={actorSuperAdminId:string;targetUserId:string;giftRecordId:string;reasonCode:SuperAdminActionReasonCode;operatorNote:string;stepUpVerification:SuperAdminStepUpVerification;idempotencyKey:string|null;requestedAt:string;};
+export type SuperAdminRetractGiftResult={status:SuperAdminCommercialControlStatus;failureReason:SuperAdminCommercialControlFailureReason|null;giftRecord:SuperAdminFocusPlanGiftRecord|null;resultingEntitlementState:'focus_plan_active'|'subscription_required';};
+export type SuperAdminUserRestrictionRequest={actorSuperAdminId:string;targetUserId:string;restrictionKind:SuperAdminUserRestrictionKind;reasonCode:SuperAdminActionReasonCode;operatorNote:string;stepUpVerification:SuperAdminStepUpVerification;idempotencyKey:string|null;requestedAt:string;};
+export type SuperAdminUserRestrictionRecord={restrictionRecordId:string;actorSuperAdminId:string;targetUserId:string;restrictionKind:SuperAdminUserRestrictionKind;status:SuperAdminUserRestrictionStatus;reasonCode:SuperAdminActionReasonCode;operatorNote:string;stepUpStatus:SuperAdminStepUpStatus;idempotencyKey:string|null;createdAt:string;updatedAt:string;};
+export type SuperAdminUserRestrictionResult={status:SuperAdminCommercialControlStatus;failureReason:SuperAdminCommercialControlFailureReason|null;restrictionRecord:SuperAdminUserRestrictionRecord|null;resultingEntitlementState:'restricted';};
+export type SuperAdminCommercialAuditEvent={actorSuperAdminId:string;targetUserId:string;actionKind:SuperAdminCommercialActionKind;reasonCode:SuperAdminActionReasonCode;operatorNote:string;stepUpStatus:SuperAdminStepUpStatus;createdAt:string;resultingEntitlementState:'focus_plan_active'|'subscription_required'|'restricted';idempotencyKey:string|null;};
+export type SuperAdminCommercialControlSnapshot={generatedAt:string;activeGiftCount:number;activeRestrictionCount:number;fixtureOnlyStepUp:boolean;};
+export type SuperAdminCommercialControlCoverageReport={generatedAt:string;supportsGiftDurations:SuperAdminFocusPlanGiftDuration[];mandatoryStepUpRequired:true;ipBanSupported:false;paymentProviderCallsPerformed:false;};

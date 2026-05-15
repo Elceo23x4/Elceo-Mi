@@ -1,0 +1,23 @@
+export type SuperAdminMetricsPeriod='monthly'|'quarterly'|'yearly'|'all_time';
+export type SuperAdminMetricsCurrency='USD';
+export type SuperAdminMetricsPlanCode='kick_off'|'focus_plan';
+export type SuperAdminMetricsBillingInterval='monthly'|'quarterly'|'yearly';
+export type SuperAdminMetricsUserStatus='active'|'suspended'|'banned';
+export type SuperAdminMetricsSubscriptionStatus='active_paid'|'expired_paid'|'not_subscribed';
+export type SuperAdminMetricsTrialStatus='active'|'expired'|'none';
+export type SuperAdminMetricsGiftStatus='active'|'expired'|'retracted';
+export type SuperAdminMetricsRevenueStatus='fixture_only'|'estimated'|'live_unavailable';
+export type SuperAdminMetricsSnapshotStatus='fixture_only'|'estimated'|'live_unavailable';
+
+export type SuperAdminUserMetrics={totalUsers:number;activeUsers:number;suspendedUsers:number;bannedUsers:number};
+export type SuperAdminSubscriptionMetrics={subscribedUsers:number;activePaidUsers:number;expiredPaidUsers:number;resubscribedUsers:number;subscriptionRequiredUsers:number};
+export type SuperAdminTrialMetrics={kickOffTrialUsers:number;activeKickOffTrialUsers:number;expiredKickOffTrialUsers:number};
+export type SuperAdminRevenueMetrics={currency:SuperAdminMetricsCurrency;dataStatus:SuperAdminMetricsRevenueStatus;totalRevenue:number;monthlyRecurringRevenue:number|null;revenueByInterval:Record<SuperAdminMetricsBillingInterval,number>;revenueByPlan:Record<SuperAdminMetricsPlanCode,number>;};
+export type SuperAdminGiftMetrics={giftedFocusPlanUsers:number;activeGifts:number;expiredGifts:number;retractedGifts:number};
+export type SuperAdminRestrictionMetrics={suspendedUsers:number;bannedUsers:number};
+export type SuperAdminPaymentReadinessMetrics={socialIdentifierCompleteUsers:number;missingSocialIdentifierUsers:number;paymentReadyUsers:number;paymentBlockedUsers:number};
+export type SuperAdminPlanIntervalSplit={monthlyCount:number;quarterlyCount:number;yearlyCount:number};
+export type SuperAdminCommercialConversionMetrics={totalUsers:number;subscribedUsers:number;activePaidUsers:number;kickOffTrialUsers:number;conversionRate:number};
+export type SuperAdminMetricsCoverageReport={generatedAt:string;deterministicOrdering:true;providerCallsPerformed:false;includesIpBanMetrics:false;liveRevenueBacked:false;};
+export type SuperAdminMetricsQuery={period:SuperAdminMetricsPeriod;asOf:string;};
+export type SuperAdminMetricsSnapshot={generatedAt:string;period:SuperAdminMetricsPeriod;dataStatus:SuperAdminMetricsSnapshotStatus;users:SuperAdminUserMetrics;subscriptions:SuperAdminSubscriptionMetrics;trials:SuperAdminTrialMetrics;revenue:SuperAdminRevenueMetrics;gifts:SuperAdminGiftMetrics;restrictions:SuperAdminRestrictionMetrics;paymentReadiness:SuperAdminPaymentReadinessMetrics;planIntervalSplit:SuperAdminPlanIntervalSplit;conversion:SuperAdminCommercialConversionMetrics;};

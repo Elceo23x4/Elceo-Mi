@@ -38,3 +38,5 @@ export * from './runtime/canonical-billing-orchestration-boundary';
 export * from './billing-orchestration';
 export * from './security';
 export * from './runtime/canonical-security-boundary';
+
+export * from './commercial-entitlements';

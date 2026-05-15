@@ -183,3 +183,13 @@ Deterministic fixture-only cognition calibration hardening added (no live provid
 - Added billing/subscription/entitlement/Super Admin/payment/notification foundation audit in `docs/billing-entitlement-superadmin-audit.md`.
 - This batch is audit/documentation only; no billing/payment/entitlement logic changes and no KoraPay integration were introduced.
 - IP ban remains withdrawn; user ban/suspension only is retained as target policy.
+
+
+## C6-A11B update (2026-05-15)
+- Kick off fixed 3-day trial and Focus Plan entitlement foundation implemented server-side.
+- Focus Plan monthly price is 70 USD; quarterly/yearly remain configurable (`pending_price_config`).
+- Social identifier (LinkedIn/Telegram/X) is now required for payment readiness eligibility.
+- No KoraPay integration and no live payment provider calls in C6-A11B.
+- Server-side entitlement guard added to prevent subscription-wall bypass from direct API access.
+- Super Admin gift/retract/user-ban/2FA deferred to C6-A11C.
+- KoraPay readiness deferred to C6-A11D.

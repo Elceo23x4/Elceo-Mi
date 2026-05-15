@@ -116,3 +116,13 @@ Complete when all of the following are true:
 6. Gift/retract lifecycle works with strict duration constraints and deterministic reversal semantics.
 7. KoraPay integration (when added later) has verified webhook authenticity, replay/idempotency protection, and secure entitlement synchronization.
 8. Notification preferences + delivery governance support requested channels and abuse controls.
+
+
+## C6-A11B update (2026-05-15)
+- Kick off fixed 3-day trial and Focus Plan entitlement foundation implemented server-side.
+- Focus Plan monthly price is 70 USD; quarterly/yearly remain configurable (`pending_price_config`).
+- Social identifier (LinkedIn/Telegram/X) is now required for payment readiness eligibility.
+- No KoraPay integration and no live payment provider calls in C6-A11B.
+- Server-side entitlement guard added to prevent subscription-wall bypass from direct API access.
+- Super Admin gift/retract/user-ban/2FA deferred to C6-A11C.
+- KoraPay readiness deferred to C6-A11D.

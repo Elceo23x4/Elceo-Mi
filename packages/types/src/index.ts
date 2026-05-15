@@ -77,3 +77,5 @@ export * from './crypto-risk-liquidity';
 export * from './golden-scenario-reasoning';
 export * from './cognition-calibration';
 export * from './frontend-contracts';
+
+export * from './commercial-entitlements';

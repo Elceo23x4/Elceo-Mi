@@ -20,6 +20,7 @@ import { runCanonicalNotificationVerificationBoundaryTests } from './canonical-n
 import { runVerificationProviderTests } from './verification-provider.test.js';
 import { runNotificationOrchestrationRuntimeTests } from './notification-orchestration-runtime.test.js';
 import { runNotificationFeedbackRuntimeTests } from './notification-feedback-runtime.test.js';
+import { runUserNotificationPreferencesFoundationTests } from './user-notification-preferences-foundation.test.js';
 
 async function run(): Promise<void> {
   runMaterialChangeTests();
@@ -45,6 +46,7 @@ async function run(): Promise<void> {
   await runVerificationProviderTests();
   await runNotificationOrchestrationRuntimeTests();
   await runNotificationFeedbackRuntimeTests();
+  runUserNotificationPreferencesFoundationTests();
   console.log('notifications runtime contract tests passed');
 }
 

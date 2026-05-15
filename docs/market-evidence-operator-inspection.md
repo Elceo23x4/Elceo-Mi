@@ -9,3 +9,4 @@
 - UI work: none
 
 C6-A10 will focus on frontend contracts + mock payload completion.
+\n## C6-A10 Update (2026-05-15)\nFrontend contracts + mock payloads added for fixture-only UI integration. No live provider calls, no API keys, and enforced public/admin_internal separation. C6-A11 deferred to observability/audit/structured logging readiness.

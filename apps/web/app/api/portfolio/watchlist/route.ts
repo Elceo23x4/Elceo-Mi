@@ -1,18 +1,22 @@
 import { parseJsonBody, parsePositiveInt, parseSearchParams, unwrapValidation, withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
-import { requireAuthenticatedSubject } from '@/lib/server/auth';
+import { requireFeatureAccess } from '@/lib/server/access';
 import { getApplicationStateRuntime } from '@/lib/server/composition';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 import { validateWatchlistCreateRequest } from '@elceo/schemas';
 
 export const GET = withApiErrorBoundary(async (request: Request) => {
-  const subject = await requireAuthenticatedSubject();
+  const access = await requireFeatureAccess('portfolio.read', { request });
+  if (!access.ok) return access.response;
+  const subject = access.subject;
   const params = parseSearchParams(request.url);
   const entries = await getApplicationStateRuntime().portfolio.listCurrentWatchlist(subject.subjectKind, subject.subjectId, parsePositiveInt(params.get('limit'), 50, 200));
   return jsonSuccess({ entries });
 });
 
 export const POST = withApiErrorBoundary(async (request: Request) => {
-  const subject = await requireAuthenticatedSubject();
+  const access = await requireFeatureAccess('portfolio.write', { request });
+  if (!access.ok) return access.response;
+  const subject = access.subject;
   const body = unwrapValidation(validateWatchlistCreateRequest(await parseJsonBody(request)));
   const actor = { actorKind: 'user' as const, actorId: subject.userId, subjectId: subject.subjectId };
   const security = await requireSecurityDecision({ request, routePath: '/api/portfolio/watchlist', method: 'POST', actionKind: 'portfolio_watchlist_write', actor, subjectId: subject.subjectId, requestBody: body });

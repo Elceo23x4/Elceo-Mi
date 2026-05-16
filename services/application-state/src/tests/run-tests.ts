@@ -25,6 +25,7 @@ async function main(): Promise<void> {
   const { runCommercialEntitlementsCoreTests } = await import('./commercial-entitlements-core.test.js');
   const { runSuperAdminCommercialControlsCoreTests } = await import('./super-admin-commercial-controls-core.test.js');
   const { runSuperAdminMetricsCoreTests } = await import('./super-admin-metrics-core.test.js');
+  const { runProviderActivationReadinessCoreTests } = await import('./provider-activation-readiness-core.test.js');
 
   await runApplicationStateTests();
   await runUserStateAccessTests();
@@ -48,6 +49,7 @@ async function main(): Promise<void> {
   await runCommercialEntitlementsCoreTests();
   await runSuperAdminCommercialControlsCoreTests();
   runSuperAdminMetricsCoreTests();
+  runProviderActivationReadinessCoreTests();
   console.log('application-state tests passed');
 }
 

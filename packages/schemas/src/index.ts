@@ -85,3 +85,5 @@ export * from './korapay-payment-readiness.schema';
 export * from './super-admin-metrics.schema';
 
 export * from './user-notification-preferences.schema';
+
+export * from './provider-activation-readiness.schema';

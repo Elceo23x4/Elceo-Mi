@@ -26,3 +26,10 @@ Runtime scope:
 - provider readiness descriptors only (shell mode)
 
 Next batch (C6-A11G): provider activation checklist and env templates.
+
+## C6-A11G update (2026-05-15)
+- Provider activation checklist and env templates added with placeholders only.
+- Live provider/payment/notification activation remains blocked by default.
+- Smoke definitions are plan-only; no live calls executed in this batch.
+- Approval gates + rollback plans are required before staging/production activation.
+- C6-A11H remains next for SEO/programmatic contract feeds.

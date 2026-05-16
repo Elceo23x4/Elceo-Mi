@@ -560,7 +560,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await coachingFocusRoute.GET(request('https://x/api/coaching/focus')))).ok, true);
   assert.equal((await readJson(await coachingActionPlanRoute.GET(request('https://x/api/coaching/action-plan')))).ok, true);
 
-  assert.equal((await readJson(await notificationsSummaryRoute.GET())).ok, true);
+  assert.equal((await readJson(await notificationsSummaryRoute.GET(request('https://x/api/notifications/summary')))).ok, true);
   assert.equal((await readJson(await notificationsInboxRoute.GET(request('https://x/api/notifications/inbox?limit=5')))).ok, true);
   securityDecisionMode = 'rate_limited';
   assert.deepEqual(await readJson(await notificationsTargetsRoute.POST(request('https://x/api/notifications/targets', { method: 'POST', body: JSON.stringify({ channel: 'email', value: 'a@b.com' }) }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });

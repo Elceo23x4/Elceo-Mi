@@ -93,3 +93,5 @@ export * from './provider-activation-readiness';
 export * from './seo-programmatic-feeds';
 
 export * from './observability-audit';
+
+export * from './route-entitlement-map';

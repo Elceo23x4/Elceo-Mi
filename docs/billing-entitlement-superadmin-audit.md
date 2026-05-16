@@ -137,3 +137,10 @@ Complete when all of the following are true:
 - Added deterministic event trigger evaluation, quiet-hours/rate-limit helpers, and draft/outbox/log builders.
 - Provider readiness remains shell-only; no live sends, no provider keys, no SDK activation in this batch.
 - Profile UI activation remains future work; C6-A11G will cover provider activation checklist + env templates.
+
+## C6-A11G update (2026-05-15)
+- Provider activation checklist and env templates added with placeholders only.
+- Live provider/payment/notification activation remains blocked by default.
+- Smoke definitions are plan-only; no live calls executed in this batch.
+- Approval gates + rollback plans are required before staging/production activation.
+- C6-A11H remains next for SEO/programmatic contract feeds.

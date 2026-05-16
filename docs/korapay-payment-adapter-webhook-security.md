@@ -8,3 +8,10 @@
 - Entitlement decision requires verified webhook status and idempotency duplicate protection.
 - C6-A11E will focus on Super Admin metrics backend.
 \n## C6-A11E update (2026-05-15)\n- Super Admin metrics backend contracts/helpers added for later dashboard UI consumption only.\n- Revenue metrics remain fixture/estimated unless live records are enabled.\n- KoraPay is still shell-only with no live provider calls in this batch.\n- No secrets/raw provider payload exposure; no IP ban metrics.\n- C6-A11F remains notification preferences + email/WhatsApp backend.
+
+## C6-A11G update (2026-05-15)
+- Provider activation checklist and env templates added with placeholders only.
+- Live provider/payment/notification activation remains blocked by default.
+- Smoke definitions are plan-only; no live calls executed in this batch.
+- Approval gates + rollback plans are required before staging/production activation.
+- C6-A11H remains next for SEO/programmatic contract feeds.

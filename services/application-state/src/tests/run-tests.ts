@@ -5,6 +5,7 @@ async function main(): Promise<void> {
 
   const { runApplicationStateTests } = await import('./application-state.test.js');
   const { runUserStateAccessTests } = await import('./user-state-access.test.js');
+  const { runRouteEntitlementMapCoreTests } = await import('./route-entitlement-map-core.test.js');
   const { runJournalPersistenceTests } = await import('./journal-persistence.test.js');
   const { runEntitlementEnforcementTests } = await import('./entitlement-enforcement.test.js');
   const { runSubscriptionMappingTests } = await import('./subscription-mapping.test.js');
@@ -31,6 +32,7 @@ async function main(): Promise<void> {
 
   await runApplicationStateTests();
   await runUserStateAccessTests();
+  await runRouteEntitlementMapCoreTests();
   await runJournalPersistenceTests();
   await runEntitlementEnforcementTests();
   await runSubscriptionMappingTests();

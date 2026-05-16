@@ -29,3 +29,19 @@ This is **not** final production launch approval.
 - Backend foundation: **Ready for pre-activation phase progression**.
 - Live operations: **Blocked pending activation gates**.
 - Production launch: **No-go until deployment + security + smoke evidence is complete**.
+
+## Post-C6-P1 update (2026-05-16)
+- Route-level entitlement enforcement is being completed before any UI work.
+- Kick off is limited to: dashboard.chart, dashboard.evidence_score, dashboard.macro_headlines, journal.page.
+- Focus Plan is required for premium surfaces; expired trial returns subscription_required wall.
+- Restricted users are denied before trial/gift/paid entitlement evaluation.
+- Admin/internal routes remain separate and require internal token + admin/super-admin gates.
+- Live providers/payments/notifications remain blocked in this phase.
+- Route inventory and unresolved families are tracked in docs/route-entitlement-enforcement-map.md.
+
+
+## Post-C6-P1B runtime enforcement update (2026-05-16)
+- Implemented runtime foundation artifacts: typed route entitlement map and shared route entitlement helper.
+- Implemented route-level runtime denial contract on checkout for payment-readiness and blocked live activation.
+- Representative runtime map coverage is implemented; broad family completion remains tracked as needs_follow_up/policy-only where not yet wired.
+- Route-runtime and lower-level tests were added for the new map/helper foundation.

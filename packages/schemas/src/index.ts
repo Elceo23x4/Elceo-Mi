@@ -88,3 +88,5 @@ export * from './user-notification-preferences.schema';
 
 export * from './provider-activation-readiness.schema';
 export * from './seo-programmatic-feeds.schema';
+
+export * from './observability-audit.schema';

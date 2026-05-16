@@ -90,3 +90,4 @@ export * from './user-notification-preferences';
 
 
 export * from './provider-activation-readiness';
+export * from './seo-programmatic-feeds';

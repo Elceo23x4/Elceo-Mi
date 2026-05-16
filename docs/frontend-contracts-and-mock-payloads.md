@@ -15,3 +15,4 @@ All frontend contracts are fixture/mock driven for UI integration planning only.
 - Added deterministic event trigger evaluation, quiet-hours/rate-limit helpers, and draft/outbox/log builders.
 - Provider readiness remains shell-only; no live sends, no provider keys, no SDK activation in this batch.
 - Profile UI activation remains future work; C6-A11G will cover provider activation checklist + env templates.
+\n## C6-A11H update (2026-05-16)\n- Added backend-only SEO/programmatic contract feed finalization module + validators + tests.\n- Contract-level only (no UI, no public routes activated).\n- Public feeds exclude premium/admin/internal/secrets/raw provider payloads and avoid recommendation/advice language.\n- No live provider calls; C6-A11I remains observability/audit/logging readiness.\n

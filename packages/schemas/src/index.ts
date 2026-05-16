@@ -87,3 +87,4 @@ export * from './super-admin-metrics.schema';
 export * from './user-notification-preferences.schema';
 
 export * from './provider-activation-readiness.schema';
+export * from './seo-programmatic-feeds.schema';

@@ -1,0 +1,31 @@
+import type { LaunchAsset } from './provider-source-registry';
+
+export const SEO_PROGRAMMATIC_FEED_SURFACES = ['supported_assets_index','asset_page','macro_event_page','evidence_class_page','market_reasoning_glossary_page','feature_page','sitemap','robots_policy','canonical_feed','structured_data','content_registry','safety_report','coverage_report'] as const;
+export type SeoProgrammaticFeedSurface = typeof SEO_PROGRAMMATIC_FEED_SURFACES[number];
+export const SEO_PROGRAMMATIC_CONTENT_KINDS = ['asset_index','asset_page','macro_event','evidence_class','market_reasoning_glossary','feature_page','sitemap_entry','robots_policy','canonical_url','structured_data_payload'] as const;
+export type SeoProgrammaticContentKind = typeof SEO_PROGRAMMATIC_CONTENT_KINDS[number];
+export const SEO_PROGRAMMATIC_VISIBILITY = ['public'] as const; export type SeoProgrammaticVisibility = typeof SEO_PROGRAMMATIC_VISIBILITY[number];
+export const SEO_PROGRAMMATIC_INDEXING_POLICIES = ['index_follow','noindex_follow','noindex_nofollow'] as const; export type SeoProgrammaticIndexingPolicy = typeof SEO_PROGRAMMATIC_INDEXING_POLICIES[number];
+export const SEO_PROGRAMMATIC_CANONICAL_STATUSES = ['canonical','duplicate','pending_review'] as const; export type SeoProgrammaticCanonicalStatus = typeof SEO_PROGRAMMATIC_CANONICAL_STATUSES[number];
+export const SEO_PROGRAMMATIC_STRUCTURED_DATA_KINDS = ['website','organization','software_application','webpage','article','breadcrumb_list'] as const; export type SeoProgrammaticStructuredDataKind = typeof SEO_PROGRAMMATIC_STRUCTURED_DATA_KINDS[number];
+export const SEO_PROGRAMMATIC_SAFETY_STATUSES = ['pass','warning','fail'] as const; export type SeoProgrammaticSafetyStatus = typeof SEO_PROGRAMMATIC_SAFETY_STATUSES[number];
+export const SEO_PROGRAMMATIC_CONTENT_STATUSES = ['active','draft'] as const; export type SeoProgrammaticContentStatus = typeof SEO_PROGRAMMATIC_CONTENT_STATUSES[number];
+export const SEO_PROGRAMMATIC_ASSET_TIERS = ['tier_1a_core','tier_1b_major_fx'] as const; export type SeoProgrammaticAssetTier = typeof SEO_PROGRAMMATIC_ASSET_TIERS[number];
+export const SEO_PROGRAMMATIC_GLOSSARY_CATEGORIES = ['macro_context','evidence_score','liquidity_pressure','real_yields','dxy','volatility_regime','credit_stress','breadth','contradiction_detection','confidence_decomposition','market_reasoning','risk_mapping','provider_readiness','scheduled_ingestion','fixture_dry_run_mode'] as const;
+export type SeoProgrammaticGlossaryCategory = typeof SEO_PROGRAMMATIC_GLOSSARY_CATEGORIES[number];
+
+export type SeoProgrammaticSupportedAssetPage = { assetId: LaunchAsset; displaySymbol: string; assetName: string; tier: SeoProgrammaticAssetTier; marketFamily: string; slug: string; canonicalPath: string; title: string; metaDescription: string; publicSummary: string; educationalSections: { heading: string; body: string }[]; relatedGlossarySlugs: string[]; supportedStatus: 'supported'; premiumContentBoundaryNote: string; indexingPolicy: SeoProgrammaticIndexingPolicy; structuredDataKind: SeoProgrammaticStructuredDataKind; updatedAt: string; visibility: 'public'; };
+export type SeoProgrammaticAssetIndexFeed = { generatedAt: string; visibility: 'public'; assets: SeoProgrammaticSupportedAssetPage[]; };
+export type SeoProgrammaticMacroEventPage = { slug:string; title:string; metaDescription:string; publicDefinition:string; whyTradersWatchIt:string; assetsCommonlyAffected: LaunchAsset[]; evidenceClasses: string[]; safeEducationalNote:string; indexingPolicy: SeoProgrammaticIndexingPolicy; canonicalPath:string; visibility:'public'; };
+export type SeoProgrammaticEvidenceClassPage = { slug:string; title:string; metaDescription:string; publicDefinition:string; whyItMatters:string; safeExample:string; relatedAssets: LaunchAsset[]; relatedGlossarySlugs: string[]; indexingPolicy: SeoProgrammaticIndexingPolicy; canonicalPath:string; visibility:'public'; };
+export type SeoProgrammaticGlossaryPage = SeoProgrammaticEvidenceClassPage & { category: SeoProgrammaticGlossaryCategory; };
+export type SeoProgrammaticFeaturePage = { slug:string; title:string; metaDescription:string; publicSummary:string; capabilityHighlights:string[]; premiumBoundaryNote:string; indexingPolicy: SeoProgrammaticIndexingPolicy; canonicalPath:string; visibility:'public'; };
+export type SeoProgrammaticSitemapEntry = { path:string; changeFrequency:'daily'|'weekly'|'monthly'; priority:number; lastModified:string; indexingPolicy:SeoProgrammaticIndexingPolicy; contentKind:SeoProgrammaticContentKind; };
+export type SeoProgrammaticSitemapFeed = { generatedAt:string; entries:SeoProgrammaticSitemapEntry[]; visibility:'public'; };
+export type SeoProgrammaticRobotsPolicy = { allowedPublicPaths:string[]; disallowedPaths:string[]; noindexPatterns:string[]; protectedPaths:string[]; adminPaths:string[]; apiPaths:string[]; visibility:'public'; };
+export type SeoProgrammaticCanonicalUrlEntry = { path:string; canonicalPath:string; canonicalStatus:SeoProgrammaticCanonicalStatus; contentKind:SeoProgrammaticContentKind; };
+export type SeoProgrammaticCanonicalFeed = { generatedAt:string; entries:SeoProgrammaticCanonicalUrlEntry[]; visibility:'public'; };
+export type SeoProgrammaticStructuredDataPayload = { id:string; kind:SeoProgrammaticStructuredDataKind; path:string; jsonLd:Record<string, unknown>; visibility:'public'; };
+export type SeoProgrammaticContentRegistry = { generatedAt:string; status:SeoProgrammaticContentStatus; entries:{surface:SeoProgrammaticFeedSurface; contentKind:SeoProgrammaticContentKind; path:string; visibility:'public'; indexingPolicy:SeoProgrammaticIndexingPolicy;}[]; safetyStatus: SeoProgrammaticSafetyStatus; };
+export type SeoProgrammaticSafetyReport = { generatedAt:string; status:SeoProgrammaticSafetyStatus; checks:{name:string; status:SeoProgrammaticSafetyStatus; details:string;}[]; blockedTerms:string[]; };
+export type SeoProgrammaticCoverageReport = { generatedAt:string; tier1aCovered:boolean; tier1bCovered:boolean; supportedAssetCount:number; macroPageCount:number; glossaryPageCount:number; featurePageCount:number; sitemapEntryCount:number; };

@@ -34,3 +34,10 @@ Next batch (C6-A11G): provider activation checklist and env templates.
 - Approval gates + rollback plans are required before staging/production activation.
 - C6-A11H remains next for SEO/programmatic contract feeds.
 \n## C6-A11I update (2026-05-16)\n- Internal observability/audit/structured logging contracts + validators + redaction helpers + diagnostic error envelopes added.\n- No external vendor integration yet; no live provider calls; no API keys; no secrets in diagnostic payloads.\n- Structured logging export integration remains production-pending; route-by-route adoption may still be pending.\n- C6-A12 remains final backend readiness refresh and pre-activation review.\n
+
+## Post-C6-P3 account/profile + notification ownership update (2026-05-17)
+- Scope: backend route ownership and payment-readiness guard updates only; no UI changes.
+- Focus Plan checkout readiness now enforces social identifiers (linkedin_address, telegram_id, x_username) before eligibility; missing identifiers return `payment_readiness_blocked` + `missing_social_identifier`; liveActivation remains blocked.
+- Notification preference foundation remains shell-only (no live email/WhatsApp sends) and owner boundary is enforced for subscription mutation routes.
+- Account/profile routes remain authenticated-basic where present; profile/social identifier CRUD route is not_present and needs_follow_up for explicit backend contract.
+- No live KoraPay/Stripe checkout created; no live provider activation.

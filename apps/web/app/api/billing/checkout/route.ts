@@ -3,6 +3,7 @@ import { requireAppUserState } from '../../../../lib/auth/session';
 import { guardRoutePaymentReadiness } from '../../../../lib/server/access/route-entitlement';
 import { captureError } from '../../../../lib/monitoring';
 import { getRequestId, logRequest } from '../../../../lib/request-context';
+import type { UserCommercialEntitlementSnapshot } from '@elceo/types';
 
 function resolveStatus(error: unknown): number {
   if (error instanceof Error && error.message === 'UNAUTHORIZED') return 401;
@@ -18,7 +19,12 @@ export async function POST(request: Request) {
       throw new Error('Unsupported target plan for checkout');
     }
 
-    const readiness = guardRoutePaymentReadiness([]);
+    const fromHeader = request.headers.get('x-elceo-commercial-snapshot');
+    const snapshot: UserCommercialEntitlementSnapshot =
+      process.env.ELCEO_ALLOW_TEST_COMMERCIAL_SNAPSHOT === '1' && fromHeader
+        ? (JSON.parse(fromHeader) as UserCommercialEntitlementSnapshot)
+        : { userId: session.user.id, nowIso: new Date().toISOString(), trialStartedAt: null, activePlanCode: null, subscriptionActive: false, socialIdentifiers: [], userRestrictionStatus: 'none' };
+    const readiness = guardRoutePaymentReadiness(snapshot.socialIdentifiers);
     if (readiness.status !== 'eligible') {
       return NextResponse.json({ error: 'payment_readiness_blocked', code: readiness.reason, subscriptionWall: { required: true, reason: 'focus_plan_required', targetPlanCode: 'focus_plan' }, liveActivation: 'blocked' }, { status: 403, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
     }

@@ -127,3 +127,10 @@ _Date: 2026-05-16_
 - Public SEO product-intelligence routes remain not_present; admin SEO feed/sitemap routes remain internal/admin-only.
 - Feature-permission gates and commercial entitlement gates remain separate and both required where applicable.
 
+
+## Post-C6-P3 account/profile + notification ownership update (2026-05-17)
+- Scope: backend route ownership and payment-readiness guard updates only; no UI changes.
+- Focus Plan checkout readiness now enforces social identifiers (linkedin_address, telegram_id, x_username) before eligibility; missing identifiers return `payment_readiness_blocked` + `missing_social_identifier`; liveActivation remains blocked.
+- Notification preference foundation remains shell-only (no live email/WhatsApp sends) and owner boundary is enforced for subscription mutation routes.
+- Account/profile routes remain authenticated-basic where present; profile/social identifier CRUD route is not_present and needs_follow_up for explicit backend contract.
+- No live KoraPay/Stripe checkout created; no live provider activation.

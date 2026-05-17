@@ -24,7 +24,7 @@ export const ROUTE_FAMILY_AUDIT_STATUS = {
   portfolio: 'commercial_runtime_guarded',
   notifications: 'commercial_runtime_guarded',
   'billing/checkout': 'helper_guarded',
-  'account/profile': 'policy_only',
+  'account/profile': 'authenticated_basic',
   dashboard: 'helper_guarded',
   'market-evidence': 'route_runtime_tested',
   'market-evidence user-facing': 'not_present',
@@ -41,7 +41,8 @@ export const ROUTE_FAMILY_AUDIT_STATUS = {
   'Super Admin metrics': 'policy_only',
   'SEO/programmatic': 'not_present',
   'observability/audit': 'route_runtime_tested',
-  'KoraPay/payment readiness routes if present': 'helper_guarded'
+  'KoraPay/payment readiness routes if present': 'helper_guarded',
+  'notification preferences ownership': 'notification_preference_owner_only'
 } as const;
 
 export const ROUTE_ENTITLEMENT_MAP_SORTED: RouteEntitlementRecord[] = [...ROUTE_ENTITLEMENT_MAP].sort((a,b)=>(`${a.method}:${a.path}`).localeCompare(`${b.method}:${b.path}`));

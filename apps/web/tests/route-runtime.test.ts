@@ -330,6 +330,7 @@ const mockNotificationRuntime = {
     listInbox: async () => [],
     registerOrUpdateTarget: async () => ({ targetId: 'target-1' }),
     registerOrUpdateSubscription: async () => ({ subscriptionId: 'sub-1' }),
+    listSubscriptionsForSubjectDetailed: async () => ([{ subscriptionId: 'sub-1', subjectId: subject.subjectId }]),
     enableTarget: async (targetId: string) => { if (targetId === 'target-foreign') throw new Error('forbidden'); },
     disableTarget: async (targetId: string) => { if (targetId === 'target-foreign') throw new Error('forbidden'); },
     enableSubscription: async (subscriptionId: string) => { if (subscriptionId === 'sub-foreign') throw new Error('forbidden'); },
@@ -594,7 +595,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   securityDecisionMode = 'rate_limited';
   assert.deepEqual(await readJson(await notificationsSubscriptionRoute.PATCH(request('https://x/api/notifications/subscriptions/sub-1', { method: 'PATCH', body: JSON.stringify({ isEnabled: false }) }), { params: Promise.resolve({ subscriptionId: 'sub-1' }) })), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
   securityDecisionMode = 'allowed';
-  assert.deepEqual(await readJson(await notificationsSubscriptionRoute.PATCH(request('https://x/api/notifications/subscriptions/sub-foreign', { method: 'PATCH', body: JSON.stringify({ isEnabled: false }) }), { params: Promise.resolve({ subscriptionId: 'sub-foreign' }) })), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
+  assert.deepEqual(await readJson(await notificationsSubscriptionRoute.PATCH(request('https://x/api/notifications/subscriptions/sub-foreign', { method: 'PATCH', body: JSON.stringify({ isEnabled: false }) }), { params: Promise.resolve({ subscriptionId: 'sub-foreign' }) })), { ok: false, error: { code: 'forbidden', message: 'Owner scope denied', details: ['code:owner_scope_denied'] } });
   assert.equal(latestSecurityActionKind, 'notification_subscription_write');
   const notificationVerificationIssueOk = await notificationsVerificationIssueRoute.POST(request('https://x/api/notifications/verification/issue', { method: 'POST', headers: { 'Idempotency-Key': 'notification-issue-ok' }, body: JSON.stringify({ targetId: 'target-1' }) }));
   assert.equal(notificationVerificationIssueOk.status, 200);

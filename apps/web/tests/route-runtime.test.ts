@@ -673,6 +673,16 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal(socialIdentifiersUnauthorized.status, 401);
   installMocks();
   assert.equal((await readJson(await accountProfileSocialIdentifiersRoute.PATCH(request('https://x/api/account/profile/social-identifiers', { method: 'PATCH', body: JSON.stringify({ linkedinAddress: 'https://linkedin.com/in/elceo' }) })))).ok, true);
+  const socialGetLinkedIn = await readJson(await accountProfileSocialIdentifiersRoute.GET());
+  assert.equal(socialGetLinkedIn.ok, true);
+  assert.equal((((socialGetLinkedIn.data as { socialIdentifiers?: Array<{ kind?: string }> }).socialIdentifiers?.[0]?.kind) ?? null), 'linkedin_address');
+  const socialTelegram = await readJson(await accountProfileSocialIdentifiersRoute.PATCH(request('https://x/api/account/profile/social-identifiers', { method: 'PATCH', body: JSON.stringify({ telegramId: 'elceo_tg', userId: 'user-2' }) })));
+  assert.equal(socialTelegram.ok, true);
+  assert.equal((((socialTelegram.data as { userId?: string }).userId) ?? null), 'user-1');
+  const socialX = await readJson(await accountProfileSocialIdentifiersRoute.PATCH(request('https://x/api/account/profile/social-identifiers', { method: 'PATCH', body: JSON.stringify({ xUsername: '@elceox' }) })));
+  assert.equal(socialX.ok, true);
+  assert.equal((((socialX.data as { socialIdentifiers?: Array<{ kind?: string }> }).socialIdentifiers?.[0]?.kind) ?? null), 'x_username');
+  assert.equal((JSON.stringify(socialX).toLowerCase().includes('session')), false);
   const socialInvalid = await accountProfileSocialIdentifiersRoute.PATCH(request('https://x/api/account/profile/social-identifiers', { method: 'PATCH', body: JSON.stringify({ xUsername: '<script>alert(1)</script>' }) }));
   assert.equal(socialInvalid.status, 400);
   assert.equal((await readJson(socialInvalid)).ok, false);

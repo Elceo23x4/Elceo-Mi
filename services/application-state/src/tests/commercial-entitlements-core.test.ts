@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { checkCommercialPaymentReadiness, evaluateCommercialFeatureAccess, getCommercialPlanCatalog, getFocusPlanDescriptor, getKickOffTrialDescriptor } from '../commercial-entitlements/index';
 
+import { clearUserSocialIdentifiersMemoryStore, getUserSocialIdentifiersSnapshot, upsertUserSocialIdentifiersSnapshot } from '../commercial-entitlements/user-social-identifiers';
+
 export async function runCommercialEntitlementsCoreTests(): Promise<void> {
   const catalog=getCommercialPlanCatalog();
   assert.equal(catalog.plans[0].planCode,'kick_off'); assert.equal(catalog.plans[1].planCode,'focus_plan');
@@ -35,6 +37,26 @@ export async function runCommercialEntitlementsCoreTests(): Promise<void> {
   assert.equal(checkCommercialPaymentReadiness({identifiers:[{kind:'telegram_id',value:'@user'}]}).status,'eligible');
   assert.equal(checkCommercialPaymentReadiness({identifiers:[{kind:'x_username',value:'@userx'}]}).status,'eligible');
   assert.equal(checkCommercialPaymentReadiness({identifiers:[{kind:'x_username',value:'<script>'}]}).status,'blocked');
+
+
+  clearUserSocialIdentifiersMemoryStore();
+  const u='user-social-test';
+  let snap = await upsertUserSocialIdentifiersSnapshot(u,[{kind:'linkedin_address',value:'https://linkedin.com/in/elceo'}]);
+  assert.equal(snap.socialIdentifiers[0]?.kind,'linkedin_address');
+  snap = await upsertUserSocialIdentifiersSnapshot(u,[{kind:'telegram_id',value:'elceo_telegram'}]);
+  assert.equal(snap.socialIdentifiers[0]?.kind,'telegram_id');
+  snap = await upsertUserSocialIdentifiersSnapshot(u,[{kind:'x_username',value:'elceox'}]);
+  assert.equal(snap.socialIdentifiers[0]?.kind,'x_username');
+  assert.equal(snap.persistenceStatus,'memory_fallback');
+  assert.equal(snap.paymentReadiness.status,'eligible');
+
+  const emptySnap = await getUserSocialIdentifiersSnapshot('missing-user');
+  assert.equal(emptySnap.paymentReadiness.status,'blocked');
+  assert.equal(emptySnap.paymentReadiness.reason,'missing_social_identifier');
+  assert.equal(emptySnap.persistenceStatus,'memory_fallback');
+  assert.equal(JSON.stringify(snap).toLowerCase().includes('password'), false);
+  assert.equal(JSON.stringify(snap).toLowerCase().includes('session'), false);
+
 }
 
 

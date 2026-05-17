@@ -10,7 +10,12 @@ export const ROUTE_ENTITLEMENT_MAP = [
   { method:'GET', path:'/api/notifications/summary', policy:'focus_plan_required', featureKey:'notification.advanced_preferences', sensitivity:'high', requiredGuard:'requireFeatureAccess+guardRouteCommercialEntitlement' },
   { method:'POST', path:'/api/billing/checkout', policy:'payment_readiness_required', featureKey:'checkout.focus_plan_prepare', sensitivity:'critical', requiredGuard:'buildRouteEntitlementDeniedResponse' },
   { method:'POST', path:'/api/billing/checkout', policy:'blocked_live_activation', featureKey:'payment.korapay_checkout_readiness', sensitivity:'critical', requiredGuard:'buildRouteEntitlementDeniedResponse' },
-  { method:'GET', path:'/api/admin/commercial/metrics', policy:'admin_read_required', featureKey:'admin.metrics', sensitivity:'critical', requiredGuard:'requireInternalRouteAccess+requireFeatureAccess' }
+  { method:'GET', path:'/api/admin/commercial/metrics', policy:'admin_read_required', featureKey:'admin.metrics', sensitivity:'critical', requiredGuard:'requireInternalRouteAccess+requireFeatureAccess' },
+  { method:'GET', path:'/api/admin/market-evidence/cognition', policy:'admin_read_required', featureKey:'admin.operator_inspection', sensitivity:'critical', requiredGuard:'requireInternalRouteAccess+requireFeatureAccess' },
+  { method:'GET', path:'/api/admin/market-evidence/weighted', policy:'admin_read_required', featureKey:'admin.operator_inspection', sensitivity:'critical', requiredGuard:'requireInternalRouteAccess+requireFeatureAccess' },
+  { method:'GET', path:'/api/admin/market-evidence/scheduled-ingestion/runs', policy:'admin_read_required', featureKey:'admin.scheduled_ingestion', sensitivity:'critical', requiredGuard:'requireInternalRouteAccess+requireFeatureAccess' },
+  { method:'POST', path:'/api/admin/market-evidence/scheduled-ingestion/dry-run', policy:'admin_ops_required', featureKey:'admin.scheduled_ingestion', sensitivity:'critical', requiredGuard:'requireInternalRouteAccess+requireFeatureAccess+requireSecurityDecision' },
+  { method:'POST', path:'/api/internal/market-evidence/tiingo/fixture-ingest', policy:'internal_only', featureKey:null, sensitivity:'critical', requiredGuard:'requireInternalRouteAccess+requireFeatureAccess+requireSecurityDecision' }
 ] as const satisfies RouteEntitlementRecord[];
 
 export const ROUTE_FAMILY_AUDIT_STATUS = {
@@ -21,9 +26,11 @@ export const ROUTE_FAMILY_AUDIT_STATUS = {
   'billing/checkout': 'helper_guarded',
   'account/profile': 'policy_only',
   dashboard: 'helper_guarded',
-  'market-evidence': 'needs_follow_up',
+  'market-evidence': 'route_runtime_tested',
+  'market-evidence user-facing': 'not_present',
   'frontend contracts/mock payloads': 'lower_level_tested',
   journal: 'helper_guarded',
+  'journal deep-analysis': 'not_present',
   workspace: 'feature_permission_guarded',
   auth: 'policy_only',
   admin: 'route_runtime_tested',

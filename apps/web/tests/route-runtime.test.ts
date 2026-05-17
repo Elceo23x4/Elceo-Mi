@@ -69,6 +69,7 @@ import * as accountEntitlementsRoute from '../app/api/account/entitlements/route
 import * as accountUsageRoute from '../app/api/account/usage/route';
 import * as accountAccessDecisionsRoute from '../app/api/account/access-decisions/route';
 import * as accountAccessCheckRoute from '../app/api/account/access-check/route';
+import * as accountProfileSocialIdentifiersRoute from '../app/api/account/profile/social-identifiers/route';
 import * as adminEntitlementPlanRoute from '../app/api/admin/entitlements/plan/route';
 import * as adminEntitlementStateRoute from '../app/api/admin/entitlements/state/route';
 import * as adminEntitlementOverrideRoute from '../app/api/admin/entitlements/override/route';
@@ -665,6 +666,16 @@ export async function runRouteRuntimeTests(): Promise<void> {
   const accountAccessCrossSubjectProbe = await readJson(await accountAccessCheckRoute.POST(request('https://x/api/account/access-check', { method: 'POST', body: JSON.stringify({ feature: 'workspace.refresh', subjectId: 'user-2' }) })));
   assert.equal(accountAccessCrossSubjectProbe.ok, true);
   assert.equal((((accountAccessCrossSubjectProbe.data as { decision?: { subjectId?: string } }).decision?.subjectId) ?? null), 'user-1');
+
+
+  setAuthTestOverrides({ subjectResolver: async () => null });
+  const socialIdentifiersUnauthorized = await accountProfileSocialIdentifiersRoute.GET();
+  assert.equal(socialIdentifiersUnauthorized.status, 401);
+  installMocks();
+  assert.equal((await readJson(await accountProfileSocialIdentifiersRoute.PATCH(request('https://x/api/account/profile/social-identifiers', { method: 'PATCH', body: JSON.stringify({ linkedinAddress: 'https://linkedin.com/in/elceo' }) })))).ok, true);
+  const socialInvalid = await accountProfileSocialIdentifiersRoute.PATCH(request('https://x/api/account/profile/social-identifiers', { method: 'PATCH', body: JSON.stringify({ xUsername: '<script>alert(1)</script>' }) }));
+  assert.equal(socialInvalid.status, 400);
+  assert.equal((await readJson(socialInvalid)).ok, false);
 
   setAuthTestOverrides({ subjectResolver: async () => null });
   const accountBillingUnauthorized = await accountBillingRoute.GET();

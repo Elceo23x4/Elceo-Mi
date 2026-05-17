@@ -95,3 +95,5 @@ export * from './seo-programmatic-feeds';
 export * from './observability-audit';
 
 export * from './route-entitlement-map';
+
+export * from './user-social-identifiers';

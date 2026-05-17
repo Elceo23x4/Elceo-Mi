@@ -1,6 +1,6 @@
-import { runRouteRuntimeTests } from './route-runtime.test.js';
+Object.assign(process.env, { ELCEO_ALLOW_TEST_COMMERCIAL_SNAPSHOT: '1' });
 
-runRouteRuntimeTests()
+import('./route-runtime.test.js').then(({ runRouteRuntimeTests }) => runRouteRuntimeTests())
   .then(() => {
     console.log('web route runtime tests passed');
   })

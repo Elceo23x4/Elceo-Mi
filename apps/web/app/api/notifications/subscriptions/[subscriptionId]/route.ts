@@ -1,5 +1,6 @@
 import { parseJsonBody, unwrapValidation, withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
 import { requireAuthenticatedSubject } from '@/lib/server/auth';
+import { assertRouteSubjectOwnership, buildOwnerAccessDeniedResponse } from '@/lib/server/access';
 import { getNotificationRuntimes } from '@/lib/server/composition';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 import { validateSubscriptionUpdateRequest } from '@elceo/schemas';
@@ -13,6 +14,9 @@ export const PATCH = withApiErrorBoundary(async (request: Request, context: { pa
   if (!security.ok) return security.response;
   try {
     const runtime = getNotificationRuntimes().management;
+    const ownedSubscriptions = await runtime.listSubscriptionsForSubjectDetailed(subject.subjectKind, subject.subjectId);
+    const ownsSubscription = ownedSubscriptions.some((entry) => assertRouteSubjectOwnership({ authenticatedSubjectId: subject.subjectId, routeSubjectId: entry.subjectId }) && entry.subscriptionId === subscriptionId);
+    if (!ownsSubscription) return buildOwnerAccessDeniedResponse();
     if (body.isEnabled === true) await runtime.enableSubscription(subscriptionId);
     if (body.isEnabled === false) await runtime.disableSubscription(subscriptionId);
     if (body.minimumMaterialityScore !== undefined) await runtime.updateSubscriptionThreshold(subscriptionId, body.minimumMaterialityScore ?? null);

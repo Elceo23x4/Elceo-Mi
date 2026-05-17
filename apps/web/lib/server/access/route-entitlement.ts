@@ -1,5 +1,6 @@
 import { jsonError } from '@/lib/server/api';
 import type { CommercialFeatureKey, CommercialProfileSocialIdentifier, UserCommercialEntitlementSnapshot } from '@elceo/types';
+import { validateCommercialProfileSocialIdentifier } from '@elceo/schemas';
 
 const kickOffAllowlist: CommercialFeatureKey[] = ['dashboard.chart', 'dashboard.evidence_score', 'dashboard.macro_headlines', 'journal.page'];
 
@@ -22,4 +23,19 @@ export function guardRouteCommercialEntitlement(input: { routePath: string; meth
   const status = result.reason === 'subscription_required' ? 402 : 403;
   return { allowed: false as const, status, code: result.reason, reason: result.reason, routePath: input.routePath, featureKey: input.featureKey, requiredPolicy: 'commercial_entitlement', entitlementStatus: result.status, restrictedUser: result.reason === 'restricted_user' ? input.snapshot.userRestrictionStatus : null, subscriptionWall: result.subscriptionWall, response: buildRouteEntitlementDeniedResponse(result.reason, status, result.reason !== 'restricted_user') };
 }
-export function guardRoutePaymentReadiness(identifiers: CommercialProfileSocialIdentifier[]) { return identifiers.length ? { status: 'eligible' as const, reason: 'ready' as const, normalizedIdentifiers: identifiers } : { status: 'blocked' as const, reason: 'missing_social_identifier' as const, normalizedIdentifiers: [] }; }
+export function guardRoutePaymentReadiness(identifiers: CommercialProfileSocialIdentifier[]) {
+  const normalized: CommercialProfileSocialIdentifier[] = [];
+  for (const id of identifiers) {
+    const checked = validateCommercialProfileSocialIdentifier(id);
+    if (checked.ok) normalized.push(checked.value);
+  }
+  return normalized.length ? { status: 'eligible' as const, reason: 'ready' as const, normalizedIdentifiers: normalized } : { status: 'blocked' as const, reason: 'missing_social_identifier' as const, normalizedIdentifiers: [] };
+}
+
+export function assertRouteSubjectOwnership(input: { authenticatedSubjectId: string; routeSubjectId: string }) {
+  return input.authenticatedSubjectId === input.routeSubjectId;
+}
+
+export function buildOwnerAccessDeniedResponse() {
+  return jsonError('forbidden', 'Owner scope denied', ['code:owner_scope_denied'], 403);
+}

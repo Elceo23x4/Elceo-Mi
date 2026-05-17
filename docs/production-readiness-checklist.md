@@ -97,4 +97,24 @@ _Date: 2026-05-16_
 - Implemented route-level runtime denial contract on checkout for payment-readiness and blocked live activation.
 - Representative runtime map coverage is implemented; broad family completion remains tracked as needs_follow_up/policy-only where not yet wired.
 - Route-runtime and lower-level tests were added for the new map/helper foundation.
-\n## Post-C6-P1D update\n- Added representative commercial runtime guards for /api/analytics/latest, /api/coaching/latest, /api/portfolio/watchlist (GET/POST), and /api/notifications/summary via guardRouteCommercialEntitlement.\n- Status: commercial_runtime_guarded (representative only).\n- requireFeatureAccess remains separate feature-permission layer from commercial entitlement.\n- Remaining families: needs_follow_up for full runtime commercial snapshot binding beyond test header fixtures.\n
+
+## Post-C6-P1D update
+- Added representative commercial runtime guards for /api/analytics/latest, /api/coaching/latest, /api/portfolio/watchlist (GET/POST), and /api/notifications/summary via guardRouteCommercialEntitlement.
+- Status: commercial_runtime_guarded (representative only).
+- requireFeatureAccess remains separate feature-permission layer from commercial entitlement.
+- Remaining families: needs_follow_up for full runtime commercial snapshot binding beyond test header fixtures.
+
+
+## Post-C6-P1E (2026-05-17)
+- Final route-family audit completed for product-facing families.
+- Commercial runtime guarded (confirmed): analytics, coaching, portfolio watchlist (GET/POST), notifications summary.
+- Feature-permission guarded only: workspace family.
+- Helper/lower-level tested: dashboard, journal, billing checkout payment-readiness and live-block, frontend contracts/mock payload families.
+- Route runtime tested: admin/internal/scheduled-ingestion/operator-inspection/observability audit representative handlers.
+- Policy only: account/profile, auth, provider activation, super-admin metrics.
+- Needs follow-up: market-evidence product-facing route family classification remains policy-ambiguous without new public handlers.
+- Not present: public SEO/programmatic route family and dedicated KoraPay public checkout route family.
+- `requireFeatureAccess` remains separate from commercial entitlement runtime guards.
+- Live provider/payment/notification activation remains blocked in this phase.
+- No UI changes were made in Post-C6-P1E.
+- Enforcement status: representative runtime enforcement complete with documented follow-up families (not full exhaustive route-runtime simulation).

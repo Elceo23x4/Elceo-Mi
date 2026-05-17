@@ -316,6 +316,7 @@ const mockAnalyticsRuntime = {
     listTopBehaviorPatterns: async () => []
   },
   coaching: {
+    getLatestCoachingSnapshot: async () => null,
     generateCoachingSnapshot: async () => ({ snapshotId: 'c-1' }),
     listTopCoachingFocusAreas: async () => [],
     listCurrentActionPlan: async () => []
@@ -398,7 +399,11 @@ function clearMocks(): void {
 }
 
 function request(url: string, init?: RequestInit): Request {
-  return new Request(url, init);
+  const headers = new Headers(init?.headers);
+  if (!headers.has('x-elceo-commercial-snapshot')) {
+    headers.set('x-elceo-commercial-snapshot', JSON.stringify({ userId: subject.userId, nowIso: '2026-01-01T00:00:00.000Z', trialStartedAt: null, activePlanCode: 'focus_plan', subscriptionActive: true, socialIdentifiers: [{ kind: 'x_username', value: '@fixture' }], userRestrictionStatus: 'none' }));
+  }
+  return new Request(url, { ...init, headers });
 }
 
 async function readJson(response: Response): Promise<{ ok: boolean; [key: string]: unknown }> {

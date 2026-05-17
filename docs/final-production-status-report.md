@@ -45,3 +45,4 @@ This is **not** final production launch approval.
 - Implemented route-level runtime denial contract on checkout for payment-readiness and blocked live activation.
 - Representative runtime map coverage is implemented; broad family completion remains tracked as needs_follow_up/policy-only where not yet wired.
 - Route-runtime and lower-level tests were added for the new map/helper foundation.
+\n## Post-C6-P1D update\n- Added representative commercial runtime guards for /api/analytics/latest, /api/coaching/latest, /api/portfolio/watchlist (GET/POST), and /api/notifications/summary via guardRouteCommercialEntitlement.\n- Status: commercial_runtime_guarded (representative only).\n- requireFeatureAccess remains separate feature-permission layer from commercial entitlement.\n- Remaining families: needs_follow_up for full runtime commercial snapshot binding beyond test header fixtures.\n

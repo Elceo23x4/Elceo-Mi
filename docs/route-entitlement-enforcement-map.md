@@ -59,3 +59,4 @@ Route root scanned: `apps/web/app/api`.
 - Dedicated KoraPay checkout route family under `/api/checkout/korapay/*` not present yet.
 - Dedicated super-admin operator inspection routes are partially represented via existing admin/internal families; additional granularity is future wiring.
 
+\n## Post-C6-P1D update\n- Added representative commercial runtime guards for /api/analytics/latest, /api/coaching/latest, /api/portfolio/watchlist (GET/POST), and /api/notifications/summary via guardRouteCommercialEntitlement.\n- Status: commercial_runtime_guarded (representative only).\n- requireFeatureAccess remains separate feature-permission layer from commercial entitlement.\n- Remaining families: needs_follow_up for full runtime commercial snapshot binding beyond test header fixtures.\n

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { ROUTE_ENTITLEMENT_MAP_SORTED, ROUTE_FAMILY_AUDIT_STATUS, classifyRouteEntitlementPolicy } from '../route-entitlement-map/index';
 import { evaluateCommercialFeatureAccess } from '../commercial-entitlements/index';
+import type { RouteEntitlementFeatureKey } from '@elceo/types';
 
 export async function runRouteEntitlementMapCoreTests(): Promise<void> {
   assert.equal(ROUTE_ENTITLEMENT_MAP_SORTED.length > 0, true);
@@ -24,4 +25,34 @@ export async function runRouteEntitlementMapCoreTests(): Promise<void> {
 
   assert.equal(ROUTE_FAMILY_AUDIT_STATUS.analytics, 'commercial_runtime_guarded');
   assert.equal(ROUTE_FAMILY_AUDIT_STATUS['SEO/programmatic'], 'not_present');
+
+  const premiumFeatureKeys: RouteEntitlementFeatureKey[] = [
+    'market_evidence.confidence_decomposition',
+    'market_evidence.contradiction_panel',
+    'market_evidence.risk_liquidity',
+    'market_evidence.provider_readiness',
+    'journal.cognition_linked_suggestions'
+  ];
+  assert.equal(premiumFeatureKeys.length, 5);
+  const kickOffRoutes = ROUTE_ENTITLEMENT_MAP_SORTED.filter((x) => x.policy === 'kick_off_allowed');
+  for (const key of premiumFeatureKeys) {
+    assert.equal(kickOffRoutes.some((x) => x.featureKey === key), false);
+  }
+
+  assert.equal(ROUTE_FAMILY_AUDIT_STATUS['market-evidence user-facing'], 'not_present');
+  assert.equal(ROUTE_FAMILY_AUDIT_STATUS['market-evidence'], 'route_runtime_tested');
+  assert.equal(ROUTE_FAMILY_AUDIT_STATUS['journal deep-analysis'], 'not_present');
+
+  const adminCognition = classifyRouteEntitlementPolicy('GET', '/api/admin/market-evidence/cognition');
+  const adminWeighted = classifyRouteEntitlementPolicy('GET', '/api/admin/market-evidence/weighted');
+  const adminScheduledRuns = classifyRouteEntitlementPolicy('GET', '/api/admin/market-evidence/scheduled-ingestion/runs');
+  const internalFixtureIngest = classifyRouteEntitlementPolicy('POST', '/api/internal/market-evidence/tiingo/fixture-ingest');
+
+  assert.equal(adminCognition?.policy, 'admin_read_required');
+  assert.equal(adminWeighted?.policy, 'admin_read_required');
+  assert.equal(adminScheduledRuns?.policy, 'admin_read_required');
+  assert.equal(internalFixtureIngest?.policy, 'internal_only');
+  assert.equal(adminCognition?.featureKey, 'admin.operator_inspection');
+  assert.equal(adminScheduledRuns?.featureKey, 'admin.scheduled_ingestion');
+  assert.equal(internalFixtureIngest?.featureKey, null);
 }

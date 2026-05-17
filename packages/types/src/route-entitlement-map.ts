@@ -19,7 +19,8 @@ export type RouteEntitlementFeatureKey =
   | 'dashboard.chart' | 'dashboard.evidence_score' | 'dashboard.macro_headlines' | 'journal.page'
   | 'dashboard.full_cognition' | 'dashboard.news_narratives' | 'dashboard.risk_liquidity' | 'dashboard.contradiction_panel' | 'dashboard.confidence_decomposition' | 'dashboard.provider_readiness'
   | 'market_evidence.full_feed' | 'market_evidence.cognition_snapshot' | 'market_evidence.weighted_evidence'
-  | 'portfolio.advanced' | 'journal.deep_analysis' | 'notification.advanced_preferences'
+  | 'market_evidence.confidence_decomposition' | 'market_evidence.contradiction_panel' | 'market_evidence.risk_liquidity' | 'market_evidence.provider_readiness'
+  | 'portfolio.advanced' | 'journal.deep_analysis' | 'journal.cognition_linked_suggestions' | 'notification.advanced_preferences'
   | 'admin.metrics' | 'admin.operator_inspection' | 'admin.provider_activation' | 'admin.scheduled_ingestion' | 'admin.seo_preview' | 'admin.observability' | 'super_admin.commercial_controls'
   | 'checkout.focus_plan_prepare' | 'payment.korapay_checkout_readiness'
   | 'seo.public_contract_feed' | 'glossary.asset_explainer' | 'sitemap.robots.canonical';

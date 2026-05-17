@@ -104,3 +104,12 @@ _Date: 2026-05-16_
 - Live provider/payment/notification activation remains blocked in this phase.
 - No UI changes were made in Post-C6-P1E.
 - Enforcement status: representative runtime enforcement complete with documented follow-up families (not full exhaustive route-runtime simulation).
+
+## Post-C6-P2 (2026-05-17) core intelligence commercial guard closure
+- Scope: market-evidence/admin-intelligence route re-audit, dashboard/journal/frontend-contract route classification only; no UI changes, no provider/payment/notification live activation.
+- User-facing market-evidence premium intelligence routes are currently not present; existing market-evidence handlers are admin/internal and remain gated by internal/admin guard layers.
+- Dashboard kick-off allowlist remains limited to dashboard.chart, dashboard.evidence_score, dashboard.macro_headlines; premium cognition remains Focus Plan required.
+- Journal basic page remains kick-off allowed; deep-analysis/cognition-linked journal routes are not present and remain documented as not_present.
+- Public SEO product-intelligence routes remain not_present; admin SEO feed/sitemap routes remain internal/admin-only.
+- Feature-permission gates and commercial entitlement gates remain separate and both required where applicable.
+

@@ -105,3 +105,10 @@ Route root scanned: `apps/web/app/api`.
 - IP ban is explicitly rejected; user restriction supports only `suspended` or `banned`.
 - No UI changes, no payment provider activation/calls, no checkout/session activation, no notification sends.
 - Persistence caveat: super-admin commercial control records are currently in-memory foundation state, not durable production storage.
+
+## Post-C6-P5 Update (2026-05-18)
+- Super Admin gift/restrict persistence now supports SQL durability when `APP_STATE_REPOSITORY=sql` and `DATABASE_URL` are configured; otherwise explicit `memory_fallback`.
+- Step-up/2FA classification: `provider_pending` (readiness only, fixture verification in tests).
+- Routes remain backend-only; no Admin UI wiring done.
+- No payment provider, notification, or live 2FA activation in this batch.
+- IP ban remains intentionally unsupported.

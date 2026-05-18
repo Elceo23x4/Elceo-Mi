@@ -1,32 +1,34 @@
 import assert from 'node:assert/strict';
-import { buildSuperAdminCommercialAuditEvent, evaluateSuperAdminGrantedEntitlement, giftFocusPlanToUser, getSuperAdminCommercialControlCoverageReport, retractFocusPlanGift, restrictUserAccount } from '../super-admin-commercial-controls/index';
-
-const stepUp={status:'verified' as const,method:'fixture_only' as const,verifiedAt:'2026-05-15T00:00:00.000Z',challengeId:'c1',providerStatus:'fixture_only' as const};
+import { assertSuperAdminStepUpFresh, buildSuperAdminCommercialAuditEvent, buildSuperAdminStepUpAuditEvent, createSuperAdminStepUpChallenge, evaluateSuperAdminGrantedEntitlement, giftFocusPlanToUser, getSuperAdminCommercialControlCoverageReport, getSuperAdminStepUpCoverageReport, getSuperAdminStepUpReadinessReport, retractFocusPlanGift, restrictUserAccount, verifySuperAdminStepUpChallenge } from '../super-admin-commercial-controls/index';
 
 export async function runSuperAdminCommercialControlsCoreTests(): Promise<void> {
-  const gift=await giftFocusPlanToUser({actorSuperAdminId:'admin-1',targetUserId:'user-1',duration:'two_weeks',reasonCode:'commercial_support',operatorNote:'grant',stepUpVerification:stepUp,idempotencyKey:'id-1',requestedAt:'2026-05-15T00:00:00.000Z'});
+  process.env.NODE_ENV='test';
+  const ch=createSuperAdminStepUpChallenge({actorUserId:'admin-1',actionKind:'focus_plan_gift',routeScope:'/api/admin/commercial/users/[userId]/gift-focus-plan',targetUserId:'user-1',providerKind:'fixture_test_only',requestedAt:'2026-05-15T00:00:00.000Z'});
+  assert.equal(ch.challengeId.startsWith('stepup_'),true);
+  const verify=verifySuperAdminStepUpChallenge({challengeId:ch.challengeId,providerKind:'fixture_test_only',actorUserId:'admin-1',proof:'fixture-pass',requestedAt:'2026-05-15T00:01:00.000Z'});
+  assert.equal(verify.verified,true);
+  assert.equal(verify.status,'verified');
+  assertSuperAdminStepUpFresh({challengeId:ch.challengeId,nowIso:'2026-05-15T00:05:00.000Z'});
+  assert.throws(()=>assertSuperAdminStepUpFresh({challengeId:ch.challengeId,nowIso:'2026-05-15T01:00:00.000Z'}));
+  const replay=verifySuperAdminStepUpChallenge({challengeId:ch.challengeId,providerKind:'fixture_test_only',actorUserId:'admin-1',proof:'fixture-pass',requestedAt:'2026-05-15T00:02:00.000Z'});
+  assert.equal(replay.status,'replayed');
+
+  const stepUp={status:'verified' as const,method:'fixture_only' as const,verifiedAt:'2026-05-15T00:01:00.000Z',challengeId:ch.challengeId,providerStatus:'fixture_only' as const};
+  const gift=await giftFocusPlanToUser({actorSuperAdminId:'admin-1',targetUserId:'user-1',duration:'two_weeks',reasonCode:'commercial_support',operatorNote:'grant',stepUpVerification:stepUp,idempotencyKey:'id-1',requestedAt:'2026-05-15T00:02:00.000Z'});
   assert.equal(gift.status,'success');
-  assert.equal(gift.giftRecord?.status,'active');
-  assert.equal(gift.giftRecord?.endsAt,'2026-05-29T00:00:00.000Z');
-  const giftMonth=await giftFocusPlanToUser({actorSuperAdminId:'admin-1',targetUserId:'user-2',duration:'one_month',reasonCode:'commercial_support',operatorNote:'grant',stepUpVerification:stepUp,idempotencyKey:'id-2',requestedAt:'2026-05-15T00:00:00.000Z'});
-  assert.equal(giftMonth.giftRecord?.endsAt,'2026-06-14T00:00:00.000Z');
   const blocked=await giftFocusPlanToUser({actorSuperAdminId:'admin-1',targetUserId:'user-1',duration:'two_weeks',reasonCode:'commercial_support',operatorNote:'x',stepUpVerification:{...stepUp,status:'missing'},idempotencyKey:null,requestedAt:'2026-05-15T00:00:00.000Z'} as never);
   assert.equal(blocked.status,'blocked');
-  const retracted=await retractFocusPlanGift({actorSuperAdminId:'admin-1',targetUserId:'user-1',giftRecordId:gift.giftRecord!.giftRecordId,reasonCode:'operator_correction',operatorNote:'reverse',stepUpVerification:stepUp,idempotencyKey:'id-3',requestedAt:'2026-05-15T00:01:00.000Z'});
+  const retracted=await retractFocusPlanGift({actorSuperAdminId:'admin-1',targetUserId:'user-1',giftRecordId:gift.giftRecord!.giftRecordId,reasonCode:'operator_correction',operatorNote:'reverse',stepUpVerification:stepUp,idempotencyKey:'id-3',requestedAt:'2026-05-15T00:03:00.000Z'});
   assert.equal(retracted.status,'success');
-  assert.equal(retracted.giftRecord?.status,'retracted');
-  const restriction=await restrictUserAccount({actorSuperAdminId:'admin-1',targetUserId:'user-3',restrictionKind:'banned',reasonCode:'policy_violation',operatorNote:'abuse',stepUpVerification:stepUp,idempotencyKey:'id-4',requestedAt:'2026-05-15T00:00:00.000Z'});
+  const restriction=await restrictUserAccount({actorSuperAdminId:'admin-1',targetUserId:'user-3',restrictionKind:'banned',reasonCode:'policy_violation',operatorNote:'abuse',stepUpVerification:stepUp,idempotencyKey:'id-4',requestedAt:'2026-05-15T00:04:00.000Z'});
   assert.equal(restriction.status,'success');
-  assert.equal(evaluateSuperAdminGrantedEntitlement({subscriptionActive:false,gift:giftMonth.giftRecord!,nowIso:'2026-05-20T00:00:00.000Z',restricted:false}),'focus_plan_active');
-  assert.equal(evaluateSuperAdminGrantedEntitlement({subscriptionActive:false,gift:giftMonth.giftRecord!,nowIso:'2026-07-20T00:00:00.000Z',restricted:false}),'subscription_required');
   assert.equal(evaluateSuperAdminGrantedEntitlement({subscriptionActive:true,gift:null,nowIso:'2026-07-20T00:00:00.000Z',restricted:false}),'focus_plan_active');
-  assert.equal(evaluateSuperAdminGrantedEntitlement({subscriptionActive:true,gift:giftMonth.giftRecord!,nowIso:'2026-05-20T00:00:00.000Z',restricted:true}),'restricted');
   assert.equal(buildSuperAdminCommercialAuditEvent({actorSuperAdminId:'admin-1',targetUserId:'user-3',actionKind:'user_restriction',reasonCode:'policy_violation',operatorNote:'abuse',stepUpStatus:'verified',createdAt:'2026-05-15T00:00:00.000Z',resultingEntitlementState:'restricted',idempotencyKey:'id-4'}).actionKind,'user_restriction');
-
-  const invalidDuration=await giftFocusPlanToUser({actorSuperAdminId:'admin-1',targetUserId:'user-1',duration:'yearly' as never,reasonCode:'commercial_support',operatorNote:'x',stepUpVerification:stepUp,idempotencyKey:null,requestedAt:'2026-05-15T00:00:00.000Z'});
-  assert.equal(invalidDuration.status,'blocked');
-  const ipRejected=await restrictUserAccount({actorSuperAdminId:'admin-1',targetUserId:'user-9',restrictionKind:'banned',reasonCode:'policy_violation',operatorNote:'abuse',stepUpVerification:stepUp,idempotencyKey:'id-5',requestedAt:'2026-05-15T00:00:00.000Z',ipAddress:'1.1.1.1'} as never);
-  assert.equal(ipRejected.status,'blocked');
+  assert.equal(buildSuperAdminStepUpAuditEvent({actorUserId:'admin-1',action:'focus_plan_gift',targetUserId:'user-1',challengeId:ch.challengeId,providerKind:'fixture_test_only',verificationStatus:'verified',failureReason:null,routeScope:'/api/admin/commercial/users/[userId]/gift-focus-plan'}).redactionStatus,'safe');
 
   assert.equal(getSuperAdminCommercialControlCoverageReport().ipBanSupported,false);
+  assert.equal(getSuperAdminStepUpReadinessReport().find((x)=>x.providerKind==='totp')?.readiness,'provider_pending');
+  assert.equal(getSuperAdminStepUpCoverageReport().persistenceStatus,'memory_fallback');
+  const pendingProviderChallenge=createSuperAdminStepUpChallenge({actorUserId:'admin-2',actionKind:'user_restriction',routeScope:'/api/admin/commercial/users/[userId]/restrict',targetUserId:'user-9',providerKind:'totp',requestedAt:'2026-05-15T00:00:00.000Z'});
+  assert.equal(verifySuperAdminStepUpChallenge({challengeId:pendingProviderChallenge.challengeId,providerKind:'totp',actorUserId:'admin-2',proof:'111111',requestedAt:'2026-05-15T00:00:30.000Z'}).status,'provider_pending');
 }

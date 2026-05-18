@@ -219,3 +219,11 @@ ELCEO currently uses **deterministic internal market reasoning/cognition logic**
 - Routes remain backend-only; no Admin UI wiring done.
 - No payment provider, notification, or live 2FA activation in this batch.
 - IP ban remains intentionally unsupported.
+
+
+## Post-C6-P6 (2026-05-18)
+- Added production step-up/2FA contract foundation: challenge creation, verification, freshness window, replay protection, rate-limit/lockout policy, and safe audit metadata.
+- Provider readiness remains blocked: totp/webauthn/authenticator_app are provider_pending; fixture_test_only is test-mode only.
+- Super Admin commercial mutation routes still require verified step-up and do not expose OTP/proof/token secrets.
+- Persistence status for step-up challenge runtime is memory_fallback; durable provider activation remains deferred.
+- No UI work, no payment/provider/notification live activation in this batch.

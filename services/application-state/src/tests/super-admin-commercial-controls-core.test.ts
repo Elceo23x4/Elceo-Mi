@@ -22,5 +22,11 @@ export async function runSuperAdminCommercialControlsCoreTests(): Promise<void> 
   assert.equal(evaluateSuperAdminGrantedEntitlement({subscriptionActive:true,gift:null,nowIso:'2026-07-20T00:00:00.000Z',restricted:false}),'focus_plan_active');
   assert.equal(evaluateSuperAdminGrantedEntitlement({subscriptionActive:true,gift:giftMonth.giftRecord!,nowIso:'2026-05-20T00:00:00.000Z',restricted:true}),'restricted');
   assert.equal(buildSuperAdminCommercialAuditEvent({actorSuperAdminId:'admin-1',targetUserId:'user-3',actionKind:'user_restriction',reasonCode:'policy_violation',operatorNote:'abuse',stepUpStatus:'verified',createdAt:'2026-05-15T00:00:00.000Z',resultingEntitlementState:'restricted',idempotencyKey:'id-4'}).actionKind,'user_restriction');
+
+  const invalidDuration=giftFocusPlanToUser({actorSuperAdminId:'admin-1',targetUserId:'user-1',duration:'yearly' as never,reasonCode:'commercial_support',operatorNote:'x',stepUpVerification:stepUp,idempotencyKey:null,requestedAt:'2026-05-15T00:00:00.000Z'});
+  assert.equal(invalidDuration.status,'blocked');
+  const ipRejected=restrictUserAccount({actorSuperAdminId:'admin-1',targetUserId:'user-9',restrictionKind:'banned',reasonCode:'policy_violation',operatorNote:'abuse',stepUpVerification:stepUp,idempotencyKey:'id-5',requestedAt:'2026-05-15T00:00:00.000Z',ipAddress:'1.1.1.1'} as never);
+  assert.equal(ipRejected.status,'blocked');
+
   assert.equal(getSuperAdminCommercialControlCoverageReport().ipBanSupported,false);
 }

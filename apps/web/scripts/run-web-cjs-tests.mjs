@@ -18,7 +18,7 @@ const aliasTargets = {
   '@elceo/domain': 'packages/domain/src/index.cjs',
   '@elceo/schemas': 'tests/stubs/schemas.cjs',
   '@elceo/providers': 'packages/providers/src/index.cjs',
-  '@elceo/application-state': 'services/application-state/src/index.cjs',
+  '@elceo/application-state': 'tests/stubs/application-state.cjs',
   '@elceo/analytics': 'services/analytics/src/index.cjs',
   '@elceo/billing': 'services/billing/src/index.cjs',
   '@/lib/server/api': 'lib/server/api/index.cjs',
@@ -54,10 +54,8 @@ function rewriteRequires(content, targetFile) {
   updated = updated.replace(/require\((['"])(@elceo\/[a-z\-]+|@\/lib\/server\/(?:api|auth|composition|access|security))\1\)/g, (_match, quote, alias) => {
     const relTarget = aliasTargets[alias];
     if (!relTarget) return _match;
-    const absolute = path.join(outputRoot, relTarget);
-    let relative = path.relative(path.dirname(targetFile), absolute).replace(/\\/g, '/');
-    if (!relative.startsWith('.')) relative = `./${relative}`;
-    return `require(${quote}${relative}${quote})`;
+    const absolute = path.join(outputRoot, relTarget).replace(/\\/g, '/');
+    return `require(${quote}${absolute}${quote})`;
   });
 
   updated = updated.replace(/require\((['"])server-only\1\);?/g, '');

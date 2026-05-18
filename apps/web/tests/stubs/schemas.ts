@@ -129,3 +129,31 @@ export const validateSuperAdminMetricsQuery = (input: unknown): SchemaValidation
   if (typeof asOf !== 'string' || Number.isNaN(Date.parse(asOf))) return { ok: false, errors: ['query invalid'] };
   return { ok: true, value: { period: period as 'monthly' | 'quarterly' | 'yearly' | 'all_time', asOf } };
 };
+
+export const validateUpdateUserSocialIdentifiersRequest = (input: unknown): SchemaValidationResult<{ linkedinAddress?: string; telegramId?: string; xUsername?: string }> => {
+  if (typeof input !== 'object' || input === null) return { ok: false, errors: ['body must be object'] };
+  const value = input as Record<string, unknown>;
+  const linkedinAddress = typeof value.linkedinAddress === 'string' ? value.linkedinAddress : undefined;
+  const telegramId = typeof value.telegramId === 'string' ? value.telegramId : undefined;
+  const xUsername = typeof value.xUsername === 'string' ? value.xUsername : undefined;
+  if (!linkedinAddress && !telegramId && !xUsername) return { ok: false, errors: ['at least one social identifier is required'] };
+  if (xUsername && (xUsername.includes('<') || xUsername.includes('>'))) return { ok: false, errors: ['xUsername is invalid'] };
+  return { ok: true, value: { linkedinAddress, telegramId, xUsername } };
+};
+
+export const validateCommercialProfileSocialIdentifier = (input: unknown): SchemaValidationResult<{ kind: 'linkedin_address' | 'telegram_id' | 'x_username'; value: string }> => {
+  if (typeof input !== 'object' || input === null) return { ok: false, errors: ['identifier invalid'] };
+  const value = input as Record<string, unknown>;
+  if (!['linkedin_address', 'telegram_id', 'x_username'].includes(String(value.kind))) return { ok: false, errors: ['kind invalid'] };
+  if (typeof value.value !== 'string' || value.value.length === 0) return { ok: false, errors: ['value invalid'] };
+  return { ok: true, value: { kind: value.kind as 'linkedin_address' | 'telegram_id' | 'x_username', value: value.value } };
+};
+
+export const validateSuperAdminStepUpVerification = (input: unknown): SchemaValidationResult<{ status: 'verified' | 'required'; verifiedAt?: string }> => {
+  if (!input || typeof input !== 'object') return { ok: false, errors: ['step_up_required'] };
+  const value = input as Record<string, unknown>;
+  if (value.status === 'verified') {
+    return { ok: true, value: { status: 'verified', verifiedAt: typeof value.verifiedAt === 'string' ? value.verifiedAt : new Date().toISOString() } };
+  }
+  return { ok: true, value: { status: 'required' } };
+};

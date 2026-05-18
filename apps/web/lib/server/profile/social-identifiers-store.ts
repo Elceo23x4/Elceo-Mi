@@ -16,8 +16,8 @@ const guard = (identifiers: CommercialProfileSocialIdentifier[]): CommercialPaym
 };
 
 async function queryDb<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
-  const module = await import('pg');
-  const pool = new module.Pool({ connectionString: env().DATABASE_URL });
+  const pgModule = await import('pg');
+  const pool = new pgModule.Pool({ connectionString: env().DATABASE_URL });
   const res = await pool.query(sql, params);
   await pool.end();
   return res.rows as T[];

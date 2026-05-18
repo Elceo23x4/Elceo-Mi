@@ -65,6 +65,10 @@ import * as adminOpsRoute from '../app/api/admin/ops/route';
 import * as adminProvidersRoute from '../app/api/admin/providers/route';
 import * as adminAuditRoute from '../app/api/admin/audit/route';
 import * as adminCommercialMetricsRoute from '../app/api/admin/commercial/metrics/route';
+import * as adminCommercialGiftFocusPlanRoute from '../app/api/admin/commercial/users/[userId]/gift-focus-plan/route';
+import * as adminCommercialRetractFocusGiftRoute from '../app/api/admin/commercial/users/[userId]/retract-focus-gift/route';
+import * as adminCommercialRestrictUserRoute from '../app/api/admin/commercial/users/[userId]/restrict/route';
+import * as adminCommercialControlSnapshotRoute from '../app/api/admin/commercial/users/[userId]/control-snapshot/route';
 import * as accountEntitlementsRoute from '../app/api/account/entitlements/route';
 import * as accountUsageRoute from '../app/api/account/usage/route';
 import * as accountAccessDecisionsRoute from '../app/api/account/access-decisions/route';
@@ -774,6 +778,51 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await adminOpsRoute.GET(request('https://x/api/admin/ops', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
   assert.equal((await readJson(await adminProvidersRoute.GET(request('https://x/api/admin/providers', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
   assert.equal((await readJson(await adminAuditRoute.GET(request('https://x/api/admin/audit?limit=5', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+
+
+  const p4GiftNoToken = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', body: JSON.stringify({ duration: 'two_weeks' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4GiftNoToken.status, 403);
+  assert.equal((await readJson(p4GiftNoToken)).ok, false);
+
+  const p4GiftNoStepUp = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4GiftNoStepUp.status, 403);
+  const p4GiftNoStepUpJson = await readJson(p4GiftNoStepUp);
+  assert.equal(p4GiftNoStepUpJson.ok, false);
+  assert.equal(JSON.stringify(p4GiftNoStepUpJson).includes('step_up_required'), true);
+
+  const p4GiftInvalidDuration = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'three_months', stepUpVerification: { status: 'verified', verifiedAt: new Date().toISOString() } }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4GiftInvalidDuration.status, 400);
+  assert.deepEqual(await readJson(p4GiftInvalidDuration), { ok: false, error: { code: 'validation_error', message: 'Validation failed', details: ['invalid_duration'] } });
+
+  const p4GiftOk = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks', targetUserId: 'user-ignored', stepUpVerification: { status: 'verified', verifiedAt: new Date().toISOString() } }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  const p4GiftOkJson = await readJson(p4GiftOk);
+  assert.equal(p4GiftOk.status, 200);
+  assert.equal(p4GiftOkJson.ok, true);
+  assert.equal((p4GiftOkJson.data as { targetUserId: string }).targetUserId, 'user-5');
+  assertNoSensitiveLeak(p4GiftOkJson);
+
+  const p4RetractNoStepUp = await adminCommercialRetractFocusGiftRoute.POST(request('https://x/api/admin/commercial/users/user-5/retract-focus-gift', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ giftRecordId: 'gift-1' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4RetractNoStepUp.status, 403);
+  assert.equal(JSON.stringify(await readJson(p4RetractNoStepUp)).includes('step_up_required'), true);
+
+  const p4RestrictNoStepUp = await adminCommercialRestrictUserRoute.POST(request('https://x/api/admin/commercial/users/user-5/restrict', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ restrictionKind: 'suspended' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4RestrictNoStepUp.status, 403);
+  assert.equal(JSON.stringify(await readJson(p4RestrictNoStepUp)).includes('step_up_required'), true);
+
+  for (const field of ['ip', 'ipAddress', 'cidr', 'ipBan']) {
+    const p4RestrictIpBlocked = await adminCommercialRestrictUserRoute.POST(request('https://x/api/admin/commercial/users/user-5/restrict', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ restrictionKind: 'banned', stepUpVerification: { status: 'verified', verifiedAt: new Date().toISOString() }, [field]: '1.2.3.4' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+    assert.equal(p4RestrictIpBlocked.status, 400);
+    assert.deepEqual(await readJson(p4RestrictIpBlocked), { ok: false, error: { code: 'validation_error', message: 'Validation failed', details: ['ip_ban_not_supported'] } });
+  }
+
+  const p4SnapshotNoToken = await adminCommercialControlSnapshotRoute.GET(request('https://x/api/admin/commercial/users/user-5/control-snapshot'), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4SnapshotNoToken.status, 403);
+  assert.equal((await readJson(p4SnapshotNoToken)).ok, false);
+  const p4SnapshotOk = await adminCommercialControlSnapshotRoute.GET(request('https://x/api/admin/commercial/users/user-5/control-snapshot', { headers: { 'x-elceo-internal-token': 'internal-token' } }), { params: Promise.resolve({ userId: 'user-5' }) });
+  const p4SnapshotOkJson = await readJson(p4SnapshotOk);
+  assert.equal(p4SnapshotOk.status, 200);
+  assert.equal((p4SnapshotOkJson.data as { targetUserId: string }).targetUserId, 'user-5');
+  assertNoSensitiveLeak(p4SnapshotOkJson);
 
   const metricsUnauthorized = await adminCommercialMetricsRoute.GET(request('https://x/api/admin/commercial/metrics'));
   assert.equal(metricsUnauthorized.status, 403);

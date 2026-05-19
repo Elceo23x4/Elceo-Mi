@@ -1,0 +1,39 @@
+import { jsonError, jsonSuccess, parseJsonBody, withApiErrorBoundary } from '@/lib/server/api';
+import { requireFeatureAccess } from '@/lib/server/access';
+import { requireInternalRouteAccess } from '@/lib/server/auth';
+import { createSuperAdminStepUpChallenge } from '@elceo/application-state';
+import { validateSuperAdminStepUpChallengeRequest } from '@elceo/schemas';
+
+export const POST = withApiErrorBoundary(async (request: Request) => {
+  requireInternalRouteAccess(request);
+  const access = await requireFeatureAccess('admin.ops', { request });
+  if (!access.ok) return access.response;
+
+  const body = (await parseJsonBody(request)) as Record<string, unknown>;
+  const parsed = validateSuperAdminStepUpChallengeRequest({
+    actorUserId: access.subject.userId,
+    actionKind: body.actionKind,
+    routeScope: body.routeScope,
+    targetUserId: typeof body.targetUserId === 'string' ? body.targetUserId : null,
+    providerKind: body.providerKind,
+    requestedAt: new Date().toISOString()
+  });
+  if (!parsed.ok) return jsonError('validation_error', 'Validation failed', ['invalid_step_up_challenge_request'], 400);
+  let challenge;
+  try {
+    challenge = createSuperAdminStepUpChallenge(parsed.value);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown';
+    if (message === 'step_up_rate_limited') return jsonError('bad_request', 'Rate limit exceeded', ['step_up_rate_limited'], 429);
+    if (message === 'step_up_actor_locked') return jsonError('forbidden', 'Step-up actor locked', ['step_up_actor_locked'], 423);
+    return jsonError('validation_error', 'Validation failed', ['invalid_step_up_challenge_request'], 400);
+  }
+  return jsonSuccess({
+    challengeId: challenge.challengeId,
+    providerKind: challenge.providerKind,
+    status: challenge.status,
+    expiresAt: challenge.expiresAt,
+    providerStatus: challenge.providerKind === 'fixture_test_only' ? 'fixture_test_only' : 'provider_pending',
+    persistenceStatus: 'memory_fallback'
+  });
+});

@@ -69,6 +69,9 @@ import * as adminCommercialGiftFocusPlanRoute from '../app/api/admin/commercial/
 import * as adminCommercialRetractFocusGiftRoute from '../app/api/admin/commercial/users/[userId]/retract-focus-gift/route';
 import * as adminCommercialRestrictUserRoute from '../app/api/admin/commercial/users/[userId]/restrict/route';
 import * as adminCommercialControlSnapshotRoute from '../app/api/admin/commercial/users/[userId]/control-snapshot/route';
+import * as adminStepUpChallengeRoute from '../app/api/admin/security/step-up/challenge/route';
+import * as adminStepUpVerifyRoute from '../app/api/admin/security/step-up/verify/route';
+import * as adminStepUpReadinessRoute from '../app/api/admin/security/step-up/readiness/route';
 import * as accountEntitlementsRoute from '../app/api/account/entitlements/route';
 import * as accountUsageRoute from '../app/api/account/usage/route';
 import * as accountAccessDecisionsRoute from '../app/api/account/access-decisions/route';
@@ -778,6 +781,34 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal((await readJson(await adminOpsRoute.GET(request('https://x/api/admin/ops', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
   assert.equal((await readJson(await adminProvidersRoute.GET(request('https://x/api/admin/providers', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
   assert.equal((await readJson(await adminAuditRoute.GET(request('https://x/api/admin/audit?limit=5', { headers: { 'x-elceo-internal-token': 'internal-token' } })))).ok, true);
+
+  const stepUpChallengeNoToken = await adminStepUpChallengeRoute.POST(request('https://x/api/admin/security/step-up/challenge', { method: 'POST', body: JSON.stringify({ providerKind: 'fixture_test_only', actionKind: 'focus_plan_gift', routeScope: '/api/admin/commercial/users/[userId]/gift-focus-plan', targetUserId: 'user-5' }) }));
+  assert.equal(stepUpChallengeNoToken.status, 403);
+  const stepUpChallengeOk = await adminStepUpChallengeRoute.POST(request('https://x/api/admin/security/step-up/challenge', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'fixture_test_only', actionKind: 'focus_plan_gift', routeScope: '/api/admin/commercial/users/[userId]/gift-focus-plan', targetUserId: 'user-5' }) }));
+  assert.equal(stepUpChallengeOk.status, 200);
+  const stepUpChallengeOkJson = await readJson(stepUpChallengeOk);
+  assert.equal(stepUpChallengeOkJson.ok, true);
+  assertNoSensitiveLeak(stepUpChallengeOkJson);
+
+  const stepUpVerifyNoToken = await adminStepUpVerifyRoute.POST(request('https://x/api/admin/security/step-up/verify', { method: 'POST', body: JSON.stringify({ challengeId: 'x', providerKind: 'fixture_test_only', proof: 'fixture-pass' }) }));
+  assert.equal(stepUpVerifyNoToken.status, 403);
+  const challengeId = (stepUpChallengeOkJson.data as { challengeId: string }).challengeId;
+  const stepUpVerifyBad = await adminStepUpVerifyRoute.POST(request('https://x/api/admin/security/step-up/verify', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ challengeId, providerKind: 'fixture_test_only', proof: 'wrong' }) }));
+  assert.equal(stepUpVerifyBad.status, 200);
+  assert.equal(((await readJson(stepUpVerifyBad)).data as { verified: boolean }).verified, false);
+  const stepUpVerifyOk = await adminStepUpVerifyRoute.POST(request('https://x/api/admin/security/step-up/verify', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ challengeId, providerKind: 'fixture_test_only', proof: 'fixture-pass' }) }));
+  assert.equal(stepUpVerifyOk.status, 200);
+  assert.equal(((await readJson(stepUpVerifyOk)).data as { verified: boolean }).verified, true);
+  const stepUpVerifyReplay = await adminStepUpVerifyRoute.POST(request('https://x/api/admin/security/step-up/verify', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ challengeId, providerKind: 'fixture_test_only', proof: 'fixture-pass' }) }));
+  assert.equal(((await readJson(stepUpVerifyReplay)).data as { status: string }).status, 'replayed');
+
+  const stepUpReadinessNoToken = await adminStepUpReadinessRoute.GET(request('https://x/api/admin/security/step-up/readiness'));
+  assert.equal(stepUpReadinessNoToken.status, 403);
+  const stepUpReadinessOk = await adminStepUpReadinessRoute.GET(request('https://x/api/admin/security/step-up/readiness', { headers: { 'x-elceo-internal-token': 'internal-token' } }));
+  const stepUpReadinessJson = await readJson(stepUpReadinessOk);
+  assert.equal(stepUpReadinessOk.status, 200);
+  assert.equal(JSON.stringify(stepUpReadinessJson).includes('provider_pending'), true);
+  assertNoSensitiveLeak(stepUpReadinessJson);
 
 
   const p4GiftNoToken = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', body: JSON.stringify({ duration: 'two_weeks' }) }), { params: Promise.resolve({ userId: 'user-5' }) });

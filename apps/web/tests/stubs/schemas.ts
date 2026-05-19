@@ -157,3 +157,14 @@ export const validateSuperAdminStepUpVerification = (input: unknown): SchemaVali
   }
   return { ok: true, value: { status: 'required' } };
 };
+
+export const validateSuperAdminStepUpChallengeRequest = (input: unknown): SchemaValidationResult<{ actorUserId: string; actionKind: string; routeScope: string; targetUserId: string | null; providerKind: string; requestedAt: string }> => {
+  const base = validation<{ actorUserId: string; actionKind: string; routeScope: string; targetUserId: string | null; providerKind: string; requestedAt: string }>(input, ['actorUserId', 'actionKind', 'routeScope', 'providerKind', 'requestedAt']);
+  if (!base.ok) return base;
+  const value = base.value;
+  if (typeof value.targetUserId !== 'string' && value.targetUserId !== null) return { ok: false, errors: ['targetUserId invalid'] };
+  return { ok: true, value };
+};
+
+export const validateSuperAdminStepUpVerificationRequest = (input: unknown): SchemaValidationResult<{ challengeId: string; providerKind: string; actorUserId: string; proof: string; requestedAt: string }> =>
+  validation<{ challengeId: string; providerKind: string; actorUserId: string; proof: string; requestedAt: string }>(input, ['challengeId', 'providerKind', 'actorUserId', 'proof', 'requestedAt']);

@@ -1,6 +1,7 @@
 const socialStore = new Map<string, { userId: string; socialIdentifiers: Array<{ kind: 'linkedin_address' | 'telegram_id' | 'x_username'; value: string }>; paymentReadiness: { status: 'eligible' | 'blocked'; reason: string; normalizedIdentifiers: Array<{ kind: 'linkedin_address' | 'telegram_id' | 'x_username'; value: string }> }; updatedAt: string; persistenceStatus: 'memory_fallback' }>();
 
 const gifts = new Map<string, { giftRecordId: string; status: 'active' | 'retracted'; startsAt: string; endsAt: string }>();
+const stepUpChallenges = new Map<string, { challengeId: string; actorUserId: string; providerKind: string; status: 'pending' | 'verified' | 'replayed'; expiresAt: string; createdAt: string }>();
 
 export function getUserSocialIdentifiersSnapshot(userId: string) {
   return socialStore.get(userId) ?? { userId, socialIdentifiers: [], paymentReadiness: { status: 'blocked', reason: 'missing_social_identifier', normalizedIdentifiers: [] }, updatedAt: new Date(0).toISOString(), persistenceStatus: 'memory_fallback' as const };
@@ -43,4 +44,45 @@ export function restrictUserAccount(input: { restrictionKind: 'suspended' | 'ban
 
 export function getSuperAdminCommercialControlSnapshot() {
   return { gifts: Array.from(gifts.values()) };
+}
+
+export function createSuperAdminStepUpChallenge(input: { actorUserId: string; providerKind: string; requestedAt: string }) {
+  const challengeId = `stepup-${Math.random().toString(36).slice(2, 10)}`;
+  const challenge = { challengeId, actorUserId: input.actorUserId, providerKind: input.providerKind, status: 'pending' as const, createdAt: input.requestedAt, expiresAt: new Date(Date.parse(input.requestedAt) + 5 * 60 * 1000).toISOString() };
+  stepUpChallenges.set(challengeId, challenge);
+  return challenge;
+}
+
+export function verifySuperAdminStepUpChallenge(input: { challengeId: string; actorUserId: string; providerKind: string; proof: string }) {
+  const found = stepUpChallenges.get(input.challengeId);
+  if (!found) return { status: 'failed' as const, verified: false, failureReason: 'challenge_not_found', challengeId: input.challengeId, providerKind: input.providerKind, verifiedAt: null, freshUntil: null, persistenceStatus: 'memory_fallback' as const };
+  if (found.status !== 'pending') return { status: 'replayed' as const, verified: false, failureReason: 'challenge_replayed', challengeId: found.challengeId, providerKind: input.providerKind, verifiedAt: null, freshUntil: null, persistenceStatus: 'memory_fallback' as const };
+  if (input.providerKind !== 'fixture_test_only') return { status: 'provider_pending' as const, verified: false, failureReason: 'provider_pending', challengeId: found.challengeId, providerKind: input.providerKind, verifiedAt: null, freshUntil: null, persistenceStatus: 'memory_fallback' as const };
+  if (input.proof !== 'fixture-pass') return { status: 'failed' as const, verified: false, failureReason: 'invalid_proof', challengeId: found.challengeId, providerKind: input.providerKind, verifiedAt: null, freshUntil: null, persistenceStatus: 'memory_fallback' as const };
+  found.status = 'verified';
+  const verifiedAt = new Date().toISOString();
+  return { status: 'verified' as const, verified: true, failureReason: null, challengeId: found.challengeId, providerKind: input.providerKind, verifiedAt, freshUntil: new Date(Date.now() + 10 * 60 * 1000).toISOString(), persistenceStatus: 'memory_fallback' as const };
+}
+
+export function getSuperAdminStepUpReadinessReport() {
+  return [
+    { providerKind: 'totp', readiness: 'provider_pending', activated: false, notes: 'Provider integration not configured.' },
+    { providerKind: 'webauthn_passkey', readiness: 'provider_pending', activated: false, notes: 'Provider integration not configured.' },
+    { providerKind: 'authenticator_app', readiness: 'provider_pending', activated: false, notes: 'Provider integration not configured.' },
+    { providerKind: 'verified_email_fallback', readiness: 'readiness_only', activated: false, notes: 'Fallback policy only.' },
+    { providerKind: 'fixture_test_only', readiness: 'fixture_test_only', activated: true, notes: 'Test fixture only.' }
+  ];
+}
+
+export function getSuperAdminStepUpCoverageReport() {
+  return {
+    generatedAt: new Date().toISOString(),
+    persistenceStatus: 'memory_fallback',
+    freshnessWindow: { maxAgeSeconds: 600 },
+    replayProtection: { enforceSingleUse: true },
+    rateLimitPolicy: { maxChallengesPerWindow: 10, windowSeconds: 600 },
+    lockoutPolicy: { maxAttemptsPerChallenge: 5, lockoutSeconds: 900 },
+    recoveryPolicy: { mode: 'manual_super_admin_reset_only', notes: 'Manual reset only.' },
+    providerReadiness: getSuperAdminStepUpReadinessReport()
+  };
 }

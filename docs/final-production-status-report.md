@@ -115,3 +115,10 @@ This is **not** final production launch approval.
 - No live payments, live notifications, commercial entitlement behavior, Super Admin behavior, or 2FA/step-up behavior were changed.
 - Reasoning gaps are now formally tracked in `docs/market-realism-truth-source-map.md` and `docs/market-realism-code-gap-audit.md`.
 - R1-R9 remain required before ELCEO can claim final market-intelligence realism: asset-contextual direction, FX relative pressure, macro surprise normalization, expanded contradictions, confidence calibration, price reaction/impulse confirmation, provider reliability weighting, golden scenario expansion, and integrated acceptance gates.
+
+## C6-R1 production status note (2026-06-03)
+
+- Asset causality mapping is now a typed, schema-validated, tested foundation for all ELCEO launch assets.
+- This improves production readiness documentation and contract coverage only; it does not activate live providers or complete downstream market-realism engines.
+- R2-R9 remain required before ELCEO can claim final market-intelligence realism.
+- No UI, live payment, live notification, commercial entitlement, Super Admin, or 2FA behavior changed.

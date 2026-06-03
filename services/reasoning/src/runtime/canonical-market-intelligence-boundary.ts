@@ -28,6 +28,7 @@ import { assertOfficialMacroSourceIdsInProviderSnapshot, getOfficialMacroAdapter
 import { getCryptoRiskLiquidityAdapterReadiness, getCryptoRiskLiquidityCoverageReport, getCryptoRiskLiquidityFixturePayload, getCryptoRiskLiquiditySourceDescriptor, getCryptoRiskLiquiditySourceRegistry, listCreditStressFixturePayloads, listCryptoDerivativesFixturePayloads, listCryptoRiskLiquidityFixturePayloads, listCryptoRiskLiquiditySourcesByFamily, listLiquidityFixturePayloads, listMarketBreadthFixturePayloads, listRiskRegimeFixturePayloads, listVolatilityFixturePayloads, normalizeCryptoRiskLiquidityFixturePayload } from '../crypto-risk-liquidity/index';
 import { checkCognitionGuardrails, decomposeConfidence, detectEvidenceContradictions, getAssetEvidenceWeights, getCognitionCalibrationCoverageReport, runAllCognitionCalibrationScenarios, runCognitionCalibrationForScenario, scoreEvidenceFreshness, scoreEvidenceQuality, scorePressureForAsset, scoreSourceCredibility, weightEvidenceForAsset } from '../cognition-calibration/index';
 import { getNewsExtractionAdapterReadiness, getNewsExtractionCoverageReport, getNewsExtractionFixturePayload, getNewsExtractionSourceDescriptor, getNewsExtractionSourceRegistry, listEtfFlowFixturePayloads, listFilingFixturePayloads, listNarrativeClusterFixturePayloads, listNewsExtractionFixturePayloads, listNewsExtractionSourcesByFamily, normalizeNewsExtractionFixturePayload } from '../news-extraction-filings/index';
+import { assertMarketAssetCausalityMatrixComplete as assertAssetCausalityMatrixComplete, buildMarketAssetCausalityMatrixSnapshot, getMarketAssetCausalityCoverageReport as getAssetCausalityCoverageReport, getMarketAssetCausalityDescriptor as getAssetCausalityDescriptor, listContradictionTriggersForAsset as listAssetContradictionTriggers, listDirectionResolutionRequirements as listAssetDirectionRequirements, listMarketAssetCausalityGaps, listProviderDependenciesForAsset as listAssetProviderDependencies, listRegimeModifiersForAsset as listAssetRegimeModifiers } from '../asset-causality-map/index';
 import { getFrontendAssetDashboardPayload, getFrontendContractCoverageReport, getFrontendContradictionPanelPayload, getFrontendConfidenceDecompositionPayload, getFrontendEvidenceFeedPayload, getFrontendGoldenScenarioPreviewPayload, getFrontendJournalPortfolioContextPlaceholder, getFrontendMacroContextPayload, getFrontendMarketCognitionSnapshot, getFrontendMarketOverviewPayload, getFrontendMockPayloadRegistry, getFrontendNewsNarrativePayload, getFrontendProviderReadinessPayload, getFrontendRiskLiquidityPayload, getFrontendScheduledIngestionStatusPayload, getFrontendSupportedAssets } from '../frontend-contracts/index';
 
 export type TiingoFixtureIngestionParams = { asset: TradingAssetCoverage; frequency?: string | null; requestedAt?: string | null };
@@ -252,6 +253,15 @@ export class CanonicalMarketIntelligenceBoundaryService {
   getFrontendJournalPortfolioContextPlaceholder(asset?: LaunchAsset) { return getFrontendJournalPortfolioContextPlaceholder(asset); }
   getFrontendMockPayloadRegistry() { return getFrontendMockPayloadRegistry(); }
   getFrontendContractCoverageReport() { return getFrontendContractCoverageReport(); }
+  getMarketAssetCausalityMatrixSnapshot(asOfIso?: string) { return buildMarketAssetCausalityMatrixSnapshot(asOfIso); }
+  getMarketAssetCausalityDescriptor(asset: Parameters<typeof getAssetCausalityDescriptor>[0]) { return getAssetCausalityDescriptor(asset); }
+  listMarketAssetCausalityGaps() { return listMarketAssetCausalityGaps(); }
+  getMarketAssetCausalityCoverageReport() { return getAssetCausalityCoverageReport(); }
+  assertMarketAssetCausalityMatrixComplete() { return assertAssetCausalityMatrixComplete(); }
+  listDirectionResolutionRequirements(asset?: Parameters<typeof listAssetDirectionRequirements>[0]) { return listAssetDirectionRequirements(asset); }
+  listProviderDependenciesForAsset(asset: Parameters<typeof listAssetProviderDependencies>[0]) { return listAssetProviderDependencies(asset); }
+  listContradictionTriggersForAsset(asset: Parameters<typeof listAssetContradictionTriggers>[0]) { return listAssetContradictionTriggers(asset); }
+  listRegimeModifiersForAsset(asset: Parameters<typeof listAssetRegimeModifiers>[0]) { return listAssetRegimeModifiers(asset); }
 
   buildSeoContentFeedSnapshot(generatedAt?: string): SeoContentFeedSnapshot { return buildSeoFeedSnapshot(getSeoContentArchitectureSnapshot(generatedAt??new Date().toISOString()), generatedAt); }
   buildSeoContentFeedAssemblyReport(snapshot: SeoContentFeedSnapshot): SeoContentFeedAssemblyReport { return buildSeoFeedReport(snapshot); }

@@ -92,3 +92,5 @@ export * from './seo-programmatic-feeds.schema';
 export * from './observability-audit.schema';
 
 export * from './user-social-identifiers.schema';
+
+export * from './market-asset-causality.schema';

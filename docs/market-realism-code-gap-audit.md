@@ -150,3 +150,10 @@ No UI, live provider, payment, notification, commercial, Super Admin, or 2FA beh
 - How C6-R2 corrects it: direction is now resolved through deterministic asset-contextual rules that consume the 14-asset causality map, asset family, evidence class, raw hint, driver kind, policy tone, risk regime, FX base/quote orientation, commodity/crypto/equity context, and explicit caveat flags for pending surprise normalization, FX relative strength, and price confirmation.
 - Remaining pending: R3 FX relative-strength engine, R4 macro surprise normalization, R5 expanded contradiction matrix, R6 confidence calibration, R7 price reaction/impulse, R8 provider reliability/golden scenario expansion, and R9 integrated acceptance remain open. C6-R2 does not claim final market-intelligence realism.
 - No UI, live provider, payment, notification, commercial entitlement, Super Admin, affiliate, or 2FA behavior changed.
+
+## C6-R2B — Direction resolver issuer-ambiguity cleanup (2026-06-03)
+
+- Corrected policy issuer ambiguity in the asset-direction resolver: missing hawkish/dovish policy issuer metadata no longer defaults to Fed/U.S. pressure.
+- Explicit Fed/U.S. metadata still resolves asset-contextually across DXY, FX pairs, gold, U.S. equity indices, BTC/USD, and VIX with the existing C6-R2 caveats.
+- Non-Fed issuer-side handling remains intentionally limited until later issuer-side expansion and R3 FX relative-strength work; R3/R4/R5/R6/R7 remain pending.
+- No UI, live provider, payment, notification, commercial, Super Admin, route entitlement, or 2FA behavior changed.

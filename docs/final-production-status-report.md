@@ -129,3 +129,10 @@ This is **not** final production launch approval.
 - Generic metadata direction mapping is no longer the primary weighted-evidence contribution path; the same event can resolve differently by asset through causality map context, asset family, FX orientation, driver kind, policy/risk tone, and caveat flags.
 - Open loops remain: R3 FX relative strength, R4 macro surprise normalization, R5 expanded contradiction matrix, R6 confidence calibration, R7 price reaction/impulse, provider reliability, and golden scenario expansion.
 - No UI, live provider, payment, notification, commercial entitlement, Super Admin, affiliate, or 2FA behavior changed.
+
+## C6-R2B — Direction resolver issuer-ambiguity cleanup (2026-06-03)
+
+- Corrected the C6-R2 policy issuer ambiguity so missing policy issuer metadata no longer defaults to Fed/U.S. direction pressure.
+- Explicit Fed metadata still resolves asset-contextually, and weighted-evidence tests now verify differing contribution signs for DXY versus EUR/USD.
+- Non-Fed issuer-side expansion remains limited and pending with later issuer-side/R3 FX relative-strength work; R3/R4/R5/R6/R7 remain pending.
+- No UI, live provider, payment, notification, commercial, Super Admin, route entitlement, or 2FA behavior changed.

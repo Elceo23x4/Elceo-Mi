@@ -16,6 +16,15 @@ export function runAssetDirectionResolutionTests(): void {
   const riskOff = { direction: 'risk_off', riskRegime: 'risk_off', driverKind: 'risk_sentiment' };
   const riskOn = { direction: 'risk_on', riskRegime: 'risk_on', driverKind: 'risk_sentiment' };
 
+  const missingIssuerHawkish = { direction: 'hawkish', driverKind: 'central_bank_policy' };
+  const missingIssuerDovish = { direction: 'dovish', driverKind: 'central_bank_policy' };
+  const missingIssuerDxy = res('dxy', missingIssuerHawkish);
+  assert(missingIssuerDxy.warnings.includes('ambiguous_policy_issuer') && (missingIssuerDxy.resolvedDirection === 'unknown' || missingIssuerDxy.resolvedDirection === 'mixed') && missingIssuerDxy.confidence < 50, 'hawkish policy without issuer stays ambiguous for DXY');
+  const missingIssuerEur = res('eur_usd', missingIssuerDovish);
+  assert(missingIssuerEur.warnings.includes('ambiguous_policy_issuer') && (missingIssuerEur.resolvedDirection === 'unknown' || missingIssuerEur.resolvedDirection === 'mixed') && missingIssuerEur.confidence < 50, 'dovish policy without issuer stays ambiguous for EUR/USD');
+  const ecbEur = res('eur_usd', { direction: 'hawkish', issuer: 'ECB', region: 'eurozone', driverKind: 'central_bank_policy' });
+  assert(ecbEur.warnings.includes('ambiguous_policy_issuer') && (ecbEur.resolvedDirection === 'unknown' || ecbEur.resolvedDirection === 'mixed') && ecbEur.confidence < 50, 'non-Fed policy issuer does not silently use Fed quote-side logic');
+
   assert(res('dxy', hawkish).resolvedDirection === 'bullish', 'hawkish Fed resolves bullish for DXY');
   assert(res('eur_usd', hawkish).resolvedDirection === 'bearish', 'hawkish Fed resolves bearish for EUR/USD');
   assert(res('gbp_usd', hawkish).resolvedDirection === 'bearish', 'hawkish Fed resolves bearish for GBP/USD');
@@ -47,13 +56,19 @@ export function runAssetDirectionResolutionTests(): void {
   assert(res('dxy', dovish).resolvedDirection !== res('eur_usd', dovish).resolvedDirection, 'dovish does not always mean bearish');
   assert(res('aud_usd', riskOff, 'risk_sentiment').resolvedDirection !== res('vix', riskOff, 'risk_sentiment').resolvedDirection, 'risk-off does not universally map bearish');
 
-  const weightedDxy = buildWeightedEvidenceItem(item(hawkish), 'xau_usd', 'intraday');
-  assert(weightedDxy.direction === 'bearish' && weightedDxy.contributionScore < 0, 'weighted evidence uses resolver output');
-  const wd = buildWeightedEvidenceItem(item(hawkish), 'eur_usd', 'intraday');
-  const wg = buildWeightedEvidenceItem(item(hawkish), 'xau_usd', 'intraday');
-  const wn = buildWeightedEvidenceItem(item(hawkish), 'nasdaq_100', 'intraday');
-  assert(wd.direction === 'bearish' && wg.direction === 'bearish' && wn.direction === 'bearish', 'same hawkish metadata resolves by asset contexts');
-  assert(wd.reasons.some((x) => x.includes('direction_warning:pending_fx_relative_strength')), 'resolver warnings carried into reasons');
+  const weightedDxy = buildWeightedEvidenceItem(item(hawkish), 'dxy', 'intraday');
+  assert(weightedDxy.direction === 'bullish' && weightedDxy.contributionScore > 0, 'weighted DXY uses explicit Fed resolver output');
+  const weightedEur = buildWeightedEvidenceItem(item(hawkish), 'eur_usd', 'intraday');
+  assert(weightedEur.direction === 'bearish' && weightedEur.contributionScore < 0, 'weighted EUR/USD contribution flips negative for the same hawkish Fed evidence');
+  const weightedXau = buildWeightedEvidenceItem(item(hawkish), 'xau_usd', 'intraday');
+  assert((weightedXau.direction === 'bearish' && weightedXau.contributionScore < 0) || (weightedXau.direction === 'mixed' && weightedXau.contributionScore === 0), 'weighted XAU/USD remains bearish or mixed for hawkish Fed evidence');
+  assert(weightedXau.reasons.some((x) => x.includes('direction_warning:requires_price_confirmation')), 'weighted XAU/USD carries price-confirmation warning');
+  const weightedNasdaq = buildWeightedEvidenceItem(item(hawkish), 'nasdaq_100', 'intraday');
+  assert((weightedNasdaq.direction === 'bearish' && weightedNasdaq.contributionScore < 0) || (weightedNasdaq.direction === 'mixed' && weightedNasdaq.contributionScore === 0), 'weighted Nasdaq 100 remains bearish or mixed for hawkish Fed evidence');
+  assert(weightedNasdaq.reasons.some((x) => x.includes('direction_warning:requires_price_confirmation')), 'weighted Nasdaq 100 carries price-confirmation warning');
+  assert(weightedEur.reasons.some((x) => x.includes('direction_warning:pending_fx_relative_strength')), 'resolver warnings carried into reasons');
+  const weightedAmbiguousDxy = buildWeightedEvidenceItem(item(missingIssuerHawkish), 'dxy', 'intraday');
+  assert((weightedAmbiguousDxy.direction === 'unknown' || weightedAmbiguousDxy.direction === 'mixed') && weightedAmbiguousDxy.contributionScore === 0 && weightedAmbiguousDxy.reasons.some((x) => x.includes('direction_warning:ambiguous_policy_issuer')), 'ambiguous hawkish policy does not create false strong DXY contribution');
   const unknown = buildWeightedEvidenceItem(item({ direction: 'positive' }, 'market_news'), 'sp500', 'intraday');
   assert(unknown.direction === 'unknown' && unknown.contributionScore === 0, 'unknown resolver does not create false contribution');
 

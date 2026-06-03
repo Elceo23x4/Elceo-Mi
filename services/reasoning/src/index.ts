@@ -32,3 +32,5 @@ export * from './cognition-calibration';
 export * from './frontend-contracts/index';
 
 export * from './asset-causality-map/index';
+
+export * from './asset-direction-resolution/index';

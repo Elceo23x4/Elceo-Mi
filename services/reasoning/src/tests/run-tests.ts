@@ -48,6 +48,7 @@ import { runCryptoRiskLiquidityTests } from './crypto-risk-liquidity.test.js';
 import './golden-scenario-reasoning.test.js';
 import { runCognitionCalibrationTests } from './cognition-calibration.test.js';
 import { runAssetCausalityMapTests } from './asset-causality-map.test.js';
+import { runAssetDirectionResolutionTests } from './asset-direction-resolution.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -99,6 +100,7 @@ async function run(): Promise<void> {
   runCryptoRiskLiquidityTests();
   runCognitionCalibrationTests();
   runAssetCausalityMapTests();
+  runAssetDirectionResolutionTests();
   console.log('reasoning runtime contract tests passed');
 }
 

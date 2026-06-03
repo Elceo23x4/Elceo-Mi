@@ -173,3 +173,10 @@ _Date: 2026-05-16_
 - Typed asset causality map foundation added and tested for all launch assets.
 - Downstream realism engines remain unchecked/pending: direction resolver, FX relative strength, macro surprise normalization, contradiction expansion, confidence calibration upgrade, price reaction/event impulse, provider reliability weighting, and golden scenario expansion.
 - No UI or live activation changes were made for providers, payments, notifications, commercial controls, Super Admin controls, or 2FA.
+
+## C6-R2 — Asset-contextual direction resolver foundation (2026-06-03)
+
+- Added a deterministic asset-contextual direction resolver foundation for reasoning internals.
+- Generic metadata direction mapping is no longer the primary weighted-evidence contribution path; the same event can resolve differently by asset through causality map context, asset family, FX orientation, driver kind, policy/risk tone, and caveat flags.
+- Open loops remain: R3 FX relative strength, R4 macro surprise normalization, R5 expanded contradiction matrix, R6 confidence calibration, R7 price reaction/impulse, provider reliability, and golden scenario expansion.
+- No UI, live provider, payment, notification, commercial entitlement, Super Admin, affiliate, or 2FA behavior changed.

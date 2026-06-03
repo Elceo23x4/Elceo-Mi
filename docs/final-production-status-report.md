@@ -106,3 +106,12 @@ This is **not** final production launch approval.
 - Super Admin commercial mutation routes still require verified step-up and do not expose OTP/proof/token secrets.
 - Persistence status for step-up challenge runtime is memory_fallback; durable provider activation remains deferred.
 - No UI work, no payment/provider/notification live activation in this batch.
+
+## C6-R0 — Market Realism Truth-Source Audit (2026-06-03)
+
+- Market-realism audit status: completed for C6-R0 as a documentation/truth-source foundation.
+- No UI was built or modified in this batch.
+- No live provider activation was performed; fixture, dry-run, and not-started provider states remain explicitly tracked.
+- No live payments, live notifications, commercial entitlement behavior, Super Admin behavior, or 2FA/step-up behavior were changed.
+- Reasoning gaps are now formally tracked in `docs/market-realism-truth-source-map.md` and `docs/market-realism-code-gap-audit.md`.
+- R1-R9 remain required before ELCEO can claim final market-intelligence realism: asset-contextual direction, FX relative pressure, macro surprise normalization, expanded contradictions, confidence calibration, price reaction/impulse confirmation, provider reliability weighting, golden scenario expansion, and integrated acceptance gates.

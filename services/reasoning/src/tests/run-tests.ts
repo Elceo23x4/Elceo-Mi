@@ -49,6 +49,7 @@ import './golden-scenario-reasoning.test.js';
 import { runCognitionCalibrationTests } from './cognition-calibration.test.js';
 import { runAssetCausalityMapTests } from './asset-causality-map.test.js';
 import { runAssetDirectionResolutionTests } from './asset-direction-resolution.test.js';
+import { runFxRelativeStrengthTests } from './fx-relative-strength.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -101,6 +102,7 @@ async function run(): Promise<void> {
   runCognitionCalibrationTests();
   runAssetCausalityMapTests();
   runAssetDirectionResolutionTests();
+  runFxRelativeStrengthTests();
   console.log('reasoning runtime contract tests passed');
 }
 

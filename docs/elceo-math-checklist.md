@@ -414,3 +414,15 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [x] Explicit Fed metadata continues to resolve asset-contextually, including weighted-evidence DXY-positive versus EUR/USD-negative contribution coverage.
 - [ ] Non-Fed issuer-side expansion remains pending with R3 FX relative strength and later issuer-side work; R4/R5/R6/R7 remain pending.
 - No UI, live provider, payment, notification, commercial, Super Admin, route entitlement, or 2FA behavior changed.
+
+## C6-R3 — FX relative currency strength foundation (2026-06-03)
+
+- [x] FX relative currency strength foundation: implemented typed FX pressure/result contracts, schema validators, deterministic base-vs-quote pressure scoring, canonical boundary read methods, weighted-evidence side-aware reasons, and tests for all seven ELCEO launch FX pairs.
+- [x] Non-Fed issuer side mapping improved for ECB/EUR, BoE/GBP, BoJ/JPY, SNB/CHF, RBA/AUD, RBNZ/NZD, and BoC/CAD when metadata identifies the issuer or affected currency.
+- [x] Missing base-side or quote-side evidence lowers confidence and produces explicit warnings instead of silently creating high-confidence pair pressure.
+- [ ] Macro surprise normalization remains R4 and is not marked complete.
+- [ ] Expanded contradiction matrix remains R5 and is not marked complete.
+- [ ] Confidence calibration remains R6 and is not marked complete.
+- [ ] Price reaction / impulse confirmation remains R7 and is not marked complete.
+- [ ] Provider reliability weighting and golden scenario expansion remain pending.
+- No UI, live provider, payment, notification, commercial, Super Admin, affiliate, route entitlement, or 2FA behavior changed.

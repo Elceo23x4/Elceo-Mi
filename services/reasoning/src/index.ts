@@ -34,3 +34,5 @@ export * from './frontend-contracts/index';
 export * from './asset-causality-map/index';
 
 export * from './asset-direction-resolution/index';
+
+export * from './fx-relative-strength/index';

@@ -136,3 +136,11 @@ This is **not** final production launch approval.
 - Explicit Fed metadata still resolves asset-contextually, and weighted-evidence tests now verify differing contribution signs for DXY versus EUR/USD.
 - Non-Fed issuer-side expansion remains limited and pending with later issuer-side/R3 FX relative-strength work; R3/R4/R5/R6/R7 remain pending.
 - No UI, live provider, payment, notification, commercial, Super Admin, route entitlement, or 2FA behavior changed.
+
+## C6-R3 — FX relative currency strength engine foundation (2026-06-03)
+
+- Added typed, schema-validated, tested FX relative currency strength foundation for all seven ELCEO launch FX pairs.
+- FX reasoning now has a base-vs-quote pressure model; missing base or quote evidence lowers confidence and remains visible in warnings/reason codes.
+- Non-Fed issuer side handling is improved for ECB/EUR, BoE/GBP, BoJ/JPY, SNB/CHF, RBA/AUD, RBNZ/NZD, and BoC/CAD, while missing issuer remains ambiguous.
+- Macro surprise normalization remains R4; expanded contradiction matrix remains R5; confidence calibration remains R6; price reaction/impulse remains R7; provider reliability/golden scenarios remain pending.
+- No UI, live provider, payment, notification, commercial, Super Admin, affiliate, route entitlement, or 2FA behavior changed.

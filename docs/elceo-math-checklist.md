@@ -374,3 +374,17 @@ with:
 - asset-specific logic
 
 and not just narrative text.
+
+---
+
+## C6-R0 Market Realism Audit Findings
+
+Status: **audit completed; implementation pending for R1-R9**. The existing checklist items above remain unchecked where deterministic implementation and tests are not yet present. Existing checked summary items indicate structural foundations only, not final market-realistic reasoning completeness.
+
+- [ ] Direction inference requires an asset-contextual resolver. Current direction inference still relies on generic evidence metadata labels and must be upgraded so XAU/USD, FX pairs, BTC/USD, indices, DXY, and VIX resolve pressure through asset-specific driver rules.
+- [ ] FX pairs require two-sided relative pressure. EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, NZD/USD, and USD/CAD must resolve base-currency pressure minus quote-currency pressure with safe-haven, commodity, policy, and yield-differential modifiers.
+- [ ] Macro surprise engine required. CPI, labor, PMI/growth, central-bank, retail/consumption, fiscal, and liquidity events need indicator-specific actual/forecast/previous/revision normalization before market impact is trusted.
+- [ ] Contradiction matrix expansion required. The current contradiction foundation must expand to price-vs-driver, price-vs-breadth, safe-haven-vs-yields, ETF-flow-vs-liquidity, COT-lag, duplicate-news, FX divergence, volatility-surface, and provider-gap contradictions.
+- [ ] Confidence calibration upgrade required. Confidence must include provider activation state, source independence, duplicate-burst adjustment, macro-normalization validity, FX completeness, price confirmation, provider-data gaps, COT lag, crypto derivatives reliability, and ETF-flow freshness.
+- [ ] Price reaction / impulse confirmation required. Reasoning needs ATR-normalized event-window impulse, fade, follow-through, related-market confirmation, and zone rejection/acceptance before price reaction can strengthen confidence.
+- [ ] Golden scenario expansion required. R8 must add deeper historical and realistic market regimes, macro surprises, FX divergence, crypto derivatives/liquidity, duplicate news, stale source, and price-reaction confirmation/failure scenarios.

@@ -23,7 +23,7 @@ export function runAssetDirectionResolutionTests(): void {
   const missingIssuerEur = res('eur_usd', missingIssuerDovish);
   assert(missingIssuerEur.warnings.includes('ambiguous_policy_issuer') && (missingIssuerEur.resolvedDirection === 'unknown' || missingIssuerEur.resolvedDirection === 'mixed') && missingIssuerEur.confidence < 50, 'dovish policy without issuer stays ambiguous for EUR/USD');
   const ecbEur = res('eur_usd', { direction: 'hawkish', issuer: 'ECB', region: 'eurozone', driverKind: 'central_bank_policy' });
-  assert(ecbEur.warnings.includes('ambiguous_policy_issuer') && (ecbEur.resolvedDirection === 'unknown' || ecbEur.resolvedDirection === 'mixed') && ecbEur.confidence < 50, 'non-Fed policy issuer does not silently use Fed quote-side logic');
+  assert(ecbEur.pressureTarget === 'base_currency' && ecbEur.resolvedDirection === 'bullish' && ecbEur.confidence < 50, 'non-Fed ECB policy issuer maps to EUR base side without Fed quote logic');
 
   assert(res('dxy', hawkish).resolvedDirection === 'bullish', 'hawkish Fed resolves bullish for DXY');
   assert(res('eur_usd', hawkish).resolvedDirection === 'bearish', 'hawkish Fed resolves bearish for EUR/USD');

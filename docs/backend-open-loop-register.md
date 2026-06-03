@@ -174,3 +174,11 @@ _Date: 2026-05-16_
 - Explicit Fed/U.S. metadata still resolves through C6-R2 asset-contextual rules and weighted-evidence contribution signs.
 - Non-Fed issuer handling remains limited until later issuer-side expansion / R3 FX relative-strength work; R3/R4/R5/R6/R7 remain pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/2FA behavior changed.
+
+## C6-R3 — FX relative currency strength engine foundation (2026-06-03)
+
+- Added deterministic FX base-vs-quote pressure modeling for EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, NZD/USD, and USD/CAD.
+- Missing side evidence now remains visible and lowers confidence; non-Fed issuer-side handling is improved for launch central banks/currencies.
+- DXY is limited read-only broad-USD diagnostic coverage only; full basket weighting is not implemented.
+- Still open: R4 macro surprise normalization, R5 expanded contradiction matrix, R6 confidence calibration, R7 price reaction/impulse engine, provider reliability weighting, and golden scenario expansion.
+- No UI, live providers, payments, notifications, commercial behavior, Super Admin behavior, affiliate behavior, route entitlement behavior, or 2FA behavior changed.

@@ -100,3 +100,5 @@ export * from './user-social-identifiers';
 
 export * from './market-asset-causality';
 export * from './market-asset-direction-resolution';
+
+export * from './market-fx-relative-strength';

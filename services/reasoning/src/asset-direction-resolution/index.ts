@@ -2,6 +2,7 @@ import type { MarketAssetCausalityAsset, MarketAssetDirectionResolutionCoverageR
 import { MARKET_ASSET_CAUSALITY_ASSETS, MARKET_ASSET_DRIVER_KINDS, MARKET_ASSET_RAW_DIRECTION_HINTS } from '@elceo/types';
 import { validateMarketAssetDirectionResolutionCoverageReport, validateMarketAssetDirectionResolutionResult, validateMarketAssetDirectionResolutionRuleSetSnapshot } from '@elceo/schemas';
 import { getMarketAssetCausalityDescriptor } from '../asset-causality-map/index';
+import { resolveFxRelativeStrength } from '../fx-relative-strength/index';
 
 type Metadata = Record<string, unknown>;
 type FxOrientation = { base: string; quote: string } | null;
@@ -48,7 +49,7 @@ export function inferDriverKindFromEvidenceClassOrMetadata(input: MarketAssetDir
   if (/crypto.*etf|onchain/.test(candidates.join('|'))) return 'crypto_etf_flows';
   return 'unknown';
 }
-export function resolveFxPairOrientation(asset: MarketAssetCausalityAsset): FxOrientation { if (!FX.includes(asset)) return null; const parts = asset.split('_'); const base = parts[0] ?? ''; const quote = parts[1] ?? ''; return { base: base.toUpperCase(), quote: quote.toUpperCase() }; }
+function resolveFxPairOrientation(asset: MarketAssetCausalityAsset): FxOrientation { if (!FX.includes(asset)) return null; const parts = asset.split('_'); const base = parts[0] ?? ''; const quote = parts[1] ?? ''; return { base: base.toUpperCase(), quote: quote.toUpperCase() }; }
 function resolveTone(input: MarketAssetDirectionResolutionInput, raw: MarketAssetRawDirectionHint, m: Metadata): MarketAssetPolicyTone { if (input.policyTone) return input.policyTone; const v = norm(m.policyTone ?? m.tone ?? raw); return v === 'hawkish' || v === 'dovish' || v === 'neutral' || v === 'mixed' ? v : 'unknown'; }
 function riskHint(input: MarketAssetDirectionResolutionInput, raw: MarketAssetRawDirectionHint, m: Metadata): MarketAssetRiskRegimeHint { if (input.riskRegime) return input.riskRegime; const v = norm(m.riskRegime ?? m.regime ?? raw); return v === 'risk_on' || v === 'risk_off' || v === 'liquidity_stress' || v === 'credit_stress' || v === 'volatility_shock' || v === 'event_window' ? v : 'unknown'; }
 function metadataStrings(values: unknown[]): string[] { return values.filter((v): v is string => typeof v === 'string' && v.trim().length > 0); }
@@ -68,6 +69,45 @@ function policyIssuerIsFed(input: MarketAssetDirectionResolutionInput, m: Metada
   const issuerValues = metadataStrings([input.policyIssuerRegion, input.affectedCurrency, m.policyIssuerRegion, m.issuer, m.region, m.source, m.affectedCurrency, m.currency, m.centralBank, m.provider, m.providerId]);
   return issuerValues.some(valueIdentifiesFedOrUsd);
 }
+
+function fxDirectionFromPairDirection(direction: 'base_strengthening' | 'quote_strengthening' | 'neutral' | 'mixed' | 'unknown'): WeightedEvidenceDirection {
+  if (direction === 'base_strengthening') return 'bullish';
+  if (direction === 'quote_strengthening') return 'bearish';
+  if (direction === 'neutral') return 'neutral';
+  if (direction === 'mixed') return 'mixed';
+  return 'unknown';
+}
+function fxTargetFromCurrency(asset: MarketAssetCausalityAsset, currency: string | null): MarketAssetResolvedPressureTarget {
+  const o = resolveFxPairOrientation(asset);
+  if (!o || !currency) return 'unknown';
+  if (o.base === currency) return 'base_currency';
+  if (o.quote === currency) return 'quote_currency';
+  if (currency === 'USD') return 'usd_side';
+  return 'non_usd_side';
+}
+function policyIssuerCurrency(input: MarketAssetDirectionResolutionInput, m: Metadata): string | null {
+  const values = metadataStrings([input.policyIssuerRegion, input.affectedCurrency, m.policyIssuerRegion, m.issuer, m.region, m.source, m.affectedCurrency, m.currency, m.centralBank, m.provider, m.providerId]).map(norm).join('|');
+  if (/\b(usd|fed|fomc|federal_reserve|united_states|usa|us)\b/.test(values)) return 'USD';
+  if (/\b(eur|ecb|eurozone|euro_area|european_central_bank)\b/.test(values)) return 'EUR';
+  if (/\b(gbp|boe|bank_of_england|united_kingdom|uk|britain)\b/.test(values)) return 'GBP';
+  if (/\b(jpy|boj|bank_of_japan|japan)\b/.test(values)) return 'JPY';
+  if (/\b(chf|snb|swiss|switzerland)\b/.test(values)) return 'CHF';
+  if (/\b(aud|rba|reserve_bank_of_australia|australia)\b/.test(values)) return 'AUD';
+  if (/\b(nzd|rbnz|reserve_bank_of_new_zealand|new_zealand)\b/.test(values)) return 'NZD';
+  if (/\b(cad|boc|bank_of_canada|canada)\b/.test(values)) return 'CAD';
+  return null;
+}
+function resolveFxPolicyWithRelativeEngine(input: MarketAssetDirectionResolutionInput, m: Metadata, raw: MarketAssetRawDirectionHint, asset: MarketAssetCausalityAsset, currency: string | null): MarketAssetDirectionResolutionResult | null {
+  if (!FX.includes(asset)) return null;
+  const fxInput: Parameters<typeof resolveFxRelativeStrength>[0] = { pairAsset: asset as Parameters<typeof resolveFxRelativeStrength>[0]['pairAsset'] };
+  if (input.metadataJson !== undefined) fxInput.metadataJson = input.metadataJson;
+  const fx = resolveFxRelativeStrength(fxInput);
+  if (fx.components.length === 0) return null;
+  const target = fxTargetFromCurrency(asset, currency);
+  const direction = fxDirectionFromPairDirection(fx.pairDirection);
+  return result(input, m, raw, direction, target, fx.confidence, ['policy_tone_asset_context','causality_map_requirement','fx_base_quote_orientation', currency === 'USD' ? 'usd_side_policy_pressure' : 'non_usd_side_pressure'], ['pending_fx_relative_strength', ...(fx.warnings.includes('requires_price_confirmation') ? ['requires_price_confirmation' as const] : []), ...(fx.warnings.includes('pending_macro_surprise_normalization') ? ['pending_macro_surprise_normalization' as const] : []), ...(fx.warnings.includes('provider_activation_gap') ? ['provider_activation_gap' as const] : []), ...(fx.warnings.includes('haven_conflict') ? ['haven_conflict' as const] : []), ...(asset === 'usd_jpy' || asset === 'usd_chf' ? ['haven_conflict' as const] : [])], fx.appliedRuleIds.length ? fx.appliedRuleIds : [`policy-fx-relative-${asset}`], `FX relative-strength engine mapped ${currency ?? 'issuer'} pressure to ${fx.baseCurrency}/${fx.quoteCurrency} sides before resolving pair pressure. ${fx.rationale}`, fx.warnings.includes('relative_magnitude_missing') ? 'relative_counterparty_side_incomplete' : undefined);
+}
+
 function policyPressureTargetForAmbiguousIssuer(asset: MarketAssetCausalityAsset): MarketAssetResolvedPressureTarget {
   if (asset === 'dxy') return 'usd_side';
   if (FX.includes(asset)) return resolveFxPairOrientation(asset)?.base === 'USD' ? 'base_currency' : 'quote_currency';
@@ -81,7 +121,11 @@ function fxUsdPolicy(asset: MarketAssetCausalityAsset, tone: MarketAssetPolicyTo
 export function resolvePolicyToneImpact(input: MarketAssetDirectionResolutionInput): MarketAssetDirectionResolutionResult {
   const m = parseMetadata(input.metadataJson); const raw = input.rawHint ?? parseRawDirectionHintFromMetadata(input.metadataJson); const tone = resolveTone(input, raw, m); const asset = isAsset(input.asset) ? input.asset : 'xau_usd';
   if (tone !== 'hawkish' && tone !== 'dovish') return result(input, m, raw, 'unknown', 'unknown', 20, ['ambiguous_context'], ['ambiguous_policy_issuer'], [], 'Policy tone was not specific enough to resolve asset pressure.', 'policy_tone_unknown');
-  const fed = policyIssuerIsFed(input, m); const codes: MarketAssetDirectionResolutionReasonCode[] = ['policy_tone_asset_context','causality_map_requirement']; const warnings: MarketAssetDirectionResolutionWarning[] = fed ? [] : ['ambiguous_policy_issuer'];
+  const fed = policyIssuerIsFed(input, m); const issuerCurrency = policyIssuerCurrency(input, m); const codes: MarketAssetDirectionResolutionReasonCode[] = ['policy_tone_asset_context','causality_map_requirement']; const warnings: MarketAssetDirectionResolutionWarning[] = fed ? [] : ['ambiguous_policy_issuer'];
+  if (FX.includes(asset) && issuerCurrency) {
+    const fxResolved = resolveFxPolicyWithRelativeEngine(input, m, raw, asset, issuerCurrency);
+    if (fxResolved) return fxResolved;
+  }
   if (!fed) return result(input, m, raw, 'mixed', policyPressureTargetForAmbiguousIssuer(asset), 34, [...codes,'ambiguous_context'], warnings, ['policy-issuer-ambiguous'], 'Policy tone needs explicit issuer or affected-side context before applying Fed/USD-specific asset pressure.', 'policy_issuer_missing_or_unresolved');
   if (asset === 'dxy') return result(input, m, raw, tone === 'hawkish' ? 'bullish' : 'bearish', 'usd_side', 76, codes, warnings, ['policy-fed-dxy'], 'Fed policy tone is resolved through broad USD-side causality rather than generic sentiment.');
   if (FX.includes(asset)) return result(input, m, raw, fxUsdPolicy(asset, tone), resolveFxPairOrientation(asset)?.base === 'USD' ? 'base_currency' : 'quote_currency', asset === 'usd_jpy' || asset === 'usd_chf' ? 68 : 72, [...codes,'fx_base_quote_orientation','usd_side_policy_pressure'], [...warnings, ...(asset === 'usd_jpy' ? ['haven_conflict' as const] : []), ...(asset === 'usd_chf' ? ['haven_conflict' as const] : [])], [`policy-fed-fx-${asset}`], 'Fed policy tone is translated through the pair base/quote orientation and retains R3 relative-strength caveats.');

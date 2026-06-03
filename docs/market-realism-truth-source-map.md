@@ -282,3 +282,13 @@ C6-R1 status:
 - The resolver is deterministic and code-backed through types, schemas, tests, canonical boundary read methods, and weighted-evidence integration.
 - FX relative-strength remains R3; macro surprise normalization remains R4; expanded contradiction matrix remains R5; confidence calibration remains R6; price reaction/impulse remains R7; provider reliability and golden scenario expansion remain pending.
 - No UI, live provider activation, payment activation, notification activation, commercial entitlement behavior, Super Admin behavior, affiliate behavior, or 2FA behavior changed.
+
+## C6-R3 — FX relative currency strength engine foundation (2026-06-03)
+
+- C6-R3 adds a deterministic FX relative currency strength foundation for EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, NZD/USD, and USD/CAD.
+- FX pair reasoning now models base-currency pressure versus quote-currency pressure, with net pair pressure calculated as base pressure minus quote pressure.
+- Missing base-side or quote-side evidence is explicit and lowers confidence instead of being silently inferred from USD-side evidence.
+- Non-Fed issuer side handling is improved for Fed/USD, ECB/EUR, BoE/GBP, BoJ/JPY, SNB/CHF, RBA/AUD, RBNZ/NZD, and BoC/CAD metadata.
+- DXY support is read-only and limited to broad USD diagnostic coverage; no full basket-weight model is claimed.
+- Macro surprise normalization remains R4; expanded contradiction matrix remains R5; confidence calibration remains R6; price reaction/impulse remains R7; provider reliability and golden scenarios remain pending.
+- No UI, live provider activation, payment activation, notification activation, commercial entitlement behavior, Super Admin behavior, affiliate behavior, route entitlement behavior, or 2FA behavior changed.

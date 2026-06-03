@@ -157,3 +157,12 @@ No UI, live provider, payment, notification, commercial, Super Admin, or 2FA beh
 - Explicit Fed/U.S. metadata still resolves asset-contextually across DXY, FX pairs, gold, U.S. equity indices, BTC/USD, and VIX with the existing C6-R2 caveats.
 - Non-Fed issuer-side handling remains intentionally limited until later issuer-side expansion and R3 FX relative-strength work; R3/R4/R5/R6/R7 remain pending.
 - No UI, live provider, payment, notification, commercial, Super Admin, route entitlement, or 2FA behavior changed.
+
+## C6-R3 — FX relative currency strength engine foundation (2026-06-03)
+
+- Added code-backed FX relative strength foundation so launch FX pairs are no longer treated as one-sided USD-only instruments.
+- The remaining limitation is now narrower: base-vs-quote pressure exists and is tested, but macro surprise normalization, expanded contradiction logic, confidence calibration, price reaction/impulse confirmation, provider reliability weighting, and golden scenario expansion remain open.
+- Missing base or quote evidence now produces explicit low-confidence warnings rather than a strong pair direction.
+- Non-Fed issuer metadata is side-aware for ECB/EUR, BoE/GBP, BoJ/JPY, SNB/CHF, RBA/AUD, RBNZ/NZD, and BoC/CAD, while issuer-less policy metadata remains ambiguous.
+- DXY is exposed only as limited broad-USD diagnostic support until a real basket-weight model exists.
+- No UI, live provider, payment, notification, commercial, Super Admin, affiliate, route entitlement, or 2FA behavior changed.

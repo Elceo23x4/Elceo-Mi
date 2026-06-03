@@ -420,6 +420,7 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [x] FX relative currency strength foundation: implemented typed FX pressure/result contracts, schema validators, deterministic base-vs-quote pressure scoring, canonical boundary read methods, weighted-evidence side-aware reasons, and tests for all seven ELCEO launch FX pairs.
 - [x] Non-Fed issuer side mapping improved for ECB/EUR, BoE/GBP, BoJ/JPY, SNB/CHF, RBA/AUD, RBNZ/NZD, and BoC/CAD when metadata identifies the issuer or affected currency.
 - [x] Missing base-side or quote-side evidence lowers confidence and produces explicit warnings instead of silently creating high-confidence pair pressure.
+- [x] C6-R3B weighted snapshot safety cleanup: unsupported/non-FX weighted snapshots no longer default to EUR/USD, DXY remains limited diagnostic, and weighted-snapshot FX relative-strength reconstruction is explicitly diagnostic/limited because original issuer/currency metadata may be reduced. Evidence-item inputs remain preferred for full FX side attribution.
 - [ ] Macro surprise normalization remains R4 and is not marked complete.
 - [ ] Expanded contradiction matrix remains R5 and is not marked complete.
 - [ ] Confidence calibration remains R6 and is not marked complete.

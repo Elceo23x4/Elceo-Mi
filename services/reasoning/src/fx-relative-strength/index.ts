@@ -37,6 +37,12 @@ function body(v: unknown): string { return JSON.stringify(v).toLowerCase(); }
 function pressureDirection(score: number, componentCount: number): MarketFxCurrencyPressureDirection { if (componentCount === 0) return 'unknown'; if (score > 10) return 'strengthening'; if (score < -10) return 'weakening'; return 'neutral'; }
 function confidenceTier(confidence: number): MarketFxRelativeStrengthResult['confidenceTier'] { return confidence >= 70 ? 'high' : confidence >= 40 ? 'medium' : 'low'; }
 function isFxPair(v: unknown): v is MarketFxPairAsset { return typeof v === 'string' && (MARKET_FX_PAIR_ASSETS as readonly string[]).includes(v); }
+function resolveWeightedSnapshotPairAsset(snapshot: WeightedEvidenceSnapshot): PairLike {
+  const snapshotAsset = String(snapshot.asset);
+  if (isFxPair(snapshotAsset)) return snapshotAsset;
+  if (snapshotAsset === 'dxy') return 'dxy';
+  throw new Error(`fx_relative_strength_unsupported_weighted_snapshot_asset:${snapshotAsset}`);
+}
 
 export function resolveFxPairOrientation(pairAsset: PairLike): { baseCurrency: MarketFxCurrencyCode; quoteCurrency: MarketFxCurrencyCode; limitedDiagnostic: boolean } {
   if (pairAsset === 'dxy') return { baseCurrency: 'USD', quoteCurrency: 'EUR', limitedDiagnostic: true };
@@ -96,10 +102,13 @@ function draftsFromEvidence(pairAsset: PairLike, evidence: ReasoningEvidenceInpu
 }
 
 function weightedDrafts(snapshot: WeightedEvidenceSnapshot): ComponentDraft[] {
-  const snapshotAsset = String(snapshot.asset);
-  const pairAsset = isFxPair(snapshotAsset) ? snapshotAsset : snapshotAsset === 'dxy' ? 'dxy' : null;
-  if (!pairAsset) return [];
-  return snapshot.items.flatMap((item) => draftsFromEvidence(pairAsset, null, { evidenceClass: item.evidenceClass, direction: item.direction, reasons: item.reasons.join('|'), contributionScore: item.contributionScore }, 'weighted_evidence'));
+  const pairAsset = resolveWeightedSnapshotPairAsset(snapshot);
+  return snapshot.items.flatMap((item) => draftsFromEvidence(pairAsset, null, { evidenceClass: item.evidenceClass, direction: item.direction, reasons: item.reasons.join('|'), contributionScore: item.contributionScore }, 'weighted_evidence').map((draft) => ({
+    ...draft,
+    confidence: Math.min(draft.confidence, 58),
+    warnings: unique([...draft.warnings, 'weighted_snapshot_metadata_limited' as const]),
+    rationale: `${draft.rationale} Weighted-snapshot reconstruction is diagnostic because original issuer/currency metadata may be reduced in weighted evidence reasons.`
+  })));
 }
 
 function toComponents(drafts: ComponentDraft[]): MarketFxCurrencyPressureComponent[] {
@@ -125,6 +134,10 @@ export function buildFxCurrencyPressureSnapshot(input: { currency: MarketFxCurre
 
 export function resolveFxRelativeStrength(input: MarketFxRelativeStrengthInput): MarketFxRelativeStrengthResult {
   const pairAsset = input.pairAsset;
+  if (input.weightedSnapshot) {
+    const weightedPairAsset = resolveWeightedSnapshotPairAsset(input.weightedSnapshot);
+    if (weightedPairAsset !== pairAsset) throw new Error(`fx_relative_strength_weighted_snapshot_asset_mismatch:${weightedPairAsset}:${pairAsset}`);
+  }
   const orientation = resolveFxPairOrientation(pairAsset);
   const descriptor = pairAsset === 'dxy' ? null : getMarketAssetCausalityDescriptor(pairAsset as MarketAssetCausalityAsset);
   const drafts = [
@@ -141,14 +154,17 @@ export function resolveFxRelativeStrength(input: MarketFxRelativeStrengthInput):
   const requiresMacro = components.some((c) => c.kind.includes('surprise') || c.warnings.includes('pending_macro_surprise_normalization')) || (descriptor?.directionResolutionRequirements.some((r) => r.requiresSurpriseNormalization) ?? false);
   const requiresPrice = components.length === 0 || components.some((c) => c.warnings.includes('requires_price_confirmation')) || (descriptor?.directionResolutionRequirements.some((r) => r.requiresPriceConfirmation) ?? false);
   const providerGap = components.length === 0 || components.some((c) => c.warnings.includes('provider_activation_gap')) || (descriptor?.providerDependencies.some((d) => d.currentStatus === 'pending_provider_activation') ?? false);
-  const warnings = unique([...basePressure.warnings, ...quotePressure.warnings, ...components.flatMap((c) => c.warnings), ...(missingSide ? ['relative_magnitude_missing' as const] : []), ...(pairAsset === 'dxy' ? ['limited_dxy_diagnostic' as const] : []), ...(providerGap ? ['provider_activation_gap' as const] : []), ...(requiresPrice ? ['requires_price_confirmation' as const] : []), ...(requiresMacro ? ['pending_macro_surprise_normalization' as const] : [])]);
+  const hasWeightedSnapshot = input.weightedSnapshot !== undefined;
+  const warnings = unique([...basePressure.warnings, ...quotePressure.warnings, ...components.flatMap((c) => c.warnings), ...(missingSide ? ['relative_magnitude_missing' as const] : []), ...(pairAsset === 'dxy' ? ['limited_dxy_diagnostic' as const] : []), ...(hasWeightedSnapshot ? ['weighted_snapshot_metadata_limited' as const] : []), ...(providerGap ? ['provider_activation_gap' as const] : []), ...(requiresPrice ? ['requires_price_confirmation' as const] : []), ...(requiresMacro ? ['pending_macro_surprise_normalization' as const] : [])]);
   const reasonCodes = unique([...components.flatMap((c) => c.reasonCodes), 'fx_base_quote_orientation' as const, 'relative_strength_applied' as const, ...(missingSide ? ['missing_side_evidence_penalty' as const] : []), ...(providerGap ? ['provider_gap_visible' as const] : []), ...(requiresPrice ? ['price_confirmation_required' as const] : []), ...(requiresMacro ? ['macro_surprise_pending' as const] : [])]);
   const sideCoverage = missingSide ? 28 : 54;
   const magnitudeBoost = Math.min(22, Math.abs(netPressureScore) / 2);
   const componentBoost = Math.min(16, components.length * 4);
   const warningPenalty = Math.min(24, warnings.length * 3);
-  const confidence = clamp(sideCoverage + magnitudeBoost + componentBoost - warningPenalty, 0, missingSide ? 49 : 82);
-  const result: MarketFxRelativeStrengthResult = { pairAsset, baseCurrency: orientation.baseCurrency, quoteCurrency: orientation.quoteCurrency, basePressure, quotePressure, netPressureScore, pairDirection: direction, confidence, confidenceTier: confidenceTier(confidence), components, reasonCodes, warnings, appliedRuleIds: unique(components.map((c) => `fxrs-${c.kind}`)), requiresMacroSurpriseNormalization: requiresMacro, requiresPriceConfirmation: requiresPrice, providerCoverageStatus: pairAsset === 'dxy' ? 'diagnostic_limited' : providerGap ? 'pending_provider_activation' : 'partial', rationale: pairAsset === 'dxy' ? 'DXY is exposed only as a limited broad-USD diagnostic because basket-weight modeling is not implemented.' : `${pairAsset} is resolved as base pressure minus quote pressure; missing sides lower confidence rather than being inferred.` };
+  const weightedSnapshotOnly = hasWeightedSnapshot && (!input.evidenceItems || input.evidenceItems.length === 0);
+  const maxConfidence = weightedSnapshotOnly ? (missingSide ? 39 : 55) : (missingSide ? 49 : 82);
+  const confidence = clamp(sideCoverage + magnitudeBoost + componentBoost - warningPenalty, 0, maxConfidence);
+  const result: MarketFxRelativeStrengthResult = { pairAsset, baseCurrency: orientation.baseCurrency, quoteCurrency: orientation.quoteCurrency, basePressure, quotePressure, netPressureScore, pairDirection: direction, confidence, confidenceTier: confidenceTier(confidence), components, reasonCodes, warnings, appliedRuleIds: unique(components.map((c) => `fxrs-${c.kind}`)), requiresMacroSurpriseNormalization: requiresMacro, requiresPriceConfirmation: requiresPrice, providerCoverageStatus: pairAsset === 'dxy' ? 'diagnostic_limited' : providerGap ? 'pending_provider_activation' : 'partial', rationale: hasWeightedSnapshot ? (pairAsset === 'dxy' ? 'DXY is exposed only as a limited broad-USD diagnostic because basket-weight modeling is not implemented; weighted-snapshot reconstruction is diagnostic because original issuer/currency metadata may be reduced.' : `${pairAsset} is resolved as base pressure minus quote pressure; weighted-snapshot reconstruction is diagnostic because original issuer/currency metadata may be reduced, so evidence-item inputs remain preferred for full side attribution.`) : (pairAsset === 'dxy' ? 'DXY is exposed only as a limited broad-USD diagnostic because basket-weight modeling is not implemented.' : `${pairAsset} is resolved as base pressure minus quote pressure; missing sides lower confidence rather than being inferred.`) };
   const validation = validateMarketFxRelativeStrengthResult(result);
   if ('errors' in validation) throw new Error(`fx_relative_strength_invalid:${validation.errors.join('|')}`);
   return result;
@@ -161,8 +177,7 @@ export function resolveFxRelativeStrengthFromEvidenceItems(pairAsset: PairLike, 
   return resolveFxRelativeStrength(input);
 }
 export function resolveFxRelativeStrengthFromWeightedSnapshot(weightedSnapshot: WeightedEvidenceSnapshot, options?: { asOfIso?: string; metadataJson?: string | null }): MarketFxRelativeStrengthResult {
-  const weightedAsset = String(weightedSnapshot.asset);
-  const pairAsset = isFxPair(weightedAsset) ? weightedAsset : weightedAsset === 'dxy' ? 'dxy' : 'eur_usd';
+  const pairAsset = resolveWeightedSnapshotPairAsset(weightedSnapshot);
   const input: MarketFxRelativeStrengthInput = { pairAsset, weightedSnapshot };
   if (options?.metadataJson !== undefined) input.metadataJson = options.metadataJson;
   if (options?.asOfIso !== undefined) input.asOfIso = options.asOfIso;
@@ -171,7 +186,7 @@ export function resolveFxRelativeStrengthFromWeightedSnapshot(weightedSnapshot: 
 
 export function listFxRelativeStrengthRules(pairAsset?: PairLike): MarketFxRelativeStrengthRule[] { const rules = getFxRelativeStrengthRuleSetSnapshot('2026-06-03T00:00:00.000Z').rules; return pairAsset ? rules.filter((r) => r.pairAssets.includes(pairAsset)) : rules; }
 export function getFxRelativeStrengthCoverageReport(asOfIso = new Date().toISOString()): MarketFxRelativeStrengthCoverageReport {
-  const report: MarketFxRelativeStrengthCoverageReport = { generatedAt: asOfIso, representedPairAssets: [...MARKET_FX_PAIR_ASSETS], optionalDiagnostics: ['dxy'], pairCount: MARKET_FX_PAIR_ASSETS.length, currencies: [...MARKET_FX_CURRENCY_CODES], dxyCoverage: 'limited_diagnostic', pendingPhases: ['R4','R5','R6','R7','provider_reliability'], warnings: ['pending_macro_surprise_normalization','requires_price_confirmation','provider_activation_gap','limited_dxy_diagnostic','relative_magnitude_missing'], notes: ['C6-R3 adds deterministic FX base-vs-quote currency pressure foundation.', 'Missing base or quote evidence lowers confidence.', 'Macro surprise normalization, expanded contradictions, confidence calibration, price reaction, and provider reliability remain pending.'] };
+  const report: MarketFxRelativeStrengthCoverageReport = { generatedAt: asOfIso, representedPairAssets: [...MARKET_FX_PAIR_ASSETS], optionalDiagnostics: ['dxy'], pairCount: MARKET_FX_PAIR_ASSETS.length, currencies: [...MARKET_FX_CURRENCY_CODES], dxyCoverage: 'limited_diagnostic', pendingPhases: ['R4','R5','R6','R7','provider_reliability'], warnings: ['pending_macro_surprise_normalization','requires_price_confirmation','provider_activation_gap','limited_dxy_diagnostic','relative_magnitude_missing','weighted_snapshot_metadata_limited'], notes: ['C6-R3 adds deterministic FX base-vs-quote currency pressure foundation.', 'Missing base or quote evidence lowers confidence.', 'Weighted-snapshot FX relative strength is diagnostic because issuer/currency metadata may be reduced; evidence-item inputs remain preferred.', 'Macro surprise normalization, expanded contradictions, confidence calibration, price reaction, and provider reliability remain pending.'] };
   const validation = validateMarketFxRelativeStrengthCoverageReport(report); if ('errors' in validation) throw new Error(`fx_relative_strength_coverage_invalid:${validation.errors.join('|')}`); return report;
 }
 export function getFxRelativeStrengthRuleSetSnapshot(asOfIso = new Date().toISOString()): MarketFxRelativeStrengthRuleSetSnapshot {

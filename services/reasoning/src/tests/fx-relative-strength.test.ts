@@ -1,8 +1,8 @@
 import { validateMarketFxRelativeStrengthCoverageReport, validateMarketFxRelativeStrengthResult, validateMarketFxRelativeStrengthRuleSetSnapshot } from '@elceo/schemas';
-import type { MarketFxPairAsset, ReasoningEvidenceInputItem } from '@elceo/types';
+import type { MarketFxPairAsset, ReasoningEvidenceInputItem, TradingAssetCoverage, WeightedEvidenceItem, WeightedEvidenceSnapshot } from '@elceo/types';
 import { MARKET_FX_PAIR_ASSETS } from '@elceo/types';
 import { buildWeightedEvidenceItem } from '../evidence-weighting/index.js';
-import { assertFxRelativeStrengthRuleSetValid, getFxRelativeStrengthCoverageReport, getFxRelativeStrengthRuleSetSnapshot, resolveFxPairOrientation, resolveFxRelativeStrength, resolveFxRelativeStrengthFromEvidenceItems } from '../fx-relative-strength/index.js';
+import { assertFxRelativeStrengthRuleSetValid, getFxRelativeStrengthCoverageReport, getFxRelativeStrengthRuleSetSnapshot, resolveFxPairOrientation, resolveFxRelativeStrength, resolveFxRelativeStrengthFromEvidenceItems, resolveFxRelativeStrengthFromWeightedSnapshot } from '../fx-relative-strength/index.js';
 import { resolveAssetContextualEvidenceDirection } from '../asset-direction-resolution/index.js';
 import { CanonicalMarketIntelligenceBoundaryService } from '../runtime/canonical-market-intelligence-boundary.js';
 import { MemoryMarketEvidenceRegistrySnapshotRepository, MemorySeoContentArchitectureSnapshotRepository } from '../persistence/registry-snapshot-repository.js';
@@ -14,6 +14,22 @@ function evidence(payloadId: string, value: Record<string, unknown>, evidenceCla
 }
 function one(pairAsset: MarketFxPairAsset, value: Record<string, unknown>, evidenceClass: ReasoningEvidenceInputItem['evidenceClass'] = 'central_bank_policy') { return resolveFxRelativeStrengthFromEvidenceItems(pairAsset, [evidence(`e-${pairAsset}-${JSON.stringify(value).length}`, value, evidenceClass)]); }
 function resolver(asset: MarketFxPairAsset, value: Record<string, unknown>, evidenceClass = 'central_bank_policy') { return resolveAssetContextualEvidenceDirection({ asset, evidenceClass, metadataJson: metadata(value), policyIssuerRegion: typeof value.policyIssuerRegion === 'string' ? value.policyIssuerRegion : null }); }
+function weightedSnapshot(asset: TradingAssetCoverage, items: WeightedEvidenceItem[]): WeightedEvidenceSnapshot {
+  return { snapshotId: `weighted-test|${asset}`, generatedAt: '2026-06-03T00:00:00.000Z', asset, horizon: 'intraday', totalWeight: 100, usableWeight: 100, excludedWeight: 0, items, warnings: [] };
+}
+function diagnosticWeightedSnapshot(asset: string, items: WeightedEvidenceItem[]): WeightedEvidenceSnapshot {
+  return { snapshotId: `weighted-test|${asset}`, generatedAt: '2026-06-03T00:00:00.000Z', asset, horizon: 'intraday', totalWeight: 100, usableWeight: 100, excludedWeight: 0, items, warnings: [] } as unknown as WeightedEvidenceSnapshot;
+}
+function assertUnsupportedWeightedSnapshot(asset: TradingAssetCoverage, item: WeightedEvidenceItem): void {
+  try {
+    resolveFxRelativeStrengthFromWeightedSnapshot(weightedSnapshot(asset, [item]));
+    throw new Error(`unsupported asset ${asset} did not throw`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    assert(message.includes(`fx_relative_strength_unsupported_weighted_snapshot_asset:${asset}`), `${asset} unsupported weighted snapshot error carries original asset`);
+    assert(!message.includes('eur_usd'), `${asset} unsupported weighted snapshot error does not claim EUR/USD`);
+  }
+}
 
 export function runFxRelativeStrengthTests(): void {
   assert(assertFxRelativeStrengthRuleSetValid(), 'FX relative rule set valid assertion passes');
@@ -72,6 +88,34 @@ export function runFxRelativeStrengthTests(): void {
   const weightedMissing = buildWeightedEvidenceItem(evidence('weighted-missing', { direction: 'hawkish', driverKind: 'central_bank_policy' }), 'eur_usd', 'intraday');
   assert(weightedMissing.contributionScore === 0 && weightedMissing.reasons.some((x) => x.includes('direction_warning:ambiguous_policy_issuer')), 'weighted missing issuer does not create high-confidence contribution');
   assert(weightedEcb.reasons.some((x) => x.includes('direction_reason:fx_base_quote_orientation')) && weightedEcb.reasons.some((x) => x.includes('direction_warning:pending_fx_relative_strength')), 'weighted FX reasons carry relative-strength markers');
+
+  const weightedEurSnapshot = weightedSnapshot('eur_usd', [weightedEcb]);
+  const weightedEurResult = resolveFxRelativeStrengthFromWeightedSnapshot(weightedEurSnapshot);
+  assert(weightedEurResult.pairAsset === 'eur_usd' && validateMarketFxRelativeStrengthResult(weightedEurResult).ok, 'supported EUR/USD weighted snapshot resolves and validates');
+  assert(weightedEurResult.warnings.includes('weighted_snapshot_metadata_limited') && weightedEurResult.rationale.includes('evidence-item inputs remain preferred'), 'supported FX weighted snapshot carries diagnostic metadata limitation');
+  assert(weightedEurResult.confidence <= 55, 'weighted-snapshot-only FX result is not high confidence');
+
+  const weightedCadSnapshot = weightedSnapshot('usd_cad', [weightedOil]);
+  const weightedCadResult = resolveFxRelativeStrengthFromWeightedSnapshot(weightedCadSnapshot);
+  assert(weightedCadResult.pairAsset === 'usd_cad' && validateMarketFxRelativeStrengthResult(weightedCadResult).ok, 'supported USD/CAD weighted snapshot resolves and validates');
+  assert(weightedCadResult.warnings.includes('weighted_snapshot_metadata_limited'), 'USD/CAD weighted snapshot carries diagnostic metadata limitation');
+
+  const weightedDxyItem = buildWeightedEvidenceItem(evidence('weighted-dxy-fed', { direction: 'hawkish', issuer: 'Fed', driverKind: 'central_bank_policy' }), 'dxy', 'intraday');
+  const weightedDxy = resolveFxRelativeStrengthFromWeightedSnapshot(diagnosticWeightedSnapshot('dxy', [weightedDxyItem]));
+  assert(weightedDxy.providerCoverageStatus === 'diagnostic_limited' && weightedDxy.warnings.includes('limited_dxy_diagnostic'), 'DXY weighted snapshot remains limited diagnostic');
+  assert(weightedDxy.warnings.includes('weighted_snapshot_metadata_limited'), 'DXY weighted snapshot carries metadata limitation warning');
+
+  assertUnsupportedWeightedSnapshot('xau_usd', buildWeightedEvidenceItem(evidence('weighted-xau', { direction: 'positive', driverKind: 'real_yield_pressure' }), 'xau_usd', 'intraday'));
+  assertUnsupportedWeightedSnapshot('sp500', buildWeightedEvidenceItem(evidence('weighted-sp500', { direction: 'positive', driverKind: 'risk_sentiment' }), 'sp500', 'intraday'));
+  assertUnsupportedWeightedSnapshot('btc_usd', buildWeightedEvidenceItem(evidence('weighted-btc', { direction: 'positive', driverKind: 'liquidity' }), 'btc_usd', 'intraday'));
+  try {
+    boundary.resolveFxRelativeStrengthFromWeightedSnapshot(weightedSnapshot('sp500', [buildWeightedEvidenceItem(evidence('boundary-sp500', { direction: 'positive', driverKind: 'risk_sentiment' }), 'sp500', 'intraday')]));
+    throw new Error('canonical boundary unsupported weighted snapshot did not throw');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    assert(message.includes('fx_relative_strength_unsupported_weighted_snapshot_asset:sp500'), 'canonical boundary preserves unsupported weighted snapshot error');
+    assert(!message.includes('eur_usd'), 'canonical boundary unsupported error does not claim EUR/USD');
+  }
 
   const dxy = resolveFxRelativeStrength({ pairAsset: 'dxy', metadataJson: metadata({ direction: 'hawkish', issuer: 'Fed' }) });
   assert(dxy.warnings.includes('limited_dxy_diagnostic') && dxy.providerCoverageStatus === 'diagnostic_limited', 'DXY is limited diagnostic only');

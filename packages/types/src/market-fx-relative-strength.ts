@@ -25,7 +25,7 @@ export type MarketFxRelativePairDirection = typeof MARKET_FX_RELATIVE_PAIR_DIREC
 export const MARKET_FX_RELATIVE_STRENGTH_CONFIDENCE_TIERS = ['low','medium','high'] as const;
 export type MarketFxRelativeStrengthConfidenceTier = typeof MARKET_FX_RELATIVE_STRENGTH_CONFIDENCE_TIERS[number];
 
-export const MARKET_FX_RELATIVE_STRENGTH_WARNINGS = ['missing_base_pressure','missing_quote_pressure','pending_macro_surprise_normalization','requires_price_confirmation','provider_activation_gap','limited_dxy_diagnostic','haven_conflict','risk_regime_conflict','intervention_risk','commodity_context_missing','relative_magnitude_missing'] as const;
+export const MARKET_FX_RELATIVE_STRENGTH_WARNINGS = ['missing_base_pressure','missing_quote_pressure','pending_macro_surprise_normalization','requires_price_confirmation','provider_activation_gap','limited_dxy_diagnostic','haven_conflict','risk_regime_conflict','intervention_risk','commodity_context_missing','relative_magnitude_missing','weighted_snapshot_metadata_limited'] as const;
 export type MarketFxRelativeStrengthWarning = typeof MARKET_FX_RELATIVE_STRENGTH_WARNINGS[number];
 
 export const MARKET_FX_RELATIVE_STRENGTH_REASON_CODES = ['fx_base_quote_orientation','base_currency_pressure','quote_currency_pressure','central_bank_policy_side_mapped','non_usd_issuer_side_mapped','usd_side_policy_pressure','risk_regime_asset_context','safe_haven_context','funding_stress_context','commodity_quote_currency_pressure','china_demand_commodity_fx','fiscal_risk_pressure','intervention_risk_caveat','missing_side_evidence_penalty','macro_surprise_pending','price_confirmation_required','provider_gap_visible','relative_strength_applied','dxy_limited_diagnostic','mixed_base_quote_conflict'] as const;

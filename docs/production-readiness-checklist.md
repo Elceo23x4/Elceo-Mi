@@ -193,6 +193,7 @@ _Date: 2026-05-16_
 - [x] FX base-vs-quote relative pressure foundation added for EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, NZD/USD, and USD/CAD.
 - [x] Missing base or quote evidence lowers confidence and remains visible.
 - [x] Non-Fed issuer side handling improved for launch FX currencies/central banks when metadata identifies issuer or affected currency.
+- [x] C6-R3B weighted snapshot safety cleanup: unsupported/non-FX weighted snapshots no longer default to EUR/USD, DXY remains limited diagnostic, and weighted-snapshot FX relative-strength reconstruction is explicitly diagnostic/limited because original issuer/currency metadata may be reduced. Evidence-item inputs remain preferred for full FX side attribution.
 - [ ] Macro surprise normalization remains R4.
 - [ ] Expanded contradiction matrix remains R5.
 - [ ] Confidence calibration remains R6.

@@ -165,4 +165,5 @@ No UI, live provider, payment, notification, commercial, Super Admin, or 2FA beh
 - Missing base or quote evidence now produces explicit low-confidence warnings rather than a strong pair direction.
 - Non-Fed issuer metadata is side-aware for ECB/EUR, BoE/GBP, BoJ/JPY, SNB/CHF, RBA/AUD, RBNZ/NZD, and BoC/CAD, while issuer-less policy metadata remains ambiguous.
 - DXY is exposed only as limited broad-USD diagnostic support until a real basket-weight model exists.
+- C6-R3B safety cleanup: unsupported/non-FX weighted snapshots no longer default to EUR/USD; weighted-snapshot FX relative-strength reconstruction is diagnostic/limited because original issuer/currency metadata may be reduced, so evidence-item inputs remain preferred for full FX side attribution.
 - No UI, live provider, payment, notification, commercial, Super Admin, affiliate, route entitlement, or 2FA behavior changed.

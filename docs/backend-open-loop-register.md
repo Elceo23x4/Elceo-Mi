@@ -180,5 +180,6 @@ _Date: 2026-05-16_
 - Added deterministic FX base-vs-quote pressure modeling for EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, NZD/USD, and USD/CAD.
 - Missing side evidence now remains visible and lowers confidence; non-Fed issuer-side handling is improved for launch central banks/currencies.
 - DXY is limited read-only broad-USD diagnostic coverage only; full basket weighting is not implemented.
+- C6-R3B safety cleanup: unsupported/non-FX weighted snapshots no longer default to EUR/USD; weighted-snapshot FX relative-strength reconstruction is diagnostic/limited because original issuer/currency metadata may be reduced, so evidence-item inputs remain preferred for full FX side attribution.
 - Still open: R4 macro surprise normalization, R5 expanded contradiction matrix, R6 confidence calibration, R7 price reaction/impulse engine, provider reliability weighting, and golden scenario expansion.
 - No UI, live providers, payments, notifications, commercial behavior, Super Admin behavior, affiliate behavior, route entitlement behavior, or 2FA behavior changed.

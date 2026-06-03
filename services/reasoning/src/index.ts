@@ -30,3 +30,5 @@ export * from './news-extraction-filings/index';
 export * from './golden-scenario-reasoning';
 export * from './cognition-calibration';
 export * from './frontend-contracts/index';
+
+export * from './asset-causality-map/index';

@@ -153,3 +153,10 @@ _Date: 2026-05-16_
 - No live payments, live notifications, commercial entitlement behavior, Super Admin behavior, or 2FA/step-up behavior were changed.
 - Reasoning gaps are now formally tracked in `docs/market-realism-truth-source-map.md` and `docs/market-realism-code-gap-audit.md`.
 - R1-R9 remain required before ELCEO can claim final market-intelligence realism: asset-contextual direction, FX relative pressure, macro surprise normalization, expanded contradictions, confidence calibration, price reaction/impulse confirmation, provider reliability weighting, golden scenario expansion, and integrated acceptance gates.
+
+## C6-R1 — Asset causality map foundation (2026-06-03)
+
+- Added code-backed asset causality map contracts and validation for all launch assets.
+- Open loops intentionally remain for R2-R9: direction resolver, FX relative strength, macro surprise normalization, contradiction expansion, confidence upgrade, price reaction/event impulse, provider reliability weighting, and golden scenarios.
+- The new map records provider dependencies as must-have, important, or nice-to-have while preserving fixture/dry-run/live-blocked/not-started caveats.
+- No UI, live provider, payment, notification, commercial, Super Admin, or 2FA activation occurred.

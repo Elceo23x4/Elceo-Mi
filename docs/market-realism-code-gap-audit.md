@@ -124,3 +124,19 @@ Status: **completed audit, implementation pending**. This document records what 
 ## C6-R0 acceptance statement
 
 C6-R0 is complete only as an audit/truth-source foundation. It intentionally does not implement broad reasoning changes, activate live providers, modify UI, activate payments, activate notifications, add secrets, or alter commercial/Super Admin/2FA behavior. R1-R9 remain required before ELCEO can claim final market-intelligence realism.
+
+## C6-R1 — Code-backed causality contract added (2026-06-03)
+
+C6-R1 converts the C6-R0 audit into an executable asset causality contract, without closing the R2-R9 implementation gaps.
+
+Exact current overlaps and inconsistencies now documented by code:
+
+- C6-R0 truth-source docs overlap with the new map on launch assets, major driver categories, provider activation caveats, contradiction needs, and downstream phase dependencies.
+- Provider registry coverage overlaps with provider dependency IDs in the new map, but registry status is source-readiness only; the new map marks dependency tier and current coverage without claiming live availability.
+- Weighting policy overlaps on evidence class weighting and base relevance, but it is not an asset-contextual driver interpreter.
+- Cognition calibration overlaps on confidence decomposition, freshness, and contradiction foundations, but lacks source activation penalties, price confirmation, FX completeness, and macro validity components required by the map.
+- Signal taxonomy overlaps on pressure, direction, contradiction, sentiment, and confidence vocabulary, but it does not define two-sided FX requirements or asset-family causality.
+
+C6-R1 adds typed descriptors, validators, deterministic reasoning helpers, canonical boundary read methods, and tests. The following remain pending: asset-contextual direction resolution, FX relative strength, macro surprise normalization, expanded contradictions, confidence overhaul, price reaction/event impulse logic, provider reliability weighting, and golden scenario expansion.
+
+No UI, live provider, payment, notification, commercial, Super Admin, or 2FA behavior was changed.

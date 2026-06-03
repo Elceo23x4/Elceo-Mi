@@ -388,3 +388,11 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [ ] Confidence calibration upgrade required. Confidence must include provider activation state, source independence, duplicate-burst adjustment, macro-normalization validity, FX completeness, price confirmation, provider-data gaps, COT lag, crypto derivatives reliability, and ETF-flow freshness.
 - [ ] Price reaction / impulse confirmation required. Reasoning needs ATR-normalized event-window impulse, fade, follow-through, related-market confirmation, and zone rejection/acceptance before price reaction can strengthen confidence.
 - [ ] Golden scenario expansion required. R8 must add deeper historical and realistic market regimes, macro surprises, FX divergence, crypto derivatives/liquidity, duplicate news, stale source, and price-reaction confirmation/failure scenarios.
+
+## C6-R1 — Asset causality contract foundation (2026-06-03)
+
+- Added typed and tested asset causality contracts for all 14 ELCEO launch assets.
+- Added schema validation rules that require driver coverage, regime modifiers, contradiction triggers, provider dependencies, FX base/quote pressure requirements, and non-complete coverage status while R2-R9 remain pending.
+- Added deterministic reasoning helpers and canonical boundary read methods so later engines consume the same source of truth.
+- No checklist item for final realism is checked by this batch: direction resolution, FX relative strength, macro surprise normalization, expanded contradiction detection, confidence calibration upgrade, price reaction/event impulse logic, provider reliability weighting, and golden scenario expansion remain pending.
+- No UI, live providers, payment, notification, commercial entitlement, Super Admin, or 2FA behavior changed.

@@ -255,3 +255,22 @@ ELCEO may only claim launch-scope market-realistic reasoning after all of the fo
 - Provider registry status prevents fixture-only or dry-run-only evidence from producing strong live-confidence claims.
 - Golden scenarios include realistic successes, contradictions, stale evidence, duplicate news, FX divergence, macro surprise, crypto derivatives, and price-reaction failures.
 - Guardrails continue to avoid direct financial-advice output language.
+
+## C6-R1 — Asset causality map contract note (2026-06-03)
+
+C6-R1 adds the typed, tested asset causality map foundation in `packages/types/src/market-asset-causality.ts`, `packages/schemas/src/market-asset-causality.schema.ts`, and `services/reasoning/src/asset-causality-map/index.ts`.
+
+Current causality-code audit summary:
+
+- C6-R0 docs already identify the required launch-asset truth-source drivers and seven realism gaps, but those docs were not executable contracts.
+- The provider source registry covers all launch assets in fixture, dry-run, live-blocked, or not-started form; it does not decide asset-specific causality or confidence.
+- Evidence weighting policy provides asset/evidence-class weights and base weights; it does not resolve FX base-vs-quote pressure or macro surprise interpretation.
+- Cognition calibration includes freshness, contradiction, confidence, and fixture scenario foundations; it does not implement asset-complete direction resolution, price reaction confirmation, or provider-gap confidence penalties.
+- Market cognition signal taxonomy names pressure, contradiction, and confidence concepts; it remains a generic taxonomy rather than an authoritative 14-asset causality matrix.
+
+C6-R1 status:
+
+- Asset causality mapping is now typed and schema validated for XAU/USD, EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, NZD/USD, USD/CAD, BTC/USD, Nasdaq 100, S&P 500, DE30, DXY, and VIX.
+- This batch does **not** implement the downstream direction resolver, FX relative strength engine, macro surprise normalization engine, expanded contradiction matrix, confidence calibration upgrade, price reaction/event impulse engine, provider reliability weighting, or golden scenario expansion.
+- R2-R9 remain required before final market-intelligence realism can be claimed.
+- No UI, live provider activation, payment activation, notification activation, commercial entitlement behavior, Super Admin behavior, or 2FA behavior changed.

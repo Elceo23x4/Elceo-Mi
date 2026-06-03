@@ -407,3 +407,10 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [ ] Price reaction / impulse confirmation remains R7 and is not marked complete.
 - [ ] Provider reliability and golden scenario expansion remain pending.
 - No UI, live provider, payment, notification, commercial entitlement, Super Admin, affiliate, or 2FA behavior changed.
+
+## C6-R2B — Policy issuer ambiguity cleanup (2026-06-03)
+
+- [x] Missing policy issuer no longer defaults hawkish/dovish policy tone to Fed/U.S. pressure.
+- [x] Explicit Fed metadata continues to resolve asset-contextually, including weighted-evidence DXY-positive versus EUR/USD-negative contribution coverage.
+- [ ] Non-Fed issuer-side expansion remains pending with R3 FX relative strength and later issuer-side work; R4/R5/R6/R7 remain pending.
+- No UI, live provider, payment, notification, commercial, Super Admin, route entitlement, or 2FA behavior changed.

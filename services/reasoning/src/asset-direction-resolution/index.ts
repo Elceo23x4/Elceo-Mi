@@ -51,13 +51,38 @@ export function inferDriverKindFromEvidenceClassOrMetadata(input: MarketAssetDir
 export function resolveFxPairOrientation(asset: MarketAssetCausalityAsset): FxOrientation { if (!FX.includes(asset)) return null; const parts = asset.split('_'); const base = parts[0] ?? ''; const quote = parts[1] ?? ''; return { base: base.toUpperCase(), quote: quote.toUpperCase() }; }
 function resolveTone(input: MarketAssetDirectionResolutionInput, raw: MarketAssetRawDirectionHint, m: Metadata): MarketAssetPolicyTone { if (input.policyTone) return input.policyTone; const v = norm(m.policyTone ?? m.tone ?? raw); return v === 'hawkish' || v === 'dovish' || v === 'neutral' || v === 'mixed' ? v : 'unknown'; }
 function riskHint(input: MarketAssetDirectionResolutionInput, raw: MarketAssetRawDirectionHint, m: Metadata): MarketAssetRiskRegimeHint { if (input.riskRegime) return input.riskRegime; const v = norm(m.riskRegime ?? m.regime ?? raw); return v === 'risk_on' || v === 'risk_off' || v === 'liquidity_stress' || v === 'credit_stress' || v === 'volatility_shock' || v === 'event_window' ? v : 'unknown'; }
-function policyIssuerIsFed(input: MarketAssetDirectionResolutionInput, m: Metadata): boolean { const issuer = `${norm(input.policyIssuerRegion)} ${norm(m.policyIssuerRegion)} ${norm(m.issuer)} ${norm(m.region)} ${norm(m.source)}`; return /fed|federal_reserve|united_states|us|u\.s\./.test(issuer) || issuer.trim() === ''; }
+function metadataStrings(values: unknown[]): string[] { return values.filter((v): v is string => typeof v === 'string' && v.trim().length > 0); }
+function tokenizeIssuerValue(value: string): string[] { return value.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean); }
+function valueIdentifiesFedOrUsd(value: string): boolean {
+  const normalized = norm(value);
+  const tokens = tokenizeIssuerValue(value);
+  const exactFedOrUsd = new Set(['fed','fomc','federal_reserve','united_states','u_s','us','usa','usd']);
+  if (exactFedOrUsd.has(normalized)) return true;
+  if (tokens.includes('fed') || tokens.includes('fomc') || tokens.includes('usd')) return true;
+  if (tokens.includes('federal') && tokens.includes('reserve')) return true;
+  if ((tokens.includes('united') && tokens.includes('states')) || tokens.includes('usa')) return true;
+  if (tokens.includes('u') && tokens.includes('s')) return true;
+  return tokens.includes('us') && tokens.length === 1;
+}
+function policyIssuerIsFed(input: MarketAssetDirectionResolutionInput, m: Metadata): boolean {
+  const issuerValues = metadataStrings([input.policyIssuerRegion, input.affectedCurrency, m.policyIssuerRegion, m.issuer, m.region, m.source, m.affectedCurrency, m.currency, m.centralBank, m.provider, m.providerId]);
+  return issuerValues.some(valueIdentifiesFedOrUsd);
+}
+function policyPressureTargetForAmbiguousIssuer(asset: MarketAssetCausalityAsset): MarketAssetResolvedPressureTarget {
+  if (asset === 'dxy') return 'usd_side';
+  if (FX.includes(asset)) return resolveFxPairOrientation(asset)?.base === 'USD' ? 'base_currency' : 'quote_currency';
+  if (asset === 'xau_usd') return 'rates_complex';
+  if (US_EQUITIES.includes(asset) || asset === 'btc_usd') return 'liquidity_complex';
+  if (asset === 'vix') return 'volatility_complex';
+  return 'asset_direct';
+}
 function fxUsdPolicy(asset: MarketAssetCausalityAsset, tone: MarketAssetPolicyTone): WeightedEvidenceDirection { const o = resolveFxPairOrientation(asset); if (!o) return 'unknown'; const usdStrong = tone === 'hawkish'; if (o.base === 'USD') return usdStrong ? 'bullish' : 'bearish'; if (o.quote === 'USD') return usdStrong ? 'bearish' : 'bullish'; return 'mixed'; }
 
 export function resolvePolicyToneImpact(input: MarketAssetDirectionResolutionInput): MarketAssetDirectionResolutionResult {
   const m = parseMetadata(input.metadataJson); const raw = input.rawHint ?? parseRawDirectionHintFromMetadata(input.metadataJson); const tone = resolveTone(input, raw, m); const asset = isAsset(input.asset) ? input.asset : 'xau_usd';
   if (tone !== 'hawkish' && tone !== 'dovish') return result(input, m, raw, 'unknown', 'unknown', 20, ['ambiguous_context'], ['ambiguous_policy_issuer'], [], 'Policy tone was not specific enough to resolve asset pressure.', 'policy_tone_unknown');
   const fed = policyIssuerIsFed(input, m); const codes: MarketAssetDirectionResolutionReasonCode[] = ['policy_tone_asset_context','causality_map_requirement']; const warnings: MarketAssetDirectionResolutionWarning[] = fed ? [] : ['ambiguous_policy_issuer'];
+  if (!fed) return result(input, m, raw, 'mixed', policyPressureTargetForAmbiguousIssuer(asset), 34, [...codes,'ambiguous_context'], warnings, ['policy-issuer-ambiguous'], 'Policy tone needs explicit issuer or affected-side context before applying Fed/USD-specific asset pressure.', 'policy_issuer_missing_or_unresolved');
   if (asset === 'dxy') return result(input, m, raw, tone === 'hawkish' ? 'bullish' : 'bearish', 'usd_side', 76, codes, warnings, ['policy-fed-dxy'], 'Fed policy tone is resolved through broad USD-side causality rather than generic sentiment.');
   if (FX.includes(asset)) return result(input, m, raw, fxUsdPolicy(asset, tone), resolveFxPairOrientation(asset)?.base === 'USD' ? 'base_currency' : 'quote_currency', asset === 'usd_jpy' || asset === 'usd_chf' ? 68 : 72, [...codes,'fx_base_quote_orientation','usd_side_policy_pressure'], [...warnings, ...(asset === 'usd_jpy' ? ['haven_conflict' as const] : []), ...(asset === 'usd_chf' ? ['haven_conflict' as const] : [])], [`policy-fed-fx-${asset}`], 'Fed policy tone is translated through the pair base/quote orientation and retains R3 relative-strength caveats.');
   if (asset === 'xau_usd') return result(input, m, raw, tone === 'hawkish' ? 'bearish' : 'bullish', 'rates_complex', 58, [...codes,'rates_liquidity_pressure'], [...warnings,'requires_price_confirmation','pending_macro_surprise_normalization'], ['policy-fed-gold-rates'], 'Gold pressure is resolved through real-yield and dollar-liquidity context, not the tone label alone.');

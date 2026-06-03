@@ -274,3 +274,11 @@ C6-R1 status:
 - This batch does **not** implement the downstream direction resolver, FX relative strength engine, macro surprise normalization engine, expanded contradiction matrix, confidence calibration upgrade, price reaction/event impulse engine, provider reliability weighting, or golden scenario expansion.
 - R2-R9 remain required before final market-intelligence realism can be claimed.
 - No UI, live provider activation, payment activation, notification activation, commercial entitlement behavior, Super Admin behavior, or 2FA behavior changed.
+
+## C6-R2 — Asset-contextual direction resolver foundation (2026-06-03)
+
+- C6-R2 adds the first reasoning upgrade after the causality-map foundation: generic metadata direction mapping is no longer the primary weighted-evidence contribution path.
+- The same event can now resolve differently by asset: hawkish Fed evidence can support DXY, pressure EUR/USD through USD quote strength, pressure gold/equity/BTC through rates/liquidity context, and carry JPY/CHF haven caveats where applicable.
+- The resolver is deterministic and code-backed through types, schemas, tests, canonical boundary read methods, and weighted-evidence integration.
+- FX relative-strength remains R3; macro surprise normalization remains R4; expanded contradiction matrix remains R5; confidence calibration remains R6; price reaction/impulse remains R7; provider reliability and golden scenario expansion remain pending.
+- No UI, live provider activation, payment activation, notification activation, commercial entitlement behavior, Super Admin behavior, affiliate behavior, or 2FA behavior changed.

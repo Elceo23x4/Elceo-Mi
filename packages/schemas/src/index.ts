@@ -94,3 +94,4 @@ export * from './observability-audit.schema';
 export * from './user-social-identifiers.schema';
 
 export * from './market-asset-causality.schema';
+export * from './market-asset-direction-resolution.schema';

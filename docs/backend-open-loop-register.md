@@ -160,3 +160,10 @@ _Date: 2026-05-16_
 - Open loops intentionally remain for R2-R9: direction resolver, FX relative strength, macro surprise normalization, contradiction expansion, confidence upgrade, price reaction/event impulse, provider reliability weighting, and golden scenarios.
 - The new map records provider dependencies as must-have, important, or nice-to-have while preserving fixture/dry-run/live-blocked/not-started caveats.
 - No UI, live provider, payment, notification, commercial, Super Admin, or 2FA activation occurred.
+
+## C6-R2 — Asset-contextual direction resolver foundation (2026-06-03)
+
+- Added a deterministic asset-contextual direction resolver foundation for reasoning internals.
+- Generic metadata direction mapping is no longer the primary weighted-evidence contribution path; the same event can resolve differently by asset through causality map context, asset family, FX orientation, driver kind, policy/risk tone, and caveat flags.
+- Open loops remain: R3 FX relative strength, R4 macro surprise normalization, R5 expanded contradiction matrix, R6 confidence calibration, R7 price reaction/impulse, provider reliability, and golden scenario expansion.
+- No UI, live provider, payment, notification, commercial entitlement, Super Admin, affiliate, or 2FA behavior changed.

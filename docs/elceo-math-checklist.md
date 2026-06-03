@@ -396,3 +396,14 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - Added deterministic reasoning helpers and canonical boundary read methods so later engines consume the same source of truth.
 - No checklist item for final realism is checked by this batch: direction resolution, FX relative strength, macro surprise normalization, expanded contradiction detection, confidence calibration upgrade, price reaction/event impulse logic, provider reliability weighting, and golden scenario expansion remain pending.
 - No UI, live providers, payment, notification, commercial entitlement, Super Admin, or 2FA behavior changed.
+
+## C6-R2 — Asset-contextual direction resolver foundation (2026-06-03)
+
+- [x] Asset-contextual direction resolver foundation: implemented typed inputs/results/rules, schema validators, deterministic resolver behavior, weighted-evidence integration, canonical boundary read methods, and behavior tests showing the same event can resolve differently by asset.
+- [ ] FX relative-strength engine remains R3 and is not marked complete.
+- [ ] Macro surprise normalization remains R4 and is not marked complete.
+- [ ] Expanded contradiction matrix remains R5 and is not marked complete.
+- [ ] Confidence calibration remains R6 and is not marked complete.
+- [ ] Price reaction / impulse confirmation remains R7 and is not marked complete.
+- [ ] Provider reliability and golden scenario expansion remain pending.
+- No UI, live provider, payment, notification, commercial entitlement, Super Admin, affiliate, or 2FA behavior changed.

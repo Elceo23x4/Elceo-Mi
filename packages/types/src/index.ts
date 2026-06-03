@@ -99,3 +99,4 @@ export * from './route-entitlement-map';
 export * from './user-social-identifiers';
 
 export * from './market-asset-causality';
+export * from './market-asset-direction-resolution';

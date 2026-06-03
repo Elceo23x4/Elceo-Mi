@@ -140,3 +140,13 @@ Exact current overlaps and inconsistencies now documented by code:
 C6-R1 adds typed descriptors, validators, deterministic reasoning helpers, canonical boundary read methods, and tests. The following remain pending: asset-contextual direction resolution, FX relative strength, macro surprise normalization, expanded contradictions, confidence overhaul, price reaction/event impulse logic, provider reliability weighting, and golden scenario expansion.
 
 No UI, live provider, payment, notification, commercial, Super Admin, or 2FA behavior was changed.
+
+## C6-R2 — Asset-contextual direction resolver audit update (2026-06-03)
+
+- Current generic direction path audited: prior weighted evidence used `inferWeightedEvidenceDirection` in `services/reasoning/src/evidence-weighting/weight-calculation.ts` to read `metadataJson.direction`, `metadataJson.sentiment`, or `metadataJson.bias`; generic labels such as `hawkish`, `dovish`, `risk_on`, `risk_off`, `positive`, and `negative` could become bullish/bearish before asset context.
+- Exact weakness: the old path treated policy tone, risk regime, and sentiment as one-sided labels, so the same event could contribute in the same direction for assets that should differ by base/quote orientation, rates sensitivity, haven behavior, commodity linkage, or crypto-native context.
+- Affected assets: XAU/USD, EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, NZD/USD, USD/CAD, BTC/USD, Nasdaq 100, S&P 500, DE30, DXY, and VIX.
+- Affected files corrected in C6-R2: `services/reasoning/src/evidence-weighting/weight-calculation.ts` now routes direction through `services/reasoning/src/asset-direction-resolution/index.ts`; new contracts live in `packages/types/src/market-asset-direction-resolution.ts`; new validation lives in `packages/schemas/src/market-asset-direction-resolution.schema.ts`; canonical read methods were added under the market-intelligence boundary.
+- How C6-R2 corrects it: direction is now resolved through deterministic asset-contextual rules that consume the 14-asset causality map, asset family, evidence class, raw hint, driver kind, policy tone, risk regime, FX base/quote orientation, commodity/crypto/equity context, and explicit caveat flags for pending surprise normalization, FX relative strength, and price confirmation.
+- Remaining pending: R3 FX relative-strength engine, R4 macro surprise normalization, R5 expanded contradiction matrix, R6 confidence calibration, R7 price reaction/impulse, R8 provider reliability/golden scenario expansion, and R9 integrated acceptance remain open. C6-R2 does not claim final market-intelligence realism.
+- No UI, live provider, payment, notification, commercial entitlement, Super Admin, affiliate, or 2FA behavior changed.

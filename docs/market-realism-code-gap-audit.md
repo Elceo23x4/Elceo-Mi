@@ -214,3 +214,12 @@ No UI, live provider, payment, notification, commercial, Super Admin, or 2FA beh
 - System-level provider reliability expansion remains pending; C6-R7 price reaction, provider reliability weighting, golden scenarios, empirical backtesting, and live provider activation remain pending.
 - Market cognition keeps conservative provider/source defaults when no explicit internal context is supplied, and calibration can reuse a supplied contradiction matrix to reduce future context drift.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## C6-R7 code-gap update — price reaction / event impulse foundation (2026-06-04)
+
+- Previously, price confirmation existed primarily as pending warnings such as `pending_price_confirmation`, `missing_price_reaction`, and confidence penalties for event-sensitive evidence without price reaction context.
+- C6-R7 adds `packages/types/src/market-price-reaction.ts`, `packages/schemas/src/market-price-reaction.schema.ts`, and `services/reasoning/src/price-reaction/index.ts` to evaluate deterministic event-time price movement, impulse class, volatility-adjusted move size, wick rejection, absorption, reversal, delayed follow-through, and insufficient-data states.
+- The contradiction matrix now distinguishes supplied confirmed, rejected, absorbed, reversed, delayed, ambiguous, and insufficient price reactions for macro-vs-price context instead of treating all macro price confirmation as missing.
+- Confidence calibration now removes the severe missing-price-confirmation penalty when confirmed reaction context is supplied, reduces confidence for rejected/reversed reaction context, and remains cautious for absorbed/ambiguous/delayed context.
+- This is fixture/input driven only and does not activate live providers, chart feeds, recommendations, payments, notifications, commercial controls, Super Admin controls, affiliates, route entitlements, or 2FA behavior.
+- Provider reliability weighting remains pending. Golden scenario expansion remains pending. Empirical backtesting remains pending.

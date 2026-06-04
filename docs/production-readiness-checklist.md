@@ -252,3 +252,16 @@ _Date: 2026-05-16_
 - [ ] C6-R7 price reaction/impulse engine remains pending.
 - [ ] Provider reliability weighting, golden scenario expansion, empirical backtesting, and live provider activation remain pending.
 - [x] No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## O) C6-R7 price reaction / event impulse readiness (2026-06-04)
+
+- [x] Deterministic price reaction/event impulse foundation implemented with types, schemas, module logic, canonical boundary methods, and tests.
+- [x] Supplied/input-driven candle windows can classify confirmed, rejected, absorbed, reversed, delayed, ambiguous, and insufficient price reactions.
+- [x] Reaction logic includes immediate movement, follow-through, volatility-adjusted magnitude, wick rejection, absorption, reversal, warnings, rationale, and pending caveats.
+- [x] Contradiction matrix can consume supplied price reaction context for macro-vs-price confirmation/tension.
+- [x] Confidence calibration can remove the severe missing-price-confirmation penalty when confirmed reaction context is supplied and remain cautious for rejected/reversed/absorbed/ambiguous/delayed contexts.
+- [ ] Provider reliability weighting remains pending.
+- [ ] Golden scenario expansion remains pending.
+- [ ] Empirical backtesting remains pending.
+- [ ] Live provider activation remains pending.
+- [x] No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

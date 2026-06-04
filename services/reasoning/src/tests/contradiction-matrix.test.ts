@@ -1,5 +1,5 @@
 import { validateMarketContradictionCoverageReport, validateMarketContradictionEvidencePoint, validateMarketContradictionMatrixResult, validateMarketContradictionRuleSetSnapshot, validateMarketContradictionSignal } from '@elceo/schemas';
-import type { EvidenceWeightHorizon, MarketContradictionAsset, MarketContradictionDriverKind, MarketContradictionEvidencePoint } from '@elceo/types';
+import type { EvidenceWeightHorizon, MarketContradictionAsset, MarketContradictionDriverKind, MarketContradictionEvidencePoint, MarketContradictionWarning, WeightedEvidenceItem, WeightedEvidenceSnapshot } from '@elceo/types';
 import { buildMarketCognitionSnapshot } from '../market-cognition/index.js';
 import { assertMarketContradictionRuleSetValid, evaluateMarketContradictionMatrix, evaluateContradictionsFromWeightedSnapshot, getMarketContradictionCoverageReport, getMarketContradictionRuleSetSnapshot } from '../contradiction-matrix/index.js';
 import { CanonicalMarketIntelligenceBoundaryService } from '../runtime/canonical-market-intelligence-boundary.js';
@@ -14,7 +14,7 @@ function result(asset: MarketContradictionAsset, evidencePoints: MarketContradic
   return evaluateMarketContradictionMatrix({ asset, horizon: 'intraday', generatedAt: at, evidencePoints, priceReactionAvailable: options?.priceReactionAvailable ?? false, providerReliabilitySupplied: false, sourceIndependenceVerified: options?.sourceIndependenceVerified ?? true, warnings: ['pending_confidence_calibration','pending_price_confirmation','pending_provider_reliability'] });
 }
 function hasFamily(output: ReturnType<typeof result>, family: string): boolean { return output.signals.some((s) => s.family === family); }
-function hasWarning(output: ReturnType<typeof result>, warning: string): boolean { return JSON.stringify(output.warnings).includes(warning) || output.signals.some((s) => s.warnings.includes(warning as never)); }
+function hasWarning(output: ReturnType<typeof result>, warning: MarketContradictionWarning): boolean { return output.warnings.includes(warning) || output.signals.some((s) => s.warnings.includes(warning)); }
 
 export function runContradictionMatrixTests(): void {
   const validPoint = ep('sp500','valid','risk_sentiment','bullish');
@@ -55,12 +55,22 @@ export function runContradictionMatrixTests(): void {
   assert(hasFamily(macro, 'macro_vs_price_reaction') && macro.status === 'pending_confirmation' && hasWarning(macro, 'pending_price_confirmation'), 'macro surprise without price reaction is pending confirmation');
   const staleFresh = result('sp500', [ep('sp500','old','risk_sentiment','bearish',['stale_evidence_conflict']), ep('sp500','fresh','risk_sentiment','bullish')]);
   assert(hasFamily(staleFresh, 'provider_staleness_conflict') && hasWarning(staleFresh, 'stale_evidence_conflict'), 'fresh evidence contradicting stale evidence flags staleness conflict');
-  const duplicate = result('sp500', [ep('sp500','dup1','source_independence','bullish',['duplicate_source_risk']), ep('sp500','dup2','source_independence','bullish',['duplicate_source_risk'])], { sourceIndependenceVerified: false });
-  assert(hasFamily(duplicate, 'source_disagreement') && hasWarning(duplicate, 'source_independence_unverified'), 'duplicate news burst lacks source independence');
+  const unverifiedOnly = result('sp500', [ep('sp500','risk-unverified','risk_sentiment','bullish'), ep('sp500','credit-unverified','credit_stress','bullish')], { sourceIndependenceVerified: false });
+  assert(hasFamily(unverifiedOnly, 'risk_vs_credit') && !hasFamily(unverifiedOnly, 'source_disagreement') && hasWarning(unverifiedOnly, 'source_independence_unverified'), 'direct unverified source independence alone remains a warning without source disagreement');
 
-  const weighted = { snapshotId:'w-c6-r5', generatedAt: at, asset:'sp500' as const, horizon:'intraday' as EvidenceWeightHorizon, totalWeight:100, usableWeight:90, excludedWeight:0, warnings:[], items:[{ payloadId:'risk', asset:'sp500' as const, horizon:'intraday' as const, evidenceTypeId:'risk_sentiment', evidenceClass:'risk_sentiment' as const, providerId:'fixture', observedAt:at, finalQualityScore:90, baseWeight:50, qualityAdjustedWeight:45, role:'primary_driver' as const, direction:'bullish' as const, contributionScore:45, reasons:['risk_on'] }, { payloadId:'credit', asset:'sp500' as const, horizon:'intraday' as const, evidenceTypeId:'credit_stress', evidenceClass:'credit_stress' as const, providerId:'fixture', observedAt:at, finalQualityScore:90, baseWeight:50, qualityAdjustedWeight:45, role:'primary_driver' as const, direction:'bullish' as const, contributionScore:45, reasons:['credit stress rising'] }] };
-  const weightedResult = evaluateContradictionsFromWeightedSnapshot(weighted, { sourceIndependenceVerified: true });
-  assert(hasFamily(weightedResult, 'risk_vs_credit'), 'weighted snapshot evaluation detects expanded matrix signal');
+  const duplicate = result('sp500', [ep('sp500','dup1','source_independence','bullish',['duplicate_source_risk']), ep('sp500','dup2','source_independence','bullish',['duplicate_source_risk'])], { sourceIndependenceVerified: false });
+  assert(hasFamily(duplicate, 'source_disagreement') && hasWarning(duplicate, 'duplicate_source_risk') && hasWarning(duplicate, 'source_independence_unverified'), 'duplicate news burst still flags source disagreement and source warnings');
+
+  const weighted: WeightedEvidenceSnapshot = { snapshotId:'w-c6-r5', generatedAt: at, asset:'sp500', horizon:'intraday' as EvidenceWeightHorizon, totalWeight:100, usableWeight:90, excludedWeight:0, warnings:[], items:[{ payloadId:'risk', asset:'sp500', horizon:'intraday', evidenceTypeId:'risk_sentiment', evidenceClass:'risk_sentiment', providerId:'fixture', observedAt:at, finalQualityScore:90, baseWeight:50, qualityAdjustedWeight:45, role:'primary_driver', direction:'bullish', contributionScore:45, reasons:['risk_on'] }, { payloadId:'credit', asset:'sp500', horizon:'intraday', evidenceTypeId:'credit_stress', evidenceClass:'credit_stress', providerId:'fixture', observedAt:at, finalQualityScore:90, baseWeight:50, qualityAdjustedWeight:45, role:'primary_driver', direction:'bullish', contributionScore:45, reasons:['credit stress rising'] }] };
+  const weightedResult = evaluateContradictionsFromWeightedSnapshot(weighted);
+  assert(hasFamily(weightedResult, 'risk_vs_credit') && !hasFamily(weightedResult, 'source_disagreement') && hasWarning(weightedResult, 'source_independence_unverified'), 'weighted snapshot default unverified independence does not create source disagreement');
+  const weightedVerifiedResult = evaluateContradictionsFromWeightedSnapshot(weighted, { sourceIndependenceVerified: true });
+  assert(hasFamily(weightedVerifiedResult, 'risk_vs_credit') && !hasWarning(weightedVerifiedResult, 'source_independence_unverified'), 'weighted snapshot evaluation detects expanded matrix signal when source independence is verified');
+
+  const marketNewsItem = (payloadId: string, reasons: string[]): WeightedEvidenceItem => ({ asset:'sp500', horizon:'intraday', providerId:'fixture', observedAt:at, finalQualityScore:90, baseWeight:50, qualityAdjustedWeight:45, role:'primary_driver', direction:'bullish', contributionScore:45, payloadId, evidenceTypeId:'market_news', evidenceClass:'market_news', reasons });
+  const scrapedWeighted: WeightedEvidenceSnapshot = { ...weighted, snapshotId:'w-c6-r5b-scraped', items:[marketNewsItem('headline-1', ['duplicate headline']), marketNewsItem('headline-2', ['scraped duplicate']), marketNewsItem('headline-3', ['same headline burst'])] };
+  const scrapedWeightedResult = evaluateContradictionsFromWeightedSnapshot(scrapedWeighted, { sourceIndependenceVerified: false });
+  assert(hasFamily(scrapedWeightedResult, 'source_disagreement') && hasWarning(scrapedWeightedResult, 'duplicate_source_risk'), 'scraped and same-headline weighted evidence still flags source disagreement');
   assert(boundary.evaluateContradictionsFromWeightedSnapshot(weighted, { sourceIndependenceVerified: true }).signals.length > 0, 'canonical boundary evaluates weighted snapshot');
   const cognition = buildMarketCognitionSnapshot(weighted);
   assert(cognition.contradictions.some((c) => c.flagId.startsWith('expanded|')), 'market cognition contradiction bridge includes expanded matrix flags');

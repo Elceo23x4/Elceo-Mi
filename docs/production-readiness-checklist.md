@@ -220,3 +220,13 @@ _Date: 2026-05-16_
 - [ ] C6-R7 price reaction/impulse engine remains pending.
 - [ ] Provider reliability weighting and golden scenario expansion remain pending.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## M) C6-R5B source-disagreement cleanup (2026-06-04)
+
+- [x] `source_disagreement` no longer triggers solely because `sourceIndependenceVerified` is false.
+- [x] Missing source independence remains visible as a warning/caveat.
+- [x] Duplicate-source-risk bursts and scraped/same-headline evidence still trigger `source_disagreement` when actual source-conflict evidence exists.
+- [ ] C6-R6 empirical confidence calibration remains pending.
+- [ ] C6-R7 price reaction/impulse engine remains pending.
+- [ ] Provider reliability weighting and golden scenario expansion remain pending.
+- No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

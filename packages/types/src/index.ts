@@ -102,3 +102,5 @@ export * from './market-asset-causality';
 export * from './market-asset-direction-resolution';
 
 export * from './market-fx-relative-strength';
+
+export * from './market-macro-surprise';

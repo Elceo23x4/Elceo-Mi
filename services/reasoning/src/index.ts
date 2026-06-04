@@ -36,3 +36,5 @@ export * from './asset-causality-map/index';
 export * from './asset-direction-resolution/index';
 
 export * from './fx-relative-strength/index';
+
+export * from './macro-surprise-normalization/index';

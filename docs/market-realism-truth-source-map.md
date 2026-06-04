@@ -292,3 +292,12 @@ C6-R1 status:
 - DXY support is read-only and limited to broad USD diagnostic coverage; no full basket-weight model is claimed.
 - Macro surprise normalization remains R4; expanded contradiction matrix remains R5; confidence calibration remains R6; price reaction/impulse remains R7; provider reliability and golden scenarios remain pending.
 - No UI, live provider activation, payment activation, notification activation, commercial entitlement behavior, Super Admin behavior, affiliate behavior, route entitlement behavior, or 2FA behavior changed.
+
+## C6-R4 update — macro surprise normalization foundation (2026-06-03)
+
+- Added a deterministic macro surprise normalization foundation before downstream asset direction, FX relative-strength, confidence, contradiction, or price-reaction systems consume macro releases.
+- Actual-vs-forecast is now the primary comparison when consensus/forecast exists; actual-vs-previous is only a lower-confidence fallback and is explicitly warned.
+- Indicator-specific meaning is now represented for inflation, wages, payrolls, unemployment, jobless claims, GDP/activity, PMI/ISM, retail sales, policy-rate decisions, confidence, and oil inventories.
+- Unemployment and jobless claims are inverted so higher-than-forecast values express weaker labor rather than generic positive pressure.
+- Revisions, missing previous values, missing consensus dispersion, missing historical distribution, ambiguous units, provider activation gaps, asset-direction pending state, FX relative-strength pending state, and price-confirmation pending state remain visible warnings.
+- C6-R4 does not complete C6-R5 expanded contradiction matrices, C6-R6 confidence calibration, C6-R7 price reaction/impulse, or provider reliability/live activation.

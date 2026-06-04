@@ -427,3 +427,18 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [ ] Price reaction / impulse confirmation remains R7 and is not marked complete.
 - [ ] Provider reliability weighting and golden scenario expansion remain pending.
 - No UI, live provider, payment, notification, commercial, Super Admin, affiliate, route entitlement, or 2FA behavior changed.
+
+## C6-R4 math checklist — macro surprise normalization (2026-06-03)
+
+- [x] Actual-vs-forecast is the primary surprise basis when forecast/consensus exists.
+- [x] Actual-vs-previous is only used as a fallback when forecast is absent and carries `previous_used_without_forecast` plus lower confidence.
+- [x] Normalized surprise scores are bounded to -100..100 and bucketed into inline/mild/moderate/large/extreme severity.
+- [x] Inflation/wage upside maps to hotter inflation and hawkish policy pressure; downside maps to cooler/dovish pressure.
+- [x] Unemployment and jobless claims invert interpretation: higher values imply weaker labor.
+- [x] Rate decision upside/dowside maps to hawkish/dovish policy surprise.
+- [x] Missing consensus dispersion and historical distribution are explicit warnings; no historical z-score is claimed without historical distribution input.
+- [x] Asset direction, FX relative strength, and price confirmation remain downstream/pending primitives rather than direct advice.
+- [ ] C6-R5 expanded contradiction matrix.
+- [ ] C6-R6 empirical confidence calibration.
+- [ ] C6-R7 price reaction/impulse confirmation.
+- [ ] Live provider reliability and consensus dispersion activation.

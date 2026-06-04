@@ -103,7 +103,7 @@ export function validateMarketFxRelativeStrengthCoverageReport(input: unknown, p
   if (!arr(input.currencies, MARKET_FX_CURRENCY_CODES)) errors.push(`${path}currencies invalid`);
   if (input.dxyCoverage !== 'limited_diagnostic' && input.dxyCoverage !== 'not_enabled') errors.push(`${path}dxyCoverage invalid`);
   const pendingPhases = Array.isArray(input.pendingPhases) ? input.pendingPhases : [];
-  if (!Array.isArray(input.pendingPhases) || !['R4','R5','R6','R7','provider_reliability'].every((p) => pendingPhases.includes(p))) errors.push(`${path}pending phases invalid`);
+  if (!Array.isArray(input.pendingPhases) || !['R5','R6','R7','provider_reliability'].every((p) => pendingPhases.includes(p))) errors.push(`${path}pending phases invalid`);
   if (!arr(input.warnings, MARKET_FX_RELATIVE_STRENGTH_WARNINGS)) errors.push(`${path}warnings invalid`);
   if (!strArr(input.notes)) errors.push(`${path}notes required`);
   return errors.length ? { ok: false, errors } : { ok: true, value: input as MarketFxRelativeStrengthCoverageReport };

@@ -96,3 +96,5 @@ export * from './user-social-identifiers.schema';
 export * from './market-asset-causality.schema';
 export * from './market-asset-direction-resolution.schema';
 export * from './market-fx-relative-strength.schema';
+
+export * from './market-macro-surprise.schema';

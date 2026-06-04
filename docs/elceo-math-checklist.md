@@ -474,3 +474,12 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [ ] Provider reliability weighting remains pending.
 - [ ] Golden scenario expansion remains pending.
 - [ ] Live provider activation remains pending.
+
+## C6-R6B provider/source context cleanup (2026-06-04)
+
+- [x] `providerReliabilitySupplied` clarified as input-level provider context, not global provider reliability completion.
+- [x] Market cognition conservative provider/source defaults remain explicit when no calibration context is supplied.
+- [x] Confidence calibration can reuse supplied contradiction context to reduce future drift.
+- [ ] C6-R7 price reaction/impulse engine remains pending.
+- [ ] Provider reliability weighting, golden scenario expansion, empirical backtesting, and live provider activation remain pending.
+- [x] No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

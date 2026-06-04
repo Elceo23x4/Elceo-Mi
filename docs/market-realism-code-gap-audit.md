@@ -208,3 +208,9 @@ No UI, live provider, payment, notification, commercial, Super Admin, or 2FA beh
 - Weakness found: contradiction severity/status, source-independence quality, duplicate/source bursts, provider activation/reliability gaps, FX base/quote completeness, macro forecast/actual/fallback completeness, price-confirmation pending status, stale-vs-fresh conflict, asset-causality completeness, and diagnostic-only paths were not fully represented in the final confidence score.
 - C6-R6 changes: adds typed calibration inputs/results, schema validators, deterministic penalty/boost rules, market-cognition integration, canonical boundary methods, and regression tests for high-tier blocking conditions.
 - Still pending after C6-R6: R7 price reaction/impulse, provider reliability weighting, golden scenario expansion, empirical backtesting, and live provider activation.
+## C6-R6B confidence calibration provider/source context cleanup (2026-06-04)
+
+- `providerReliabilitySupplied` is input-level provider context for one calibration input, not completion of global provider reliability weighting.
+- System-level provider reliability expansion remains pending; C6-R7 price reaction, provider reliability weighting, golden scenarios, empirical backtesting, and live provider activation remain pending.
+- Market cognition keeps conservative provider/source defaults when no explicit internal context is supplied, and calibration can reuse a supplied contradiction matrix to reduce future context drift.
+- No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

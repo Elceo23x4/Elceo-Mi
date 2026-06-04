@@ -161,3 +161,9 @@ C6-R5B keeps source independence as a warning/caveat while preventing `source_di
 ## C6-R6 production-status note — Confidence calibration foundation (2026-06-04)
 
 C6-R6 adds deterministic confidence calibration and read-only canonical boundary methods. Confidence now accounts for contradiction severity, source independence, duplicate/source risk, FX completeness, macro completeness, price-confirmation pending status, provider gaps, freshness, and diagnostic path limitations. This is foundation-level deterministic calibration, not empirical backtesting. C6-R7 price reaction/impulse, provider reliability weighting, golden scenario expansion, and live provider activation remain pending. No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+## C6-R6B confidence calibration provider/source context cleanup (2026-06-04)
+
+- `providerReliabilitySupplied` is input-level provider context for one calibration input, not completion of global provider reliability weighting.
+- System-level provider reliability expansion remains pending; C6-R7 price reaction, provider reliability weighting, golden scenarios, empirical backtesting, and live provider activation remain pending.
+- Market cognition keeps conservative provider/source defaults when no explicit internal context is supplied, and calibration can reuse a supplied contradiction matrix to reduce future context drift.
+- No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

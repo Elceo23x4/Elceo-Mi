@@ -210,3 +210,9 @@ _Date: 2026-05-16_
 - Closed foundation-level gap: confidence no longer ignores market-realism readiness factors. The deterministic calibration layer now consumes contradiction severity, source independence/duplicate risk, provider/data activation gaps, FX completeness, macro completeness, price-confirmation pending status, stale/fresh conflict, and diagnostic path limitations.
 - Still open: C6-R7 price reaction/impulse, provider reliability weighting, golden scenario expansion, empirical backtesting, and live provider activation.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+## C6-R6B confidence calibration provider/source context cleanup (2026-06-04)
+
+- `providerReliabilitySupplied` is input-level provider context for one calibration input, not completion of global provider reliability weighting.
+- System-level provider reliability expansion remains pending; C6-R7 price reaction, provider reliability weighting, golden scenarios, empirical backtesting, and live provider activation remain pending.
+- Market cognition keeps conservative provider/source defaults when no explicit internal context is supplied, and calibration can reuse a supplied contradiction matrix to reduce future context drift.
+- No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

@@ -17,6 +17,8 @@ export type MarketConfidenceCalibrationWarning = typeof MARKET_CONFIDENCE_CALIBR
 export const MARKET_CONFIDENCE_CALIBRATION_REASON_CODES = ['base_confidence_from_existing_decomposition','evidence_quality_component_applied','usable_weight_component_applied','freshness_component_applied','coverage_component_applied','contradiction_severity_penalty','contradiction_count_penalty','pending_confirmation_penalty','source_independence_caveat','duplicate_source_penalty','fx_completeness_penalty','macro_completeness_penalty','price_confirmation_pending','provider_readiness_gap','stale_evidence_penalty','diagnostic_path_limited','boost_conditions_met','boost_blocked_by_severe_context','confidence_cap_applied','deterministic_foundation_only'] as const;
 export type MarketConfidenceCalibrationReasonCode = typeof MARKET_CONFIDENCE_CALIBRATION_REASON_CODES[number];
 
+export type MarketConfidenceCalibrationOptions = { priceReactionAvailable?: boolean; providerReliabilitySupplied?: boolean; sourceIndependenceVerified?: boolean; eventSensitive?: boolean; macroDriven?: boolean; fxDiagnosticPath?: boolean };
+export type MarketConfidenceCalibrationBuildOptions = MarketConfidenceCalibrationOptions & { contradictionMatrix?: MarketContradictionMatrixResult };
 export type MarketConfidenceCalibrationInput = {
   asset: MarketConfidenceCalibrationAsset;
   horizon: EvidenceWeightHorizon;
@@ -31,7 +33,7 @@ export type MarketConfidenceCalibrationInput = {
   contradictionMatrix?: MarketContradictionMatrixResult;
   warnings: string[];
   reasonCodes: string[];
-  options?: { priceReactionAvailable?: boolean; providerReliabilitySupplied?: boolean; sourceIndependenceVerified?: boolean; eventSensitive?: boolean; macroDriven?: boolean; fxDiagnosticPath?: boolean };
+  options?: MarketConfidenceCalibrationOptions;
 };
 export type MarketConfidenceCalibrationComponent = { kind: MarketConfidenceCalibrationComponentKind; score: number; contribution: number; rationale: string; };
 export type MarketConfidenceCalibrationPenalty = { kind: MarketConfidenceCalibrationPenaltyKind; magnitude: number; severe: boolean; rationale: string; };

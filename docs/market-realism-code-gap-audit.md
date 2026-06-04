@@ -186,3 +186,10 @@ No UI, live provider, payment, notification, commercial, Super Admin, or 2FA beh
 - C6-R5 changes: contradiction detection now covers policy-vs-risk, rates-vs-gold, FX base/quote, risk-vs-volatility, risk-vs-credit, equities-vs-breadth, crypto-vs-derivatives/liquidity, commodity cross-asset, safe-haven conflict, macro-vs-price-confirmation, stale/fresh conflict, and source disagreement. Contradiction is treated as tension/uncertainty and not as reversal or direct financial advice.
 - Remaining pending work: C6-R6 empirical confidence calibration, C6-R7 price reaction/impulse engine, provider reliability weighting, and golden scenario expansion remain open and must not be marked complete by C6-R5.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## C6-R5B source-disagreement cleanup note (2026-06-04)
+
+- `source_disagreement` no longer fires solely from `sourceIndependenceVerified: false`; unverified source independence remains a warning/caveat.
+- Duplicate, scraped, and same-headline source bursts still produce `source_disagreement` when actual source-conflict evidence is present.
+- C6-R6 confidence calibration, C6-R7 price reaction/impulse logic, provider reliability weighting, and golden scenario expansion remain pending.
+- No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

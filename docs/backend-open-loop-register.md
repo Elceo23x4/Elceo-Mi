@@ -196,3 +196,11 @@ _Date: 2026-05-16_
 - Contradiction means tension/uncertainty or pending confirmation; it is not automatic reversal logic and not direct financial advice.
 - Still open: C6-R6 empirical confidence calibration, C6-R7 price reaction/impulse engine, provider reliability weighting, and golden scenario expansion.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## C6-R5B — Source-disagreement noise cleanup (2026-06-04)
+
+- `source_disagreement` no longer triggers solely because `sourceIndependenceVerified` is false; missing source independence remains a warning/caveat.
+- Duplicate-source-risk bursts and scraped/same-headline source evidence still trigger `source_disagreement`.
+- Carry-forward: DXY/VIX raw evidence contradiction mapping should be reviewed later if diagnostic assets remain part of launch reasoning.
+- Still open: C6-R6 empirical confidence calibration, C6-R7 price reaction/impulse engine, provider reliability weighting, and golden scenario expansion.
+- No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

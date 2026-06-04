@@ -98,3 +98,4 @@ export * from './market-asset-direction-resolution.schema';
 export * from './market-fx-relative-strength.schema';
 
 export * from './market-macro-surprise.schema';
+export * from './market-contradiction-matrix.schema';

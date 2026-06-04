@@ -210,3 +210,13 @@ _Date: 2026-05-16_
 - [ ] C6-R6 empirical confidence calibration.
 - [ ] C6-R7 price reaction/impulse engine.
 - [ ] Live macro provider reliability, consensus dispersion, and historical distribution activation.
+
+## L) C6-R5 expanded contradiction readiness (2026-06-04)
+
+- [x] C6-R5 expanded contradiction matrix foundation implemented with deterministic types, schemas, module logic, canonical boundary methods, and tests.
+- [x] Rule families include policy-vs-risk, rates-vs-gold, FX base/quote, risk-vs-volatility, risk-vs-credit, equities-vs-breadth, crypto-vs-derivatives/liquidity, commodity cross-asset, safe-haven conflict, macro-vs-price-confirmation, stale/fresh conflict, and source disagreement.
+- [x] Contradiction means tension/uncertainty/pending confirmation, not automatic reversal and not direct financial advice.
+- [ ] C6-R6 empirical confidence calibration remains pending.
+- [ ] C6-R7 price reaction/impulse engine remains pending.
+- [ ] Provider reliability weighting and golden scenario expansion remain pending.
+- No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

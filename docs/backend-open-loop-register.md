@@ -189,3 +189,10 @@ _Date: 2026-05-16_
 - Closed foundation gap: macro releases can now be normalized into signed surprise objects using actual vs forecast, previous fallback, revisions, indicator category/kind, directional meaning, severity, confidence, warnings, and reason codes.
 - Still open: C6-R5 contradiction expansion, C6-R6 confidence calibration, C6-R7 price reaction/impulse engine, consensus dispersion ingestion, historical distribution calibration, and provider reliability/live macro activation.
 - Commercial, billing, Super Admin, affiliate, route entitlement, notification, payment, live provider, and 2FA behavior were not changed in C6-R4.
+
+## C6-R5 expanded contradiction matrix open-loop update (2026-06-04)
+
+- Completed foundation: deterministic expanded contradiction matrix added for policy-vs-risk, rates-vs-gold, FX base/quote, risk-vs-volatility, risk-vs-credit, equities-vs-breadth, crypto-vs-derivatives/liquidity, commodity cross-asset, safe-haven conflict, macro-vs-price-confirmation, stale/fresh conflict, and source disagreement.
+- Contradiction means tension/uncertainty or pending confirmation; it is not automatic reversal logic and not direct financial advice.
+- Still open: C6-R6 empirical confidence calibration, C6-R7 price reaction/impulse engine, provider reliability weighting, and golden scenario expansion.
+- No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

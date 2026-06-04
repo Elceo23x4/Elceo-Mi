@@ -149,3 +149,7 @@ This is **not** final production launch approval.
 ## C6-R4 production-status note — macro surprise normalization (2026-06-03)
 
 C6-R4 added a fixture-only/read-only macro surprise normalization engine. It improves market realism by making actual-vs-forecast the primary macro comparison and by preserving indicator-specific interpretation for inflation, labor, growth/activity, and policy-rate decisions. It does not activate live providers, payments, notifications, or frontend payload changes. R5/R6/R7/provider reliability remain pending.
+
+## C6-R5 production-status note — Expanded contradiction matrix (2026-06-04)
+
+C6-R5 added a deterministic expanded contradiction matrix foundation and read-only canonical boundary methods. The matrix broadens contradiction/tension detection beyond the old four market-cognition pairs and now covers policy-vs-risk, rates-vs-gold, FX base/quote, risk-vs-volatility, risk-vs-credit, equities-vs-breadth, crypto-vs-derivatives/liquidity, commodity cross-asset, safe-haven conflict, macro-vs-price-confirmation, stale/fresh conflict, and source disagreement. Contradiction is uncertainty context, not automatic reversal and not financial advice. R6 confidence calibration, R7 price reaction/impulse, provider reliability weighting, and golden scenario expansion remain pending. No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

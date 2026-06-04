@@ -193,3 +193,18 @@ No UI, live provider, payment, notification, commercial, Super Admin, or 2FA beh
 - Duplicate, scraped, and same-headline source bursts still produce `source_disagreement` when actual source-conflict evidence is present.
 - C6-R6 confidence calibration, C6-R7 price reaction/impulse logic, provider reliability weighting, and golden scenario expansion remain pending.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## C6-R6 confidence calibration code-gap update (2026-06-04)
+
+- Added `packages/types/src/market-confidence-calibration.ts`, `packages/schemas/src/market-confidence-calibration.schema.ts`, and `services/reasoning/src/confidence-calibration/index.ts` as the deterministic confidence calibration foundation.
+- Updated market-cognition confidence decomposition to consume calibrated confidence and keep existing snapshot shape/backward-compatible fields.
+- Calibration considers contradiction severity, source independence versus duplicate/source-disagreement risk, provider activation/reliability gaps, FX base/quote completeness, macro forecast/actual/fallback completeness, pending price confirmation, stale/fresh conflict, and DXY/weighted FX diagnostic limitations.
+- Remaining gaps: C6-R7 price reaction/impulse engine, provider reliability weighting, golden scenario expansion, empirical backtesting, and live provider activation.
+- No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+### C6-R6 audit notes — current confidence inputs and weaknesses
+
+- Before C6-R6, `services/reasoning/src/market-cognition/confidence-decomposition.ts` derived final confidence from average evidence quality, usable-weight ratio, stale/expired freshness, pressure-family coverage, and a generic contradiction-count penalty.
+- Weakness found: contradiction severity/status, source-independence quality, duplicate/source bursts, provider activation/reliability gaps, FX base/quote completeness, macro forecast/actual/fallback completeness, price-confirmation pending status, stale-vs-fresh conflict, asset-causality completeness, and diagnostic-only paths were not fully represented in the final confidence score.
+- C6-R6 changes: adds typed calibration inputs/results, schema validators, deterministic penalty/boost rules, market-cognition integration, canonical boundary methods, and regression tests for high-tier blocking conditions.
+- Still pending after C6-R6: R7 price reaction/impulse, provider reliability weighting, golden scenario expansion, empirical backtesting, and live provider activation.

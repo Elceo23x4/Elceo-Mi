@@ -280,7 +280,7 @@ C6-R1 status:
 - C6-R2 adds the first reasoning upgrade after the causality-map foundation: generic metadata direction mapping is no longer the primary weighted-evidence contribution path.
 - The same event can now resolve differently by asset: hawkish Fed evidence can support DXY, pressure EUR/USD through USD quote strength, pressure gold/equity/BTC through rates/liquidity context, and carry JPY/CHF haven caveats where applicable.
 - The resolver is deterministic and code-backed through types, schemas, tests, canonical boundary read methods, and weighted-evidence integration.
-- FX relative-strength remains R3; macro surprise normalization remains R4; expanded contradiction matrix remains R5; confidence calibration remains R6; price reaction/impulse remains R7; provider reliability and golden scenario expansion remain pending.
+- FX relative-strength remains R3; macro surprise normalization remains R4; expanded contradiction matrix remains R5; confidence calibration foundation is complete in C6-R6; price reaction/impulse remains R7; provider reliability and golden scenario expansion remain pending.
 - No UI, live provider activation, payment activation, notification activation, commercial entitlement behavior, Super Admin behavior, affiliate behavior, or 2FA behavior changed.
 
 ## C6-R3 — FX relative currency strength engine foundation (2026-06-03)
@@ -290,7 +290,7 @@ C6-R1 status:
 - Missing base-side or quote-side evidence is explicit and lowers confidence instead of being silently inferred from USD-side evidence.
 - Non-Fed issuer side handling is improved for Fed/USD, ECB/EUR, BoE/GBP, BoJ/JPY, SNB/CHF, RBA/AUD, RBNZ/NZD, and BoC/CAD metadata.
 - DXY support is read-only and limited to broad USD diagnostic coverage; no full basket-weight model is claimed.
-- Macro surprise normalization remains R4; expanded contradiction matrix remains R5; confidence calibration remains R6; price reaction/impulse remains R7; provider reliability and golden scenarios remain pending.
+- Macro surprise normalization remains R4; expanded contradiction matrix remains R5; confidence calibration foundation is complete in C6-R6; price reaction/impulse remains R7; provider reliability and golden scenarios remain pending.
 - No UI, live provider activation, payment activation, notification activation, commercial entitlement behavior, Super Admin behavior, affiliate behavior, route entitlement behavior, or 2FA behavior changed.
 
 ## C6-R4 update — macro surprise normalization foundation (2026-06-03)
@@ -307,7 +307,15 @@ C6-R1 status:
 - C6-R5 adds a deterministic, read-only expanded contradiction matrix foundation for market-cognition evidence tension. Contradiction means tension, uncertainty, partial support, stale/fresh disagreement, or pending confirmation; it is not automatic reversal logic and is not a prediction layer.
 - Current contradiction-code audit: before C6-R5, `services/reasoning/src/market-cognition/contradiction-signals.ts` only covered four broad signal pairs: macro-vs-policy, liquidity-vs-sentiment, volatility-vs-sentiment, and credit-stress-vs-earnings. It missed cross-asset and driver-specific tensions for policy-vs-risk assets, rates-vs-gold, FX base/quote pressure, equity breadth, crypto derivatives/liquidity, commodity terms-of-trade versus margin effects, safe-haven conflicts, macro surprise without price reaction, stale/fresh evidence, duplicate source bursts, and source independence uncertainty.
 - C6-R5 rule families now include policy-vs-risk, rates-vs-gold, FX base/quote, risk-vs-volatility, risk-vs-credit, equities-vs-breadth, crypto-vs-derivatives/liquidity, commodity cross-asset, safe-haven conflict, macro-vs-price-confirmation, stale/fresh conflict, and source disagreement.
-- R6 confidence calibration remains pending; the matrix can feed contradiction count/severity into existing penalty inputs only and does not claim empirical calibration.
+- R6 confidence calibration foundation is complete in C6-R6; empirical backtesting remains pending; the matrix can feed contradiction count/severity into existing penalty inputs only and does not claim empirical calibration.
 - R7 price reaction/impulse remains pending; macro surprise without price reaction is marked pending confirmation rather than full certainty.
 - Provider reliability/golden scenario expansion remains pending; source independence and provider reliability gaps remain visible warnings unless explicit reliability data is supplied.
+- No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## C6-R6 — Confidence calibration foundation (2026-06-04)
+
+- C6-R6 adds a deterministic confidence calibration foundation so final confidence reflects market-readiness quality rather than only evidence weight, freshness, coverage, and raw contradiction count.
+- Confidence now accounts for contradiction severity/count/status, source independence caveats, duplicate/source-disagreement risk, FX base/quote completeness, weighted-snapshot diagnostic limitations, macro forecast/actual/fallback completeness, normalized macro caveats, pending price confirmation, provider activation/reliability gaps, stale evidence, stale/fresh conflict, and diagnostic-only paths such as DXY.
+- This is not empirically backtested calibration and does not claim statistical production calibration.
+- C6-R7 price reaction/impulse, provider reliability weighting, golden scenario expansion, and live provider activation remain pending.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

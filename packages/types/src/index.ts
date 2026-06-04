@@ -105,3 +105,5 @@ export * from './market-fx-relative-strength';
 
 export * from './market-macro-surprise';
 export * from './market-contradiction-matrix';
+
+export * from './market-confidence-calibration';

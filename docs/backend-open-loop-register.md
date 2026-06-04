@@ -204,3 +204,9 @@ _Date: 2026-05-16_
 - Carry-forward: DXY/VIX raw evidence contradiction mapping should be reviewed later if diagnostic assets remain part of launch reasoning.
 - Still open: C6-R6 empirical confidence calibration, C6-R7 price reaction/impulse engine, provider reliability weighting, and golden scenario expansion.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## C6-R6 confidence calibration open-loop update (2026-06-04)
+
+- Closed foundation-level gap: confidence no longer ignores market-realism readiness factors. The deterministic calibration layer now consumes contradiction severity, source independence/duplicate risk, provider/data activation gaps, FX completeness, macro completeness, price-confirmation pending status, stale/fresh conflict, and diagnostic path limitations.
+- Still open: C6-R7 price reaction/impulse, provider reliability weighting, golden scenario expansion, empirical backtesting, and live provider activation.
+- No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

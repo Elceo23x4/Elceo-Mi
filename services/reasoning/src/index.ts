@@ -38,3 +38,5 @@ export * from './asset-direction-resolution/index';
 export * from './fx-relative-strength/index';
 
 export * from './macro-surprise-normalization/index';
+
+export * from './contradiction-matrix/index';

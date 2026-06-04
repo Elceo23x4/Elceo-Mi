@@ -442,3 +442,14 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [ ] C6-R6 empirical confidence calibration.
 - [ ] C6-R7 price reaction/impulse confirmation.
 - [ ] Live provider reliability and consensus dispersion activation.
+
+## C6-R5 math checklist — Expanded contradiction matrix foundation (2026-06-04)
+
+- [x] C6-R5 expanded contradiction matrix foundation implemented and covered by deterministic tests.
+- [x] Contradiction semantics are tension/uncertainty/pending-confirmation semantics, not automatic reversal or prediction semantics.
+- [x] Rule families cover policy-vs-risk, rates-vs-gold, FX base/quote, risk-vs-volatility, risk-vs-credit, equities-vs-breadth, crypto-vs-derivatives/liquidity, commodity cross-asset, safe-haven conflict, macro-vs-price-confirmation, stale/fresh conflict, and source disagreement.
+- [ ] C6-R6 empirical confidence calibration remains pending.
+- [ ] C6-R7 price reaction/impulse confirmation remains pending.
+- [ ] Provider reliability weighting and golden scenario expansion remain pending.
+- [ ] Live provider activation remains pending.
+- No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

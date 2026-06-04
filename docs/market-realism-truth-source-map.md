@@ -301,3 +301,13 @@ C6-R1 status:
 - Unemployment and jobless claims are inverted so higher-than-forecast values express weaker labor rather than generic positive pressure.
 - Revisions, missing previous values, missing consensus dispersion, missing historical distribution, ambiguous units, provider activation gaps, asset-direction pending state, FX relative-strength pending state, and price-confirmation pending state remain visible warnings.
 - C6-R4 does not complete C6-R5 expanded contradiction matrices, C6-R6 confidence calibration, C6-R7 price reaction/impulse, or provider reliability/live activation.
+
+## C6-R5 — Expanded contradiction matrix foundation (2026-06-04)
+
+- C6-R5 adds a deterministic, read-only expanded contradiction matrix foundation for market-cognition evidence tension. Contradiction means tension, uncertainty, partial support, stale/fresh disagreement, or pending confirmation; it is not automatic reversal logic and is not a prediction layer.
+- Current contradiction-code audit: before C6-R5, `services/reasoning/src/market-cognition/contradiction-signals.ts` only covered four broad signal pairs: macro-vs-policy, liquidity-vs-sentiment, volatility-vs-sentiment, and credit-stress-vs-earnings. It missed cross-asset and driver-specific tensions for policy-vs-risk assets, rates-vs-gold, FX base/quote pressure, equity breadth, crypto derivatives/liquidity, commodity terms-of-trade versus margin effects, safe-haven conflicts, macro surprise without price reaction, stale/fresh evidence, duplicate source bursts, and source independence uncertainty.
+- C6-R5 rule families now include policy-vs-risk, rates-vs-gold, FX base/quote, risk-vs-volatility, risk-vs-credit, equities-vs-breadth, crypto-vs-derivatives/liquidity, commodity cross-asset, safe-haven conflict, macro-vs-price-confirmation, stale/fresh conflict, and source disagreement.
+- R6 confidence calibration remains pending; the matrix can feed contradiction count/severity into existing penalty inputs only and does not claim empirical calibration.
+- R7 price reaction/impulse remains pending; macro surprise without price reaction is marked pending confirmation rather than full certainty.
+- Provider reliability/golden scenario expansion remains pending; source independence and provider reliability gaps remain visible warnings unless explicit reliability data is supplied.
+- No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

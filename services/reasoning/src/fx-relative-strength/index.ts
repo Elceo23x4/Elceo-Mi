@@ -2,6 +2,7 @@ import type { MarketAssetCausalityAsset, MarketFxCurrencyCode, MarketFxCurrencyP
 import { MARKET_FX_CURRENCY_CODES, MARKET_FX_PAIR_ASSETS } from '@elceo/types';
 import { validateMarketFxRelativeStrengthCoverageReport, validateMarketFxRelativeStrengthResult, validateMarketFxRelativeStrengthRuleSetSnapshot } from '@elceo/schemas';
 import { getMarketAssetCausalityDescriptor } from '../asset-causality-map/index';
+import { normalizeMacroSurprise, parseMacroReleaseInputFromMetadata } from '../macro-surprise-normalization/index';
 
 const THRESHOLD = 15;
 const ORIENTATION: Record<MarketFxPairAsset, { base: MarketFxCurrencyCode; quote: MarketFxCurrencyCode }> = {
@@ -67,12 +68,29 @@ function positive(metadata: Metadata): boolean { const values = [metadata.direct
 function add(drafts: ComponentDraft[], draft: ComponentDraft): void { drafts.push({ ...draft, score: clamp(draft.score, -100, 100), confidence: clamp(draft.confidence, 0, 100) }); }
 function pressureForTone(policyTone: 'hawkish'|'dovish'): { direction: MarketFxCurrencyPressureDirection; score: number } { return policyTone === 'hawkish' ? { direction: 'strengthening', score: 42 } : { direction: 'weakening', score: -42 }; }
 
+
+function macroDraft(pairAsset: PairLike, evidence: ReasoningEvidenceInputItem | null, metadata: Metadata, source: MarketFxCurrencyPressureComponent['source']): ComponentDraft | null {
+  const hasMacroFields = ['actual','forecast','consensus','expected','previous','prior','revisedPrevious','indicatorKind','indicatorName'].some((k) => Object.prototype.hasOwnProperty.call(metadata, k));
+  if (!hasMacroFields) return null;
+  const release = normalizeMacroSurprise(parseMacroReleaseInputFromMetadata(JSON.stringify(metadata), evidence ? { releaseId: evidence.payloadId, indicatorName: evidence.evidenceClass, region: evidence.region, observedAt: evidence.observedAt, providerQualityScore: evidence.qualityScore.finalQualityScore } : undefined));
+  if (release.currency === 'global' || release.currency === 'unknown') return null;
+  const o = resolveFxPairOrientation(pairAsset);
+  if (pairAsset !== 'dxy' && release.currency !== o.baseCurrency && release.currency !== o.quoteCurrency) return null;
+  const incomplete = release.warnings.includes('missing_forecast') || release.warnings.includes('missing_actual') || release.indicatorKind === 'unknown';
+  const direction: MarketFxCurrencyPressureDirection = release.policyPressure === 'hawkish' || release.growthPressure === 'stronger' ? 'strengthening' : release.policyPressure === 'dovish' || release.growthPressure === 'weaker' ? 'weakening' : 'mixed';
+  const score = direction === 'strengthening' ? Math.max(18, Math.abs(release.normalizedSurpriseScore) * 0.7) : direction === 'weakening' ? -Math.max(18, Math.abs(release.normalizedSurpriseScore) * 0.7) : 0;
+  const kind: MarketFxCurrencyPressureComponentKind = release.category === 'inflation' ? 'normalized_inflation_pressure' : release.category === 'labor_market' ? 'normalized_labor_pressure' : release.category === 'central_bank_policy' ? 'normalized_policy_pressure' : 'normalized_growth_pressure';
+  const sideCode: MarketFxRelativeStrengthReasonCode = release.currency === o.baseCurrency ? 'base_currency_pressure' : 'quote_currency_pressure';
+  return { currency: release.currency, kind, direction, score, confidence: incomplete ? Math.min(42, release.confidence) : Math.min(72, release.confidence), source, evidenceIds: evidence ? [evidence.payloadId] : [], reasonCodes: ['normalized_macro_surprise_applied', sideCode], warnings: unique([...(incomplete ? ['pending_macro_surprise_normalization' as const] : []), 'requires_price_confirmation' as const, 'provider_activation_gap' as const]), rationale: `${release.currency} ${release.indicatorKind} normalized macro surprise is mapped to its own currency side before pair netting.` };
+}
+
 function draftsFromEvidence(pairAsset: PairLike, evidence: ReasoningEvidenceInputItem | null, metadata: Metadata, source: MarketFxCurrencyPressureComponent['source']): ComponentDraft[] {
   const drafts: ComponentDraft[] = [];
   const o = resolveFxPairOrientation(pairAsset);
   const text = body(metadata);
   const evidenceIds = evidence ? [evidence.payloadId] : [];
   const quality = evidence ? evidence.qualityScore.finalQualityScore : 74;
+  const macro = macroDraft(pairAsset, evidence, metadata, source); if (macro) add(drafts, macro);
   const policyTone = tone(metadata);
   const currency = issuerCurrency(metadata);
   if (policyTone && currency && (currency === o.baseCurrency || currency === o.quoteCurrency || pairAsset === 'dxy')) {
@@ -151,7 +169,7 @@ export function resolveFxRelativeStrength(input: MarketFxRelativeStrengthInput):
   const netPressureScore = clamp(basePressure.pressureScore - quotePressure.pressureScore, -100, 100);
   const missingSide = basePressure.componentCount === 0 || quotePressure.componentCount === 0;
   const direction = pairAsset === 'dxy' ? (basePressure.pressureScore > THRESHOLD ? 'base_strengthening' : basePressure.pressureScore < -THRESHOLD ? 'quote_strengthening' : 'neutral') : pairDirection(netPressureScore, components, missingSide);
-  const requiresMacro = components.some((c) => c.kind.includes('surprise') || c.warnings.includes('pending_macro_surprise_normalization')) || (descriptor?.directionResolutionRequirements.some((r) => r.requiresSurpriseNormalization) ?? false);
+  const requiresMacro = components.some((c) => c.warnings.includes('pending_macro_surprise_normalization')) || (descriptor?.directionResolutionRequirements.some((r) => r.requiresSurpriseNormalization) ?? false);
   const requiresPrice = components.length === 0 || components.some((c) => c.warnings.includes('requires_price_confirmation')) || (descriptor?.directionResolutionRequirements.some((r) => r.requiresPriceConfirmation) ?? false);
   const providerGap = components.length === 0 || components.some((c) => c.warnings.includes('provider_activation_gap')) || (descriptor?.providerDependencies.some((d) => d.currentStatus === 'pending_provider_activation') ?? false);
   const hasWeightedSnapshot = input.weightedSnapshot !== undefined;
@@ -186,7 +204,7 @@ export function resolveFxRelativeStrengthFromWeightedSnapshot(weightedSnapshot: 
 
 export function listFxRelativeStrengthRules(pairAsset?: PairLike): MarketFxRelativeStrengthRule[] { const rules = getFxRelativeStrengthRuleSetSnapshot('2026-06-03T00:00:00.000Z').rules; return pairAsset ? rules.filter((r) => r.pairAssets.includes(pairAsset)) : rules; }
 export function getFxRelativeStrengthCoverageReport(asOfIso = new Date().toISOString()): MarketFxRelativeStrengthCoverageReport {
-  const report: MarketFxRelativeStrengthCoverageReport = { generatedAt: asOfIso, representedPairAssets: [...MARKET_FX_PAIR_ASSETS], optionalDiagnostics: ['dxy'], pairCount: MARKET_FX_PAIR_ASSETS.length, currencies: [...MARKET_FX_CURRENCY_CODES], dxyCoverage: 'limited_diagnostic', pendingPhases: ['R4','R5','R6','R7','provider_reliability'], warnings: ['pending_macro_surprise_normalization','requires_price_confirmation','provider_activation_gap','limited_dxy_diagnostic','relative_magnitude_missing','weighted_snapshot_metadata_limited'], notes: ['C6-R3 adds deterministic FX base-vs-quote currency pressure foundation.', 'Missing base or quote evidence lowers confidence.', 'Weighted-snapshot FX relative strength is diagnostic because issuer/currency metadata may be reduced; evidence-item inputs remain preferred.', 'Macro surprise normalization, expanded contradictions, confidence calibration, price reaction, and provider reliability remain pending.'] };
+  const report: MarketFxRelativeStrengthCoverageReport = { generatedAt: asOfIso, representedPairAssets: [...MARKET_FX_PAIR_ASSETS], optionalDiagnostics: ['dxy'], pairCount: MARKET_FX_PAIR_ASSETS.length, currencies: [...MARKET_FX_CURRENCY_CODES], dxyCoverage: 'limited_diagnostic', pendingPhases: ['R5','R6','R7','provider_reliability'], warnings: ['pending_macro_surprise_normalization','requires_price_confirmation','provider_activation_gap','limited_dxy_diagnostic','relative_magnitude_missing','weighted_snapshot_metadata_limited'], notes: ['C6-R3 adds deterministic FX base-vs-quote currency pressure foundation.', 'Missing base or quote evidence lowers confidence.', 'Weighted-snapshot FX relative strength is diagnostic because issuer/currency metadata may be reduced; evidence-item inputs remain preferred.', 'Macro surprise normalization, expanded contradictions, confidence calibration, price reaction, and provider reliability remain pending.'] };
   const validation = validateMarketFxRelativeStrengthCoverageReport(report); if ('errors' in validation) throw new Error(`fx_relative_strength_coverage_invalid:${validation.errors.join('|')}`); return report;
 }
 export function getFxRelativeStrengthRuleSetSnapshot(asOfIso = new Date().toISOString()): MarketFxRelativeStrengthRuleSetSnapshot {

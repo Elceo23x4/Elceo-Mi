@@ -145,3 +145,7 @@ This is **not** final production launch approval.
 - C6-R3B safety cleanup: unsupported/non-FX weighted snapshots no longer default to EUR/USD; weighted-snapshot FX relative-strength reconstruction is diagnostic/limited because original issuer/currency metadata may be reduced, so evidence-item inputs remain preferred for full FX side attribution and DXY remains limited diagnostic.
 - Macro surprise normalization remains R4; expanded contradiction matrix remains R5; confidence calibration remains R6; price reaction/impulse remains R7; provider reliability/golden scenarios remain pending.
 - No UI, live provider, payment, notification, commercial, Super Admin, affiliate, route entitlement, or 2FA behavior changed.
+
+## C6-R4 production-status note — macro surprise normalization (2026-06-03)
+
+C6-R4 added a fixture-only/read-only macro surprise normalization engine. It improves market realism by making actual-vs-forecast the primary macro comparison and by preserving indicator-specific interpretation for inflation, labor, growth/activity, and policy-rate decisions. It does not activate live providers, payments, notifications, or frontend payload changes. R5/R6/R7/provider reliability remain pending.

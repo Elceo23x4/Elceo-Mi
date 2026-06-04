@@ -50,6 +50,7 @@ import { runCognitionCalibrationTests } from './cognition-calibration.test.js';
 import { runAssetCausalityMapTests } from './asset-causality-map.test.js';
 import { runAssetDirectionResolutionTests } from './asset-direction-resolution.test.js';
 import { runFxRelativeStrengthTests } from './fx-relative-strength.test.js';
+import { runMacroSurpriseNormalizationTests } from './macro-surprise-normalization.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -103,6 +104,7 @@ async function run(): Promise<void> {
   runAssetCausalityMapTests();
   runAssetDirectionResolutionTests();
   runFxRelativeStrengthTests();
+  runMacroSurpriseNormalizationTests();
   console.log('reasoning runtime contract tests passed');
 }
 

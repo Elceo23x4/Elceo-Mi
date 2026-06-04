@@ -3,6 +3,7 @@ import { MARKET_ASSET_CAUSALITY_ASSETS, MARKET_ASSET_DRIVER_KINDS, MARKET_ASSET_
 import { validateMarketAssetDirectionResolutionCoverageReport, validateMarketAssetDirectionResolutionResult, validateMarketAssetDirectionResolutionRuleSetSnapshot } from '@elceo/schemas';
 import { getMarketAssetCausalityDescriptor } from '../asset-causality-map/index';
 import { resolveFxRelativeStrength } from '../fx-relative-strength/index';
+import { normalizeMacroSurprise, parseMacroReleaseInputFromMetadata } from '../macro-surprise-normalization/index';
 
 type Metadata = Record<string, unknown>;
 type FxOrientation = { base: string; quote: string } | null;
@@ -23,7 +24,8 @@ function result(input: MarketAssetDirectionResolutionInput, metadata: Metadata, 
   const surpriseLike = /surprise|inflation|labor|growth|economic_indicator|macro_calendar|central_bank_policy|rates/i.test(evidenceClass);
   const priceLike = /real_yields|volatility_surface|market_price|event_reaction|risk_sentiment|crypto_market_structure|energy_commodities|central_bank_policy/i.test(evidenceClass);
   const needsPrice = priceLike || descriptor.directionResolutionRequirements.some((r) => r.requiresPriceConfirmation) || warnings.includes('requires_price_confirmation');
-  const needsSurprise = surpriseLike || descriptor.directionResolutionRequirements.some((r) => r.requiresSurpriseNormalization) || warnings.includes('pending_macro_surprise_normalization');
+  const macroNormalized = reasonCodes.includes('normalized_macro_surprise_applied');
+  const needsSurprise = !macroNormalized && (surpriseLike || descriptor.directionResolutionRequirements.some((r) => r.requiresSurpriseNormalization) || warnings.includes('pending_macro_surprise_normalization'));
   const allWarnings = unique([...warnings, ...(requiresRelativeStrength ? ['pending_fx_relative_strength' as const] : []), ...(needsPrice ? ['requires_price_confirmation' as const] : []), ...(needsSurprise ? ['pending_macro_surprise_normalization' as const] : []), ...(descriptor.providerDependencies.some((d) => d.currentStatus === 'pending_provider_activation') ? ['provider_activation_gap' as const] : [])]);
   const out = { asset, evidenceClass, rawHint, resolvedDirection: direction, pressureTarget: target, confidence: Math.max(0, Math.min(100, Math.round(confidence))), reasonCodes: unique(reasonCodes), warnings: allWarnings, requiresSurpriseNormalization: needsSurprise, requiresRelativeStrength, requiresPriceConfirmation: needsPrice, appliedRuleIds, rationale, ...(unresolvedReason ? { unresolvedReason } : {}) };
   const validation = validateMarketAssetDirectionResolutionResult(out);
@@ -149,6 +151,29 @@ export function resolveRiskRegimeImpact(input: MarketAssetDirectionResolutionInp
   return result(input, m, raw, off ? 'bearish' : 'bullish', 'risk_complex', 50, codes, ['requires_price_confirmation'], ['risk-context'], 'Risk pressure is resolved through asset-family context.');
 }
 
+
+function macroDirection(input: MarketAssetDirectionResolutionInput, m: Metadata, raw: MarketAssetRawDirectionHint, asset: MarketAssetCausalityAsset): MarketAssetDirectionResolutionResult | null {
+  const hasMacroFields = ['actual','forecast','consensus','expected','previous','prior','revisedPrevious','indicatorKind','indicatorName'].some((k) => Object.prototype.hasOwnProperty.call(m, k));
+  if (!hasMacroFields) return null;
+  const fallback = { releaseId: `${String(input.evidenceClass)}|${input.observedAt ?? 'unobserved'}`, indicatorName: String(input.evidenceClass) };
+  const normalized = normalizeMacroSurprise(parseMacroReleaseInputFromMetadata(input.metadataJson, input.policyIssuerRegion || input.affectedCurrency ? { ...fallback, ...(input.policyIssuerRegion ? { region: input.policyIssuerRegion } : {}), ...(input.affectedCurrency ? { currency: input.affectedCurrency } : {}) } : fallback));
+  const incomplete = normalized.warnings.includes('missing_actual') || normalized.warnings.includes('missing_forecast') || normalized.indicatorKind === 'unknown';
+  const warnings: MarketAssetDirectionResolutionWarning[] = ['requires_price_confirmation','provider_activation_gap', ...(incomplete ? ['pending_macro_surprise_normalization' as const] : []), ...(FX.includes(asset) ? ['pending_fx_relative_strength' as const] : [])];
+  const codes: MarketAssetDirectionResolutionReasonCode[] = ['normalized_macro_surprise_applied','causality_map_requirement'];
+  if (incomplete) codes.push('macro_surprise_incomplete');
+  if (normalized.category === 'inflation') codes.push('macro_inflation_pressure_context');
+  if (normalized.category === 'labor_market') codes.push('macro_labor_pressure_context');
+  if (['growth_activity','business_activity','consumption'].includes(normalized.category)) codes.push('macro_growth_pressure_context');
+  let direction: WeightedEvidenceDirection = incomplete ? 'unknown' : 'mixed';
+  let target: MarketAssetResolvedPressureTarget = 'risk_complex';
+  if (!incomplete && asset === 'dxy') { direction = normalized.policyPressure === 'hawkish' ? 'bullish' : normalized.policyPressure === 'dovish' ? 'bearish' : 'mixed'; target = 'usd_side'; } else if (asset === 'dxy') { target = 'usd_side'; }
+  else if (!incomplete && FX.includes(asset)) { const fxInput: Parameters<typeof resolveFxRelativeStrength>[0] = { pairAsset: asset as Parameters<typeof resolveFxRelativeStrength>[0]['pairAsset'] }; if (input.metadataJson !== undefined) fxInput.metadataJson = input.metadataJson; const fx = resolveFxRelativeStrength(fxInput); direction = fxDirectionFromPairDirection(fx.pairDirection); target = fxTargetFromCurrency(asset, normalized.currency === 'global' || normalized.currency === 'unknown' ? null : normalized.currency); }
+  else if (!incomplete && asset === 'xau_usd') { direction = normalized.policyPressure === 'hawkish' ? 'bearish' : normalized.policyPressure === 'dovish' ? 'bullish' : 'mixed'; target = 'rates_complex'; }
+  else if (!incomplete && (US_EQUITIES.includes(asset) || asset === 'btc_usd')) { direction = normalized.policyPressure === 'hawkish' ? 'mixed' : normalized.policyPressure === 'dovish' ? 'bullish' : normalized.growthPressure === 'weaker' ? 'bearish' : 'mixed'; target = asset === 'btc_usd' ? 'liquidity_complex' : 'risk_complex'; }
+  const confidence = incomplete ? Math.min(35, normalized.confidence) : Math.min(68, normalized.confidence);
+  return result(input, m, raw, direction, target, confidence, codes, warnings, ['c6-r4-macro-surprise-normalized'], `C6-R4 normalized ${normalized.indicatorKind} as ${normalized.surpriseDirection}/${normalized.economicMeaning}; downstream asset direction remains context-aware and price confirmation is pending.`);
+}
+
 function commodityOrDemand(input: MarketAssetDirectionResolutionInput, driver: string): MarketAssetDirectionResolutionResult | null {
   const m = parseMetadata(input.metadataJson); const raw = input.rawHint ?? parseRawDirectionHintFromMetadata(input.metadataJson); const asset = isAsset(input.asset) ? input.asset : 'xau_usd'; const pos = raw !== 'negative' && raw !== 'bearish' && raw !== 'lower' && raw !== 'weaker';
   if (driver === 'oil_energy' || /oil|energy/.test(JSON.stringify(m).toLowerCase())) {
@@ -165,6 +190,7 @@ function commodityOrDemand(input: MarketAssetDirectionResolutionInput, driver: s
 
 export function resolveAssetContextualEvidenceDirection(input: MarketAssetDirectionResolutionInput): MarketAssetDirectionResolutionResult {
   const m = parseMetadata(input.metadataJson); const raw = input.rawHint ?? parseRawDirectionHintFromMetadata(input.metadataJson); const driver = inferDriverKindFromEvidenceClassOrMetadata(input); const asset = isAsset(input.asset) ? input.asset : 'xau_usd';
+  const macro = macroDirection(input, m, raw, asset); if (macro) return macro;
   if (raw === 'hawkish' || raw === 'dovish' || driver === 'central_bank_policy') return resolvePolicyToneImpact({ ...input, rawHint: raw });
   const regime = riskHint(input, raw, m);
   if (/risk_sentiment/i.test(String(input.evidenceClass)) && (raw === 'bullish' || raw === 'bearish')) return resolveRiskRegimeImpact({ ...input, rawHint: raw === 'bullish' ? 'risk_on' : 'risk_off', riskRegime: raw === 'bullish' ? 'risk_on' : 'risk_off' });
@@ -182,7 +208,7 @@ export function resolveAssetContextualEvidenceDirection(input: MarketAssetDirect
 }
 export function resolveAssetContextualDirectionForEvidenceItem(input: MarketAssetDirectionResolutionInput): MarketAssetDirectionResolutionResult { return resolveAssetContextualEvidenceDirection(input); }
 
-export function getAssetDirectionResolutionCoverageReport(asOfIso = new Date().toISOString()): MarketAssetDirectionResolutionCoverageReport { const report = { generatedAt: asOfIso, launchAssetCount: MARKET_ASSET_CAUSALITY_ASSETS.length, representedAssets: [...MARKET_ASSET_CAUSALITY_ASSETS], genericDirectionPrimaryPathDisabled: true, ruleCount: 12, pendingPhases: ['R3','R4','R5','R6','R7','R8','R9'] as Array<'R3'|'R4'|'R5'|'R6'|'R7'|'R8'|'R9'>, warnings: ALL_WARNINGS, notes: ['C6-R2 adds deterministic asset-contextual direction resolution foundation.', 'FX relative-strength remains R3 and macro surprise normalization remains R4.', 'Price reaction/impulse remains R7 and provider reliability expansion remains pending.'] }; const validation = validateMarketAssetDirectionResolutionCoverageReport(report); if ('errors' in validation) throw new Error(`asset_direction_coverage_invalid:${validation.errors.join('|')}`); return report; }
+export function getAssetDirectionResolutionCoverageReport(asOfIso = new Date().toISOString()): MarketAssetDirectionResolutionCoverageReport { const report = { generatedAt: asOfIso, launchAssetCount: MARKET_ASSET_CAUSALITY_ASSETS.length, representedAssets: [...MARKET_ASSET_CAUSALITY_ASSETS], genericDirectionPrimaryPathDisabled: true, ruleCount: 12, pendingPhases: ['R3','R4','R5','R6','R7','R8','R9'] as Array<'R3'|'R4'|'R5'|'R6'|'R7'|'R8'|'R9'>, warnings: ALL_WARNINGS, notes: ['C6-R2 adds deterministic asset-contextual direction resolution foundation.', 'C6-R4 adds macro surprise normalization; incomplete macro evidence still carries pending normalization warnings.', 'Price reaction/impulse remains R7 and provider reliability expansion remains pending.'] }; const validation = validateMarketAssetDirectionResolutionCoverageReport(report); if ('errors' in validation) throw new Error(`asset_direction_coverage_invalid:${validation.errors.join('|')}`); return report; }
 export function getAssetDirectionResolutionRuleSetSnapshot(asOfIso = new Date().toISOString()): MarketAssetDirectionResolutionRuleSetSnapshot { const rules: MarketAssetDirectionResolutionRule[] = ['precious_metals','fx_major','fx_safe_haven','fx_commodity','crypto','equity_index_us','equity_index_europe','dollar_index','volatility_index'].map((family) => ({ ruleId: `c6-r2-${family}`, assetFamily: family as MarketAssetDirectionResolutionRule['assetFamily'], evidenceClasses: ['central_bank_policy','risk_sentiment','energy_commodities','market_news'], rawHints: family === 'all' ? ['unknown'] : ['hawkish','dovish','risk_on','risk_off','positive','negative'], driverKinds: ['central_bank_policy','risk_sentiment','oil_energy','china_demand','crypto_etf_flows','safe_haven_demand'], pressureTarget: family === 'volatility_index' ? 'volatility_complex' : family.toString().startsWith('fx') ? 'base_currency' : 'asset_direct', requiresIssuerOrAffectedSide: true, output: 'mixed', confidence: 50, reasonCodes: ['causality_map_requirement'], warnings: ['pending_macro_surprise_normalization','requires_price_confirmation'], rationale: `C6-R2 ${family} rule documents deterministic asset-contextual interpretation; final calibration remains pending.` })); const snapshot = { generatedAt: asOfIso, rules, coverageReport: getAssetDirectionResolutionCoverageReport(asOfIso) }; const validation = validateMarketAssetDirectionResolutionRuleSetSnapshot(snapshot); if ('errors' in validation) throw new Error(`asset_direction_rules_invalid:${validation.errors.join('|')}`); return snapshot; }
 export function listAssetDirectionResolutionWarnings(asset?: MarketAssetCausalityAsset): MarketAssetDirectionResolutionWarning[] { return asset && FX.includes(asset) ? unique([...ALL_WARNINGS, 'pending_fx_relative_strength']) : [...ALL_WARNINGS]; }
 export function assertAssetDirectionResolutionRuleSetValid(): true { getAssetDirectionResolutionRuleSetSnapshot('2026-06-03T00:00:00.000Z'); return true; }

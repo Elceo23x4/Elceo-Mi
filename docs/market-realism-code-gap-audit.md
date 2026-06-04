@@ -167,3 +167,13 @@ No UI, live provider, payment, notification, commercial, Super Admin, or 2FA beh
 - DXY is exposed only as limited broad-USD diagnostic support until a real basket-weight model exists.
 - C6-R3B safety cleanup: unsupported/non-FX weighted snapshots no longer default to EUR/USD; weighted-snapshot FX relative-strength reconstruction is diagnostic/limited because original issuer/currency metadata may be reduced, so evidence-item inputs remain preferred for full FX side attribution.
 - No UI, live provider, payment, notification, commercial, Super Admin, affiliate, route entitlement, or 2FA behavior changed.
+
+## C6-R4 audit update — Macro Surprise Normalization Engine (2026-06-03)
+
+- Macro-like evidence currently enters through reasoning evidence metadata, official macro fixtures, macro calendar/indicator payloads, asset direction resolution, FX relative strength, and weighted evidence reason propagation.
+- C6-R2 flagged surprise-like macro evidence with `pending_macro_surprise_normalization` in the asset direction resolver; C6-R3 carried the same warning into FX relative strength when macro surprise pressure was still unnormalized.
+- C6-R4 adds `services/reasoning/src/macro-surprise-normalization/index.ts`, `packages/types/src/market-macro-surprise.ts`, and `packages/schemas/src/market-macro-surprise.schema.ts` so actual-vs-forecast normalization is deterministic and schema-validated.
+- Direction resolver integration now applies normalized economic meaning/pressure context when release metadata includes actual/forecast/previous fields, while preserving asset-contextual resolution and price-confirmation caveats.
+- FX relative strength now maps normalized macro surprises to the relevant currency side when the release currency belongs to the pair; one-sided evidence still keeps missing-side/relative-magnitude penalties.
+- Weighted evidence now carries macro surprise reason/warning strings from the direction resolver; actual-only macro releases remain low-confidence/incomplete and do not create a high-confidence contribution.
+- Remaining gaps: C6-R5 expanded contradiction matrix, C6-R6 confidence calibration with empirical distributions, C6-R7 price impulse/reaction confirmation, consensus dispersion ingestion, historical sigma/z-score calibration, provider quality/reliability activation, and live macro provider dependencies.

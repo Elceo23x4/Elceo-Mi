@@ -41,7 +41,7 @@ export function validateMarketAssetDirectionResolutionResult(input: unknown, pat
   if (fx.has(text(input.asset)) && input.requiresRelativeStrength !== true) errors.push(`${path}FX result must preserve base/quote relative-strength caveat`);
   if ((input.rawHint === 'hawkish' || input.rawHint === 'dovish') && !hasContextualRule(input)) errors.push(`${path}policy tone cannot map directly without issuer/asset-family rule`);
   if ((input.rawHint === 'risk_on' || input.rawHint === 'risk_off') && !hasContextualRule(input)) errors.push(`${path}risk regime cannot map directly without asset-family/regime rule`);
-  if (macroSurprise.test(text(input.evidenceClass)) && input.requiresSurpriseNormalization !== true) errors.push(`${path}macro surprise-like event must retain pending surprise-normalization flag`);
+  if (macroSurprise.test(text(input.evidenceClass)) && input.requiresSurpriseNormalization !== true && !(Array.isArray(input.reasonCodes) && input.reasonCodes.includes('normalized_macro_surprise_applied'))) errors.push(`${path}macro surprise-like event must retain pending surprise-normalization flag`);
   if (priceSensitive.test(text(input.evidenceClass)) && input.requiresPriceConfirmation !== true) errors.push(`${path}price-sensitive event must retain price-confirmation flag`);
   return errors.length ? { ok: false, errors } : { ok: true, value: input as MarketAssetDirectionResolutionResult };
 }

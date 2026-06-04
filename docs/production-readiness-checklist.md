@@ -200,3 +200,13 @@ _Date: 2026-05-16_
 - [ ] Price reaction/impulse remains R7.
 - [ ] Provider reliability/golden scenarios remain pending.
 - No UI, live provider, payment, notification, commercial, Super Admin, affiliate, route entitlement, or 2FA behavior changed.
+
+## K) C6-R4 macro surprise readiness (2026-06-03)
+
+- [x] Deterministic macro surprise normalization foundation added.
+- [x] Actual-vs-forecast primary comparison implemented; previous-only fallback is warning-gated and lower confidence.
+- [x] Asset direction resolver, FX relative strength, canonical boundary, schemas, and weighted evidence reason propagation updated.
+- [ ] C6-R5 expanded contradiction matrix.
+- [ ] C6-R6 empirical confidence calibration.
+- [ ] C6-R7 price reaction/impulse engine.
+- [ ] Live macro provider reliability, consensus dispersion, and historical distribution activation.

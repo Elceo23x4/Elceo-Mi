@@ -143,7 +143,7 @@ This is **not** final production launch approval.
 - FX reasoning now has a base-vs-quote pressure model; missing base or quote evidence lowers confidence and remains visible in warnings/reason codes.
 - Non-Fed issuer side handling is improved for ECB/EUR, BoE/GBP, BoJ/JPY, SNB/CHF, RBA/AUD, RBNZ/NZD, and BoC/CAD, while missing issuer remains ambiguous.
 - C6-R3B safety cleanup: unsupported/non-FX weighted snapshots no longer default to EUR/USD; weighted-snapshot FX relative-strength reconstruction is diagnostic/limited because original issuer/currency metadata may be reduced, so evidence-item inputs remain preferred for full FX side attribution and DXY remains limited diagnostic.
-- Macro surprise normalization remains R4; expanded contradiction matrix remains R5; confidence calibration remains R6; price reaction/impulse remains R7; provider reliability/golden scenarios remain pending.
+- Macro surprise normalization remains R4; expanded contradiction matrix remains R5; confidence calibration foundation is complete in C6-R6; price reaction/impulse remains R7; provider reliability/golden scenarios remain pending.
 - No UI, live provider, payment, notification, commercial, Super Admin, affiliate, route entitlement, or 2FA behavior changed.
 
 ## C6-R4 production-status note — macro surprise normalization (2026-06-03)
@@ -157,3 +157,7 @@ C6-R5 added a deterministic expanded contradiction matrix foundation and read-on
 ## C6-R5B production-status note — Source-disagreement cleanup (2026-06-04)
 
 C6-R5B keeps source independence as a warning/caveat while preventing `source_disagreement` from firing solely because `sourceIndependenceVerified` is false. Duplicate-source-risk bursts and scraped/same-headline source evidence still create `source_disagreement` when actual source-conflict evidence exists. R6 confidence calibration, R7 price reaction/impulse, provider reliability weighting, and golden scenario expansion remain pending. No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## C6-R6 production-status note — Confidence calibration foundation (2026-06-04)
+
+C6-R6 adds deterministic confidence calibration and read-only canonical boundary methods. Confidence now accounts for contradiction severity, source independence, duplicate/source risk, FX completeness, macro completeness, price-confirmation pending status, provider gaps, freshness, and diagnostic path limitations. This is foundation-level deterministic calibration, not empirical backtesting. C6-R7 price reaction/impulse, provider reliability weighting, golden scenario expansion, and live provider activation remain pending. No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

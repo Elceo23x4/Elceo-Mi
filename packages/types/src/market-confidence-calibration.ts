@@ -1,0 +1,57 @@
+import type { EvidenceWeightHorizon, WeightedEvidenceSnapshot } from './market-evidence-weighting';
+import type { TradingAssetCoverage } from './market-evidence';
+import type { MarketContradictionMatrixResult } from './market-contradiction-matrix';
+import type { MarketCognitionSnapshot } from './market-cognition-signals';
+
+export type MarketConfidenceCalibrationAsset = TradingAssetCoverage | 'dxy';
+export const MARKET_CONFIDENCE_CALIBRATION_TIERS = ['very_low','low','medium','high','very_high'] as const;
+export type MarketConfidenceCalibrationTier = typeof MARKET_CONFIDENCE_CALIBRATION_TIERS[number];
+export const MARKET_CONFIDENCE_CALIBRATION_COMPONENT_KINDS = ['evidence_quality','usable_weight','evidence_freshness','evidence_coverage','asset_causality_coverage','direction_resolution_quality','fx_relative_strength_completeness','macro_surprise_completeness','contradiction_load','source_independence','provider_readiness','price_confirmation_readiness','diagnostic_path_limitation'] as const;
+export type MarketConfidenceCalibrationComponentKind = typeof MARKET_CONFIDENCE_CALIBRATION_COMPONENT_KINDS[number];
+export const MARKET_CONFIDENCE_CALIBRATION_PENALTY_KINDS = ['high_contradiction_severity','excessive_contradiction_count','missing_price_confirmation','missing_macro_forecast','missing_macro_actual','previous_only_macro_fallback','historical_distribution_missing','consensus_dispersion_missing','pending_fx_relative_strength','one_sided_fx_evidence','weighted_snapshot_metadata_limited','duplicate_source_risk','source_disagreement','source_independence_unverified','provider_activation_gap','missing_provider_reliability','stale_evidence_conflict','diagnostic_only_dxy','low_evidence_coverage','low_usable_weight','stale_fresh_conflict','stale_evidence'] as const;
+export type MarketConfidenceCalibrationPenaltyKind = typeof MARKET_CONFIDENCE_CALIBRATION_PENALTY_KINDS[number];
+export const MARKET_CONFIDENCE_CALIBRATION_BOOST_KINDS = ['high_quality_evidence','high_usable_weight','fresh_evidence','broad_evidence_coverage','independent_corroboration','normalized_macro_confidence'] as const;
+export type MarketConfidenceCalibrationBoostKind = typeof MARKET_CONFIDENCE_CALIBRATION_BOOST_KINDS[number];
+export const MARKET_CONFIDENCE_CALIBRATION_WARNINGS = ['confidence_not_empirically_calibrated','pending_price_reaction_engine','pending_provider_reliability_weighting','pending_golden_scenario_expansion','contradiction_penalty_applied','source_independence_penalty_applied','fx_completeness_penalty_applied','macro_completeness_penalty_applied','price_confirmation_penalty_applied','diagnostic_path_penalty_applied','provider_readiness_penalty_applied','freshness_penalty_applied'] as const;
+export type MarketConfidenceCalibrationWarning = typeof MARKET_CONFIDENCE_CALIBRATION_WARNINGS[number];
+export const MARKET_CONFIDENCE_CALIBRATION_REASON_CODES = ['base_confidence_from_existing_decomposition','evidence_quality_component_applied','usable_weight_component_applied','freshness_component_applied','coverage_component_applied','contradiction_severity_penalty','contradiction_count_penalty','pending_confirmation_penalty','source_independence_caveat','duplicate_source_penalty','fx_completeness_penalty','macro_completeness_penalty','price_confirmation_pending','provider_readiness_gap','stale_evidence_penalty','diagnostic_path_limited','boost_conditions_met','boost_blocked_by_severe_context','confidence_cap_applied','deterministic_foundation_only'] as const;
+export type MarketConfidenceCalibrationReasonCode = typeof MARKET_CONFIDENCE_CALIBRATION_REASON_CODES[number];
+
+export type MarketConfidenceCalibrationInput = {
+  asset: MarketConfidenceCalibrationAsset;
+  horizon: EvidenceWeightHorizon;
+  generatedAt: string;
+  baseConfidence: number;
+  evidenceQuality: number;
+  usableWeight: number;
+  freshness: number;
+  coverage: number;
+  weightedSnapshot?: WeightedEvidenceSnapshot;
+  marketCognitionSnapshot?: MarketCognitionSnapshot;
+  contradictionMatrix?: MarketContradictionMatrixResult;
+  warnings: string[];
+  reasonCodes: string[];
+  options?: { priceReactionAvailable?: boolean; providerReliabilitySupplied?: boolean; sourceIndependenceVerified?: boolean; eventSensitive?: boolean; macroDriven?: boolean; fxDiagnosticPath?: boolean };
+};
+export type MarketConfidenceCalibrationComponent = { kind: MarketConfidenceCalibrationComponentKind; score: number; contribution: number; rationale: string; };
+export type MarketConfidenceCalibrationPenalty = { kind: MarketConfidenceCalibrationPenaltyKind; magnitude: number; severe: boolean; rationale: string; };
+export type MarketConfidenceCalibrationBoost = { kind: MarketConfidenceCalibrationBoostKind; magnitude: number; rationale: string; };
+export type MarketConfidenceCalibrationResult = {
+  asset: MarketConfidenceCalibrationAsset;
+  horizon: EvidenceWeightHorizon;
+  generatedAt: string;
+  baseConfidence: number;
+  finalConfidence: number;
+  confidenceTier: MarketConfidenceCalibrationTier;
+  components: MarketConfidenceCalibrationComponent[];
+  penalties: MarketConfidenceCalibrationPenalty[];
+  boosts: MarketConfidenceCalibrationBoost[];
+  warnings: MarketConfidenceCalibrationWarning[];
+  reasonCodes: MarketConfidenceCalibrationReasonCode[];
+  rationale: string;
+  complete: false;
+  pending: { priceReactionR7: true; providerReliabilityExpansion: true; goldenScenarioExpansion: true; empiricalBacktesting: true };
+};
+export type MarketConfidenceCalibrationRule = { ruleId: string; componentKind?: MarketConfidenceCalibrationComponentKind; penaltyKind?: MarketConfidenceCalibrationPenaltyKind; boostKind?: MarketConfidenceCalibrationBoostKind; rationale: string; };
+export type MarketConfidenceCalibrationRuleSetSnapshot = { generatedAt: string; rules: MarketConfidenceCalibrationRule[]; warnings: MarketConfidenceCalibrationWarning[]; complete: false; pending: MarketConfidenceCalibrationResult['pending']; };
+export type MarketConfidenceCalibrationCoverageReport = { generatedAt: string; componentKinds: MarketConfidenceCalibrationComponentKind[]; penaltyKinds: MarketConfidenceCalibrationPenaltyKind[]; boostKinds: MarketConfidenceCalibrationBoostKind[]; warnings: MarketConfidenceCalibrationWarning[]; notes: string[]; complete: false; pending: MarketConfidenceCalibrationResult['pending']; };

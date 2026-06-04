@@ -196,7 +196,7 @@ _Date: 2026-05-16_
 - [x] C6-R3B weighted snapshot safety cleanup: unsupported/non-FX weighted snapshots no longer default to EUR/USD, DXY remains limited diagnostic, and weighted-snapshot FX relative-strength reconstruction is explicitly diagnostic/limited because original issuer/currency metadata may be reduced. Evidence-item inputs remain preferred for full FX side attribution.
 - [ ] Macro surprise normalization remains R4.
 - [ ] Expanded contradiction matrix remains R5.
-- [ ] Confidence calibration remains R6.
+- [ ] Confidence calibration foundation is complete in C6-R6; empirical backtesting remains pending.
 - [ ] Price reaction/impulse remains R7.
 - [ ] Provider reliability/golden scenarios remain pending.
 - No UI, live provider, payment, notification, commercial, Super Admin, affiliate, route entitlement, or 2FA behavior changed.
@@ -216,7 +216,7 @@ _Date: 2026-05-16_
 - [x] C6-R5 expanded contradiction matrix foundation implemented with deterministic types, schemas, module logic, canonical boundary methods, and tests.
 - [x] Rule families include policy-vs-risk, rates-vs-gold, FX base/quote, risk-vs-volatility, risk-vs-credit, equities-vs-breadth, crypto-vs-derivatives/liquidity, commodity cross-asset, safe-haven conflict, macro-vs-price-confirmation, stale/fresh conflict, and source disagreement.
 - [x] Contradiction means tension/uncertainty/pending confirmation, not automatic reversal and not direct financial advice.
-- [ ] C6-R6 empirical confidence calibration remains pending.
+- [ ] C6-R6 deterministic confidence calibration foundation is complete; empirical backtesting remains pending.
 - [ ] C6-R7 price reaction/impulse engine remains pending.
 - [ ] Provider reliability weighting and golden scenario expansion remain pending.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
@@ -226,7 +226,19 @@ _Date: 2026-05-16_
 - [x] `source_disagreement` no longer triggers solely because `sourceIndependenceVerified` is false.
 - [x] Missing source independence remains visible as a warning/caveat.
 - [x] Duplicate-source-risk bursts and scraped/same-headline evidence still trigger `source_disagreement` when actual source-conflict evidence exists.
-- [ ] C6-R6 empirical confidence calibration remains pending.
+- [ ] C6-R6 deterministic confidence calibration foundation is complete; empirical backtesting remains pending.
 - [ ] C6-R7 price reaction/impulse engine remains pending.
 - [ ] Provider reliability weighting and golden scenario expansion remain pending.
+- No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## N) C6-R6 confidence calibration readiness (2026-06-04)
+
+- [x] C6-R6 deterministic confidence calibration foundation implemented with types, schemas, module logic, canonical boundary methods, market-cognition integration, and tests.
+- [x] Confidence now accounts for contradiction severity, source independence, duplicate/source risk, FX completeness, macro completeness, price-confirmation pending status, provider gaps, freshness, and diagnostic path limitations.
+- [x] High/very-high confidence is blocked by severe missing context such as severe contradiction, missing price confirmation, one-sided FX evidence, missing macro forecast, and severe provider activation gaps.
+- [ ] Confidence is not empirically backtested.
+- [ ] C6-R7 price reaction/impulse engine remains pending.
+- [ ] Provider reliability weighting remains pending.
+- [ ] Golden scenario expansion remains pending.
+- [ ] Live provider activation remains pending.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

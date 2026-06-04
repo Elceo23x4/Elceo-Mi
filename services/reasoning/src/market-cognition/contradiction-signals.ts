@@ -13,9 +13,9 @@ export function buildContradictionFlags(snapshot:{asset:string;horizon:string;ge
 
 export function buildExpandedContradictionMatrixDiagnostics(weightedSnapshot: WeightedEvidenceSnapshot): MarketContradictionMatrixResult { return evaluateContradictionsFromWeightedSnapshot(weightedSnapshot); }
 
-export function buildContradictionFlagsWithExpandedMatrix(weightedSnapshot: WeightedEvidenceSnapshot, signals: MarketCognitionSignal[]): MarketContradictionFlag[] {
+export function buildContradictionFlagsWithExpandedMatrix(weightedSnapshot: WeightedEvidenceSnapshot, signals: MarketCognitionSignal[], contradictionMatrix?: MarketContradictionMatrixResult): MarketContradictionFlag[] {
   const legacy = buildContradictionFlags(weightedSnapshot, signals);
-  const matrix = evaluateContradictionsFromWeightedSnapshot(weightedSnapshot);
+  const matrix = contradictionMatrix ?? evaluateContradictionsFromWeightedSnapshot(weightedSnapshot);
   const expanded: MarketContradictionFlag[] = matrix.signals.map((signal) => ({ flagId: `expanded|${signal.signalId}`, asset: weightedSnapshot.asset, horizon: weightedSnapshot.horizon, generatedAt: weightedSnapshot.generatedAt, severity: signal.severity === 'critical' ? 'critical' : signal.severity === 'high' ? 'high' : 'low', conflictingSignalKinds: ['contradiction_flag'], evidenceItemIds: signal.evidencePointIds, rationale: `expanded_matrix:${signal.family}:${signal.status}` }));
   const seen = new Set<string>();
   return [...legacy, ...expanded].filter((flag) => { if (seen.has(flag.flagId)) return false; seen.add(flag.flagId); return true; });

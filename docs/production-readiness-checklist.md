@@ -242,3 +242,13 @@ _Date: 2026-05-16_
 - [ ] Golden scenario expansion remains pending.
 - [ ] Live provider activation remains pending.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## N.1) C6-R6B provider/source context cleanup (2026-06-04)
+
+- [x] `providerReliabilitySupplied` clarified as input-level provider context, not global provider reliability completion.
+- [x] System-level provider reliability expansion remains pending.
+- [x] Market cognition conservative provider/source defaults remain explicit when no calibration context is supplied.
+- [x] Confidence calibration can reuse supplied contradiction context to reduce future drift.
+- [ ] C6-R7 price reaction/impulse engine remains pending.
+- [ ] Provider reliability weighting, golden scenario expansion, empirical backtesting, and live provider activation remain pending.
+- [x] No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

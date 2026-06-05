@@ -103,3 +103,5 @@ export * from './market-contradiction-matrix.schema';
 export * from './market-confidence-calibration.schema';
 
 export * from './market-price-reaction.schema';
+
+export * from './market-provider-reliability.schema';

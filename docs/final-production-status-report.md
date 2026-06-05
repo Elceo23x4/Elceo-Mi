@@ -176,3 +176,7 @@ C6-R6 adds deterministic confidence calibration and read-only canonical boundary
 - Contradiction and confidence calibration can use supplied reaction context, but confirmed reaction never overrides severe contradiction or provider gaps.
 - Provider reliability weighting, golden scenario expansion, empirical backtesting, and live provider activation remain pending.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## C6-R8 provider reliability foundation status (2026-06-05)
+
+C6-R8 added deterministic provider/source reliability and data-gap weighting. The implementation uses registry/status/metadata/test-fixture context only and does not activate live providers or prove empirical reliability. Source authority, activation state, freshness, independence, extraction quality, provider/evidence-class fit, and asset dependency coverage now reduce or cap evidence strength and confidence when context is weak. Live provider activation, empirical reliability backtesting, and golden scenario expansion remain pending. No UI, live provider, payment, notification, commercial, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

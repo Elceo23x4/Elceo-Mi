@@ -223,3 +223,21 @@ No UI, live provider, payment, notification, commercial, Super Admin, or 2FA beh
 - Confidence calibration now removes the severe missing-price-confirmation penalty when confirmed reaction context is supplied, reduces confidence for rejected/reversed reaction context, and remains cautious for absorbed/ambiguous/delayed context.
 - This is fixture/input driven only and does not activate live providers, chart feeds, recommendations, payments, notifications, commercial controls, Super Admin controls, affiliates, route entitlements, or 2FA behavior.
 - Provider reliability weighting remains pending. Golden scenario expansion remains pending. Empirical backtesting remains pending.
+
+## C6-R8 code-gap update — provider reliability/data-gap weighting (2026-06-05)
+
+Closed foundation-level gap:
+
+- Added deterministic provider/source reliability contracts, validators, reasoning module, canonical boundary methods, and tests.
+- Provider reliability now uses available registry/status/metadata/test fixtures only; it scores authority, activation state, freshness, independence, extraction quality, provider/evidence-class fit, and C6-R1 asset dependency coverage.
+- Evidence weighting now appends provider reliability diagnostics and reduces evidence contribution through bounded provider weight multipliers for fixture-only, dry-run, unknown, scraped, duplicate, stale, failed-extraction, or missing-critical-dependency contexts.
+- Confidence calibration can consume supplied provider reliability results, avoid only the missing-provider-context input penalty, still apply low-provider-reliability penalties, and cap final confidence when provider reliability caps are lower than computed confidence.
+- Contradiction diagnostics can carry provider reliability caveats without converting mere provider unreliability into market contradiction or reintroducing C6-R5B source-disagreement noise.
+
+Still open:
+
+- Live provider activation remains pending.
+- Empirical reliability backtesting remains pending.
+- Golden scenario expansion remains pending.
+- Live provider payload/schema smoke tests remain pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.

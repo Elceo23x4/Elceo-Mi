@@ -4,6 +4,7 @@ import { validateMarketConfidenceCalibrationCoverageReport, validateMarketConfid
 import { evaluateContradictionsFromWeightedSnapshot } from '../contradiction-matrix/index';
 import { getMarketAssetCausalityDescriptor } from '../asset-causality-map/index';
 import { resolveFxRelativeStrengthFromWeightedSnapshot } from '../fx-relative-strength/index';
+import { evaluateProviderReliabilityForWeightedSnapshot } from '../provider-reliability/index';
 
 const pending = { priceReactionR7: true, providerReliabilityExpansion: true, goldenScenarioExpansion: true, empiricalBacktesting: true } as const;
 const fxAssets = new Set<string>(['eur_usd','gbp_usd','usd_jpy','usd_chf','aud_usd','nzd_usd','usd_cad']);
@@ -14,6 +15,8 @@ function addPenalty(penalties: MarketConfidenceCalibrationPenalty[], kind: Marke
 function hasWarning(input: MarketConfidenceCalibrationInput, warning: string): boolean { return input.warnings.includes(warning) || input.contradictionMatrix?.warnings.includes(warning as never) === true || input.weightedSnapshot?.warnings.includes(warning) === true || input.weightedSnapshot?.items.some((i) => i.reasons.includes(warning) || i.reasons.some((r) => r.includes(warning))) === true; }
 function hasReason(input: MarketConfidenceCalibrationInput, reason: string): boolean { return input.reasonCodes.includes(reason) || input.contradictionMatrix?.reasonCodes.includes(reason as never) === true || input.weightedSnapshot?.items.some((i) => i.reasons.some((r) => r.includes(reason))) === true; }
 function fromMatrix(input: MarketConfidenceCalibrationInput): MarketContradictionMatrixResult | undefined { return input.contradictionMatrix; }
+function providerResults(input: MarketConfidenceCalibrationInput) { return input.options?.providerReliabilityResults ?? (input.options?.providerReliability ? [input.options.providerReliability] : []); }
+function providerConfidenceCapFromReasons(input: MarketConfidenceCalibrationInput): number | undefined { const caps = input.weightedSnapshot?.items.flatMap((i)=>i.reasons).filter((r)=>r.startsWith('provider_confidence_cap:')).map((r)=>Number(r.split(':')[1])).filter((n)=>Number.isFinite(n)); return caps && caps.length ? Math.min(...caps) : undefined; }
 
 export function calibrateMarketConfidence(input: MarketConfidenceCalibrationInput): MarketConfidenceCalibrationResult {
   const validation = validateMarketConfidenceCalibrationInput(input); if (validation.ok === false) throw new Error(`invalid_market_confidence_calibration_input:${validation.errors.join('|')}`);
@@ -28,6 +31,9 @@ export function calibrateMarketConfidence(input: MarketConfidenceCalibrationInpu
   const reasonCodes: MarketConfidenceCalibrationReasonCode[] = ['base_confidence_from_existing_decomposition','evidence_quality_component_applied','usable_weight_component_applied','freshness_component_applied','coverage_component_applied','deterministic_foundation_only'];
   const warnings: MarketConfidenceCalibrationWarning[] = ['confidence_not_empirically_calibrated', ...(input.options?.priceReaction ? [] : ['pending_price_reaction_engine' as const]), 'pending_provider_reliability_weighting','pending_golden_scenario_expansion'];
   const matrix = fromMatrix(input);
+  const suppliedProviderResults = providerResults(input);
+  const providerCap = suppliedProviderResults.length ? Math.min(...suppliedProviderResults.map((r)=>r.confidenceCap)) : providerConfidenceCapFromReasons(input);
+  const lowestProviderScore = suppliedProviderResults.length ? Math.min(...suppliedProviderResults.map((r)=>r.reliabilityScore)) : undefined;
   if (matrix) {
     const high = matrix.signals.filter((s) => s.severity === 'high' || s.severity === 'critical');
     const moderate = matrix.signals.filter((s) => s.severity === 'moderate');
@@ -57,6 +63,7 @@ export function calibrateMarketConfidence(input: MarketConfidenceCalibrationInpu
   if (hasWarning(input, 'weighted_snapshot_metadata_limited')) { addPenalty(penalties, 'weighted_snapshot_metadata_limited', 9, false, 'Weighted FX diagnostic metadata is limited.'); reasonCodes.push('fx_completeness_penalty'); warnings.push('fx_completeness_penalty_applied'); }
   if (input.asset === 'dxy' || input.options?.fxDiagnosticPath === true || hasWarning(input, 'limited_dxy_diagnostic')) { addPenalty(penalties, 'diagnostic_only_dxy', 8, false, 'DXY path is diagnostic-limited and cannot reach very-high confidence.'); reasonCodes.push('diagnostic_path_limited'); warnings.push('diagnostic_path_penalty_applied'); }
   if (hasWarning(input, 'provider_activation_gap')) { addPenalty(penalties, 'provider_activation_gap', 13, true, 'Provider activation gap lowers readiness until live activation work is complete.'); reasonCodes.push('provider_readiness_gap'); warnings.push('provider_readiness_penalty_applied'); }
+  if (typeof lowestProviderScore === 'number' && lowestProviderScore < 45) { addPenalty(penalties, 'provider_activation_gap', lowestProviderScore < 30 ? 16 : 10, lowestProviderScore < 35, 'Low deterministic provider reliability score lowers confidence even when provider context is supplied.'); reasonCodes.push('provider_readiness_gap'); warnings.push('provider_readiness_penalty_applied'); }
   if (hasWarning(input, 'missing_provider_reliability') || input.options?.providerReliabilitySupplied !== true) { addPenalty(penalties, 'missing_provider_reliability', 8, false, 'Provider reliability context was not supplied for this calibration input; system-level provider reliability weighting still remains pending.'); reasonCodes.push('provider_readiness_gap'); warnings.push('provider_readiness_penalty_applied'); }
   const staleItems = input.weightedSnapshot?.items.filter((i) => i.reasons.some((r) => r.includes('stale') || r.includes('expired'))).length ?? 0;
   if (input.freshness < 65 || staleItems > 0) { addPenalty(penalties, 'stale_evidence', input.freshness < 45 ? 12 : 7, input.freshness < 35, 'Stale evidence lowers market readiness.'); reasonCodes.push('stale_evidence_penalty'); warnings.push('freshness_penalty_applied'); }
@@ -70,6 +77,7 @@ export function calibrateMarketConfidence(input: MarketConfidenceCalibrationInpu
   if (penalties.some((p) => ['missing_price_confirmation','high_contradiction_severity','one_sided_fx_evidence','missing_macro_forecast'].includes(p.kind))) { score = Math.min(score, 64); reasonCodes.push('confidence_cap_applied'); }
   if (penalties.some((p) => p.kind === 'provider_activation_gap' && p.severe)) { score = Math.min(score, 64); reasonCodes.push('confidence_cap_applied'); }
   if (penalties.some((p) => p.kind === 'missing_provider_reliability')) { score = Math.min(score, 79); reasonCodes.push('confidence_cap_applied'); }
+  if (typeof providerCap === 'number') { score = Math.min(score, providerCap); reasonCodes.push('confidence_cap_applied'); }
   if (penalties.some((p) => p.kind === 'diagnostic_only_dxy')) { score = Math.min(score, 79); reasonCodes.push('confidence_cap_applied'); }
   const result: MarketConfidenceCalibrationResult = { asset:input.asset, horizon:input.horizon, generatedAt:input.generatedAt, baseConfidence:clamp(input.baseConfidence), finalConfidence:clamp(score), confidenceTier:tier(clamp(score)), components, penalties, boosts, warnings:unique(warnings), reasonCodes:unique(reasonCodes), rationale:'Deterministic confidence calibration adjusts evidence confidence for market-realism readiness gaps without claiming empirical backtesting.', complete:false, pending };
   const valid = validateMarketConfidenceCalibrationResult(result); if (valid.ok === false) throw new Error(`invalid_market_confidence_calibration_result:${valid.errors.join('|')}`);
@@ -86,7 +94,8 @@ export function buildConfidenceCalibrationInputFromWeightedSnapshot(weightedSnap
   const baseConfidence = clamp(0.3*evidenceQuality + 0.25*usableWeight + 0.2*freshness + 0.25*coverage);
   let fxWarnings: string[] = [];
   if (fxAssets.has(weightedSnapshot.asset)) { try { const fx = resolveFxRelativeStrengthFromWeightedSnapshot(weightedSnapshot); fxWarnings = fx.warnings; } catch { fxWarnings = ['weighted_snapshot_metadata_limited']; } }
-  const { contradictionMatrix: suppliedContradictionMatrix, ...calibrationOptions } = options ?? {};
+  const evaluatedProviderReliability = options?.providerReliabilityResults ?? evaluateProviderReliabilityForWeightedSnapshot(weightedSnapshot);
+  const { contradictionMatrix: suppliedContradictionMatrix, ...calibrationOptions } = { ...options, providerReliabilitySupplied: options?.providerReliabilitySupplied ?? true, providerReliabilityResults: evaluatedProviderReliability };
   const contradictionMatrix = suppliedContradictionMatrix ?? evaluateContradictionsFromWeightedSnapshot(weightedSnapshot, calibrationOptions);
   const includeOptions = Object.keys(calibrationOptions).length > 0;
   return { asset:weightedSnapshot.asset, horizon:weightedSnapshot.horizon, generatedAt:weightedSnapshot.generatedAt, baseConfidence, evidenceQuality:clamp(evidenceQuality), usableWeight:clamp(usableWeight), freshness, coverage, weightedSnapshot, contradictionMatrix, warnings:[...weightedSnapshot.warnings, ...fxWarnings, ...contradictionMatrix.warnings], reasonCodes:[...contradictionMatrix.reasonCodes], ...(includeOptions ? { options: calibrationOptions } : {}) };

@@ -496,3 +496,13 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [ ] Empirical backtesting remains pending.
 - [ ] Live provider activation remains pending.
 - [x] No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.
+
+## C6-R8 deterministic provider reliability/data-gap weighting checklist (2026-06-05)
+
+- [x] Deterministic provider/source reliability foundation implemented and tested.
+- [x] Source authority, activation state, freshness, independence, extraction quality, evidence-class fit, and asset dependency coverage affect provider reliability score, evidence weight multiplier, and confidence cap.
+- [x] Fixture-only, dry-run, disabled, not-configured, unknown, scraped, duplicated, stale, failed-extraction, and missing-critical-dependency contexts cannot score like official recent sources.
+- [x] `providerReliabilitySupplied` remains input-level context only; it does not mean global provider reliability expansion, live activation, empirical backtesting, or golden scenarios are complete.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical reliability backtesting remains pending.
+- [ ] Golden scenario expansion remains pending.

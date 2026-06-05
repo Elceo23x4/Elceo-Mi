@@ -8,6 +8,12 @@ const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 const pct = (from: number, to: number) => from === 0 ? 0 : (to - from) / from * 100;
 const unique = <T extends string>(items: T[]): T[] => Array.from(new Set(items));
 const dirSign = (d: MarketPriceReactionExpectedDirection) => d === 'bullish' ? 1 : d === 'bearish' ? -1 : 0;
+
+function asSupportedPriceReactionAsset(asset: string | null | undefined, source: 'evidence_item' | 'weighted_snapshot'): MarketPriceReactionAsset {
+  if (asset && (MARKET_ASSET_CAUSALITY_ASSETS as readonly string[]).includes(asset)) return asset as MarketPriceReactionAsset;
+  throw new Error(`market_price_reaction_unsupported_asset:${source}:${asset ?? 'missing'}`);
+}
+
 function sorted(candles: MarketPriceCandle[]): MarketPriceCandle[] { return [...candles].sort((a,b)=>Date.parse(a.timestamp)-Date.parse(b.timestamp)); }
 function windowFrom(kind: MarketPriceReactionWindow['kind'], candles: MarketPriceCandle[]): MarketPriceReactionWindow {
   const first = candles[0]; const last = candles[candles.length - 1];
@@ -95,13 +101,13 @@ export function evaluatePriceReaction(input: MarketPriceReactionInput): MarketPr
 
 function expectedFromMetadata(metaJson: string): MarketPriceReactionExpectedDirection | null { try { const v: unknown = JSON.parse(metaJson || '{}'); if (typeof v !== 'object' || v === null || Array.isArray(v)) return null; const d = (v as Record<string, unknown>).expectedDirection; return d === 'bullish' || d === 'bearish' || d === 'neutral' || d === 'mixed' || d === 'unknown' ? d : null; } catch { return null; } }
 export function evaluatePriceReactionFromEvidenceItem(evidenceItem: Parameters<typeof resolveAssetContextualDirectionForEvidenceItem>[0], candles: MarketPriceCandle[], options?: Partial<Omit<MarketPriceReactionInput, 'asset' | 'eventKind' | 'candles'>> & { eventKind?: MarketPriceReactionInput['eventKind'] }): MarketPriceReactionResult {
+  const asset = asSupportedPriceReactionAsset(evidenceItem.asset, 'evidence_item');
   const resolved = resolveAssetContextualDirectionForEvidenceItem(evidenceItem); const expected = options?.expectedDirection ?? expectedFromMetadata(evidenceItem.metadataJson ?? '') ?? (resolved.resolvedDirection === 'bullish' || resolved.resolvedDirection === 'bearish' || resolved.resolvedDirection === 'neutral' ? resolved.resolvedDirection : 'unknown');
-  const asset = evidenceItem.asset && (MARKET_ASSET_CAUSALITY_ASSETS as readonly string[]).includes(evidenceItem.asset) ? evidenceItem.asset as MarketPriceReactionAsset : 'sp500';
   const input: MarketPriceReactionInput = { asset, horizon:options?.horizon ?? 'intraday', eventKind:options?.eventKind ?? 'generic_news', eventTime:options?.eventTime ?? evidenceItem.observedAt ?? null, expectedDirection:expected, candles, ...(options?.volatilityBasisPct !== undefined ? { volatilityBasisPct: options.volatilityBasisPct } : {}), ...(options?.volatilityBasis !== undefined ? { volatilityBasis: options.volatilityBasis } : {}), ...(options?.reactionId ? { reactionId: options.reactionId } : {}) };
   return evaluatePriceReaction(input);
 }
 export function evaluatePriceReactionFromWeightedSnapshot(weightedSnapshot: { asset: string; horizon: MarketPriceReactionInput['horizon']; generatedAt: string; items: { direction: string; reasons: string[] }[] }, candles: MarketPriceCandle[], options?: Partial<Omit<MarketPriceReactionInput, 'asset' | 'eventKind' | 'candles'>> & { eventKind?: MarketPriceReactionInput['eventKind'] }): MarketPriceReactionResult {
-  const asset = (MARKET_ASSET_CAUSALITY_ASSETS as readonly string[]).includes(weightedSnapshot.asset) ? weightedSnapshot.asset as MarketPriceReactionAsset : 'sp500';
+  const asset = asSupportedPriceReactionAsset(weightedSnapshot.asset, 'weighted_snapshot');
   const first = weightedSnapshot.items.find((i)=>i.direction === 'bullish' || i.direction === 'bearish' || i.direction === 'neutral');
   const expected = options?.expectedDirection ?? (first?.direction === 'bullish' || first?.direction === 'bearish' || first?.direction === 'neutral' ? first.direction : 'unknown');
   const input: MarketPriceReactionInput = { asset, horizon:weightedSnapshot.horizon, eventKind:options?.eventKind ?? 'generic_news', eventTime:options?.eventTime ?? weightedSnapshot.generatedAt, expectedDirection:expected, candles, ...(options?.volatilityBasisPct !== undefined ? { volatilityBasisPct: options.volatilityBasisPct } : {}), ...(options?.volatilityBasis !== undefined ? { volatilityBasis: options.volatilityBasis } : {}), ...(options?.reactionId ? { reactionId: options.reactionId } : {}) };

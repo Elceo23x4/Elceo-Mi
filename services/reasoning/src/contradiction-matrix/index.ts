@@ -36,7 +36,7 @@ function priceReactionReasons(reaction: MarketPriceReactionResult | undefined): 
   if (reaction.status === 'delayed') return ['price_reaction_delayed'];
   return ['price_reaction_ambiguous'];
 }
-function hasUsablePriceReaction(input: MarketContradictionInput): boolean { return input.priceReactionAvailable || input.priceReaction !== undefined; }
+function hasUsablePriceReaction(input: MarketContradictionInput): boolean { return input.priceReaction !== undefined; }
 
 function parseMetadata(json: string): MetadataRecord {
   try {

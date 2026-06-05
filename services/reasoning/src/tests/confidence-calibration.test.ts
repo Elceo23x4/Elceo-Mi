@@ -2,6 +2,7 @@ import { validateMarketConfidenceCalibrationCoverageReport, validateMarketConfid
 import type { EvidenceWeightHorizon, MarketConfidenceCalibrationInput, MarketContradictionMatrixResult, WeightedEvidenceItem, WeightedEvidenceSnapshot } from '@elceo/types';
 import { buildMarketCognitionSnapshot } from '../market-cognition/index.js';
 import { buildConfidenceCalibrationInputFromWeightedSnapshot, calibrateConfidenceFromWeightedSnapshot, calibrateMarketConfidence, getMarketConfidenceCalibrationCoverageReport, getMarketConfidenceCalibrationRuleSetSnapshot } from '../confidence-calibration/index.js';
+import { evaluatePriceReaction } from '../price-reaction/index.js';
 import { CanonicalMarketIntelligenceBoundaryService } from '../runtime/canonical-market-intelligence-boundary.js';
 import { MemoryMarketEvidenceRegistrySnapshotRepository, MemorySeoContentArchitectureSnapshotRepository } from '../persistence/registry-snapshot-repository.js';
 function assert(condition: boolean, message: string): void { if (!condition) throw new Error(`Assertion failed: ${message}`); }
@@ -47,7 +48,8 @@ export function runConfidenceCalibrationTests(): void {
   const cleanWeighted = snapshot([item('risk','risk_sentiment','bullish'), item('liq','liquidity_conditions','bullish'), item('macro','economic_indicator','bullish')]);
   const cognition = buildMarketCognitionSnapshot(cleanWeighted);
   assert(cognition.confidence.rationale.includes('C6-R6 deterministic calibration'), 'market cognition uses calibrated final confidence');
-  assert(cognition.confidence.finalConfidence < calibrateConfidenceFromWeightedSnapshot(cleanWeighted, { providerReliabilitySupplied:true, sourceIndependenceVerified:true, priceReactionAvailable:true }).finalConfidence, 'market cognition keeps conservative provider/source defaults unless context is supplied');
+  const confirmedReaction = evaluatePriceReaction({ asset:'sp500', horizon:'intraday', eventKind:'macro_release', eventTime:at, expectedDirection:'bullish', candles:[{ timestamp:'2026-06-03T23:58:00.000Z', open:100, high:100.2, low:99.8, close:100 }, { timestamp:at, open:100, high:101.2, low:99.9, close:101 }, { timestamp:'2026-06-04T00:01:00.000Z', open:101, high:101.5, low:100.8, close:101.3 }, { timestamp:'2026-06-04T00:03:00.000Z', open:101.3, high:102, low:101.1, close:101.8 }] });
+  assert(cognition.confidence.finalConfidence < calibrateConfidenceFromWeightedSnapshot(cleanWeighted, { providerReliabilitySupplied:true, sourceIndependenceVerified:true, priceReaction:confirmedReaction }).finalConfidence, 'market cognition keeps conservative provider/source defaults unless confirmed price reaction context is supplied');
   assert(cognition.confidence.rationale.includes('Conservative provider/source context'), 'market cognition rationale states conservative calibration context');
   const contradictory = snapshot([item('risk','risk_sentiment','bullish'), item('credit','credit_stress','bullish')]);
   assert(buildMarketCognitionSnapshot(contradictory).confidence.conflictPenalty > 0 && buildMarketCognitionSnapshot(contradictory).confidence.finalConfidence < 80, 'expanded contradiction matrix severity affects final confidence');
@@ -55,11 +57,11 @@ export function runConfidenceCalibrationTests(): void {
   const duplicateBurst = snapshot([item('dup1','market_news','bullish',['duplicate headline']), item('dup2','market_news','bullish',['scraped duplicate']), item('dup3','market_news','bullish',['same headline burst'])]);
   assert(buildMarketCognitionSnapshot(duplicateBurst).confidence.finalConfidence < buildMarketCognitionSnapshot(unverifiedOnly).confidence.finalConfidence, 'duplicate burst/source disagreement stronger than unverified warning alone');
   const recomputableContradiction = snapshot([item('risk-recompute','risk_sentiment','bullish'), item('credit-recompute','credit_stress','bullish')]);
-  const suppliedClearInput = buildConfidenceCalibrationInputFromWeightedSnapshot(recomputableContradiction, { providerReliabilitySupplied:true, sourceIndependenceVerified:true, priceReactionAvailable:true, contradictionMatrix:matrix('none',0) });
-  const recomputedInput = buildConfidenceCalibrationInputFromWeightedSnapshot(recomputableContradiction, { providerReliabilitySupplied:true, sourceIndependenceVerified:true, priceReactionAvailable:true });
-  const suppliedHighInput = buildConfidenceCalibrationInputFromWeightedSnapshot(cleanWeighted, { providerReliabilitySupplied:true, sourceIndependenceVerified:true, priceReactionAvailable:true, contradictionMatrix:matrix('high',1) });
+  const suppliedClearInput = buildConfidenceCalibrationInputFromWeightedSnapshot(recomputableContradiction, { providerReliabilitySupplied:true, sourceIndependenceVerified:true, priceReaction:confirmedReaction, contradictionMatrix:matrix('none',0) });
+  const recomputedInput = buildConfidenceCalibrationInputFromWeightedSnapshot(recomputableContradiction, { providerReliabilitySupplied:true, sourceIndependenceVerified:true, priceReaction:confirmedReaction });
+  const suppliedHighInput = buildConfidenceCalibrationInputFromWeightedSnapshot(cleanWeighted, { providerReliabilitySupplied:true, sourceIndependenceVerified:true, priceReaction:confirmedReaction, contradictionMatrix:matrix('high',1) });
   assert(suppliedClearInput.contradictionMatrix?.highestSeverity === 'none' && recomputedInput.contradictionMatrix?.highestSeverity !== 'none', 'supplied contradiction matrix is reused instead of silently recomputing divergent context');
-  assert(calibrateMarketConfidence(suppliedHighInput).finalConfidence < calibrateMarketConfidence(buildConfidenceCalibrationInputFromWeightedSnapshot(cleanWeighted, { providerReliabilitySupplied:true, sourceIndependenceVerified:true, priceReactionAvailable:true })).finalConfidence, 'supplied contradiction matrix affects confidence');
+  assert(calibrateMarketConfidence(suppliedHighInput).finalConfidence < calibrateMarketConfidence(buildConfidenceCalibrationInputFromWeightedSnapshot(cleanWeighted, { providerReliabilitySupplied:true, sourceIndependenceVerified:true, priceReaction:confirmedReaction })).finalConfidence, 'supplied contradiction matrix affects confidence');
   assert(calibrateMarketConfidence(recomputedInput).finalConfidence < calibrateMarketConfidence(suppliedClearInput).finalConfidence, 'default recompute path still detects contradiction when no matrix is supplied');
   assert(validateMarketConfidenceCalibrationResult(calibrateConfidenceFromWeightedSnapshot(cleanWeighted)).ok, 'existing cognition confidence calibration result schema validates');
   const boundary = new CanonicalMarketIntelligenceBoundaryService(new MemoryMarketEvidenceRegistrySnapshotRepository(), new MemorySeoContentArchitectureSnapshotRepository());

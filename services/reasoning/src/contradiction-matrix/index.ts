@@ -1,6 +1,6 @@
 import { validateMarketContradictionCoverageReport, validateMarketContradictionInput, validateMarketContradictionMatrixResult, validateMarketContradictionRuleSetSnapshot } from '@elceo/schemas';
 import type { EvidenceWeightHorizon, MarketPriceReactionResult, MarketContradictionAsset, MarketContradictionCoverageReport, MarketContradictionEvidenceItemsOptions, MarketContradictionEvidencePoint, MarketContradictionFamily, MarketContradictionInput, MarketContradictionMatrixResult, MarketContradictionReasonCode, MarketContradictionReasoningEvidenceItem, MarketContradictionRule, MarketContradictionRuleSetSnapshot, MarketContradictionSeverity, MarketContradictionSignal, MarketContradictionStatus, MarketContradictionWarning, MarketContradictionWeightedSnapshotOptions, MarketEvidenceClass, WeightedEvidenceDirection, WeightedEvidenceItem, WeightedEvidenceSnapshot } from '@elceo/types';
-import { MARKET_ASSET_CAUSALITY_ASSETS, MARKET_CONTRADICTION_FAMILIES } from '@elceo/types';
+import { MARKET_ASSET_CAUSALITY_ASSETS, MARKET_CONTRADICTION_FAMILIES, MARKET_CONTRADICTION_WARNINGS } from '@elceo/types';
 import { resolveAssetContextualDirectionForEvidenceItem } from '../asset-direction-resolution/index';
 import { resolveFxRelativeStrengthFromEvidenceItems, resolveFxRelativeStrengthFromWeightedSnapshot } from '../fx-relative-strength/index';
 import { normalizeMacroSurpriseFromEvidenceItem } from '../macro-surprise-normalization/index';
@@ -83,8 +83,10 @@ function evidencePointFromWeighted(item: WeightedEvidenceItem, asset: MarketCont
   const driver = driverFromEvidence(item.evidenceClass, narrative);
   const warnings: MarketContradictionWarning[] = [];
   const reasonCodes: MarketContradictionReasonCode[] = ['contradiction_matrix_rule_applied'];
-  if (includesAny(narrative, ['stale','expired'])) warnings.push('stale_evidence_conflict');
+  if (includesAny(narrative, ['stale','expired'])) warnings.push('stale_evidence_conflict','stale_provider_data');
   if (includesAny(narrative, ['duplicate','scraped','same headline'])) warnings.push('duplicate_source_risk','source_independence_unverified');
+  if (includesAny(narrative, ['provider_warning:provider_activation_gap','provider_activation_gap'])) warnings.push('provider_activation_gap');
+  if (includesAny(narrative, ['provider_warning:source_independence_unverified','source_independence_unverified'])) warnings.push('source_independence_unverified');
   if (includesAny(narrative, ['price_confirmation','price reaction missing','missing_price_reaction'])) warnings.push('missing_price_reaction','pending_price_confirmation');
   return { evidencePointId: `cmp|${asset}|${item.payloadId}`, asset, horizon: item.horizon, observedAt: item.observedAt || generatedAt, evidenceClass: item.evidenceClass, driverKind: driver, side: item.direction === 'unknown' ? 'context' : 'supporting', direction: directionForDriver(item, driver), strength: Math.min(100, Math.abs(item.contributionScore) + item.qualityAdjustedWeight), quality: item.finalQualityScore, providerId: item.providerId || null, sourceId: item.providerId || null, rationale: `Weighted ${item.evidenceClass} evidence mapped into expanded contradiction context.`, reasonCodes, warnings };
 }
@@ -96,8 +98,10 @@ function evidencePointFromInputItem(asset: MarketContradictionAsset, item: Marke
   const resolved = supportedTradingAsset ? resolveAssetContextualDirectionForEvidenceItem({ asset: asset as Parameters<typeof resolveAssetContextualDirectionForEvidenceItem>[0]['asset'], evidenceClass: item.evidenceClass, metadataJson: item.metadataJson, observedAt: item.observedAt }) : { resolvedDirection: 'unknown' as const, warnings: ['unsupported_diagnostic_asset'] as string[] };
   const warnings: MarketContradictionWarning[] = [...resolved.warnings.includes('pending_fx_relative_strength') ? ['fx_relative_strength_context_required' as const] : []];
   const reasonCodes: MarketContradictionReasonCode[] = ['contradiction_matrix_rule_applied'];
-  if (includesAny(narrative, ['stale','expired'])) warnings.push('stale_evidence_conflict');
+  if (includesAny(narrative, ['stale','expired'])) warnings.push('stale_evidence_conflict','stale_provider_data');
   if (includesAny(narrative, ['duplicate','scraped','same headline'])) warnings.push('duplicate_source_risk','source_independence_unverified');
+  if (includesAny(narrative, ['provider_warning:provider_activation_gap','provider_activation_gap'])) warnings.push('provider_activation_gap');
+  if (includesAny(narrative, ['provider_warning:source_independence_unverified','source_independence_unverified'])) warnings.push('source_independence_unverified');
   if (includesAny(narrative, ['price reaction missing','missing_price_reaction'])) warnings.push('missing_price_reaction','pending_price_confirmation');
   if (['macro_calendar','economic_indicator','macro_surprise_history','inflation','labor_market','growth_activity'].includes(item.evidenceClass)) {
     const macro = normalizeMacroSurpriseFromEvidenceItem(item);
@@ -154,9 +158,10 @@ export function evaluateMarketContradictionMatrix(input: MarketContradictionInpu
   return result;
 }
 export function buildContradictionEvidencePointsFromWeightedSnapshot(weightedSnapshot: WeightedEvidenceSnapshot): MarketContradictionEvidencePoint[] { const asset=asAsset(weightedSnapshot.asset); return weightedSnapshot.items.filter((i)=>i.role!=='excluded').map((i)=>evidencePointFromWeighted(i, asset, weightedSnapshot.generatedAt)); }
+function validContradictionWarnings(warnings: readonly string[]): MarketContradictionWarning[] { return warnings.filter((w): w is MarketContradictionWarning => (MARKET_CONTRADICTION_WARNINGS as readonly string[]).includes(w)); }
 export function evaluateContradictionsFromWeightedSnapshot(weightedSnapshot: WeightedEvidenceSnapshot, options?: MarketContradictionWeightedSnapshotOptions): MarketContradictionMatrixResult {
   const asset=asAsset(weightedSnapshot.asset); if (fxAssets.has(asset)) { try { resolveFxRelativeStrengthFromWeightedSnapshot(weightedSnapshot); } catch { /* diagnostics remain warnings-only here */ } }
-  return evaluateMarketContradictionMatrix({ asset, horizon: weightedSnapshot.horizon, generatedAt: weightedSnapshot.generatedAt, evidencePoints: buildContradictionEvidencePointsFromWeightedSnapshot(weightedSnapshot), priceReactionAvailable: options?.priceReactionAvailable ?? (options?.priceReaction !== undefined), ...(options?.priceReaction ? { priceReaction: options.priceReaction } : {}), providerReliabilitySupplied: options?.providerReliabilitySupplied ?? false, sourceIndependenceVerified: options?.sourceIndependenceVerified ?? false, warnings: [...baseWarnings, ...weightedSnapshot.warnings as MarketContradictionWarning[]] });
+  return evaluateMarketContradictionMatrix({ asset, horizon: weightedSnapshot.horizon, generatedAt: weightedSnapshot.generatedAt, evidencePoints: buildContradictionEvidencePointsFromWeightedSnapshot(weightedSnapshot), priceReactionAvailable: options?.priceReactionAvailable ?? (options?.priceReaction !== undefined), ...(options?.priceReaction ? { priceReaction: options.priceReaction } : {}), providerReliabilitySupplied: options?.providerReliabilitySupplied ?? false, sourceIndependenceVerified: options?.sourceIndependenceVerified ?? false, warnings: [...baseWarnings, ...validContradictionWarnings(weightedSnapshot.warnings)] });
 }
 export function buildContradictionEvidencePointsFromEvidenceItems(asset: MarketContradictionAsset, evidenceItems: MarketContradictionReasoningEvidenceItem[], horizon: EvidenceWeightHorizon = 'intraday'): MarketContradictionEvidencePoint[] { return evidenceItems.map((i)=>evidencePointFromInputItem(asset, i, horizon)); }
 export function evaluateContradictionsFromEvidenceItems(asset: MarketContradictionAsset, evidenceItems: MarketContradictionReasoningEvidenceItem[], options?: MarketContradictionEvidenceItemsOptions): MarketContradictionMatrixResult {

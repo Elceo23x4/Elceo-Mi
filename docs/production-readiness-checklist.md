@@ -265,3 +265,14 @@ _Date: 2026-05-16_
 - [ ] Empirical backtesting remains pending.
 - [ ] Live provider activation remains pending.
 - [x] No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## C6-R8 provider reliability readiness note (2026-06-05)
+
+- [x] Deterministic provider/source reliability and data-gap weighting foundation added.
+- [x] Provider reliability is based on available registry/status/metadata/test fixtures and remains diagnostic/read-only.
+- [x] Weak authority, non-live activation, stale data, duplicate/scraped source risk, failed extraction, and missing critical asset dependencies reduce evidence weight and confidence caps.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical reliability backtesting remains pending.
+- [ ] Golden scenario expansion remains pending.
+- [ ] Live provider smoke tests and production payload schema verification remain pending.
+- [x] No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed in C6-R8.

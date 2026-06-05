@@ -232,3 +232,19 @@ Still open:
 - Empirical backtesting remains pending and is not treated as complete.
 - Live provider activation/live chart feeds remain pending and blocked by default.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## C6-R8 — Provider reliability/data-gap weighting open-loop update (2026-06-05)
+
+Closed in this batch:
+
+- Deterministic provider/source reliability and data-gap weighting foundation added.
+- Provider reliability is based on available registry/status/metadata/test fixtures only, not live provider activation.
+- Source authority, activation state, freshness, independence, extraction quality, evidence-class fit, and asset-critical dependency coverage now affect reliability, evidence weight, diagnostics, and confidence caps.
+
+Still open:
+
+- Live provider activation remains pending.
+- Empirical reliability backtesting remains pending.
+- Golden scenario expansion remains pending.
+- Production live-payload schema verification and provider smoke tests remain pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.

@@ -329,3 +329,14 @@ C6-R1 status:
 - Confidence calibration can avoid the severe missing-price-confirmation penalty when confirmed price reaction context is supplied, while rejected/reversed reactions reduce confidence and absorbed/ambiguous/delayed reactions stay cautious.
 - Provider reliability weighting remains pending. Golden scenario expansion remains pending. Empirical backtesting remains pending.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## C6-R8 — Provider reliability and data-gap weighting foundation (2026-06-05)
+
+- C6-R8 added a deterministic provider/source reliability and data-gap weighting foundation across typed contracts, schema validation, reasoning services, evidence weighting, confidence calibration, contradiction diagnostics, canonical boundary methods, and tests.
+- Current provider readiness state remains conservative: the provider source registry is readiness/status metadata only. Registry rows are fixture-ready, dry-run-ready, live-blocked, or not-started; C6-R8 treats providers as `live_verified` only when explicitly supplied and does not infer live activation from registry presence.
+- Current source reliability assumptions are now explicit: official macro, central bank, and primary/exchange-grade sources score above reputable aggregators; scraped, unknown, duplicated, fixture-only, stale, disabled, or dry-run contexts receive warnings, lower weight multipliers, and lower confidence caps.
+- Current evidence-quality inputs used by C6-R8 are source authority, provider kind, activation state, freshness tier, source independence, extraction quality, evidence-class/provider fit, and C6-R1 asset dependency coverage.
+- Current provider gaps by asset/evidence class remain visible: XAU/USD depends on real-yields/USD/inflation-policy/haven context, FX pairs require both base and quote macro/policy context, BTC/USD needs crypto derivatives/on-chain/ETF/liquidity/regulatory context, equity indices need rates/breadth/volatility/credit/liquidity context, DXY remains basket-diagnostic limited, and VIX needs volatility/equity/risk/credit context.
+- C6-R8 changes evidence strength before confidence can overstate certainty: provider reliability reasons are appended to weighted evidence, weak providers reduce `qualityAdjustedWeight`, and low reliability or confidence caps are consumed by confidence calibration when provider context is supplied.
+- C6-R8 does **not** activate live providers, call external APIs, implement empirical backtesting, expand golden scenarios, add UI, or change payments, notifications, commercial behavior, Super Admin behavior, affiliates, route entitlements, or 2FA.
+- Remaining pending work for C6-R9 and later: live provider activation, empirical reliability backtesting, expanded golden scenarios, live payload verification, and production-provider smoke tests.

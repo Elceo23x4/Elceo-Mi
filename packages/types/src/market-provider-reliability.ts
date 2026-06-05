@@ -1,0 +1,115 @@
+import type { EvidenceWeightHorizon } from './market-evidence-weighting';
+import type { MarketAssetCausalityAsset } from './market-asset-causality';
+import type { MarketEvidenceClass } from './market-evidence';
+
+export type MarketProviderReliabilityAsset = MarketAssetCausalityAsset;
+export type MarketProviderReliabilityEvidenceClass = MarketEvidenceClass;
+
+export const MARKET_PROVIDER_RELIABILITY_PROVIDER_KINDS = ['official_macro','central_bank','exchange_market_data','broker_market_data','news_wire','scraped_news','macro_calendar','fundamentals_provider','crypto_exchange','crypto_derivatives','onchain_provider','volatility_provider','credit_provider','breadth_provider','positioning_provider','internal_fixture','manual_fixture','unknown'] as const;
+export type MarketProviderReliabilityProviderKind = typeof MARKET_PROVIDER_RELIABILITY_PROVIDER_KINDS[number];
+export const MARKET_PROVIDER_RELIABILITY_SOURCE_AUTHORITY_TIERS = ['official','primary_market','reputable_aggregator','secondary_aggregator','scraped_or_unverified','fixture_only','unknown'] as const;
+export type MarketProviderReliabilitySourceAuthorityTier = typeof MARKET_PROVIDER_RELIABILITY_SOURCE_AUTHORITY_TIERS[number];
+export const MARKET_PROVIDER_RELIABILITY_ACTIVATION_STATES = ['live_verified','dry_run','fixture_only','disabled','not_configured','unknown'] as const;
+export type MarketProviderReliabilityActivationState = typeof MARKET_PROVIDER_RELIABILITY_ACTIVATION_STATES[number];
+export const MARKET_PROVIDER_RELIABILITY_COVERAGE_TIERS = ['critical_complete','sufficient','partial','thin','missing','unknown'] as const;
+export type MarketProviderReliabilityCoverageTier = typeof MARKET_PROVIDER_RELIABILITY_COVERAGE_TIERS[number];
+export const MARKET_PROVIDER_RELIABILITY_FRESHNESS_TIERS = ['real_time_or_near_real_time','recent','delayed','stale','expired','unknown'] as const;
+export type MarketProviderReliabilityFreshnessTier = typeof MARKET_PROVIDER_RELIABILITY_FRESHNESS_TIERS[number];
+export const MARKET_PROVIDER_RELIABILITY_INDEPENDENCE_STATUSES = ['independent','partially_independent','duplicate_risk','same_headline_burst','scraped_duplicate','unverified','unknown'] as const;
+export type MarketProviderReliabilityIndependenceStatus = typeof MARKET_PROVIDER_RELIABILITY_INDEPENDENCE_STATUSES[number];
+export const MARKET_PROVIDER_RELIABILITY_EXTRACTION_QUALITIES = ['high','medium','low','failed','unknown'] as const;
+export type MarketProviderReliabilityExtractionQuality = typeof MARKET_PROVIDER_RELIABILITY_EXTRACTION_QUALITIES[number];
+export const MARKET_PROVIDER_RELIABILITY_DATA_GAP_SEVERITIES = ['none','low','moderate','high','critical'] as const;
+export type MarketProviderReliabilityDataGapSeverity = typeof MARKET_PROVIDER_RELIABILITY_DATA_GAP_SEVERITIES[number];
+export const MARKET_PROVIDER_RELIABILITY_WARNINGS = ['provider_activation_gap','provider_not_configured','provider_disabled','provider_fixture_only','provider_dry_run_only','missing_provider_reliability','unknown_provider','source_authority_low','source_independence_unverified','duplicate_source_risk','scraped_source_risk','stale_provider_data','delayed_provider_data','missing_critical_asset_dependency','partial_asset_dependency_coverage','extraction_quality_low','extraction_failed','evidence_class_provider_mismatch','diagnostic_only_provider_context','pending_live_provider_activation','pending_empirical_reliability_backtesting','pending_golden_scenario_expansion'] as const;
+export type MarketProviderReliabilityWarning = typeof MARKET_PROVIDER_RELIABILITY_WARNINGS[number];
+export const MARKET_PROVIDER_RELIABILITY_REASON_CODES = ['provider_registry_match','provider_registry_missing','authority_tier_applied','activation_state_applied','freshness_tier_applied','independence_status_applied','extraction_quality_applied','asset_dependency_gap_applied','evidence_class_match_applied','duplicate_source_penalty','fixture_provider_penalty','dry_run_provider_penalty','provider_reliability_score_applied','deterministic_foundation_only'] as const;
+export type MarketProviderReliabilityReasonCode = typeof MARKET_PROVIDER_RELIABILITY_REASON_CODES[number];
+
+export type MarketProviderReliabilitySourceObservation = {
+  providerId: string;
+  sourceId?: string;
+  providerKind?: MarketProviderReliabilityProviderKind;
+  authorityTier?: MarketProviderReliabilitySourceAuthorityTier;
+  activationState?: MarketProviderReliabilityActivationState;
+  freshnessTier?: MarketProviderReliabilityFreshnessTier;
+  independenceStatus?: MarketProviderReliabilityIndependenceStatus;
+  extractionQuality?: MarketProviderReliabilityExtractionQuality;
+  observedAt?: string;
+  rationale?: string;
+};
+export type MarketProviderReliabilityAssetDependency = {
+  dependencyId: string;
+  evidenceClasses: MarketProviderReliabilityEvidenceClass[];
+  critical: boolean;
+  covered: boolean;
+  sourceIds: string[];
+  rationale: string;
+};
+export type MarketProviderReliabilityInput = {
+  asset: MarketProviderReliabilityAsset;
+  horizon: EvidenceWeightHorizon;
+  generatedAt: string;
+  providerId: string;
+  sourceId?: string;
+  evidenceClass: MarketProviderReliabilityEvidenceClass;
+  providerKind?: MarketProviderReliabilityProviderKind;
+  authorityTier?: MarketProviderReliabilitySourceAuthorityTier;
+  activationState?: MarketProviderReliabilityActivationState;
+  coverageTier?: MarketProviderReliabilityCoverageTier;
+  freshnessTier?: MarketProviderReliabilityFreshnessTier;
+  independenceStatus?: MarketProviderReliabilityIndependenceStatus;
+  extractionQuality?: MarketProviderReliabilityExtractionQuality;
+  observations?: MarketProviderReliabilitySourceObservation[];
+  assetDependencies?: MarketProviderReliabilityAssetDependency[];
+  rationale?: string;
+};
+export type MarketProviderReliabilityResult = {
+  asset: MarketProviderReliabilityAsset;
+  horizon: EvidenceWeightHorizon;
+  generatedAt: string;
+  providerId: string;
+  sourceId?: string;
+  evidenceClass: MarketProviderReliabilityEvidenceClass;
+  providerKind: MarketProviderReliabilityProviderKind;
+  authorityTier: MarketProviderReliabilitySourceAuthorityTier;
+  activationState: MarketProviderReliabilityActivationState;
+  coverageTier: MarketProviderReliabilityCoverageTier;
+  freshnessTier: MarketProviderReliabilityFreshnessTier;
+  independenceStatus: MarketProviderReliabilityIndependenceStatus;
+  extractionQuality: MarketProviderReliabilityExtractionQuality;
+  dataGapSeverity: MarketProviderReliabilityDataGapSeverity;
+  reliabilityScore: number;
+  weightMultiplier: number;
+  confidenceCap: number;
+  warnings: MarketProviderReliabilityWarning[];
+  reasonCodes: MarketProviderReliabilityReasonCode[];
+  rationale: string;
+  complete: false;
+  pending: { liveProviderActivation: true; empiricalReliabilityBacktesting: true; goldenScenarioExpansion: true };
+};
+export type MarketProviderReliabilityCoverageReport = {
+  generatedAt: string;
+  assets: MarketProviderReliabilityAsset[];
+  evidenceClasses: MarketProviderReliabilityEvidenceClass[];
+  rules: MarketProviderReliabilityRule[];
+  warnings: MarketProviderReliabilityWarning[];
+  notes: string[];
+  complete: false;
+  pending: MarketProviderReliabilityResult['pending'];
+};
+export type MarketProviderReliabilityRule = {
+  ruleId: string;
+  asset?: MarketProviderReliabilityAsset;
+  evidenceClass?: MarketProviderReliabilityEvidenceClass;
+  providerKind?: MarketProviderReliabilityProviderKind;
+  warning?: MarketProviderReliabilityWarning;
+  rationale: string;
+};
+export type MarketProviderReliabilityRuleSetSnapshot = {
+  generatedAt: string;
+  rules: MarketProviderReliabilityRule[];
+  warnings: MarketProviderReliabilityWarning[];
+  complete: false;
+  pending: MarketProviderReliabilityResult['pending'];
+};

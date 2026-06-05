@@ -54,6 +54,7 @@ import { runMacroSurpriseNormalizationTests } from './macro-surprise-normalizati
 import { runContradictionMatrixTests } from './contradiction-matrix.test.js';
 import { runConfidenceCalibrationTests } from './confidence-calibration.test.js';
 import { runPriceReactionTests } from './price-reaction.test.js';
+import { runProviderReliabilityTests } from './provider-reliability.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -111,6 +112,7 @@ async function run(): Promise<void> {
   runContradictionMatrixTests();
   runConfidenceCalibrationTests();
   runPriceReactionTests();
+  runProviderReliabilityTests();
   console.log('reasoning runtime contract tests passed');
 }
 

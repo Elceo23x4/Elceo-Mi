@@ -167,3 +167,12 @@ C6-R6 adds deterministic confidence calibration and read-only canonical boundary
 - System-level provider reliability expansion remains pending; C6-R7 price reaction, provider reliability weighting, golden scenarios, empirical backtesting, and live provider activation remain pending.
 - Market cognition keeps conservative provider/source defaults when no explicit internal context is supplied, and calibration can reuse a supplied contradiction matrix to reduce future context drift.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## C6-R7 production-status addendum — deterministic price reaction foundation (2026-06-04)
+
+- C6-R7 adds the first deterministic price reaction / event impulse layer for market-cognition reasoning.
+- The layer is input/fixture driven and can classify event-window price behavior as confirmed, rejected, absorbed, reversed, delayed, ambiguous, or insufficient data.
+- The layer checks immediate move, follow-through, volatility-adjusted impulse, wick rejection, absorption, reversal, warnings, rationale, and incomplete/pending status.
+- Contradiction and confidence calibration can use supplied reaction context, but confirmed reaction never overrides severe contradiction or provider gaps.
+- Provider reliability weighting, golden scenario expansion, empirical backtesting, and live provider activation remain pending.
+- No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

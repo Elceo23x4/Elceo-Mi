@@ -216,3 +216,19 @@ _Date: 2026-05-16_
 - System-level provider reliability expansion remains pending; C6-R7 price reaction, provider reliability weighting, golden scenarios, empirical backtesting, and live provider activation remain pending.
 - Market cognition keeps conservative provider/source defaults when no explicit internal context is supplied, and calibration can reuse a supplied contradiction matrix to reduce future context drift.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## C6-R7 open-loop update — price reaction / event impulse (2026-06-04)
+
+Closed in this batch:
+
+- Deterministic price reaction/event impulse foundation added for supplied candles and event times.
+- Price reaction can now be classified as confirmed, rejected, absorbed, reversed, delayed, ambiguous, or insufficient data.
+- Contradiction and confidence layers can consume supplied price reaction diagnostics instead of relying only on pending price-confirmation warnings.
+
+Still open:
+
+- Provider reliability weighting remains pending and is not treated as complete.
+- Golden scenario expansion remains pending and is not treated as complete.
+- Empirical backtesting remains pending and is not treated as complete.
+- Live provider activation/live chart feeds remain pending and blocked by default.
+- No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

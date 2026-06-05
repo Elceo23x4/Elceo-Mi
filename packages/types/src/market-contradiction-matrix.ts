@@ -1,5 +1,6 @@
 import type { EvidenceWeightHorizon, WeightedEvidenceSnapshot, WeightedEvidenceItem } from './market-evidence-weighting';
 import type { MarketAssetCausalityAsset, MarketAssetDriverKind } from './market-asset-causality';
+import type { MarketPriceReactionResult } from './market-price-reaction';
 import type { MarketEvidenceClass, TradingAssetCoverage } from './market-evidence';
 import type { ReasoningEvidenceInputItem } from './reasoning-market-input';
 
@@ -16,9 +17,9 @@ export type MarketContradictionDriverKind = MarketAssetDriverKind | 'macro_surpr
 export const MARKET_CONTRADICTION_EVIDENCE_SIDES = ['supporting','opposing','mixed','context','missing'] as const;
 export type MarketContradictionEvidenceSide = typeof MARKET_CONTRADICTION_EVIDENCE_SIDES[number];
 export type MarketContradictionRuleId = string;
-export const MARKET_CONTRADICTION_WARNINGS = ['missing_cross_asset_context','missing_price_reaction','missing_provider_reliability','stale_evidence_conflict','duplicate_source_risk','pending_confidence_calibration','pending_price_confirmation','pending_provider_reliability','partial_evidence_only','source_independence_unverified','macro_surprise_context_required','fx_relative_strength_context_required'] as const;
+export const MARKET_CONTRADICTION_WARNINGS = ['missing_cross_asset_context','missing_price_reaction','missing_provider_reliability','stale_evidence_conflict','duplicate_source_risk','pending_confidence_calibration','pending_price_confirmation','pending_provider_reliability','partial_evidence_only','source_independence_unverified','macro_surprise_context_required','fx_relative_strength_context_required','price_reaction_confirmed','price_reaction_rejected','price_reaction_absorbed','price_reaction_reversed','price_reaction_delayed','price_reaction_ambiguous'] as const;
 export type MarketContradictionWarning = typeof MARKET_CONTRADICTION_WARNINGS[number];
-export const MARKET_CONTRADICTION_REASON_CODES = ['policy_risk_tension','macro_policy_tension','rates_gold_tension','dollar_fx_tension','fx_base_quote_conflict','risk_volatility_tension','credit_risk_tension','breadth_index_divergence','crypto_derivatives_tension','commodity_margin_tension','haven_cross_conflict','stale_fresh_conflict','source_disagreement_detected','price_confirmation_pending','contradiction_matrix_rule_applied'] as const;
+export const MARKET_CONTRADICTION_REASON_CODES = ['policy_risk_tension','macro_policy_tension','rates_gold_tension','dollar_fx_tension','fx_base_quote_conflict','risk_volatility_tension','credit_risk_tension','breadth_index_divergence','crypto_derivatives_tension','commodity_margin_tension','haven_cross_conflict','stale_fresh_conflict','source_disagreement_detected','price_confirmation_pending','price_reaction_confirmed','price_reaction_rejected','price_reaction_absorbed','price_reaction_reversed','price_reaction_delayed','price_reaction_ambiguous','contradiction_matrix_rule_applied'] as const;
 export type MarketContradictionReasonCode = typeof MARKET_CONTRADICTION_REASON_CODES[number];
 
 export type MarketContradictionEvidencePoint = {
@@ -45,6 +46,7 @@ export type MarketContradictionInput = {
   generatedAt: string;
   evidencePoints: MarketContradictionEvidencePoint[];
   priceReactionAvailable: boolean;
+  priceReaction?: MarketPriceReactionResult;
   providerReliabilitySupplied: boolean;
   sourceIndependenceVerified: boolean;
   warnings: MarketContradictionWarning[];
@@ -97,7 +99,7 @@ export type MarketContradictionRule = {
 export type MarketContradictionRuleSetSnapshot = { generatedAt: string; rules: MarketContradictionRule[]; warnings: MarketContradictionWarning[]; complete: false; pending: { confidenceCalibrationR6: true; priceReactionR7: true; providerReliabilityExpansion: true } };
 export type MarketContradictionCoverageReport = { generatedAt: string; familyCount: number; ruleCount: number; coveredFamilies: MarketContradictionFamily[]; missingFamilies: MarketContradictionFamily[]; warnings: MarketContradictionWarning[]; complete: false; pending: { confidenceCalibrationR6: true; priceReactionR7: true; providerReliabilityExpansion: true }; notes: string[] };
 
-export type MarketContradictionWeightedSnapshotOptions = { priceReactionAvailable?: boolean; providerReliabilitySupplied?: boolean; sourceIndependenceVerified?: boolean };
+export type MarketContradictionWeightedSnapshotOptions = { priceReactionAvailable?: boolean; priceReaction?: MarketPriceReactionResult; providerReliabilitySupplied?: boolean; sourceIndependenceVerified?: boolean };
 export type MarketContradictionEvidenceItemsOptions = MarketContradictionWeightedSnapshotOptions & { generatedAt?: string; horizon?: EvidenceWeightHorizon };
 export type MarketContradictionWeightedSnapshotInput = WeightedEvidenceSnapshot;
 export type MarketContradictionWeightedEvidenceItem = WeightedEvidenceItem;

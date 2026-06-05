@@ -30,6 +30,7 @@ import { checkCognitionGuardrails, decomposeConfidence, detectEvidenceContradict
 import { getNewsExtractionAdapterReadiness, getNewsExtractionCoverageReport, getNewsExtractionFixturePayload, getNewsExtractionSourceDescriptor, getNewsExtractionSourceRegistry, listEtfFlowFixturePayloads, listFilingFixturePayloads, listNarrativeClusterFixturePayloads, listNewsExtractionFixturePayloads, listNewsExtractionSourcesByFamily, normalizeNewsExtractionFixturePayload } from '../news-extraction-filings/index';
 import { assertAssetDirectionResolutionRuleSetValid, getAssetDirectionResolutionCoverageReport, getAssetDirectionResolutionRuleSetSnapshot, listAssetDirectionResolutionWarnings, resolveAssetContextualEvidenceDirection } from '../asset-direction-resolution/index';
 import { assertFxRelativeStrengthRuleSetValid, getFxRelativeStrengthCoverageReport, getFxRelativeStrengthRuleSetSnapshot, listFxRelativeStrengthWarnings, resolveFxRelativeStrength, resolveFxRelativeStrengthFromEvidenceItems, resolveFxRelativeStrengthFromWeightedSnapshot } from '../fx-relative-strength/index';
+import { assertMarketPriceReactionRuleSetValid, evaluatePriceReaction, evaluatePriceReactionFromEvidenceItem, evaluatePriceReactionFromWeightedSnapshot, getMarketPriceReactionCoverageReport, getMarketPriceReactionRuleSetSnapshot, listMarketPriceReactionRules, listMarketPriceReactionWarnings } from '../price-reaction/index';
 import { assertMarketConfidenceCalibrationRuleSetValid, buildConfidenceCalibrationInputFromWeightedSnapshot, calibrateConfidenceFromMarketCognition, calibrateConfidenceFromWeightedSnapshot, calibrateMarketConfidence, getMarketConfidenceCalibrationCoverageReport, getMarketConfidenceCalibrationRuleSetSnapshot, listMarketConfidenceCalibrationRules, listMarketConfidenceCalibrationWarnings } from '../confidence-calibration/index';
 import { assertMarketContradictionRuleSetValid, evaluateContradictionsFromEvidenceItems, evaluateContradictionsFromWeightedSnapshot, evaluateMarketContradictionMatrix, getMarketContradictionCoverageReport, getMarketContradictionRuleSetSnapshot, listMarketContradictionRules, listMarketContradictionWarnings } from '../contradiction-matrix/index';
 import { assertMacroSurpriseRuleSetValid, getMacroSurpriseCoverageReport, getMacroSurpriseRuleSetSnapshot, listMacroSurpriseWarnings, normalizeMacroSurprise, normalizeMacroSurpriseFromEvidenceItem, normalizeMacroSurprisesFromEvidenceItems } from '../macro-surprise-normalization/index';
@@ -293,6 +294,16 @@ export class CanonicalMarketIntelligenceBoundaryService {
   assertMarketConfidenceCalibrationRuleSetValid() { return assertMarketConfidenceCalibrationRuleSetValid(); }
   listMarketConfidenceCalibrationWarnings(asset?: Parameters<typeof listMarketConfidenceCalibrationWarnings>[0]) { return listMarketConfidenceCalibrationWarnings(asset); }
   listMarketConfidenceCalibrationRules(asset?: Parameters<typeof listMarketConfidenceCalibrationRules>[0]) { return listMarketConfidenceCalibrationRules(asset); }
+
+  evaluatePriceReaction(input: Parameters<typeof evaluatePriceReaction>[0]) { return evaluatePriceReaction(input); }
+  evaluatePriceReactionFromEvidenceItem(evidenceItem: Parameters<typeof evaluatePriceReactionFromEvidenceItem>[0], candles: Parameters<typeof evaluatePriceReactionFromEvidenceItem>[1], options?: Parameters<typeof evaluatePriceReactionFromEvidenceItem>[2]) { return evaluatePriceReactionFromEvidenceItem(evidenceItem, candles, options); }
+  evaluatePriceReactionFromWeightedSnapshot(weightedSnapshot: Parameters<typeof evaluatePriceReactionFromWeightedSnapshot>[0], candles: Parameters<typeof evaluatePriceReactionFromWeightedSnapshot>[1], options?: Parameters<typeof evaluatePriceReactionFromWeightedSnapshot>[2]) { return evaluatePriceReactionFromWeightedSnapshot(weightedSnapshot, candles, options); }
+  getMarketPriceReactionRuleSetSnapshot(asOfIso?: string) { return getMarketPriceReactionRuleSetSnapshot(asOfIso); }
+  getMarketPriceReactionCoverageReport(asOfIso?: string) { return getMarketPriceReactionCoverageReport(asOfIso); }
+  assertMarketPriceReactionRuleSetValid() { return assertMarketPriceReactionRuleSetValid(); }
+  listMarketPriceReactionWarnings(asset?: Parameters<typeof listMarketPriceReactionWarnings>[0]) { return listMarketPriceReactionWarnings(asset); }
+  listMarketPriceReactionRules(asset?: Parameters<typeof listMarketPriceReactionRules>[0]) { return listMarketPriceReactionRules(asset); }
+
   normalizeMacroSurprise(input: Parameters<typeof normalizeMacroSurprise>[0]) { return normalizeMacroSurprise(input); }
   normalizeMacroSurpriseFromEvidenceItem(evidenceItem: Parameters<typeof normalizeMacroSurpriseFromEvidenceItem>[0]) { return normalizeMacroSurpriseFromEvidenceItem(evidenceItem); }
   normalizeMacroSurprisesFromEvidenceItems(evidenceItems: Parameters<typeof normalizeMacroSurprisesFromEvidenceItems>[0]) { return normalizeMacroSurprisesFromEvidenceItems(evidenceItems); }

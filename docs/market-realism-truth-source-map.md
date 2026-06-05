@@ -319,3 +319,13 @@ C6-R1 status:
 - This is not empirically backtested calibration and does not claim statistical production calibration.
 - C6-R7 price reaction/impulse, provider reliability weighting, golden scenario expansion, and live provider activation remain pending.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## C6-R7 — Price reaction / event impulse foundation (2026-06-04)
+
+- C6-R7 adds a deterministic price reaction and event impulse foundation through typed candles, event windows, volatility-adjusted movement, wick rejection, absorption, reversal, delayed follow-through, and canonical boundary diagnostics.
+- ELCEO can now classify supplied/input-driven event-window price reactions as confirmed, rejected, absorbed, reversed, delayed, ambiguous, or insufficient data.
+- Price confirmation is deterministic and fixture/input driven; it does not activate live chart feeds or live market-data providers.
+- The contradiction matrix can use supplied price reaction context to remove pending price-confirmation warnings for confirmed reactions and to surface macro-vs-price tension when reactions are rejected, reversed, absorbed, delayed, or ambiguous.
+- Confidence calibration can avoid the severe missing-price-confirmation penalty when confirmed price reaction context is supplied, while rejected/reversed reactions reduce confidence and absorbed/ambiguous/delayed reactions stay cautious.
+- Provider reliability weighting remains pending. Golden scenario expansion remains pending. Empirical backtesting remains pending.
+- No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.

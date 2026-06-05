@@ -404,7 +404,7 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [ ] Macro surprise normalization remains R4 and is not marked complete.
 - [ ] Expanded contradiction matrix remains R5 and is not marked complete.
 - [ ] Confidence calibration remains R6 and is not marked complete.
-- [ ] Price reaction / impulse confirmation remains R7 and is not marked complete.
+- [x] Price reaction / impulse confirmation foundation is implemented for deterministic supplied-candle event windows; live providers, provider reliability, golden scenarios, and empirical backtesting remain pending.
 - [ ] Provider reliability and golden scenario expansion remain pending.
 - No UI, live provider, payment, notification, commercial entitlement, Super Admin, affiliate, or 2FA behavior changed.
 
@@ -440,7 +440,7 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [x] Asset direction, FX relative strength, and price confirmation remain downstream/pending primitives rather than direct advice.
 - [ ] C6-R5 expanded contradiction matrix.
 - [ ] C6-R6 empirical confidence calibration.
-- [ ] C6-R7 price reaction/impulse confirmation.
+- [x] C6-R7 deterministic price reaction/impulse confirmation foundation.
 - [ ] Live provider reliability and consensus dispersion activation.
 
 ## C6-R5 math checklist — Expanded contradiction matrix foundation (2026-06-04)
@@ -460,7 +460,7 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [x] Missing source independence remains visible as a warning/caveat.
 - [x] Duplicate, scraped, and same-headline source bursts still trigger `source_disagreement` when source-conflict evidence exists.
 - [ ] C6-R6 deterministic confidence calibration foundation is complete; empirical backtesting remains pending.
-- [ ] C6-R7 price reaction/impulse engine remains pending.
+- [x] C6-R7 deterministic price reaction/impulse engine foundation implemented; provider reliability, golden scenarios, and empirical backtesting remain pending.
 - [ ] Provider reliability weighting and golden scenario expansion remain pending.
 - No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
 
@@ -483,3 +483,16 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [ ] C6-R7 price reaction/impulse engine remains pending.
 - [ ] Provider reliability weighting, golden scenario expansion, empirical backtesting, and live provider activation remain pending.
 - [x] No UI, live provider, payment, notification, commercial, billing, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+
+## C6-R7 math checklist update — price reaction / event impulse foundation (2026-06-04)
+
+- [x] Deterministic price reaction/event impulse foundation now evaluates supplied event-window candles.
+- [x] Classification includes confirmed, rejected, absorbed, reversed, delayed, ambiguous, and insufficient data.
+- [x] Calculation includes immediate move, follow-through move, volatility-adjusted impulse, wick rejection score, absorption score, reversal score, and confidence caveats.
+- [x] Contradiction and confidence calibration can consume supplied price reaction context.
+- [ ] Provider reliability weighting remains pending.
+- [ ] Golden scenario expansion remains pending.
+- [ ] Empirical backtesting remains pending.
+- [ ] Live provider activation remains pending.
+- [x] No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.

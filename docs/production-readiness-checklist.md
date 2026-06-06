@@ -276,3 +276,14 @@ _Date: 2026-05-16_
 - [ ] Golden scenario expansion remains pending.
 - [ ] Live provider smoke tests and production payload schema verification remain pending.
 - [x] No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed in C6-R8.
+
+## C6-R9 golden scenario / market-realism acceptance suite
+
+- [x] C6-R9 deterministic golden scenario acceptance suite added.
+- [x] 33 deterministic golden scenarios cover all 14 launch/diagnostic assets.
+- [x] Covered engines: asset direction, FX relative strength, macro surprise, contradiction matrix, confidence calibration, price reaction, provider reliability, source independence, and diagnostic limitations.
+- [x] Covered realism themes: macro actual-vs-forecast, inverted labor indicators, FX base/quote conflict, safe-haven conflict, risk vs volatility/credit/breadth, rates vs gold, crypto funding/liquidity, commodity cross-asset effects, provider/source quality, duplicate-source risk, fixture-only cap, missing critical dependency, DXY/VIX diagnostic limits.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical reliability/backtesting remains pending.
+- [ ] Production data calibration remains pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.

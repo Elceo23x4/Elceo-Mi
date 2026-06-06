@@ -248,3 +248,10 @@ Still open:
 - Golden scenario expansion remains pending.
 - Production live-payload schema verification and provider smoke tests remain pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.
+
+## C6-R9 open-loop update — golden scenario acceptance
+
+- Added deterministic C6-R9 golden scenario acceptance suite with 33 fixtures covering all 14 launch/diagnostic assets.
+- Verified areas: macro actual-vs-forecast surprise, inverted labor indicators, FX base/quote pressure, safe-haven conflicts, risk/volatility/credit/breadth contradictions, crypto derivatives/liquidity tension, commodity cross-asset distinctions, price-reaction statuses, provider/source reliability, source independence, and diagnostic DXY/VIX limits.
+- Still open: live provider activation, empirical reliability/backtesting, and production data calibration.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.

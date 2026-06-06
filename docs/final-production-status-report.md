@@ -180,3 +180,12 @@ C6-R6 adds deterministic confidence calibration and read-only canonical boundary
 ## C6-R8 provider reliability foundation status (2026-06-05)
 
 C6-R8 added deterministic provider/source reliability and data-gap weighting. The implementation uses registry/status/metadata/test-fixture context only and does not activate live providers or prove empirical reliability. Source authority, activation state, freshness, independence, extraction quality, provider/evidence-class fit, and asset dependency coverage now reduce or cap evidence strength and confidence when context is weak. Live provider activation, empirical reliability backtesting, and golden scenario expansion remain pending. No UI, live provider, payment, notification, commercial, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## C6-R9 production status note — market-realism acceptance
+
+- C6-R9 adds a deterministic golden-scenario acceptance suite for the market-realism reasoning layer.
+- The suite includes 33 scenarios covering all 14 launch/diagnostic assets and checks macro surprise, FX relative strength, contradictions, confidence calibration, price reaction, provider reliability, source independence, and diagnostic limitations.
+- This improves production-readiness evidence for deterministic reasoning behavior only.
+- It is not live provider activation, not empirical backtesting, and not production data calibration.
+- Live provider activation, empirical reliability/backtesting, and production data calibration remain pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.

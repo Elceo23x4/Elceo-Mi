@@ -340,3 +340,14 @@ C6-R1 status:
 - C6-R8 changes evidence strength before confidence can overstate certainty: provider reliability reasons are appended to weighted evidence, weak providers reduce `qualityAdjustedWeight`, and low reliability or confidence caps are consumed by confidence calibration when provider context is supplied.
 - C6-R8 does **not** activate live providers, call external APIs, implement empirical backtesting, expand golden scenarios, add UI, or change payments, notifications, commercial behavior, Super Admin behavior, affiliates, route entitlements, or 2FA.
 - Remaining pending work for C6-R9 and later: live provider activation, empirical reliability backtesting, expanded golden scenarios, live payload verification, and production-provider smoke tests.
+
+## C6-R9 golden scenario acceptance suite — deterministic fixture layer
+
+- C6-R9 adds a fixture-driven market-realism acceptance suite under `services/reasoning/src/golden-scenarios/index.ts` with 33 deterministic golden scenarios.
+- Current golden-scenario audit: the repository already had a narrower `golden-scenario-reasoning` pack for launch fixtures; C6-R9 expands coverage into a market-realism suite spanning all 14 launch/diagnostic assets: XAU/USD, EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, NZD/USD, USD/CAD, BTC/USD, Nasdaq 100, S&P 500, DE30, DXY, and VIX.
+- C6-R9 scenarios verify asset-contextual direction, macro actual-vs-forecast surprise handling, inverted labor indicators, FX base/quote relative strength, cross-asset contradictions, confidence caps, price-reaction confirmation/rejection/absorption/reversal, provider reliability, source independence, duplicate-source risk, missing critical dependencies, and DXY/VIX diagnostic limits.
+- This is deterministic acceptance, not live provider activation, not empirical backtesting, and not production data calibration.
+- Live provider activation remains pending.
+- Empirical reliability/backtesting remains pending.
+- Production data calibration remains pending.
+- No UI, live provider, payment, notification, commercial, Super Admin, affiliate, route entitlement, or 2FA behavior changed in C6-R9.

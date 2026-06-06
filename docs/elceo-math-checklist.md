@@ -506,3 +506,14 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [ ] Live provider activation remains pending.
 - [ ] Empirical reliability backtesting remains pending.
 - [ ] Golden scenario expansion remains pending.
+
+## C6-R9 deterministic golden scenario acceptance
+
+- [x] Deterministic golden scenario acceptance suite added and validated by reasoning tests.
+- [x] At least 28 deterministic scenarios exist; C6-R9 currently includes 33.
+- [x] All 14 launch/diagnostic assets are represented.
+- [x] Macro surprise, FX relative strength, contradiction matrix, confidence calibration, price reaction, provider reliability, source independence, and diagnostic limitations are covered by fixture scenarios.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical reliability/backtesting remains pending.
+- [ ] Production data calibration remains pending.
+- Note: this checklist marks deterministic acceptance complete only for fixture-driven verification. It does not mark live provider reliability or empirical market validation complete.

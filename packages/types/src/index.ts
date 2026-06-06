@@ -111,3 +111,5 @@ export * from './market-confidence-calibration';
 export * from './market-price-reaction';
 
 export * from './market-provider-reliability';
+
+export * from './market-golden-scenarios';

@@ -241,3 +241,13 @@ Still open:
 - Golden scenario expansion remains pending.
 - Live provider payload/schema smoke tests remain pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.
+
+## C6-R9 gap closeout — golden scenario expansion
+
+- C6-R9 closes the acceptance-suite gap by adding deterministic golden scenarios and schema validators for market-realism reasoning.
+- Scenario count: 33 deterministic fixtures, exceeding the minimum 28 required for C6-R9.
+- Assets covered: all 14 launch/diagnostic assets are represented at least once.
+- Engines covered end-to-end in fixture acceptance: asset direction, FX relative strength, macro surprise normalization, contradiction matrix, confidence calibration, price reaction, provider reliability, and source independence diagnostics.
+- Market regimes covered include inflation shock, disinflation relief, growth scare, hawkish/dovish policy repricing, risk-off, volatility shock, credit stress, energy shock, crypto leverage unwind, liquidity stress, soft landing, mixed regime, and diagnostic DXY/VIX contexts.
+- Remaining gaps: live provider activation, empirical reliability/backtesting, and production data calibration remain open and must not be represented as complete.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.

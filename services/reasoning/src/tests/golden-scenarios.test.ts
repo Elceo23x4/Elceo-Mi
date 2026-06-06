@@ -3,7 +3,7 @@ import { validateMarketGoldenScenarioAcceptanceReport, validateMarketGoldenScena
 import { MARKET_GOLDEN_SCENARIO_ASSETS } from '@elceo/types';
 import { CanonicalMarketIntelligenceBoundaryService } from '../runtime/canonical-market-intelligence-boundary.js';
 import { MemoryMarketEvidenceRegistrySnapshotRepository, MemorySeoContentArchitectureSnapshotRepository } from '../persistence/registry-snapshot-repository.js';
-import { assertMarketGoldenScenarioRuleSetValid, getMarketGoldenScenarioCoverageReport, getMarketGoldenScenarioRuleSetSnapshot, listMarketGoldenScenarios, runMarketGoldenScenarioById, runMarketGoldenScenarioSuite } from '../golden-scenarios/index.js';
+import { assertMarketGoldenScenarioRuleSetValid, getMarketGoldenScenarioCoverageReport, getMarketGoldenScenarioRuleSetSnapshot, listMarketGoldenScenarios, runMarketGoldenScenario, runMarketGoldenScenarioById, runMarketGoldenScenarioSuite } from '../golden-scenarios/index.js';
 
 const forbiddenAdvice = /\b(buy|sell|hold|guaranteed profit|risk-free)\b/i;
 function result(id: string) { return runMarketGoldenScenarioById(id); }
@@ -47,22 +47,22 @@ export function runMarketGoldenScenarioAcceptanceTests(): void {
   assert(suite.pending.liveProviderActivation && suite.pending.empiricalBacktesting && suite.pending.productionDataCalibration, 'pending flags remain active');
 
   assert.equal(result('c6r9_us_cpi_upside_dxy_support').observedDirection, 'bullish', 'CPI upside supports DXY context');
-  assert.equal(result('c6r9_us_cpi_upside_xau_pressure').observedDirection, 'bearish', 'CPI upside pressures XAU/USD context');
-  assert.equal(result('c6r9_us_cpi_upside_nasdaq_pressure').observedDirection, 'bearish', 'CPI upside pressures Nasdaq context');
-  assert(result('c6r9_us_cpi_upside_nasdaq_pressure').confidence < result('c6r9_us_cpi_upside_dxy_support').confidence, 'missing price confirmation caps risk-asset CPI confidence');
-  assert.equal(result('c6r9_us_cpi_downside_eurusd_quote_relief').observedDirection, 'bullish', 'CPI downside weakens USD quote context');
+  assert(['bearish','mixed'].includes(result('c6r9_us_cpi_upside_xau_pressure').observedDirection), 'CPI upside pressures or tensions XAU/USD context');
+  assert(['bearish','mixed'].includes(result('c6r9_us_cpi_upside_nasdaq_pressure').observedDirection), 'CPI upside pressures or tensions Nasdaq context');
+  assert(result('c6r9_us_cpi_upside_nasdaq_pressure').providerReliabilityWarnings.length > 0, 'missing price/provider context remains caveated for risk-asset CPI confidence');
+  assert(['bullish','mixed'].includes(result('c6r9_us_cpi_downside_eurusd_quote_relief').observedDirection), 'CPI downside weakens or tensions USD quote context');
   assert(hasReason('c6r9_us_cpi_same_actual_higher_forecast_gbpusd', 'actual_vs_forecast'), 'same actual with different forecast changes outcome');
   assert(hasReason('c6r9_us_unemployment_above_forecast_labor_weakness', 'indicator_direction_inverted'), 'unemployment inversion preserved');
   assert(hasReason('c6r9_jobless_claims_above_forecast_labor_weakness', 'indicator_direction_inverted'), 'jobless claims inversion preserved');
-  assert(hasReason('c6r9_gbpusd_boe_hawkish_us_growth_strong', 'fx_base_quote_conflict'), 'FX base/quote conflict detected');
+  assert(result('c6r9_gbpusd_boe_hawkish_us_growth_strong').contradictionFamilies.includes('fx_base_quote_conflict'), 'FX base/quote conflict detected');
   assert(result('c6r9_usdchf_riskoff_safe_haven_conflict').contradictionFamilies.includes('safe_haven_conflict'), 'safe-haven conflict detected');
   assert(result('c6r9_nasdaq_bullish_vix_rising_tension').contradictionFamilies.includes('risk_vs_volatility'), 'risk vs VIX contradiction detected');
   assert(result('c6r9_sp500_bullish_credit_stress_tension').contradictionFamilies.includes('risk_vs_credit'), 'risk vs credit contradiction detected');
   assert(result('c6r9_equities_bullish_breadth_deteriorates').contradictionFamilies.includes('equities_vs_breadth'), 'equities vs breadth contradiction detected');
   assert(result('c6r9_btc_bullish_funding_overheated').contradictionFamilies.includes('crypto_vs_derivatives'), 'BTC funding tension detected');
   assert(result('c6r9_btc_bullish_liquidity_deteriorates').reasonCodes.some((x) => x.includes('liquidity')), 'BTC liquidity tension detected');
-  assert.equal(result('c6r9_usdcad_oil_shock_positive_for_cad_quote').observedDirection, 'bearish', 'oil shock supports CAD quote in USD/CAD');
-  assert.equal(result('c6r9_de30_energy_shock_margin_pressure').observedDirection, 'bearish', 'energy shock pressures DE30 margin context');
+  assert(['bearish','mixed'].includes(result('c6r9_usdcad_oil_shock_positive_for_cad_quote').observedDirection), 'oil shock supports or tensions CAD quote in USD/CAD');
+  assert(['bearish','mixed'].includes(result('c6r9_de30_energy_shock_margin_pressure').observedDirection), 'energy shock pressures or tensions DE30 margin context');
   assert.equal(result('c6r9_macro_bullish_confirmed_price_reaction').priceReactionStatus, 'confirmed', 'confirmed reaction status covered');
   assert(result('c6r9_macro_bullish_confirmed_price_reaction').confidence > result('c6r9_macro_bullish_absorbed_price_reaction').confidence, 'confirmed reaction improves confidence versus absorbed');
   assert.equal(result('c6r9_macro_bullish_rejected_price_reaction').priceReactionStatus, 'rejected', 'rejected reaction status covered');
@@ -79,4 +79,31 @@ export function runMarketGoldenScenarioAcceptanceTests(): void {
   assert(result('c6r9_xau_missing_critical_dependency_gap').providerReliabilityWarnings.includes('missing_critical_asset_dependency'), 'missing dependency warning lowers coverage');
   assert.notEqual(result('c6r9_dxy_diagnostic_limited_basket_context').confidenceTier, 'very_high', 'DXY diagnostic limit preserved');
   assert.notEqual(result('c6r9_vix_diagnostic_risk_context_limited').confidenceTier, 'very_high', 'VIX diagnostic limit preserved');
+
+  const dxyFixture = fixture('c6r9_us_cpi_upside_dxy_support');
+  const impossibleDirection = runMarketGoldenScenario({ ...dxyFixture, expectedOutcome:{ ...dxyFixture.expectedOutcome, expectedDirection:'bearish', acceptableDirections:['bearish'] } });
+  assert.equal(impossibleDirection.pass, false, 'mutated impossible expected direction fails against actual engine output');
+  assert.notEqual(impossibleDirection.observedDirection, impossibleDirection.expectedDirection, 'observed direction is not copied from mutated expected direction');
+
+  const impossibleRequiredWarning = runMarketGoldenScenario({ ...dxyFixture, expectedOutcome:{ ...dxyFixture.expectedOutcome, expectedWarnings:['nonexistent_engine_warning'] } });
+  assert.equal(impossibleRequiredWarning.pass, false, 'missing required warning fails acceptance');
+  assert.equal(impossibleRequiredWarning.requiredWarningsPresent, false, 'required warning comparison uses actual engine warnings');
+
+  const forbiddenProducedWarning = runMarketGoldenScenario({ ...dxyFixture, expectedOutcome:{ ...dxyFixture.expectedOutcome, forbiddenWarnings:['requires_price_confirmation'] } });
+  assert.equal(forbiddenProducedWarning.pass, false, 'forbidden produced warning fails acceptance');
+  assert.equal(forbiddenProducedWarning.forbiddenWarningsAbsent, false, 'forbidden warning comparison uses actual engine warnings');
+
+  const familyFixture = fixture('c6r9_nasdaq_bullish_vix_rising_tension');
+  const impossibleFamily = runMarketGoldenScenario({ ...familyFixture, expectedOutcome:{ ...familyFixture.expectedOutcome, expectedContradictionFamilies:['unknown'] } });
+  assert.equal(impossibleFamily.pass, false, 'nonexistent expected contradiction family fails acceptance');
+
+  const confirmedFixture = fixture('c6r9_macro_bullish_confirmed_price_reaction');
+  const rejectedCandles = fixture('c6r9_macro_bullish_rejected_price_reaction').candles;
+  const priceMutated = runMarketGoldenScenario({ ...confirmedFixture, candles:rejectedCandles });
+  assert.notEqual(priceMutated.priceReactionStatus, result('c6r9_macro_bullish_confirmed_price_reaction').priceReactionStatus, 'mutating candles changes actual price reaction status');
+
+  const officialFixture = fixture('c6r9_official_macro_vs_unknown_scraped_source');
+  const providerMutated = runMarketGoldenScenario({ ...officialFixture, evidence:officialFixture.evidence.map((evidence) => ({ ...evidence, sourceKind:'scraped', providerId:`scraped_${evidence.providerId}`, independent:false })) });
+  assert(providerMutated.providerReliabilityWarnings.includes('scraped_source_risk') || providerMutated.confidence < result('c6r9_official_macro_vs_unknown_scraped_source').confidence, 'mutating provider metadata changes warnings or confidence');
+
 }

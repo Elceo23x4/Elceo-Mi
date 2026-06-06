@@ -189,3 +189,11 @@ C6-R8 added deterministic provider/source reliability and data-gap weighting. Th
 - It is not live provider activation, not empirical backtesting, and not production data calibration.
 - Live provider activation, empirical reliability/backtesting, and production data calibration remain pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9B production status note — real-engine acceptance harness
+
+- C6-R9B upgrades the market-realism golden scenario suite so observed scenario results are produced by actual reasoning modules rather than copied expected fixture values.
+- This strengthens deterministic production-readiness evidence for reasoning behavior only.
+- It is not live provider activation, not empirical backtesting, and not production data calibration.
+- Live provider activation, empirical reliability/backtesting, and production data calibration remain pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.

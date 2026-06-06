@@ -287,3 +287,13 @@ _Date: 2026-05-16_
 - [ ] Empirical reliability/backtesting remains pending.
 - [ ] Production data calibration remains pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9B golden scenario real-engine execution cleanup
+
+- [x] Golden scenario runner executes actual reasoning modules and compares observed outputs against expected fixture criteria.
+- [x] Observed direction, confidence, contradiction families, price-reaction status, provider warnings, and reason codes are derived from engine outputs, not copied from expected outcomes.
+- [x] Anti-self-fulfillment tests cover mutated expected direction, required warnings, forbidden warnings, contradiction families, price candles, and provider/source metadata.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical reliability/backtesting remains pending.
+- [ ] Production data calibration remains pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.

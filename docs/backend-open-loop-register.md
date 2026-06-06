@@ -255,3 +255,10 @@ Still open:
 - Verified areas: macro actual-vs-forecast surprise, inverted labor indicators, FX base/quote pressure, safe-haven conflicts, risk/volatility/credit/breadth contradictions, crypto derivatives/liquidity tension, commodity cross-asset distinctions, price-reaction statuses, provider/source reliability, source independence, and diagnostic DXY/VIX limits.
 - Still open: live provider activation, empirical reliability/backtesting, and production data calibration.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9B open-loop update — real-engine golden scenarios
+
+- C6-R9B removes the self-fulfilling golden scenario runner path and derives observed acceptance fields from actual reasoning engine outputs.
+- The suite remains deterministic and fixture-driven, not live-provider or empirical-backtesting completion.
+- Still open: live provider activation, empirical reliability/backtesting, and production data calibration.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.

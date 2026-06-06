@@ -351,3 +351,12 @@ C6-R1 status:
 - Empirical reliability/backtesting remains pending.
 - Production data calibration remains pending.
 - No UI, live provider, payment, notification, commercial, Super Admin, affiliate, route entitlement, or 2FA behavior changed in C6-R9.
+
+## C6-R9B golden scenario real-engine execution cleanup
+
+- C6-R9B converts the golden scenario runner from a fixture self-check into a real-engine acceptance harness.
+- Scenario observed outputs are now derived from actual reasoning modules: evidence weighting, asset-direction resolution, macro surprise normalization, FX relative strength, contradiction matrix, confidence calibration, price reaction, and provider reliability.
+- Expected fixture values are used only as acceptance criteria; observed direction, confidence, contradiction families, price-reaction status, provider warnings, and reason codes are not copied from expected outcomes.
+- The suite remains fixture-driven and deterministic; it is not empirical backtesting, live provider activation, or production data calibration.
+- Live provider activation and production data calibration remain pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.

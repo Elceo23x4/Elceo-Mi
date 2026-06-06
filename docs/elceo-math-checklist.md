@@ -517,3 +517,12 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [ ] Empirical reliability/backtesting remains pending.
 - [ ] Production data calibration remains pending.
 - Note: this checklist marks deterministic acceptance complete only for fixture-driven verification. It does not mark live provider reliability or empirical market validation complete.
+
+## C6-R9B golden scenario execution verification
+
+- [x] Golden scenarios now execute actual reasoning modules instead of copying expected fixture values into observed outputs.
+- [x] Anti-self-fulfillment tests prove mutated expectations, warnings, contradiction families, price candles, and provider metadata affect pass/fail behavior.
+- [x] Deterministic acceptance remains complete for the fixture suite only.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical reliability/backtesting remains pending.
+- [ ] Production data calibration remains pending.

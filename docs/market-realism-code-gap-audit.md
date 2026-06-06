@@ -251,3 +251,11 @@ Still open:
 - Market regimes covered include inflation shock, disinflation relief, growth scare, hawkish/dovish policy repricing, risk-off, volatility shock, credit stress, energy shock, crypto leverage unwind, liquidity stress, soft landing, mixed regime, and diagnostic DXY/VIX contexts.
 - Remaining gaps: live provider activation, empirical reliability/backtesting, and production data calibration remain open and must not be represented as complete.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9B real-engine execution cleanup
+
+- C6-R9B fixes the C6-R9 runner gap where observed values could be derived from expected fixture outcomes.
+- The golden scenario harness now builds deterministic reasoning evidence items, weighted snapshots, price candles, provider reliability inputs, contradiction context, and confidence inputs, then compares actual engine outputs against fixture expectations.
+- Anti-self-fulfillment tests mutate expected direction, warnings, contradiction families, price candles, and provider metadata to prove the runner fails when actual engine outputs do not satisfy expectations.
+- This remains deterministic fixture acceptance only; live provider activation, empirical backtesting, and production data calibration remain pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.

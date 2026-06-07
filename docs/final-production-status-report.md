@@ -197,3 +197,11 @@ C6-R8 added deterministic provider/source reliability and data-gap weighting. Th
 - It is not live provider activation, not empirical backtesting, and not production data calibration.
 - Live provider activation, empirical reliability/backtesting, and production data calibration remain pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9C production status note — acceptance purity
+
+- C6-R9C removes remaining fixture-derived warning and contradiction-family shortcuts from the market-realism golden scenario suite.
+- Scenario acceptance now requires actual engine warnings, actual contradiction matrix families, and meaningful confidence bounds/tier/cap checks.
+- This strengthens deterministic real-engine acceptance evidence only; it is not live provider activation, empirical backtesting, or production data calibration.
+- Live provider activation, empirical reliability/backtesting, and production data calibration remain pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.

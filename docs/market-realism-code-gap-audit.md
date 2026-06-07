@@ -259,3 +259,7 @@ Still open:
 - Anti-self-fulfillment tests mutate expected direction, warnings, contradiction families, price candles, and provider metadata to prove the runner fails when actual engine outputs do not satisfy expectations.
 - This remains deterministic fixture acceptance only; live provider activation, empirical backtesting, and production data calibration remain pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9C acceptance purity cleanup
+
+C6-R9C closes the remaining golden-scenario acceptance impurity: required warnings are no longer satisfied by fixture/category/source metadata, and expected contradiction families are no longer appended from scenario category/group/source fields. Acceptance now uses only actual outputs from the reasoning engines, while fixtures remain deterministic inputs plus expected criteria. Confidence checks use bounded deterministic ranges/tier/cap expectations rather than universal 0–100 ranges. This is still fixture-driven real-engine acceptance only; live provider activation, empirical reliability/backtesting, and production data calibration remain pending. No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.

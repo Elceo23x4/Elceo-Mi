@@ -526,3 +526,14 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [ ] Live provider activation remains pending.
 - [ ] Empirical reliability/backtesting remains pending.
 - [ ] Production data calibration remains pending.
+
+## C6-R9C golden scenario acceptance purity
+
+- [x] Fixture-derived warning shortcuts removed from golden-scenario acceptance.
+- [x] Contradiction-family acceptance now depends only on actual contradiction matrix signals.
+- [x] Confidence acceptance uses meaningful deterministic bounds/tier/cap checks rather than universal 0–100 ranges.
+- [x] Anti-fixture-derivation tests prove missing actual warnings, missing actual families, source-disagreement purity, and impossible confidence bands fail.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical reliability/backtesting remains pending.
+- [ ] Production data calibration remains pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.

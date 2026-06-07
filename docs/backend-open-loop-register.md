@@ -262,3 +262,12 @@ Still open:
 - The suite remains deterministic and fixture-driven, not live-provider or empirical-backtesting completion.
 - Still open: live provider activation, empirical reliability/backtesting, and production data calibration.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9C golden scenario acceptance purity note
+
+- Closed: golden-scenario acceptance no longer satisfies required warnings or contradiction families from fixture/category/source metadata.
+- Closed: confidence expectations now apply deterministic bounds/tier/cap checks instead of universal 0–100 acceptance.
+- Open: live provider activation remains pending.
+- Open: empirical reliability/backtesting remains pending.
+- Open: production data calibration remains pending.
+- Scope note: no UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.

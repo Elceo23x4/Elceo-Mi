@@ -360,3 +360,12 @@ C6-R1 status:
 - The suite remains fixture-driven and deterministic; it is not empirical backtesting, live provider activation, or production data calibration.
 - Live provider activation and production data calibration remain pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9C golden scenario acceptance purity cleanup
+
+- C6-R9C removes fixture-derived warnings and manually injected contradiction families from golden-scenario acceptance logic.
+- Required warnings and expected contradiction families are now satisfied only by actual engine outputs, with fixture metadata limited to deterministic input construction and expected criteria.
+- Confidence expectations now use meaningful deterministic bounds/tier/cap checks instead of universal 0–100 acceptance ranges.
+- Golden scenarios remain deterministic fixture-driven real-engine acceptance, not live provider activation, empirical backtesting, or production data calibration.
+- Live provider activation and production data calibration remain pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.

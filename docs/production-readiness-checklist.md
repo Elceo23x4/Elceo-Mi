@@ -297,3 +297,14 @@ _Date: 2026-05-16_
 - [ ] Empirical reliability/backtesting remains pending.
 - [ ] Production data calibration remains pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9C golden scenario acceptance purity cleanup
+
+- [x] Required golden-scenario warnings are satisfied only by actual engine outputs.
+- [x] Expected contradiction families are satisfied only by contradiction matrix signals.
+- [x] Scenario confidence acceptance uses deterministic bounds/tier/cap checks instead of universal 0–100 ranges.
+- [x] Anti-fixture-derivation tests cover warning purity, contradiction-family purity, source-disagreement purity, and confidence-band purity.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical reliability/backtesting remains pending.
+- [ ] Production data calibration remains pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.

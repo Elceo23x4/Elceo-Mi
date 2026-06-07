@@ -97,6 +97,25 @@ export function runMarketGoldenScenarioAcceptanceTests(): void {
   const impossibleFamily = runMarketGoldenScenario({ ...familyFixture, expectedOutcome:{ ...familyFixture.expectedOutcome, expectedContradictionFamilies:['unknown'] } });
   assert.equal(impossibleFamily.pass, false, 'nonexistent expected contradiction family fails acceptance');
 
+  const fixtureOnlyWarning = runMarketGoldenScenario({ ...dxyFixture, expectedOutcome:{ ...dxyFixture.expectedOutcome, expectedWarnings:['diagnostic_only_dxy'] } });
+  assert.equal(fixtureOnlyWarning.pass, false, 'fixture-only diagnostic warning metadata cannot satisfy required warning acceptance');
+  assert.equal(fixtureOnlyWarning.requiredWarningsPresent, false, 'required warning purity uses actual engine outputs only');
+
+  const creditFixture = fixture('c6r9_sp500_bullish_credit_stress_tension');
+  const creditRemoved = runMarketGoldenScenario({ ...creditFixture, evidence:creditFixture.evidence.filter((evidence) => evidence.evidenceClass !== 'credit_stress') });
+  assert.equal(creditRemoved.pass, false, 'category metadata alone cannot satisfy expected risk-credit family');
+  assert.equal(creditRemoved.contradictionFamilies.includes('risk_vs_credit'), false, 'risk-credit family must come from actual contradiction signals');
+
+  const duplicateFixture = fixture('c6r9_duplicate_same_headline_news_burst');
+  const sourceIndependentEvidence = duplicateFixture.evidence.map(({ duplicateGroupId: _duplicateGroupId, ...evidence }, index) => ({ ...evidence, sourceKind:'official' as const, evidenceId:`official_unique_payload_${index}`, providerId:`official_unique_${index}`, independent:true }));
+  const sourcePurified = runMarketGoldenScenario({ ...duplicateFixture, evidence:sourceIndependentEvidence });
+  assert.equal(sourcePurified.pass, false, 'source disagreement category/source metadata alone cannot create source disagreement');
+  assert.equal(sourcePurified.contradictionFamilies.includes('source_disagreement'), false, 'source disagreement must come from duplicate or source-conflict engine output');
+
+  const actualConfidence = result('c6r9_us_cpi_upside_dxy_support').confidence;
+  const impossibleConfidenceBand = runMarketGoldenScenario({ ...dxyFixture, confidenceExpectation:{ ...dxyFixture.confidenceExpectation, minConfidence:Math.max(0, actualConfidence - 2), maxConfidence:Math.max(0, actualConfidence - 1) } });
+  assert.equal(impossibleConfidenceBand.pass, false, 'confidence outside a meaningful expected band fails acceptance');
+
   const confirmedFixture = fixture('c6r9_macro_bullish_confirmed_price_reaction');
   const rejectedCandles = fixture('c6r9_macro_bullish_rejected_price_reaction').candles;
   const priceMutated = runMarketGoldenScenario({ ...confirmedFixture, candles:rejectedCandles });

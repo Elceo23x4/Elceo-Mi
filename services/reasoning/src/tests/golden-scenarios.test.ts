@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { validateMarketGoldenScenarioAcceptanceReport, validateMarketGoldenScenarioAcceptanceResult, validateMarketGoldenScenarioCandleFixture, validateMarketGoldenScenarioCoverageReport, validateMarketGoldenScenarioEvidenceFixture, validateMarketGoldenScenarioFixture, validateMarketGoldenScenarioRule, validateMarketGoldenScenarioRuleSetSnapshot } from '@elceo/schemas';
-import { MARKET_GOLDEN_SCENARIO_ASSETS } from '@elceo/types';
+import { MARKET_CONFIDENCE_CALIBRATION_TIERS, MARKET_GOLDEN_SCENARIO_ASSETS } from '@elceo/types';
 import { CanonicalMarketIntelligenceBoundaryService } from '../runtime/canonical-market-intelligence-boundary.js';
 import { MemoryMarketEvidenceRegistrySnapshotRepository, MemorySeoContentArchitectureSnapshotRepository } from '../persistence/registry-snapshot-repository.js';
 import { assertMarketGoldenScenarioRuleSetValid, getMarketGoldenScenarioCoverageReport, getMarketGoldenScenarioRuleSetSnapshot, listMarketGoldenScenarios, runMarketGoldenScenario, runMarketGoldenScenarioById, runMarketGoldenScenarioSuite } from '../golden-scenarios/index.js';
@@ -18,6 +18,11 @@ export function runMarketGoldenScenarioAcceptanceTests(): void {
 
   assert(scenarios.length >= 28, 'at least 28 golden scenarios exist');
   assert.equal(suite.failedCount, 0, 'all golden scenarios pass deterministic acceptance');
+  const broadConfidenceDefaults = scenarios.filter((scenario) => scenario.confidenceExpectation.minConfidence === 0 && scenario.confidenceExpectation.maxConfidence === 100);
+  assert.equal(broadConfidenceDefaults.length, 0, 'no scenario silently defaults to a universal confidence range');
+  const normalConfidenceScenario = fixture('c6r9_us_unemployment_above_forecast_labor_weakness');
+  assert(normalConfidenceScenario.confidenceExpectation.maxConfidence - normalConfidenceScenario.confidenceExpectation.minConfidence <= 30, 'default confidence band is not wider than ±15');
+  assert.deepEqual(normalConfidenceScenario.confidenceExpectation.allowedTiers, [normalConfidenceScenario.confidenceExpectation.expectedTier], 'default confidence acceptance pins the expected tier');
   assert(validateMarketGoldenScenarioFixture(scenarios[0]).ok, 'scenario fixture schema validates');
   assert(validateMarketGoldenScenarioEvidenceFixture(scenarios[0]!.evidence[0]).ok, 'evidence fixture schema validates');
   assert(validateMarketGoldenScenarioCandleFixture({ timestamp:'2026-06-06T00:01:00.000Z', open:100, high:101, low:99, close:100.5 }).ok, 'candle fixture schema validates');
@@ -68,6 +73,8 @@ export function runMarketGoldenScenarioAcceptanceTests(): void {
   assert.equal(result('c6r9_macro_bullish_rejected_price_reaction').priceReactionStatus, 'rejected', 'rejected reaction status covered');
   assert.equal(result('c6r9_macro_bullish_absorbed_price_reaction').priceReactionStatus, 'absorbed', 'absorbed reaction status covered');
   assert.equal(result('c6r9_macro_bullish_reversed_price_reaction').priceReactionStatus, 'reversed', 'reversed reaction status covered');
+  assert(result('c6r9_macro_bullish_confirmed_price_reaction').confidence > result('c6r9_macro_bullish_rejected_price_reaction').confidence, 'confirmed reaction remains higher confidence than rejected');
+  assert(result('c6r9_macro_bullish_confirmed_price_reaction').confidence > result('c6r9_macro_bullish_reversed_price_reaction').confidence, 'confirmed reaction remains higher confidence than reversed');
   assert(result('c6r9_macro_bullish_reversed_price_reaction').confidence < result('c6r9_macro_bullish_absorbed_price_reaction').confidence, 'reversed reaction lowers confidence versus absorbed');
   assert(fixture('c6r9_official_macro_vs_unknown_scraped_source').providerExpectation.officialWeightHigherThanScraped, 'official source weighted higher than scraped');
   assert(result('c6r9_official_macro_vs_unknown_scraped_source').providerReliabilityWarnings.includes('scraped_source_risk'), 'scraped source warning present');
@@ -113,8 +120,18 @@ export function runMarketGoldenScenarioAcceptanceTests(): void {
   assert.equal(sourcePurified.contradictionFamilies.includes('source_disagreement'), false, 'source disagreement must come from duplicate or source-conflict engine output');
 
   const actualConfidence = result('c6r9_us_cpi_upside_dxy_support').confidence;
-  const impossibleConfidenceBand = runMarketGoldenScenario({ ...dxyFixture, confidenceExpectation:{ ...dxyFixture.confidenceExpectation, minConfidence:Math.max(0, actualConfidence - 2), maxConfidence:Math.max(0, actualConfidence - 1) } });
-  assert.equal(impossibleConfidenceBand.pass, false, 'confidence outside a meaningful expected band fails acceptance');
+  const confidenceTooHighRequired = runMarketGoldenScenario({ ...dxyFixture, confidenceExpectation:{ ...dxyFixture.confidenceExpectation, minConfidence:Math.min(100, actualConfidence + 1), maxConfidence:Math.min(100, actualConfidence + 5) } });
+  assert.equal(confidenceTooHighRequired.pass, false, 'scenario fails when actual confidence is materially too low for the expected band');
+  const confidenceTooLowRequired = runMarketGoldenScenario({ ...dxyFixture, confidenceExpectation:{ ...dxyFixture.confidenceExpectation, minConfidence:Math.max(0, actualConfidence - 5), maxConfidence:Math.max(0, actualConfidence - 1) } });
+  assert.equal(confidenceTooLowRequired.pass, false, 'scenario fails when actual confidence is materially too high for the expected band');
+  const excludedTiers = MARKET_CONFIDENCE_CALIBRATION_TIERS.filter((tier) => tier !== result('c6r9_us_cpi_upside_dxy_support').confidenceTier);
+  const impossibleConfidenceTier = runMarketGoldenScenario({ ...dxyFixture, confidenceExpectation:{ ...dxyFixture.confidenceExpectation, allowedTiers:excludedTiers } });
+  assert.equal(impossibleConfidenceTier.pass, false, 'scenario fails when actual confidence tier is excluded from allowed tiers');
+
+  const diagnosticAsVeryHigh = runMarketGoldenScenario({ ...fixture('c6r9_dxy_diagnostic_limited_basket_context'), confidenceExpectation:{ ...fixture('c6r9_dxy_diagnostic_limited_basket_context').confidenceExpectation, minConfidence:0, maxConfidence:100, allowedTiers:['very_high'], cannotReachTier:'very_high' } });
+  assert.equal(diagnosticAsVeryHigh.pass, false, 'diagnostic cap prevents very-high acceptance');
+  const fixtureOnlyAsVeryHigh = runMarketGoldenScenario({ ...fixture('c6r9_fixture_only_provider_high_extraction_capped'), confidenceExpectation:{ ...fixture('c6r9_fixture_only_provider_high_extraction_capped').confidenceExpectation, minConfidence:0, maxConfidence:100, allowedTiers:['very_high'], cannotReachTier:'very_high' } });
+  assert.equal(fixtureOnlyAsVeryHigh.pass, false, 'fixture-only cap prevents very-high acceptance');
 
   const confirmedFixture = fixture('c6r9_macro_bullish_confirmed_price_reaction');
   const rejectedCandles = fixture('c6r9_macro_bullish_rejected_price_reaction').candles;

@@ -205,3 +205,11 @@ C6-R8 added deterministic provider/source reliability and data-gap weighting. Th
 - This strengthens deterministic real-engine acceptance evidence only; it is not live provider activation, empirical backtesting, or production data calibration.
 - Live provider activation, empirical reliability/backtesting, and production data calibration remain pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9D production status note — confidence acceptance tightening
+
+- C6-R9D tightens market-realism golden scenario confidence acceptance so deterministic scenarios can fail on actual confidence range or tier mismatches.
+- Default confidence bands are now meaningful rather than broad 0–100-like ranges, and tier/cap expectations are enforced for diagnostic, fixture-only, and price-reaction scenarios.
+- This strengthens deterministic real-engine acceptance evidence only; it is not live provider activation, empirical backtesting, or production data calibration.
+- Live provider activation, empirical reliability/backtesting, and production data calibration remain pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.

@@ -369,3 +369,11 @@ C6-R1 status:
 - Golden scenarios remain deterministic fixture-driven real-engine acceptance, not live provider activation, empirical backtesting, or production data calibration.
 - Live provider activation and production data calibration remain pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.
+
+## C6-R9D golden scenario confidence acceptance tightening
+
+- C6-R9D tightens golden scenario confidence acceptance so the suite fails when actual engine confidence is materially too low, materially too high, or outside the allowed confidence tier.
+- Default scenario confidence bands are now meaningful deterministic bands instead of broad 0–100-like ranges, and tier/cap expectations are enforced for diagnostic, fixture-only, and price-reaction scenarios.
+- Golden scenarios remain deterministic fixture-driven real-engine acceptance, not live provider activation, empirical backtesting, or production data calibration.
+- Live provider activation, empirical reliability/backtesting, and production data calibration remain pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.

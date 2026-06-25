@@ -308,3 +308,13 @@ _Date: 2026-05-16_
 - [ ] Empirical reliability/backtesting remains pending.
 - [ ] Production data calibration remains pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9D golden scenario confidence acceptance tightening
+
+- [x] Golden-scenario confidence acceptance now uses meaningful deterministic bands instead of broad 0–100-like ranges.
+- [x] Expected/allowed confidence tiers and cannot-reach caps are enforced in scenario pass/fail logic.
+- [x] Anti-confidence-regression tests cover too-low confidence, too-high confidence, excluded tier, diagnostic cap, fixture-only cap, and price-reaction ordering.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical reliability/backtesting remains pending.
+- [ ] Production data calibration remains pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.

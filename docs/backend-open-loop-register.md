@@ -271,3 +271,12 @@ Still open:
 - Open: empirical reliability/backtesting remains pending.
 - Open: production data calibration remains pending.
 - Scope note: no UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.
+
+## C6-R9D golden scenario confidence acceptance tightening
+
+- Closed: golden-scenario confidence acceptance now rejects materially too-low, too-high, or wrong-tier actual confidence outputs.
+- Closed: default confidence bands are tightened and tier/cap expectations are enforced for diagnostic, fixture-only, and price-reaction scenarios.
+- Open: live provider activation remains pending.
+- Open: empirical reliability/backtesting remains pending.
+- Open: production data calibration remains pending.
+- Scope note: no UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.

@@ -537,3 +537,14 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [ ] Empirical reliability/backtesting remains pending.
 - [ ] Production data calibration remains pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9D golden scenario confidence acceptance tightening
+
+- [x] Default golden-scenario confidence acceptance now uses meaningful deterministic bands rather than broad 0–100-like ranges.
+- [x] Expected/allowed confidence tiers are enforced during scenario pass/fail evaluation.
+- [x] Diagnostic and fixture-only confidence caps remain active and cannot pass as very high confidence.
+- [x] Price-reaction confidence ordering is protected by tests for confirmed versus absorbed/rejected/reversed cases.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical reliability/backtesting remains pending.
+- [ ] Production data calibration remains pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.

@@ -548,3 +548,15 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [ ] Empirical reliability/backtesting remains pending.
 - [ ] Production data calibration remains pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9E golden scenario expectation completeness
+
+- [x] Expected reason codes are binding acceptance criteria checked against actual engine reason codes.
+- [x] Price-reaction status and price-reaction warnings are binding and checked against price-reaction engine output only.
+- [x] Provider warnings and provider expectation flags are binding and checked against provider-reliability output only.
+- [x] Severity expectations reuse the canonical contradiction severity contract and participate in pass/fail.
+- [x] Confidence expectations remain bounded and tier/cap validated; no adaptive confidence or drift engine was introduced.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical backtesting remains pending.
+- [ ] Production-data calibration remains pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.

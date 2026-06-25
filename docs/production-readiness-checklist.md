@@ -318,3 +318,14 @@ _Date: 2026-05-16_
 - [ ] Empirical reliability/backtesting remains pending.
 - [ ] Production data calibration remains pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9E golden scenario expectation completeness
+
+- [x] Expected reason codes, provider warnings, price-reaction status/warnings, severity, and confidence expectations are binding acceptance criteria.
+- [x] Severity expectations reuse the canonical contradiction severity contract and reject universal fixture ranges.
+- [x] Fixture schema validation now checks expected outcomes, provider expectations, price expectations, severity/confidence contracts, engines, groups, notes, and duplicate IDs/evidence IDs.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical backtesting remains pending.
+- [ ] Production-data calibration remains pending.
+- No adaptive confidence or drift engine was introduced.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.

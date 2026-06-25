@@ -213,3 +213,11 @@ C6-R8 added deterministic provider/source reliability and data-gap weighting. Th
 - This strengthens deterministic real-engine acceptance evidence only; it is not live provider activation, empirical backtesting, or production data calibration.
 - Live provider activation, empirical reliability/backtesting, and production data calibration remain pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9E production status note — expectation completeness
+
+- C6-R9E makes every binding golden-scenario expectation participate in deterministic pass/fail: reason codes, provider warnings, price-reaction status/warnings, severity, and confidence.
+- Severity now uses the canonical contradiction severity contract, and schema validation rejects misleading universal severity/confidence contracts.
+- This strengthens deterministic real-engine acceptance evidence only; it is not live provider activation, empirical backtesting, or production-data calibration.
+- No adaptive confidence or drift engine was introduced.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.

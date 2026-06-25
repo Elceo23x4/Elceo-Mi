@@ -377,3 +377,11 @@ C6-R1 status:
 - Golden scenarios remain deterministic fixture-driven real-engine acceptance, not live provider activation, empirical backtesting, or production data calibration.
 - Live provider activation, empirical reliability/backtesting, and production data calibration remain pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.
+
+## C6-R9E golden scenario expectation completeness closure
+
+- C6-R9E closes expectation completeness for deterministic golden scenarios: expected reason codes, provider warnings, price-reaction status/warnings, severity expectations, and confidence expectations now participate in pass/fail.
+- Severity vocabulary now reuses the canonical contradiction severity contract (`none`, `low`, `moderate`, `high`, `critical`) rather than a separate fixture-only vocabulary.
+- Golden scenarios remain deterministic fixture-driven real-engine acceptance; live provider activation, empirical backtesting, and production-data calibration remain pending.
+- No adaptive confidence or drift engine was introduced.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.

@@ -280,3 +280,12 @@ Still open:
 - Open: empirical reliability/backtesting remains pending.
 - Open: production data calibration remains pending.
 - Scope note: no UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.
+
+## C6-R9E golden scenario expectation completeness closure
+
+- Closed: all binding golden-scenario expectations now participate in pass/fail, including reason codes, provider warnings, price-reaction status/warnings, severity, and confidence.
+- Closed: severity expectations now use the canonical contradiction severity vocabulary.
+- Open: live provider activation remains pending.
+- Open: empirical backtesting remains pending.
+- Open: production-data calibration remains pending.
+- Scope note: no adaptive confidence/drift engine, UI, live provider, payment, notification, commercial, Super Admin, affiliate, route-entitlement, or 2FA behaviour changed.

@@ -560,3 +560,16 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [ ] Empirical backtesting remains pending.
 - [ ] Production-data calibration remains pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.
+
+## C6-R9F actual confidence and provider-input purity
+
+- [x] Supported golden-scenario confidence now uses the actual confidence-calibration engine result and tier.
+- [x] Diagnostic confidence fallback is explicit for unsupported diagnostic assets.
+- [x] Provider expectation fields no longer construct provider-engine inputs.
+- [x] Price confidence-effect semantics are binding in pass/fail.
+- [x] Provider flag failures are individually diagnosable.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical backtesting remains pending.
+- [ ] Production-data calibration remains pending.
+- No adaptive confidence/drift engine was introduced.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.

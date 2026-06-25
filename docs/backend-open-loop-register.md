@@ -289,3 +289,13 @@ Still open:
 - Open: empirical backtesting remains pending.
 - Open: production-data calibration remains pending.
 - Scope note: no adaptive confidence/drift engine, UI, live provider, payment, notification, commercial, Super Admin, affiliate, route-entitlement, or 2FA behaviour changed.
+
+## C6-R9F actual confidence and provider-input purity closure
+
+- Closed: supported golden-scenario confidence now comes from the real confidence-calibration output, not a separate golden-runner confidence formula.
+- Closed: provider expectations no longer construct provider-reliability inputs; provider input fixtures now carry deterministic dependency input.
+- Closed: price confidence-effect checks are binding, and provider expectation flag failures are individually reported.
+- Open: live provider activation remains pending.
+- Open: empirical backtesting remains pending.
+- Open: production-data calibration remains pending.
+- Scope note: no adaptive confidence/drift engine, UI, live provider, payment, notification, commercial, Super Admin, affiliate, route-entitlement, or 2FA behaviour changed.

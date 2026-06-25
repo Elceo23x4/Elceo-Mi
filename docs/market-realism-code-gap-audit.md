@@ -271,3 +271,7 @@ C6-R9D closes the remaining broad-confidence acceptance gap in the golden-scenar
 ## C6-R9E expectation completeness closure
 
 C6-R9E closes the remaining fixture-contract gap: declared expected reason codes, provider warnings, price-reaction status/warnings, severity expectations, and confidence expectations now bind scenario pass/fail against actual engine outputs. Severity now reuses the canonical contradiction severity vocabulary (`none`, `low`, `moderate`, `high`, `critical`). This remains deterministic fixture-driven real-engine acceptance only; live provider activation, empirical backtesting, and production-data calibration remain pending. No adaptive confidence or drift engine was introduced, and no UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.
+
+## C6-R9F actual confidence and provider-input purity closure
+
+C6-R9F closes the final acceptance-purity gap: supported golden-scenario confidence now comes from the confidence-calibration engine's final confidence/tier, provider expectations no longer manufacture provider-engine inputs, price confidence-effect semantics are binding, and provider expectation flag failures are named diagnostics. The suite remains deterministic fixture-driven real-engine acceptance only; live provider activation, empirical backtesting, and production-data calibration remain pending. No adaptive confidence/drift engine, UI, live provider, payment, notification, commercial, Super Admin, affiliate, route-entitlement, or 2FA behaviour changed.

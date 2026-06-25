@@ -221,3 +221,11 @@ C6-R8 added deterministic provider/source reliability and data-gap weighting. Th
 - This strengthens deterministic real-engine acceptance evidence only; it is not live provider activation, empirical backtesting, or production-data calibration.
 - No adaptive confidence or drift engine was introduced.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.
+
+## C6-R9F production status note — actual confidence and provider-input purity
+
+- C6-R9F makes deterministic golden-scenario confidence use actual confidence-calibration engine outputs for supported assets, with explicit diagnostic fallback only where required.
+- Provider expectations no longer construct provider engine inputs; provider flag failures and price confidence-effect expectations are binding and diagnosable.
+- This strengthens deterministic real-engine acceptance evidence only; it is not live provider activation, empirical backtesting, or production-data calibration.
+- No adaptive confidence or drift engine was introduced.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.

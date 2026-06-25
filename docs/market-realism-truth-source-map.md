@@ -385,3 +385,11 @@ C6-R1 status:
 - Golden scenarios remain deterministic fixture-driven real-engine acceptance; live provider activation, empirical backtesting, and production-data calibration remain pending.
 - No adaptive confidence or drift engine was introduced.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.
+
+## C6-R9F actual confidence and provider-input purity closure
+
+- C6-R9F makes golden-scenario confidence read the real confidence-calibration engine result for supported assets, with an explicit diagnostic fallback only for unsupported diagnostic assets.
+- Provider expectation fields no longer construct provider-reliability engine inputs; missing dependency inputs live in fixture provider input data, while expectations only assert outputs.
+- Price-reaction confidence-effect semantics are binding, provider flag failures are individually diagnosable, and deterministic golden scenarios remain fixture-driven real-engine acceptance.
+- Live provider activation, empirical backtesting, and production-data calibration remain pending. No adaptive confidence/drift engine was added.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.

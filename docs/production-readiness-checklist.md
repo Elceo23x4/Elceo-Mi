@@ -329,3 +329,15 @@ _Date: 2026-05-16_
 - [ ] Production-data calibration remains pending.
 - No adaptive confidence or drift engine was introduced.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.
+
+## C6-R9F actual confidence and provider-input purity closure
+
+- [x] Supported golden-scenario confidence and tier are sourced from the real confidence-calibration engine.
+- [x] Provider expectations are separated from provider input construction.
+- [x] Price confidence-effect semantics participate in pass/fail.
+- [x] Provider expectation flag failures are individually diagnosable.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical backtesting remains pending.
+- [ ] Production-data calibration remains pending.
+- No adaptive confidence/drift engine was introduced.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.

@@ -8,6 +8,14 @@ import type { MarketCognitionSnapshot } from './market-cognition-signals';
 export type MarketConfidenceCalibrationAsset = TradingAssetCoverage | 'dxy';
 export const MARKET_CONFIDENCE_CALIBRATION_TIERS = ['very_low','low','medium','high','very_high'] as const;
 export type MarketConfidenceCalibrationTier = typeof MARKET_CONFIDENCE_CALIBRATION_TIERS[number];
+export const MARKET_CONFIDENCE_CALIBRATION_TIER_BANDS = [
+  { tier:'very_low', min:0, max:24 },
+  { tier:'low', min:25, max:44 },
+  { tier:'medium', min:45, max:64 },
+  { tier:'high', min:65, max:79 },
+  { tier:'very_high', min:80, max:100 }
+] as const satisfies readonly { tier: MarketConfidenceCalibrationTier; min: number; max: number }[];
+export function marketConfidenceTierForScore(score: number): MarketConfidenceCalibrationTier { const clamped = Math.max(0, Math.min(100, score)); return clamped < 25 ? 'very_low' : clamped < 45 ? 'low' : clamped < 65 ? 'medium' : clamped < 80 ? 'high' : 'very_high'; }
 export const MARKET_CONFIDENCE_CALIBRATION_COMPONENT_KINDS = ['evidence_quality','usable_weight','evidence_freshness','evidence_coverage','asset_causality_coverage','direction_resolution_quality','fx_relative_strength_completeness','macro_surprise_completeness','contradiction_load','source_independence','provider_readiness','price_confirmation_readiness','diagnostic_path_limitation'] as const;
 export type MarketConfidenceCalibrationComponentKind = typeof MARKET_CONFIDENCE_CALIBRATION_COMPONENT_KINDS[number];
 export const MARKET_CONFIDENCE_CALIBRATION_PENALTY_KINDS = ['high_contradiction_severity','excessive_contradiction_count','missing_price_confirmation','missing_macro_forecast','missing_macro_actual','previous_only_macro_fallback','historical_distribution_missing','consensus_dispersion_missing','pending_fx_relative_strength','one_sided_fx_evidence','weighted_snapshot_metadata_limited','duplicate_source_risk','source_disagreement','source_independence_unverified','provider_activation_gap','missing_provider_reliability','stale_evidence_conflict','diagnostic_only_dxy','low_evidence_coverage','low_usable_weight','stale_fresh_conflict','stale_evidence'] as const;

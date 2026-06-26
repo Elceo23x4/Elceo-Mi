@@ -573,3 +573,15 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [ ] Production-data calibration remains pending.
 - No adaptive confidence/drift engine was introduced.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.
+
+## C6-R9G fixture input explicitness and canonical confidence tiers
+
+- [x] Confidence-tier thresholds now use one canonical shared source.
+- [x] Fixture confidence expectations have one visible inline source of truth.
+- [x] Scenario IDs/categories no longer manufacture economic evidence or semantic contradiction context.
+- [x] Price-reaction confidence effects are verified through controlled same-input comparisons.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical backtesting remains pending.
+- [ ] Production-data calibration remains pending.
+- No adaptive confidence/drift system was introduced.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.

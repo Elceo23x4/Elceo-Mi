@@ -229,3 +229,11 @@ C6-R8 added deterministic provider/source reliability and data-gap weighting. Th
 - This strengthens deterministic real-engine acceptance evidence only; it is not live provider activation, empirical backtesting, or production-data calibration.
 - No adaptive confidence or drift engine was introduced.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.
+
+## C6-R9G production status note — fixture input explicitness
+
+- C6-R9G canonicalizes confidence-tier thresholds and removes hidden fixture confidence anchors.
+- Economic and semantic evidence inputs are now explicit fixture data rather than scenario-ID/category-derived engine input.
+- Price-reaction confidence effects are verified through controlled same-input comparisons.
+- This remains deterministic real-engine acceptance evidence only; it is not live provider activation, empirical backtesting, or production-data calibration.
+- No adaptive confidence/drift system, UI, live provider, payment, notification, commercial, Super Admin, affiliate, route-entitlement, or 2FA behaviour changed.

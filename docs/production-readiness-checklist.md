@@ -341,3 +341,15 @@ _Date: 2026-05-16_
 - [ ] Production-data calibration remains pending.
 - No adaptive confidence/drift engine was introduced.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.
+
+## C6-R9G fixture input explicitness and canonical confidence tiers
+
+- [x] Confidence-tier thresholds have one canonical shared source.
+- [x] Golden fixture confidence expectations have one visible inline anchor.
+- [x] Scenario IDs/categories do not manufacture economic evidence or semantic contradiction context.
+- [x] Controlled same-input tests verify price-reaction confidence effects.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical backtesting remains pending.
+- [ ] Production-data calibration remains pending.
+- No adaptive confidence/drift system was introduced.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.

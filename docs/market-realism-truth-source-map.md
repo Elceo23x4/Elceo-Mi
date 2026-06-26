@@ -393,3 +393,11 @@ C6-R1 status:
 - Price-reaction confidence-effect semantics are binding, provider flag failures are individually diagnosable, and deterministic golden scenarios remain fixture-driven real-engine acceptance.
 - Live provider activation, empirical backtesting, and production-data calibration remain pending. No adaptive confidence/drift engine was added.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.
+
+## C6-R9G fixture input explicitness and canonical confidence tiers
+
+- C6-R9G moves confidence-tier thresholds to one canonical shared source and uses that source in confidence calibration, golden fixtures, diagnostic fallback, and acceptance-result validation.
+- Fixture confidence expectations now have one visible inline source of truth, and scenario IDs/categories no longer manufacture economic or safe-haven semantic evidence.
+- Price-reaction confidence effects are verified with controlled same-input comparisons that vary only deterministic candles/reaction status.
+- Golden scenarios remain deterministic fixture-driven real-engine acceptance; live provider activation, empirical backtesting, and production-data calibration remain pending.
+- No adaptive confidence/drift system, UI, live provider, payment, notification, commercial, Super Admin, affiliate, route-entitlement, or 2FA behaviour changed.

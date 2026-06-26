@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { validateMarketGoldenScenarioAcceptanceReport, validateMarketGoldenScenarioAcceptanceResult, validateMarketGoldenScenarioCandleFixture, validateMarketGoldenScenarioCoverageReport, validateMarketGoldenScenarioEvidenceFixture, validateMarketGoldenScenarioFixture, validateMarketGoldenScenarioRule, validateMarketGoldenScenarioRuleSetSnapshot } from '@elceo/schemas';
-import { MARKET_CONFIDENCE_CALIBRATION_TIERS, MARKET_GOLDEN_SCENARIO_ASSETS } from '@elceo/types';
+import { MARKET_CONFIDENCE_CALIBRATION_TIERS, MARKET_GOLDEN_SCENARIO_ASSETS, marketConfidenceTierForScore } from '@elceo/types';
 import { CanonicalMarketIntelligenceBoundaryService } from '../runtime/canonical-market-intelligence-boundary.js';
 import { MemoryMarketEvidenceRegistrySnapshotRepository, MemorySeoContentArchitectureSnapshotRepository } from '../persistence/registry-snapshot-repository.js';
-import { assertMarketGoldenScenarioRuleSetValid, buildReasoningEvidenceItemsFromScenario, buildWeightedSnapshotFromScenario, getMarketGoldenScenarioCoverageReport, getMarketGoldenScenarioRuleSetSnapshot, listMarketGoldenScenarios, runMarketGoldenScenario, runMarketGoldenScenarioById, runMarketGoldenScenarioSuite, runScenarioConfidenceCalibration, runScenarioContradictionMatrix, runScenarioPriceReaction, runScenarioProviderReliability } from '../golden-scenarios/index.js';
+import { assertMarketGoldenScenarioRuleSetValid, buildReasoningEvidenceItemsFromScenario, buildWeightedSnapshotFromScenario, getMarketGoldenScenarioCoverageReport, getMarketGoldenScenarioRuleSetSnapshot, listMarketGoldenScenarios, runMarketGoldenScenario, runScenarioAssetDirection, runMarketGoldenScenarioById, runMarketGoldenScenarioSuite, runScenarioConfidenceCalibration, runScenarioContradictionMatrix, runScenarioPriceReaction, runScenarioProviderReliability } from '../golden-scenarios/index.js';
 
 const forbiddenAdvice = /\b(buy|sell|hold|guaranteed profit|risk-free)\b/i;
 function result(id: string) { return runMarketGoldenScenarioById(id); }
@@ -11,6 +12,8 @@ function fixture(id: string) { const found = listMarketGoldenScenarios().find((x
 function hasReason(id: string, needle: string): boolean { return result(id).reasonCodes.some((x) => x.includes(needle)); }
 function engineConfidenceFor(id: string) { const scenario = fixture(id); const evidenceItems = buildReasoningEvidenceItemsFromScenario(scenario); const weightedSnapshot = buildWeightedSnapshotFromScenario(scenario); const priceReaction = runScenarioPriceReaction(scenario, weightedSnapshot); const providerReliability = runScenarioProviderReliability(scenario, evidenceItems); const contradictionMatrix = runScenarioContradictionMatrix(scenario, weightedSnapshot, evidenceItems, priceReaction, providerReliability); return runScenarioConfidenceCalibration(scenario, weightedSnapshot, contradictionMatrix, priceReaction, providerReliability); }
 function providerOutputSignature(id: string, scenario = fixture(id)): string { const evidenceItems = buildReasoningEvidenceItemsFromScenario(scenario); return JSON.stringify(runScenarioProviderReliability(scenario, evidenceItems)); }
+function rawEngineSignature(scenario = fixture('c6r9_us_cpi_upside_dxy_support')): string { const evidenceItems = buildReasoningEvidenceItemsFromScenario(scenario); const weightedSnapshot = buildWeightedSnapshotFromScenario(scenario); const priceReaction = runScenarioPriceReaction(scenario, weightedSnapshot); const providerReliability = runScenarioProviderReliability(scenario, evidenceItems); const contradictionMatrix = runScenarioContradictionMatrix(scenario, weightedSnapshot, evidenceItems, priceReaction, providerReliability); const confidence = runScenarioConfidenceCalibration(scenario, weightedSnapshot, contradictionMatrix, priceReaction, providerReliability); return JSON.stringify({ metadata:evidenceItems.map((x) => x.metadataJson), macro:evidenceItems.filter((x) => ['inflation','labor_market','growth_activity','economic_indicator','macro_calendar','central_bank_policy'].includes(x.evidenceClass)).map((x) => x.metadataJson), direction:runScenarioAssetDirection(scenario, evidenceItems), families:contradictionMatrix.signals.map((x) => x.family), severity:contradictionMatrix.highestSeverity, confidence:confidence?.finalConfidence, tier:confidence?.confidenceTier }); }
+function controlledConfidence(scenario: ReturnType<typeof fixture>) { const evidenceItems = buildReasoningEvidenceItemsFromScenario(scenario); const weightedSnapshot = buildWeightedSnapshotFromScenario(scenario); const priceReaction = runScenarioPriceReaction(scenario, weightedSnapshot); const providerReliability = runScenarioProviderReliability(scenario, evidenceItems); const contradictionMatrix = runScenarioContradictionMatrix(scenario, weightedSnapshot, evidenceItems, priceReaction, providerReliability); const confidence = runScenarioConfidenceCalibration(scenario, weightedSnapshot, contradictionMatrix, priceReaction, providerReliability); assert(confidence); return { priceReaction, contradictionMatrix, confidence }; }
 
 export function runMarketGoldenScenarioAcceptanceTests(): void {
   const scenarios = listMarketGoldenScenarios();
@@ -22,6 +25,14 @@ export function runMarketGoldenScenarioAcceptanceTests(): void {
   assert.equal(suite.failedCount, 0, 'all golden scenarios pass deterministic acceptance');
   const broadConfidenceDefaults = scenarios.filter((scenario) => scenario.confidenceExpectation.minConfidence === 0 && scenario.confidenceExpectation.maxConfidence === 100);
   assert.equal(broadConfidenceDefaults.length, 0, 'no scenario silently defaults to a universal confidence range');
+  assert.equal(readFileSync('src/golden-scenarios/index.ts','utf8').includes('confidenceAnchorByScenario'), false, 'no separate confidence-anchor map exists');
+  const tierBoundaries: Array<[number, string]> = [[0,'very_low'],[24,'very_low'],[25,'low'],[44,'low'],[45,'medium'],[64,'medium'],[65,'high'],[79,'high'],[80,'very_high'],[100,'very_high']];
+  for (const [score, expectedTier] of tierBoundaries) assert.equal(marketConfidenceTierForScore(score), expectedTier, `canonical tier boundary ${score}`);
+  for (const scenario of scenarios) {
+    assert.equal('confidence' in scenario, false, `scenario has no stale confidence field: ${scenario.scenarioId}`);
+    assert.equal(scenario.confidenceExpectation.expectedTier, marketConfidenceTierForScore(scenario.expectedConfidenceAnchor), `fixture tier uses canonical helper: ${scenario.scenarioId}`);
+  }
+
   const normalConfidenceScenario = fixture('c6r9_us_unemployment_above_forecast_labor_weakness');
   assert(normalConfidenceScenario.confidenceExpectation.maxConfidence - normalConfidenceScenario.confidenceExpectation.minConfidence <= 30, 'default confidence band is not wider than ±15');
   assert.deepEqual(normalConfidenceScenario.confidenceExpectation.allowedTiers, [normalConfidenceScenario.confidenceExpectation.expectedTier], 'default confidence acceptance pins the expected tier');
@@ -219,6 +230,33 @@ export function runMarketGoldenScenarioAcceptanceTests(): void {
   assert.equal(impossibleEffect.priceReactionConfidenceEffectMet, false, 'price confidence effect diagnostic reports failure');
   const invalidPass = { ...result('c6r9_macro_bullish_confirmed_price_reaction'), pass:true, providerFlagsMet:false };
   assert.equal(validateMarketGoldenScenarioAcceptanceResult(invalidPass).ok, false, 'schema rejects pass true with failed binding diagnostic');
+
+
+  const inputPurityFixture = fixture('c6r9_us_cpi_upside_dxy_support');
+  const baselineRawSignature = rawEngineSignature(inputPurityFixture);
+  assert.equal(rawEngineSignature({ ...inputPurityFixture, scenarioId:'renamed_scenario_only' }), baselineRawSignature, 'changing only scenarioId does not change raw engine outputs');
+  assert.equal(rawEngineSignature({ ...inputPurityFixture, title:'Renamed title only' }), baselineRawSignature, 'changing only title does not change raw engine outputs');
+  assert.equal(rawEngineSignature({ ...inputPurityFixture, groups:['renamed_group_only'] }), baselineRawSignature, 'changing only groups does not change raw engine outputs');
+  assert.equal(rawEngineSignature({ ...inputPurityFixture, expectedOutcome:{ ...inputPurityFixture.expectedOutcome, expectedWarnings:[] }, confidenceExpectation:{ ...inputPurityFixture.confidenceExpectation, minConfidence:0, maxConfidence:15 }, severityExpectation:{ ...inputPurityFixture.severityExpectation, allowedSeverities:['none'] } }), baselineRawSignature, 'changing only expectations does not change raw engine outputs');
+  assert.notEqual(rawEngineSignature({ ...inputPurityFixture, macroInput:{ ...inputPurityFixture.macroInput!, actual:1.1, forecast:4.5 } }), baselineRawSignature, 'changing explicit macro input changes raw macro/downstream outputs');
+
+  const safeHavenFixture = fixture('c6r9_usdchf_riskoff_safe_haven_conflict');
+  assert(runMarketGoldenScenario({ ...safeHavenFixture, category:'macro_surprise' }).contradictionFamilies.includes('safe_haven_conflict'), 'changing category alone does not remove explicit safe-haven family');
+  const safeHavenEvidenceRemoved = runMarketGoldenScenario({ ...safeHavenFixture, evidence:safeHavenFixture.evidence.filter((evidence) => evidence.evidenceClass !== 'geopolitical_risk') });
+  assert.equal(safeHavenEvidenceRemoved.contradictionFamilies.includes('safe_haven_conflict'), false, 'removing explicit haven/geopolitical evidence removes safe-haven family');
+
+  const controlledBase = fixture('c6r9_macro_bullish_confirmed_price_reaction');
+  const controlledConfirmed = controlledConfidence(controlledBase);
+  const controlledAbsorbed = controlledConfidence({ ...controlledBase, candles:fixture('c6r9_macro_bullish_absorbed_price_reaction').candles, priceReactionExpectation:{ ...controlledBase.priceReactionExpectation, expectedStatus:'absorbed', expectedConfidenceEffect:'cautious' } });
+  const controlledRejected = controlledConfidence({ ...controlledBase, candles:fixture('c6r9_macro_bullish_rejected_price_reaction').candles, priceReactionExpectation:{ ...controlledBase.priceReactionExpectation, expectedStatus:'rejected', expectedConfidenceEffect:'contradiction' } });
+  const controlledReversed = controlledConfidence({ ...controlledBase, candles:fixture('c6r9_macro_bullish_reversed_price_reaction').candles, priceReactionExpectation:{ ...controlledBase.priceReactionExpectation, expectedStatus:'reversed', expectedConfidenceEffect:'contradiction' } });
+  assert(controlledConfirmed.confidence.finalConfidence > controlledAbsorbed.confidence.finalConfidence, 'controlled confirmed confidence exceeds absorbed confidence');
+  assert(controlledConfirmed.confidence.finalConfidence > controlledRejected.confidence.finalConfidence, 'controlled confirmed confidence exceeds rejected confidence');
+  assert(controlledConfirmed.confidence.finalConfidence > controlledReversed.confidence.finalConfidence, 'controlled confirmed confidence exceeds reversed confidence');
+  assert(controlledAbsorbed.confidence.penalties.some((penalty) => penalty.kind === 'missing_price_confirmation'), 'controlled absorbed carries confirmation penalty');
+  assert(controlledRejected.confidence.penalties.some((penalty) => penalty.kind === 'high_contradiction_severity'), 'controlled rejected carries contradiction penalty');
+  assert(controlledReversed.confidence.penalties.some((penalty) => penalty.kind === 'high_contradiction_severity'), 'controlled reversed carries contradiction penalty');
+  assert.equal(controlledConfirmed.confidence.penalties.some((penalty) => penalty.kind === 'missing_price_confirmation'), false, 'controlled confirmed omits missing-confirmation penalty');
 
   const rejectedWithConfirmedCandles = runMarketGoldenScenario({ ...fixture('c6r9_macro_bullish_rejected_price_reaction'), candles:confirmedFixture.candles });
   assert.equal(rejectedWithConfirmedCandles.pass, false, 'contradiction plus price reaction plus confidence changes when rejected reaction is replaced by confirmed candles');

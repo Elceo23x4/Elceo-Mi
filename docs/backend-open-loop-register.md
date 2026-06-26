@@ -299,3 +299,13 @@ Still open:
 - Open: empirical backtesting remains pending.
 - Open: production-data calibration remains pending.
 - Scope note: no adaptive confidence/drift engine, UI, live provider, payment, notification, commercial, Super Admin, affiliate, route-entitlement, or 2FA behaviour changed.
+
+## C6-R9G fixture input explicitness and canonical confidence tiers
+
+- Closed: confidence-tier thresholds now have one canonical shared definition.
+- Closed: golden fixtures now use one visible confidence anchor and explicit economic input rather than hidden scenario-ID inference.
+- Closed: category labels no longer inject semantic evidence, and price confidence effects are tested with controlled same-input comparisons.
+- Open: live provider activation remains pending.
+- Open: empirical backtesting remains pending.
+- Open: production-data calibration remains pending.
+- Scope note: no adaptive confidence/drift system, UI, live provider, payment, notification, commercial, Super Admin, affiliate, route-entitlement, or 2FA behaviour changed.

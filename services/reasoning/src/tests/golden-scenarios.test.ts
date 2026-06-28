@@ -23,7 +23,7 @@ export function runMarketGoldenScenarioAcceptanceTests(): void {
   const coverage = getMarketGoldenScenarioCoverageReport('2026-06-06T00:00:00.000Z');
   const rules = getMarketGoldenScenarioRuleSetSnapshot('2026-06-06T00:00:00.000Z');
 
-  assert(scenarios.length >= 28, 'at least 28 golden scenarios exist');
+  assert.equal(scenarios.length, 33, 'canonical golden scenario suite has exactly 33 scenarios');
   assert.equal(suite.failedCount, 0, 'all golden scenarios pass deterministic acceptance');
   const broadConfidenceDefaults = scenarios.filter((scenario) => scenario.confidenceExpectation.minConfidence === 0 && scenario.confidenceExpectation.maxConfidence === 100);
   assert.equal(broadConfidenceDefaults.length, 0, 'no scenario silently defaults to a universal confidence range');
@@ -44,6 +44,19 @@ export function runMarketGoldenScenarioAcceptanceTests(): void {
   assert(validateMarketGoldenScenarioCandleFixture({ timestamp:'2026-06-06T00:01:00.000Z', open:100, high:101, low:99, close:100.5 }).ok, 'candle fixture schema validates');
   assert(validateMarketGoldenScenarioAcceptanceResult(suite.results[0]).ok, 'acceptance result schema validates');
   assert(validateMarketGoldenScenarioAcceptanceReport(suite).ok, 'acceptance report schema validates');
+  const oneScenarioReport = runMarketGoldenScenarioSuite({ scenarioIds:['c6r9_us_cpi_upside_dxy_support'], asOfIso:'2026-06-06T00:00:00.000Z' });
+  const multiScenarioReport = runMarketGoldenScenarioSuite({ scenarioIds:['c6r9_us_cpi_upside_dxy_support','c6r9_macro_bullish_confirmed_price_reaction'], asOfIso:'2026-06-06T00:00:00.000Z' });
+  assert(validateMarketGoldenScenarioAcceptanceReport(oneScenarioReport).ok, 'one-scenario subset report schema validates');
+  assert(validateMarketGoldenScenarioAcceptanceReport(multiScenarioReport).ok, 'multi-scenario subset report schema validates');
+  assert.equal(oneScenarioReport.totalScenarios, oneScenarioReport.results.length, 'subset total matches selected result count');
+  assert.equal(oneScenarioReport.passedCount + oneScenarioReport.failedCount, oneScenarioReport.totalScenarios, 'subset pass/fail counts sum to total');
+  assert(oneScenarioReport.missingCoverage.includes('missing_asset:xau_usd'), 'one-scenario subset reports unselected assets as missing coverage');
+  assert.equal(suite.missingCoverage.length, 0, 'complete suite reports no missing asset coverage');
+  assert.equal(validateMarketGoldenScenarioAcceptanceReport({ ...oneScenarioReport, passedCount:99 }).ok, false, 'incorrect passedCount is rejected');
+  assert.equal(validateMarketGoldenScenarioAcceptanceReport({ ...oneScenarioReport, failedCount:99 }).ok, false, 'incorrect failedCount is rejected');
+  assert.equal(validateMarketGoldenScenarioAcceptanceReport({ ...oneScenarioReport, perAssetCoverage:{ ...oneScenarioReport.perAssetCoverage, dxy:0 } }).ok, false, 'per-asset coverage total mismatch is rejected');
+  assert.equal(validateMarketGoldenScenarioAcceptanceReport({ ...oneScenarioReport, perCategoryCoverage:{ ...oneScenarioReport.perCategoryCoverage, macro_surprise:0 } }).ok, false, 'per-category coverage total mismatch is rejected');
+  assert.equal(suite.totalScenarios, 33, 'complete report remains the 33-scenario suite');
   assert(validateMarketGoldenScenarioRule(rules.rules[0]).ok, 'rule schema validates');
   assert(validateMarketGoldenScenarioRuleSetSnapshot(rules).ok, 'rule set validates');
   assert(validateMarketGoldenScenarioCoverageReport(coverage).ok, 'coverage report validates');
@@ -56,7 +69,7 @@ export function runMarketGoldenScenarioAcceptanceTests(): void {
   assert.equal(boundary.runMarketGoldenScenarioSuite().failedCount, 0, 'canonical boundary runs suite');
   assert(boundary.getMarketGoldenScenarioCoverageReport().totalScenarios >= 28, 'canonical boundary exposes coverage');
   assert(boundary.getMarketGoldenScenarioRuleSetSnapshot().rules.length > 0, 'canonical boundary exposes rules');
-  assert(boundary.assertMarketGoldenScenarioRuleSetValid().scenarioCount >= 28, 'canonical boundary validates rules');
+  assert.equal(boundary.assertMarketGoldenScenarioRuleSetValid().scenarioCount, 33, 'canonical boundary validates the exact canonical suite count');
   assert(boundary.listMarketGoldenScenarioRules().length > 0, 'canonical boundary lists rules');
   assert(boundary.listMarketGoldenScenarioWarnings('xau_usd').length > 0, 'canonical boundary lists warnings');
 

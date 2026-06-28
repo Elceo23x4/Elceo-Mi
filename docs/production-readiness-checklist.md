@@ -353,3 +353,10 @@ _Date: 2026-05-16_
 - [ ] Production-data calibration remains pending.
 - No adaptive confidence/drift system was introduced.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.
+
+## C6-R9G.1 confidence-floor saturation open loop
+
+- [ ] Deterministic fixture/dry-run confidence floor saturation remains open: 25 of 33 golden scenarios currently produce confidence `0`.
+- [ ] Empirical backtesting must determine whether stacked readiness, coverage, confirmation, contradiction, and provider penalties are correctly composed or over-accumulating.
+- [ ] Production-data calibration remains required before treating confidence levels as live-validated.
+- Passing golden fixtures do not close this open loop by themselves.

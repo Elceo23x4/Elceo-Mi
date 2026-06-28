@@ -1,5 +1,5 @@
 import type { MarketGoldenScenarioAcceptanceReport, MarketGoldenScenarioAcceptanceResult, MarketGoldenScenarioCandleFixture, MarketGoldenScenarioCoverageReport, MarketGoldenScenarioEvidenceFixture, MarketGoldenScenarioFixture, MarketGoldenScenarioRule, MarketGoldenScenarioRuleSetSnapshot } from '@elceo/types';
-import { EVIDENCE_WEIGHT_HORIZONS, MARKET_CONFIDENCE_CALIBRATION_TIERS, MARKET_CONTRADICTION_FAMILIES, MARKET_CONTRADICTION_SEVERITIES, MARKET_EVIDENCE_CLASSES, MARKET_GOLDEN_SCENARIO_ASSETS, MARKET_GOLDEN_SCENARIO_CATEGORIES, MARKET_GOLDEN_SCENARIO_REGIMES, MARKET_PRICE_REACTION_STATUSES, MARKET_PRICE_REACTION_WARNINGS, MARKET_PROVIDER_RELIABILITY_WARNINGS, WEIGHTED_EVIDENCE_DIRECTIONS, marketConfidenceTierForScore } from '@elceo/types';
+import { EVIDENCE_WEIGHT_HORIZONS, MARKET_CONFIDENCE_CALIBRATION_TIERS, MARKET_CONTRADICTION_FAMILIES, MARKET_CONTRADICTION_SEVERITIES, MARKET_EVIDENCE_CLASSES, MARKET_GOLDEN_SCENARIO_ASSETS, MARKET_GOLDEN_SCENARIO_CATEGORIES, MARKET_GOLDEN_SCENARIO_REGIMES, MARKET_PRICE_REACTION_EVENT_KINDS, MARKET_PRICE_REACTION_STATUSES, MARKET_PRICE_REACTION_WARNINGS, MARKET_PROVIDER_RELIABILITY_WARNINGS, WEIGHTED_EVIDENCE_DIRECTIONS, marketConfidenceTierForScore } from '@elceo/types';
 import { isBoolean, isEnumValue, isFiniteNumber, isIsoDateString, isNonEmptyString, isObjectRecord, isScore0to100, type SchemaValidationResult } from './validation-utils';
 
 const forbidden = /\b(buy|sell|hold|guaranteed profit|risk-free)\b/i;
@@ -91,6 +91,10 @@ export function validateMarketGoldenScenarioFixture(input: unknown): SchemaValid
       }
     });
   }
+
+  const priceInput = input.priceReactionInput;
+  if (!isObjectRecord(priceInput)) e.push('priceReactionInput');
+  else if (!isEnumValue(priceInput.eventKind, MARKET_PRICE_REACTION_EVENT_KINDS)) e.push('priceReactionInput.eventKind');
 
   const price = input.priceReactionExpectation;
   if (!isObjectRecord(price)) e.push('priceReactionExpectation');

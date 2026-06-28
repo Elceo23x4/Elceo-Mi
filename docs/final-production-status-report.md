@@ -237,3 +237,10 @@ C6-R8 added deterministic provider/source reliability and data-gap weighting. Th
 - Price-reaction confidence effects are verified through controlled same-input comparisons.
 - This remains deterministic real-engine acceptance evidence only; it is not live provider activation, empirical backtesting, or production-data calibration.
 - No adaptive confidence/drift system, UI, live provider, payment, notification, commercial, Super Admin, affiliate, route-entitlement, or 2FA behaviour changed.
+
+## C6-R9G.1 confidence-floor saturation note
+
+- The C6-R9 deterministic fixture suite still shows substantial confidence-floor saturation: 25 of 33 golden scenarios currently produce confidence `0`.
+- The saturation may be caused by conservative stacked readiness, coverage, confirmation, contradiction, and provider penalties.
+- Empirical backtesting and production-data calibration remain required to determine whether these penalties are correctly composed or over-accumulating.
+- This is fixture-driven dry-run acceptance, not live confidence validation, and should not be treated as closed only because the golden scenarios pass.

@@ -105,3 +105,5 @@ export * from './market-confidence-calibration.schema';
 export * from './market-price-reaction.schema';
 
 export * from './market-provider-reliability.schema';
+
+export * from './market-golden-scenarios.schema';

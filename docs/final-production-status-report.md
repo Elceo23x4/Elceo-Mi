@@ -180,3 +180,67 @@ C6-R6 adds deterministic confidence calibration and read-only canonical boundary
 ## C6-R8 provider reliability foundation status (2026-06-05)
 
 C6-R8 added deterministic provider/source reliability and data-gap weighting. The implementation uses registry/status/metadata/test-fixture context only and does not activate live providers or prove empirical reliability. Source authority, activation state, freshness, independence, extraction quality, provider/evidence-class fit, and asset dependency coverage now reduce or cap evidence strength and confidence when context is weak. Live provider activation, empirical reliability backtesting, and golden scenario expansion remain pending. No UI, live provider, payment, notification, commercial, Super Admin, affiliate, route-entitlement, or 2FA behavior changed.
+
+## C6-R9 production status note — market-realism acceptance
+
+- C6-R9 adds a deterministic golden-scenario acceptance suite for the market-realism reasoning layer.
+- The suite includes 33 scenarios covering all 14 launch/diagnostic assets and checks macro surprise, FX relative strength, contradictions, confidence calibration, price reaction, provider reliability, source independence, and diagnostic limitations.
+- This improves production-readiness evidence for deterministic reasoning behavior only.
+- It is not live provider activation, not empirical backtesting, and not production data calibration.
+- Live provider activation, empirical reliability/backtesting, and production data calibration remain pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9B production status note — real-engine acceptance harness
+
+- C6-R9B upgrades the market-realism golden scenario suite so observed scenario results are produced by actual reasoning modules rather than copied expected fixture values.
+- This strengthens deterministic production-readiness evidence for reasoning behavior only.
+- It is not live provider activation, not empirical backtesting, and not production data calibration.
+- Live provider activation, empirical reliability/backtesting, and production data calibration remain pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9C production status note — acceptance purity
+
+- C6-R9C removes remaining fixture-derived warning and contradiction-family shortcuts from the market-realism golden scenario suite.
+- Scenario acceptance now requires actual engine warnings, actual contradiction matrix families, and meaningful confidence bounds/tier/cap checks.
+- This strengthens deterministic real-engine acceptance evidence only; it is not live provider activation, empirical backtesting, or production data calibration.
+- Live provider activation, empirical reliability/backtesting, and production data calibration remain pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9D production status note — confidence acceptance tightening
+
+- C6-R9D tightens market-realism golden scenario confidence acceptance so deterministic scenarios can fail on actual confidence range or tier mismatches.
+- Default confidence bands are now meaningful rather than broad 0–100-like ranges, and tier/cap expectations are enforced for diagnostic, fixture-only, and price-reaction scenarios.
+- This strengthens deterministic real-engine acceptance evidence only; it is not live provider activation, empirical backtesting, or production data calibration.
+- Live provider activation, empirical reliability/backtesting, and production data calibration remain pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9E production status note — expectation completeness
+
+- C6-R9E makes every binding golden-scenario expectation participate in deterministic pass/fail: reason codes, provider warnings, price-reaction status/warnings, severity, and confidence.
+- Severity now uses the canonical contradiction severity contract, and schema validation rejects misleading universal severity/confidence contracts.
+- This strengthens deterministic real-engine acceptance evidence only; it is not live provider activation, empirical backtesting, or production-data calibration.
+- No adaptive confidence or drift engine was introduced.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.
+
+## C6-R9F production status note — actual confidence and provider-input purity
+
+- C6-R9F makes deterministic golden-scenario confidence use actual confidence-calibration engine outputs for supported assets, with explicit diagnostic fallback only where required.
+- Provider expectations no longer construct provider engine inputs; provider flag failures and price confidence-effect expectations are binding and diagnosable.
+- This strengthens deterministic real-engine acceptance evidence only; it is not live provider activation, empirical backtesting, or production-data calibration.
+- No adaptive confidence or drift engine was introduced.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.
+
+## C6-R9G production status note — fixture input explicitness
+
+- C6-R9G canonicalizes confidence-tier thresholds and removes hidden fixture confidence anchors.
+- Economic and semantic evidence inputs are now explicit fixture data rather than scenario-ID/category-derived engine input.
+- Price-reaction confidence effects are verified through controlled same-input comparisons.
+- This remains deterministic real-engine acceptance evidence only; it is not live provider activation, empirical backtesting, or production-data calibration.
+- No adaptive confidence/drift system, UI, live provider, payment, notification, commercial, Super Admin, affiliate, route-entitlement, or 2FA behaviour changed.
+
+## C6-R9G.1 confidence-floor saturation note
+
+- The C6-R9 deterministic fixture suite still shows substantial confidence-floor saturation: 25 of 33 golden scenarios currently produce confidence `0`.
+- The saturation may be caused by conservative stacked readiness, coverage, confirmation, contradiction, and provider penalties.
+- Empirical backtesting and production-data calibration remain required to determine whether these penalties are correctly composed or over-accumulating.
+- This is fixture-driven dry-run acceptance, not live confidence validation, and should not be treated as closed only because the golden scenarios pass.

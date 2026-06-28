@@ -1,5 +1,5 @@
 import type { MarketCognitionSnapshot, MarketConfidenceCalibrationAsset, MarketConfidenceCalibrationBoost, MarketConfidenceCalibrationComponent, MarketConfidenceCalibrationBuildOptions, MarketConfidenceCalibrationCoverageReport, MarketConfidenceCalibrationInput, MarketConfidenceCalibrationPenalty, MarketConfidenceCalibrationPenaltyKind, MarketConfidenceCalibrationReasonCode, MarketConfidenceCalibrationResult, MarketConfidenceCalibrationRule, MarketConfidenceCalibrationRuleSetSnapshot, MarketConfidenceCalibrationWarning, MarketContradictionMatrixResult, WeightedEvidenceSnapshot } from '@elceo/types';
-import { MARKET_CONFIDENCE_CALIBRATION_BOOST_KINDS, MARKET_CONFIDENCE_CALIBRATION_COMPONENT_KINDS, MARKET_CONFIDENCE_CALIBRATION_PENALTY_KINDS, MARKET_CONFIDENCE_CALIBRATION_WARNINGS } from '@elceo/types';
+import { MARKET_CONFIDENCE_CALIBRATION_BOOST_KINDS, MARKET_CONFIDENCE_CALIBRATION_COMPONENT_KINDS, MARKET_CONFIDENCE_CALIBRATION_PENALTY_KINDS, MARKET_CONFIDENCE_CALIBRATION_WARNINGS, marketConfidenceTierForScore } from '@elceo/types';
 import { validateMarketConfidenceCalibrationCoverageReport, validateMarketConfidenceCalibrationInput, validateMarketConfidenceCalibrationResult, validateMarketConfidenceCalibrationRuleSetSnapshot } from '@elceo/schemas';
 import { evaluateContradictionsFromWeightedSnapshot } from '../contradiction-matrix/index';
 import { getMarketAssetCausalityDescriptor } from '../asset-causality-map/index';
@@ -9,7 +9,6 @@ import { evaluateProviderReliabilityForWeightedSnapshot } from '../provider-reli
 const pending = { priceReactionR7: true, providerReliabilityExpansion: true, goldenScenarioExpansion: true, empiricalBacktesting: true } as const;
 const fxAssets = new Set<string>(['eur_usd','gbp_usd','usd_jpy','usd_chf','aud_usd','nzd_usd','usd_cad']);
 const clamp = (n: number) => Math.max(0, Math.min(100, n));
-function tier(score: number): MarketConfidenceCalibrationResult['confidenceTier'] { return score < 25 ? 'very_low' : score < 45 ? 'low' : score < 65 ? 'medium' : score < 80 ? 'high' : 'very_high'; }
 function unique<T extends string>(items: T[]): T[] { return Array.from(new Set(items)); }
 function addPenalty(penalties: MarketConfidenceCalibrationPenalty[], kind: MarketConfidenceCalibrationPenaltyKind, magnitude: number, severe: boolean, rationale: string): void { penalties.push({ kind, magnitude: clamp(magnitude), severe, rationale }); }
 function hasWarning(input: MarketConfidenceCalibrationInput, warning: string): boolean { return input.warnings.includes(warning) || input.contradictionMatrix?.warnings.includes(warning as never) === true || input.weightedSnapshot?.warnings.includes(warning) === true || input.weightedSnapshot?.items.some((i) => i.reasons.includes(warning) || i.reasons.some((r) => r.includes(warning))) === true; }
@@ -79,7 +78,7 @@ export function calibrateMarketConfidence(input: MarketConfidenceCalibrationInpu
   if (penalties.some((p) => p.kind === 'missing_provider_reliability')) { score = Math.min(score, 79); reasonCodes.push('confidence_cap_applied'); }
   if (typeof providerCap === 'number') { score = Math.min(score, providerCap); reasonCodes.push('confidence_cap_applied'); }
   if (penalties.some((p) => p.kind === 'diagnostic_only_dxy')) { score = Math.min(score, 79); reasonCodes.push('confidence_cap_applied'); }
-  const result: MarketConfidenceCalibrationResult = { asset:input.asset, horizon:input.horizon, generatedAt:input.generatedAt, baseConfidence:clamp(input.baseConfidence), finalConfidence:clamp(score), confidenceTier:tier(clamp(score)), components, penalties, boosts, warnings:unique(warnings), reasonCodes:unique(reasonCodes), rationale:'Deterministic confidence calibration adjusts evidence confidence for market-realism readiness gaps without claiming empirical backtesting.', complete:false, pending };
+  const result: MarketConfidenceCalibrationResult = { asset:input.asset, horizon:input.horizon, generatedAt:input.generatedAt, baseConfidence:clamp(input.baseConfidence), finalConfidence:clamp(score), confidenceTier:marketConfidenceTierForScore(clamp(score)), components, penalties, boosts, warnings:unique(warnings), reasonCodes:unique(reasonCodes), rationale:'Deterministic confidence calibration adjusts evidence confidence for market-realism readiness gaps without claiming empirical backtesting.', complete:false, pending };
   const valid = validateMarketConfidenceCalibrationResult(result); if (valid.ok === false) throw new Error(`invalid_market_confidence_calibration_result:${valid.errors.join('|')}`);
   return result;
 }

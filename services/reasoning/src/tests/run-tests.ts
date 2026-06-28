@@ -55,6 +55,7 @@ import { runContradictionMatrixTests } from './contradiction-matrix.test.js';
 import { runConfidenceCalibrationTests } from './confidence-calibration.test.js';
 import { runPriceReactionTests } from './price-reaction.test.js';
 import { runProviderReliabilityTests } from './provider-reliability.test.js';
+import { runMarketGoldenScenarioAcceptanceTests } from './golden-scenarios.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -113,6 +114,7 @@ async function run(): Promise<void> {
   runConfidenceCalibrationTests();
   runPriceReactionTests();
   runProviderReliabilityTests();
+  runMarketGoldenScenarioAcceptanceTests();
   console.log('reasoning runtime contract tests passed');
 }
 

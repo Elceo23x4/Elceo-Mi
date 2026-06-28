@@ -248,3 +248,72 @@ Still open:
 - Golden scenario expansion remains pending.
 - Production live-payload schema verification and provider smoke tests remain pending.
 - No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.
+
+## C6-R9 open-loop update — golden scenario acceptance
+
+- Added deterministic C6-R9 golden scenario acceptance suite with 33 fixtures covering all 14 launch/diagnostic assets.
+- Verified areas: macro actual-vs-forecast surprise, inverted labor indicators, FX base/quote pressure, safe-haven conflicts, risk/volatility/credit/breadth contradictions, crypto derivatives/liquidity tension, commodity cross-asset distinctions, price-reaction statuses, provider/source reliability, source independence, and diagnostic DXY/VIX limits.
+- Still open: live provider activation, empirical reliability/backtesting, and production data calibration.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9B open-loop update — real-engine golden scenarios
+
+- C6-R9B removes the self-fulfilling golden scenario runner path and derives observed acceptance fields from actual reasoning engine outputs.
+- The suite remains deterministic and fixture-driven, not live-provider or empirical-backtesting completion.
+- Still open: live provider activation, empirical reliability/backtesting, and production data calibration.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9C golden scenario acceptance purity note
+
+- Closed: golden-scenario acceptance no longer satisfies required warnings or contradiction families from fixture/category/source metadata.
+- Closed: confidence expectations now apply deterministic bounds/tier/cap checks instead of universal 0–100 acceptance.
+- Open: live provider activation remains pending.
+- Open: empirical reliability/backtesting remains pending.
+- Open: production data calibration remains pending.
+- Scope note: no UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.
+
+## C6-R9D golden scenario confidence acceptance tightening
+
+- Closed: golden-scenario confidence acceptance now rejects materially too-low, too-high, or wrong-tier actual confidence outputs.
+- Closed: default confidence bands are tightened and tier/cap expectations are enforced for diagnostic, fixture-only, and price-reaction scenarios.
+- Open: live provider activation remains pending.
+- Open: empirical reliability/backtesting remains pending.
+- Open: production data calibration remains pending.
+- Scope note: no UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behavior changed.
+
+## C6-R9E golden scenario expectation completeness closure
+
+- Closed: all binding golden-scenario expectations now participate in pass/fail, including reason codes, provider warnings, price-reaction status/warnings, severity, and confidence.
+- Closed: severity expectations now use the canonical contradiction severity vocabulary.
+- Open: live provider activation remains pending.
+- Open: empirical backtesting remains pending.
+- Open: production-data calibration remains pending.
+- Scope note: no adaptive confidence/drift engine, UI, live provider, payment, notification, commercial, Super Admin, affiliate, route-entitlement, or 2FA behaviour changed.
+
+## C6-R9F actual confidence and provider-input purity closure
+
+- Closed: supported golden-scenario confidence now comes from the real confidence-calibration output, not a separate golden-runner confidence formula.
+- Closed: provider expectations no longer construct provider-reliability inputs; provider input fixtures now carry deterministic dependency input.
+- Closed: price confidence-effect checks are binding, and provider expectation flag failures are individually reported.
+- Open: live provider activation remains pending.
+- Open: empirical backtesting remains pending.
+- Open: production-data calibration remains pending.
+- Scope note: no adaptive confidence/drift engine, UI, live provider, payment, notification, commercial, Super Admin, affiliate, route-entitlement, or 2FA behaviour changed.
+
+## C6-R9G fixture input explicitness and canonical confidence tiers
+
+- Closed: confidence-tier thresholds now have one canonical shared definition.
+- Closed: golden fixtures now use one visible confidence anchor and explicit economic input rather than hidden scenario-ID inference.
+- Closed: category labels no longer inject semantic evidence, and price confidence effects are tested with controlled same-input comparisons.
+- Open: live provider activation remains pending.
+- Open: empirical backtesting remains pending.
+- Open: production-data calibration remains pending.
+- Scope note: no adaptive confidence/drift system, UI, live provider, payment, notification, commercial, Super Admin, affiliate, route-entitlement, or 2FA behaviour changed.
+
+## C6-R9G.1 confidence-floor saturation open loop
+
+- Deterministic fixture/dry-run confidence currently exhibits substantial floor saturation: 25 of 33 current golden scenarios produce confidence `0`.
+- This may reflect conservative stacked readiness, coverage, confirmation, contradiction, and provider penalties rather than calibrated production confidence.
+- Empirical backtesting must determine whether these penalties are correctly composed or over-accumulating.
+- Production-data calibration remains required; this is not live confidence validation.
+- Do not close this issue merely because the golden fixtures accept the current values.

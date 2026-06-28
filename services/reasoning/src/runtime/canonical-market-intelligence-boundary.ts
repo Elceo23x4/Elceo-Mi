@@ -1,3 +1,4 @@
+import { assertMarketGoldenScenarioRuleSetValid, getMarketGoldenScenario, getMarketGoldenScenarioCoverageReport, getMarketGoldenScenarioRuleSetSnapshot, listMarketGoldenScenarioRules, listMarketGoldenScenarios, listMarketGoldenScenarioWarnings, runMarketGoldenScenario, runMarketGoldenScenarioById, runMarketGoldenScenarioSuite } from '../golden-scenarios/index';
 import { assertGoldenScenarioResult, getGoldenScenarioCoverageReport, getGoldenScenarioDefinition, getGoldenScenarioDefinitions, listGoldenScenariosByAsset, listGoldenScenariosByFamily, runAllGoldenScenarios, runGoldenScenario } from '../golden-scenario-reasoning/index';
 import { generateAndPersistMarketEvidenceRegistrySnapshot } from '../evidence-registry/snapshot-service';
 import { getLatestMarketEvidenceRegistrySnapshot, listMarketEvidenceRegistrySnapshots } from '../evidence-registry/query-service';
@@ -139,6 +140,16 @@ export class CanonicalMarketIntelligenceBoundaryService {
   runAllGoldenScenarios() { return runAllGoldenScenarios(); }
   assertGoldenScenarioResult(scenarioId: Parameters<typeof assertGoldenScenarioResult>[0]) { return assertGoldenScenarioResult(scenarioId); }
   getGoldenScenarioCoverageReport() { return getGoldenScenarioCoverageReport(); }
+  listMarketGoldenScenarios() { return listMarketGoldenScenarios(); }
+  getMarketGoldenScenario(scenarioId: Parameters<typeof getMarketGoldenScenario>[0]) { return getMarketGoldenScenario(scenarioId); }
+  runMarketGoldenScenario(scenario: Parameters<typeof runMarketGoldenScenario>[0]) { return runMarketGoldenScenario(scenario); }
+  runMarketGoldenScenarioById(scenarioId: Parameters<typeof runMarketGoldenScenarioById>[0]) { return runMarketGoldenScenarioById(scenarioId); }
+  runMarketGoldenScenarioSuite(options?: Parameters<typeof runMarketGoldenScenarioSuite>[0]) { return runMarketGoldenScenarioSuite(options); }
+  getMarketGoldenScenarioCoverageReport(asOfIso?: string) { return getMarketGoldenScenarioCoverageReport(asOfIso); }
+  getMarketGoldenScenarioRuleSetSnapshot(asOfIso?: string) { return getMarketGoldenScenarioRuleSetSnapshot(asOfIso); }
+  assertMarketGoldenScenarioRuleSetValid() { return assertMarketGoldenScenarioRuleSetValid(); }
+  listMarketGoldenScenarioRules(asset?: Parameters<typeof listMarketGoldenScenarioRules>[0]) { return listMarketGoldenScenarioRules(asset); }
+  listMarketGoldenScenarioWarnings(asset?: Parameters<typeof listMarketGoldenScenarioWarnings>[0]) { return listMarketGoldenScenarioWarnings(asset); }
   buildFixtureEvidenceForScenario(scenarioId: Parameters<typeof buildFixtureEvidenceForScenario>[0]) { return buildFixtureEvidenceForScenario(scenarioId); }
   buildFixtureExpectedOutput(scenarioId: Parameters<typeof buildFixtureExpectedOutput>[0]) { return buildFixtureExpectedOutput(scenarioId); }
 

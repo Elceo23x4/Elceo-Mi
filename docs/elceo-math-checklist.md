@@ -506,3 +506,82 @@ Status: **audit completed; implementation pending for R1-R9**. The existing chec
 - [ ] Live provider activation remains pending.
 - [ ] Empirical reliability backtesting remains pending.
 - [ ] Golden scenario expansion remains pending.
+
+## C6-R9 deterministic golden scenario acceptance
+
+- [x] Deterministic golden scenario acceptance suite added and validated by reasoning tests.
+- [x] At least 28 deterministic scenarios exist; C6-R9 currently includes 33.
+- [x] All 14 launch/diagnostic assets are represented.
+- [x] Macro surprise, FX relative strength, contradiction matrix, confidence calibration, price reaction, provider reliability, source independence, and diagnostic limitations are covered by fixture scenarios.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical reliability/backtesting remains pending.
+- [ ] Production data calibration remains pending.
+- Note: this checklist marks deterministic acceptance complete only for fixture-driven verification. It does not mark live provider reliability or empirical market validation complete.
+
+## C6-R9B golden scenario execution verification
+
+- [x] Golden scenarios now execute actual reasoning modules instead of copying expected fixture values into observed outputs.
+- [x] Anti-self-fulfillment tests prove mutated expectations, warnings, contradiction families, price candles, and provider metadata affect pass/fail behavior.
+- [x] Deterministic acceptance remains complete for the fixture suite only.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical reliability/backtesting remains pending.
+- [ ] Production data calibration remains pending.
+
+## C6-R9C golden scenario acceptance purity
+
+- [x] Fixture-derived warning shortcuts removed from golden-scenario acceptance.
+- [x] Contradiction-family acceptance now depends only on actual contradiction matrix signals.
+- [x] Confidence acceptance uses meaningful deterministic bounds/tier/cap checks rather than universal 0–100 ranges.
+- [x] Anti-fixture-derivation tests prove missing actual warnings, missing actual families, source-disagreement purity, and impossible confidence bands fail.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical reliability/backtesting remains pending.
+- [ ] Production data calibration remains pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9D golden scenario confidence acceptance tightening
+
+- [x] Default golden-scenario confidence acceptance now uses meaningful deterministic bands rather than broad 0–100-like ranges.
+- [x] Expected/allowed confidence tiers are enforced during scenario pass/fail evaluation.
+- [x] Diagnostic and fixture-only confidence caps remain active and cannot pass as very high confidence.
+- [x] Price-reaction confidence ordering is protected by tests for confirmed versus absorbed/rejected/reversed cases.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical reliability/backtesting remains pending.
+- [ ] Production data calibration remains pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/2FA behavior changed.
+
+## C6-R9E golden scenario expectation completeness
+
+- [x] Expected reason codes are binding acceptance criteria checked against actual engine reason codes.
+- [x] Price-reaction status and price-reaction warnings are binding and checked against price-reaction engine output only.
+- [x] Provider warnings and provider expectation flags are binding and checked against provider-reliability output only.
+- [x] Severity expectations reuse the canonical contradiction severity contract and participate in pass/fail.
+- [x] Confidence expectations remain bounded and tier/cap validated; no adaptive confidence or drift engine was introduced.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical backtesting remains pending.
+- [ ] Production-data calibration remains pending.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.
+
+## C6-R9F actual confidence and provider-input purity
+
+- [x] Supported golden-scenario confidence now uses the actual confidence-calibration engine result and tier.
+- [x] Diagnostic confidence fallback is explicit for unsupported diagnostic assets.
+- [x] Provider expectation fields no longer construct provider-engine inputs.
+- [x] Price confidence-effect semantics are binding in pass/fail.
+- [x] Provider flag failures are individually diagnosable.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical backtesting remains pending.
+- [ ] Production-data calibration remains pending.
+- No adaptive confidence/drift engine was introduced.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.
+
+## C6-R9G fixture input explicitness and canonical confidence tiers
+
+- [x] Confidence-tier thresholds now use one canonical shared source.
+- [x] Fixture confidence expectations have one visible inline source of truth.
+- [x] Scenario IDs/categories no longer manufacture economic evidence or semantic contradiction context.
+- [x] Price-reaction confidence effects are verified through controlled same-input comparisons.
+- [ ] Live provider activation remains pending.
+- [ ] Empirical backtesting remains pending.
+- [ ] Production-data calibration remains pending.
+- No adaptive confidence/drift system was introduced.
+- No UI/live provider/payment/notification/commercial/Super Admin/affiliate/route-entitlement/2FA behaviour changed.

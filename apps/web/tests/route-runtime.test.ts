@@ -821,16 +821,44 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal(p4GiftNoStepUpJson.ok, false);
   assert.equal(JSON.stringify(p4GiftNoStepUpJson).includes('step_up_required'), true);
 
-  const p4GiftInvalidDuration = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'three_months', stepUpVerification: { status: 'verified', verifiedAt: new Date().toISOString() } }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+
+  const p4GiftForgedOnly = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks', stepUpVerification: { status: 'verified', verifiedAt: new Date().toISOString(), challengeId: null }, proof: 'fixture-pass' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4GiftForgedOnly.status, 403);
+  assertNoSensitiveLeak(await readJson(p4GiftForgedOnly));
+
+  const p4GiftUnknownChallenge = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks', stepUpChallengeId: 'stepup_unknown', proof: 'fixture-pass' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4GiftUnknownChallenge.status, 403);
+
+  const p4GiftInvalidDuration = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'three_months', stepUpChallengeId: challengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
   assert.equal(p4GiftInvalidDuration.status, 400);
   assert.deepEqual(await readJson(p4GiftInvalidDuration), { ok: false, error: { code: 'validation_error', message: 'Validation failed', details: ['invalid_duration'] } });
 
-  const p4GiftOk = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks', targetUserId: 'user-ignored', stepUpVerification: { status: 'verified', verifiedAt: new Date().toISOString() } }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  const p4GiftOk = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks', targetUserId: 'user-ignored', stepUpChallengeId: challengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
   const p4GiftOkJson = await readJson(p4GiftOk);
   assert.equal(p4GiftOk.status, 200);
   assert.equal(p4GiftOkJson.ok, true);
   assert.equal((p4GiftOkJson.data as { targetUserId: string }).targetUserId, 'user-5');
   assertNoSensitiveLeak(p4GiftOkJson);
+
+  const p4GiftReuse = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks', stepUpChallengeId: challengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4GiftReuse.status, 403);
+
+
+
+  const createVerifiedStepUp = async (actionKind: string, targetUserId: string) => {
+    const created = await adminStepUpChallengeRoute.POST(request('https://x/api/admin/security/step-up/challenge', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'fixture_test_only', actionKind, targetUserId }) }));
+    assert.equal(created.status, 200);
+    const createdJson = await readJson(created);
+    const id = (createdJson.data as { challengeId: string }).challengeId;
+    const verified = await adminStepUpVerifyRoute.POST(request('https://x/api/admin/security/step-up/verify', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ challengeId: id, providerKind: 'fixture_test_only', proof: 'fixture-pass' }) }));
+    assert.equal(((await readJson(verified)).data as { verified: boolean }).verified, true);
+    return id;
+  };
+
+  const wrongTargetChallenge = await createVerifiedStepUp('focus_plan_gift', 'user-wrong-target');
+  assert.equal((await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks', stepUpChallengeId: wrongTargetChallenge }) }), { params: Promise.resolve({ userId: 'user-5' }) })).status, 403);
+  const wrongActionChallenge = await createVerifiedStepUp('user_restriction', 'user-5');
+  assert.equal((await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks', stepUpChallengeId: wrongActionChallenge }) }), { params: Promise.resolve({ userId: 'user-5' }) })).status, 403);
 
   const p4RetractNoStepUp = await adminCommercialRetractFocusGiftRoute.POST(request('https://x/api/admin/commercial/users/user-5/retract-focus-gift', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ giftRecordId: 'gift-1' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
   assert.equal(p4RetractNoStepUp.status, 403);
@@ -839,6 +867,17 @@ export async function runRouteRuntimeTests(): Promise<void> {
   const p4RestrictNoStepUp = await adminCommercialRestrictUserRoute.POST(request('https://x/api/admin/commercial/users/user-5/restrict', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ restrictionKind: 'suspended' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
   assert.equal(p4RestrictNoStepUp.status, 403);
   assert.equal(JSON.stringify(await readJson(p4RestrictNoStepUp)).includes('step_up_required'), true);
+
+
+  const retractChallengeId = await createVerifiedStepUp('focus_plan_gift_retract', 'user-5');
+  const p4RetractOk = await adminCommercialRetractFocusGiftRoute.POST(request('https://x/api/admin/commercial/users/user-5/retract-focus-gift', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ giftRecordId: (p4GiftOkJson.data as { giftRecordId: string }).giftRecordId, stepUpChallengeId: retractChallengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4RetractOk.status, 200);
+
+  const restrictChallengeId = await createVerifiedStepUp('user_restriction', 'user-5');
+  const p4RestrictOk = await adminCommercialRestrictUserRoute.POST(request('https://x/api/admin/commercial/users/user-5/restrict', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ restrictionKind: 'suspended', stepUpChallengeId: restrictChallengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4RestrictOk.status, 200);
+  const p4RestrictReuse = await adminCommercialRestrictUserRoute.POST(request('https://x/api/admin/commercial/users/user-5/restrict', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ restrictionKind: 'suspended', stepUpChallengeId: restrictChallengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4RestrictReuse.status, 403);
 
   for (const field of ['ip', 'ipAddress', 'cidr', 'ipBan']) {
     const p4RestrictIpBlocked = await adminCommercialRestrictUserRoute.POST(request('https://x/api/admin/commercial/users/user-5/restrict', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ restrictionKind: 'banned', stepUpVerification: { status: 'verified', verifiedAt: new Date().toISOString() }, [field]: '1.2.3.4' }) }), { params: Promise.resolve({ userId: 'user-5' }) });

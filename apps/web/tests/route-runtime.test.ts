@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { clearAuthTestOverrides, setAuthTestOverrides } from '../lib/server/auth/subject';
 import { setCompositionTestOverrides } from './stubs/composition';
+import { commercialMutationCounts, expireStepUpChallengeFreshness, resetCommercialMutationCounts } from './stubs/application-state';
 
 import * as workspaceCurrentRoute from '../app/api/workspace/current/route';
 import * as workspaceRefreshRoute from '../app/api/workspace/refresh/route';
@@ -146,6 +147,7 @@ let replayResponseJson = '{"ok":true,"data":{"run":{"runId":"replayed"}}}';
 let securityFailedCount = 0;
 let securityAuditCount = 0;
 let latestSecurityActionKind: string | null = null;
+const idempotencyRecords = new Map<string, { requestHash: string; responseJson: string; httpStatus: number }>();
 
 function assertNoSensitiveLeak(response: unknown): void {
   const serialized = JSON.stringify(response).toLowerCase();
@@ -275,16 +277,25 @@ const mockApplicationStateRuntime = {
   security: {
     evaluateSecurityControl: async (_params: { actionKind: string; actorKind: string; actorId: string; subjectId?: string | null; idempotencyKey?: string | null; requestHash?: string | null; routePath?: string; method?: string }) => {
       latestSecurityActionKind = _params.actionKind;
-      if (securityDecisionMode === 'rate_limited') return { decisionId: 'sec-rate', actionKind: 'billing_reconcile', actorKind: 'internal', actorId: 'internal-api', subjectId: 'user-2', status: 'blocked', blockReason: 'rate_limit_exceeded', idempotencyKey: 'idem', rateLimitPolicyKey: 'p', currentCount: 60, maxCount: 60, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
-      if (securityDecisionMode === 'idempotency_conflict') return { decisionId: 'sec-idem', actionKind: 'billing_reconcile', actorKind: 'internal', actorId: 'internal-api', subjectId: 'user-2', status: 'blocked', blockReason: 'idempotency_conflict', idempotencyKey: 'idem', rateLimitPolicyKey: null, currentCount: null, maxCount: null, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
-      if (securityDecisionMode === 'replayed') return { decisionId: 'sec-replay', actionKind: 'billing_orchestration_retry', actorKind: 'internal', actorId: 'internal-api', subjectId: 'user-2', status: 'replayed', blockReason: null, idempotencyKey: 'idem', rateLimitPolicyKey: null, currentCount: null, maxCount: null, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
-      return { decisionId: 'sec-allow', actionKind: 'billing_reconcile', actorKind: 'internal', actorId: 'internal-api', subjectId: 'user-2', status: 'allowed', blockReason: null, idempotencyKey: 'idem', rateLimitPolicyKey: null, currentCount: null, maxCount: null, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
+      const idempotencyKey = _params.idempotencyKey ?? null;
+      const requestHash = _params.requestHash ?? '';
+      if (securityDecisionMode === 'rate_limited') return { decisionId: 'sec-rate', actionKind: _params.actionKind, actorKind: _params.actorKind, actorId: _params.actorId, subjectId: _params.subjectId, status: 'blocked', blockReason: 'rate_limit_exceeded', idempotencyKey, rateLimitPolicyKey: 'p', currentCount: 60, maxCount: 60, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
+      if (securityDecisionMode === 'idempotency_conflict') return { decisionId: 'sec-idem', actionKind: _params.actionKind, actorKind: _params.actorKind, actorId: _params.actorId, subjectId: _params.subjectId, status: 'blocked', blockReason: 'idempotency_conflict', idempotencyKey, rateLimitPolicyKey: null, currentCount: null, maxCount: null, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
+      if (securityDecisionMode === 'replayed') return { decisionId: 'sec-replay', actionKind: _params.actionKind, actorKind: _params.actorKind, actorId: _params.actorId, subjectId: _params.subjectId, status: 'replayed', blockReason: null, idempotencyKey, rateLimitPolicyKey: null, currentCount: null, maxCount: null, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
+      if (idempotencyKey) {
+        const existing = idempotencyRecords.get(idempotencyKey);
+        if (existing?.requestHash === requestHash) return { decisionId: 'sec-replay', actionKind: _params.actionKind, actorKind: _params.actorKind, actorId: _params.actorId, subjectId: _params.subjectId, status: 'replayed', blockReason: null, idempotencyKey, rateLimitPolicyKey: null, currentCount: null, maxCount: null, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
+        if (existing) return { decisionId: 'sec-idem', actionKind: _params.actionKind, actorKind: _params.actorKind, actorId: _params.actorId, subjectId: _params.subjectId, status: 'blocked', blockReason: 'idempotency_conflict', idempotencyKey, rateLimitPolicyKey: null, currentCount: null, maxCount: null, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
+      }
+      return { decisionId: 'sec-allow', actionKind: _params.actionKind, actorKind: _params.actorKind, actorId: _params.actorId, subjectId: _params.subjectId, status: 'allowed', blockReason: null, idempotencyKey, rateLimitPolicyKey: null, currentCount: null, maxCount: null, decidedAt: '2026-01-01T00:00:00.000Z', metadataJson: '{}' };
     },
     completeIdempotentAction: async (_params: { idempotencyKey: string; responseHash: string; nowIso: string }) => { securityCompletedCount += 1; },
-    completeIdempotentActionWithResponse: async (_params: { idempotencyKey: string; requestHash: string; responseHash: string; httpStatus: number; responseJson: string; completedAt: string }) => { securityCompletedWithResponseCount += 1; securityCompletedCount += 1; replayResponseJson = _params.responseJson; },
+    completeIdempotentActionWithResponse: async (_params: { idempotencyKey: string; requestHash: string; responseHash: string; httpStatus: number; responseJson: string; completedAt: string }) => { securityCompletedWithResponseCount += 1; securityCompletedCount += 1; replayResponseJson = _params.responseJson; idempotencyRecords.set(_params.idempotencyKey, { requestHash: _params.requestHash, responseJson: _params.responseJson, httpStatus: _params.httpStatus }); },
     getIdempotencyReplayResult: async (_idempotencyKey: string, _requestHash: string, _asOfIso?: string) => {
       if (replayMode === 'unavailable') return { replayable: false, reason: 'no_completed_response', completedAt: null, httpStatus: null, responseJson: null };
       if (replayMode === 'malformed') return { replayable: true, reason: 'completed_response_found', completedAt: '2026-01-01T00:00:00.000Z', httpStatus: 200, responseJson: '{' };
+      const existing = idempotencyRecords.get(_idempotencyKey);
+      if (existing?.requestHash === _requestHash) return { replayable: true, reason: 'completed_response_found', completedAt: '2026-01-01T00:00:00.000Z', httpStatus: existing.httpStatus, responseJson: existing.responseJson };
       return { replayable: true, reason: 'completed_response_found', completedAt: '2026-01-01T00:00:00.000Z', httpStatus: 200, responseJson: replayResponseJson };
     },
     failIdempotentAction: async (_params: { idempotencyKey: string; nowIso: string; metadata?: Record<string, unknown> }) => { securityFailedCount += 1; },
@@ -790,6 +801,12 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal(stepUpChallengeOkJson.ok, true);
   assertNoSensitiveLeak(stepUpChallengeOkJson);
 
+
+  const stepUpChallengeWrongRouteScope = await adminStepUpChallengeRoute.POST(request('https://x/api/admin/security/step-up/challenge', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'fixture_test_only', actionKind: 'focus_plan_gift', routeScope: '/wrong', targetUserId: 'user-5' }) }));
+  assert.equal(stepUpChallengeWrongRouteScope.status, 400);
+  const stepUpChallengeNonStringRouteScope = await adminStepUpChallengeRoute.POST(request('https://x/api/admin/security/step-up/challenge', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'fixture_test_only', actionKind: 'focus_plan_gift', routeScope: 123, targetUserId: 'user-5' }) }));
+  assert.equal(stepUpChallengeNonStringRouteScope.status, 400);
+
   const stepUpVerifyNoToken = await adminStepUpVerifyRoute.POST(request('https://x/api/admin/security/step-up/verify', { method: 'POST', body: JSON.stringify({ challengeId: 'x', providerKind: 'fixture_test_only', proof: 'fixture-pass' }) }));
   assert.equal(stepUpVerifyNoToken.status, 403);
   const challengeId = (stepUpChallengeOkJson.data as { challengeId: string }).challengeId;
@@ -811,6 +828,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assertNoSensitiveLeak(stepUpReadinessJson);
 
 
+  resetCommercialMutationCounts();
   const p4GiftNoToken = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', body: JSON.stringify({ duration: 'two_weeks' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
   assert.equal(p4GiftNoToken.status, 403);
   assert.equal((await readJson(p4GiftNoToken)).ok, false);
@@ -821,16 +839,79 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal(p4GiftNoStepUpJson.ok, false);
   assert.equal(JSON.stringify(p4GiftNoStepUpJson).includes('step_up_required'), true);
 
-  const p4GiftInvalidDuration = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'three_months', stepUpVerification: { status: 'verified', verifiedAt: new Date().toISOString() } }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+
+  const p4GiftForgedOnly = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks', stepUpVerification: { status: 'verified', verifiedAt: new Date().toISOString(), challengeId: null }, proof: 'fixture-pass' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4GiftForgedOnly.status, 403);
+  assertNoSensitiveLeak(await readJson(p4GiftForgedOnly));
+
+  const p4GiftUnknownChallenge = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'commercial-denied-replay' }, body: JSON.stringify({ duration: 'two_weeks', stepUpChallengeId: 'stepup_unknown', proof: 'fixture-pass' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4GiftUnknownChallenge.status, 403);
+  const p4GiftUnknownJson = await readJson(p4GiftUnknownChallenge);
+  assert.deepEqual(p4GiftUnknownJson, { ok: false, error: { code: 'forbidden', message: 'Step-up verification failed', details: ['step_up_verification_failed'] } });
+  const p4GiftUnknownReplay = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'commercial-denied-replay' }, body: JSON.stringify({ duration: 'two_weeks', stepUpChallengeId: 'stepup_unknown', proof: 'fixture-pass' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.deepEqual(await readJson(p4GiftUnknownReplay), p4GiftUnknownJson);
+
+  const p4GiftInvalidDuration = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'three_months', stepUpChallengeId: challengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
   assert.equal(p4GiftInvalidDuration.status, 400);
   assert.deepEqual(await readJson(p4GiftInvalidDuration), { ok: false, error: { code: 'validation_error', message: 'Validation failed', details: ['invalid_duration'] } });
 
-  const p4GiftOk = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks', targetUserId: 'user-ignored', stepUpVerification: { status: 'verified', verifiedAt: new Date().toISOString() } }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  const p4GiftOk = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'commercial-gift-replay' }, body: JSON.stringify({ duration: 'two_weeks', targetUserId: 'user-ignored', stepUpChallengeId: challengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
   const p4GiftOkJson = await readJson(p4GiftOk);
   assert.equal(p4GiftOk.status, 200);
   assert.equal(p4GiftOkJson.ok, true);
   assert.equal((p4GiftOkJson.data as { targetUserId: string }).targetUserId, 'user-5');
   assertNoSensitiveLeak(p4GiftOkJson);
+  assert.equal(commercialMutationCounts.gift, 1);
+  const p4GiftReplay = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'commercial-gift-replay' }, body: JSON.stringify({ duration: 'two_weeks', targetUserId: 'user-ignored', stepUpChallengeId: challengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.deepEqual(await readJson(p4GiftReplay), p4GiftOkJson);
+  assert.equal(commercialMutationCounts.gift, 1);
+
+
+  const p4GiftCrossTargetReplay = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-6/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'commercial-gift-replay' }, body: JSON.stringify({ duration: 'two_weeks', targetUserId: 'user-ignored', stepUpChallengeId: challengeId }) }), { params: Promise.resolve({ userId: 'user-6' }) });
+  assert.equal(p4GiftCrossTargetReplay.status, 409);
+  assert.equal(commercialMutationCounts.gift, 1);
+  setAuthTestOverrides({ subjectResolver: async () => ({ subjectKind: 'user' as const, subjectId: 'admin-b-subject', userId: 'admin-b' }), internalToken: 'internal-token' });
+  const p4GiftCrossActorReplay = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'commercial-gift-replay' }, body: JSON.stringify({ duration: 'two_weeks', targetUserId: 'user-ignored', stepUpChallengeId: challengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4GiftCrossActorReplay.status, 409);
+  setAuthTestOverrides({ subjectResolver: async () => subject, internalToken: 'internal-token' });
+
+  const p4CrossActionReplay = await adminCommercialRestrictUserRoute.POST(request('https://x/api/admin/commercial/users/user-5/restrict', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'commercial-gift-replay' }, body: JSON.stringify({ restrictionKind: 'suspended', stepUpChallengeId: challengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4CrossActionReplay.status, 409);
+  assert.equal(commercialMutationCounts.restrict, 0);
+
+  const p4GiftReuse = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks', stepUpChallengeId: challengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4GiftReuse.status, 403);
+  assert.equal(commercialMutationCounts.gift, 1);
+
+
+
+  const createVerifiedStepUp = async (actionKind: string, targetUserId: string) => {
+    const created = await adminStepUpChallengeRoute.POST(request('https://x/api/admin/security/step-up/challenge', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'fixture_test_only', actionKind, targetUserId }) }));
+    assert.equal(created.status, 200);
+    const createdJson = await readJson(created);
+    const id = (createdJson.data as { challengeId: string }).challengeId;
+    const verified = await adminStepUpVerifyRoute.POST(request('https://x/api/admin/security/step-up/verify', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ challengeId: id, providerKind: 'fixture_test_only', proof: 'fixture-pass' }) }));
+    assert.equal(((await readJson(verified)).data as { verified: boolean }).verified, true);
+    return id;
+  };
+
+  const wrongTargetChallenge = await createVerifiedStepUp('focus_plan_gift', 'user-wrong-target');
+  assert.equal((await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks', stepUpChallengeId: wrongTargetChallenge }) }), { params: Promise.resolve({ userId: 'user-5' }) })).status, 403);
+  const wrongActionChallenge = await createVerifiedStepUp('user_restriction', 'user-5');
+  assert.equal((await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks', stepUpChallengeId: wrongActionChallenge }) }), { params: Promise.resolve({ userId: 'user-5' }) })).status, 403);
+
+
+  const actorBoundChallenge = await createVerifiedStepUp('focus_plan_gift', 'user-5');
+  setAuthTestOverrides({ subjectResolver: async () => ({ subjectKind: 'user' as const, subjectId: 'admin-b-subject', userId: 'admin-b' }), internalToken: 'internal-token' });
+  const p4WrongActor = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks', stepUpChallengeId: actorBoundChallenge }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4WrongActor.status, 403);
+  setAuthTestOverrides({ subjectResolver: async () => subject, internalToken: 'internal-token' });
+
+
+  const staleRouteChallenge = await createVerifiedStepUp('focus_plan_gift', 'user-5');
+  expireStepUpChallengeFreshness(staleRouteChallenge);
+  const p4StaleChallenge = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks', stepUpChallengeId: staleRouteChallenge }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4StaleChallenge.status, 403);
 
   const p4RetractNoStepUp = await adminCommercialRetractFocusGiftRoute.POST(request('https://x/api/admin/commercial/users/user-5/retract-focus-gift', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ giftRecordId: 'gift-1' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
   assert.equal(p4RetractNoStepUp.status, 403);
@@ -839,6 +920,18 @@ export async function runRouteRuntimeTests(): Promise<void> {
   const p4RestrictNoStepUp = await adminCommercialRestrictUserRoute.POST(request('https://x/api/admin/commercial/users/user-5/restrict', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ restrictionKind: 'suspended' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
   assert.equal(p4RestrictNoStepUp.status, 403);
   assert.equal(JSON.stringify(await readJson(p4RestrictNoStepUp)).includes('step_up_required'), true);
+
+
+  const retractChallengeId = await createVerifiedStepUp('focus_plan_gift_retract', 'user-5');
+  const p4RetractOk = await adminCommercialRetractFocusGiftRoute.POST(request('https://x/api/admin/commercial/users/user-5/retract-focus-gift', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ giftRecordId: ((await readJson(await adminCommercialControlSnapshotRoute.GET(request('https://x/api/admin/commercial/users/user-5/control-snapshot', { headers: { 'x-elceo-internal-token': 'internal-token' } }), { params: Promise.resolve({ userId: 'user-5' }) }))).data as { snapshot: { activeGift: { giftRecordId: string } } }).snapshot.activeGift.giftRecordId, stepUpChallengeId: retractChallengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4RetractOk.status, 200);
+
+  const restrictChallengeId = await createVerifiedStepUp('user_restriction', 'user-5');
+  const p4RestrictOk = await adminCommercialRestrictUserRoute.POST(request('https://x/api/admin/commercial/users/user-5/restrict', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ restrictionKind: 'suspended', stepUpChallengeId: restrictChallengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4RestrictOk.status, 200);
+  const p4RestrictReuse = await adminCommercialRestrictUserRoute.POST(request('https://x/api/admin/commercial/users/user-5/restrict', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ restrictionKind: 'suspended', stepUpChallengeId: restrictChallengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4RestrictReuse.status, 403);
+  assert.equal(commercialMutationCounts.restrict, 1);
 
   for (const field of ['ip', 'ipAddress', 'cidr', 'ipBan']) {
     const p4RestrictIpBlocked = await adminCommercialRestrictUserRoute.POST(request('https://x/api/admin/commercial/users/user-5/restrict', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ restrictionKind: 'banned', stepUpVerification: { status: 'verified', verifiedAt: new Date().toISOString() }, [field]: '1.2.3.4' }) }), { params: Promise.resolve({ userId: 'user-5' }) });

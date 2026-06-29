@@ -12,13 +12,14 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   const body = (await parseJsonBody(request)) as Record<string, unknown>;
   if (!isSuperAdminCommercialActionKind(body.actionKind)) return jsonError('validation_error', 'Validation failed', ['unsupported_action_kind'], 400);
   const routeScope = getSuperAdminCommercialRouteScope(body.actionKind);
-  if (typeof body.routeScope === 'string' && body.routeScope !== routeScope) return jsonError('validation_error', 'Validation failed', ['route_scope_mismatch'], 400);
+  if (Object.prototype.hasOwnProperty.call(body, 'routeScope') && body.routeScope !== routeScope) return jsonError('validation_error', 'Validation failed', ['route_scope_mismatch'], 400);
   if (typeof body.targetUserId !== 'string' || body.targetUserId.trim() === '') return jsonError('validation_error', 'Validation failed', ['target_user_id_required'], 400);
+  const targetUserId = body.targetUserId.trim();
   const parsed = validateSuperAdminStepUpChallengeRequest({
     actorUserId: access.subject.userId,
     actionKind: body.actionKind,
     routeScope,
-    targetUserId: body.targetUserId,
+    targetUserId,
     providerKind: body.providerKind,
     requestedAt: new Date().toISOString()
   });

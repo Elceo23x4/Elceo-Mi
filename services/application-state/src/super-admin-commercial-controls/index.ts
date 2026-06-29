@@ -23,7 +23,7 @@ export const SUPER_ADMIN_COMMERCIAL_ACTION_ROUTES = {
 } as const;
 export type SuperAdminCommercialActionKind = keyof typeof SUPER_ADMIN_COMMERCIAL_ACTION_ROUTES;
 export const getSuperAdminCommercialRouteScope = (actionKind: SuperAdminCommercialActionKind) => SUPER_ADMIN_COMMERCIAL_ACTION_ROUTES[actionKind];
-export const isSuperAdminCommercialActionKind = (value: unknown): value is SuperAdminCommercialActionKind => typeof value === 'string' && value in SUPER_ADMIN_COMMERCIAL_ACTION_ROUTES;
+export const isSuperAdminCommercialActionKind = (value: unknown): value is SuperAdminCommercialActionKind => typeof value === 'string' && Object.prototype.hasOwnProperty.call(SUPER_ADMIN_COMMERCIAL_ACTION_ROUTES, value);
 
 export const validateSuperAdminStepUpVerificationInput = (input: unknown) => validateSuperAdminStepUpVerification(input);
 export const assertSuperAdminStepUpVerified = (input: SuperAdminStepUpVerification) => { if (input.status !== 'verified') throw new Error('super_admin_step_up_required'); return input; };

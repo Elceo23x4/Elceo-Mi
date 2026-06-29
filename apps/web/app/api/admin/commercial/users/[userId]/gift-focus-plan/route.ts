@@ -2,10 +2,12 @@ import { jsonError, jsonSuccess, parseJsonBody, withApiErrorBoundary } from '@/l
 import { requireInternalRouteAccess } from '@/lib/server/auth';
 import { requireFeatureAccess } from '@/lib/server/access';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, getSecurityActorFromRequest, requireSecurityDecision } from '@/lib/server/security';
-import { giftFocusPlanToUser } from '@elceo/application-state';
+import { giftFocusPlanToUser, getSuperAdminCommercialRouteScope } from '@elceo/application-state';
 
-const routePath = '/api/admin/commercial/users/[userId]/gift-focus-plan';
-const requireChallengeId = (body: Record<string, unknown>) => typeof body.stepUpChallengeId === 'string' && body.stepUpChallengeId.trim() !== '' ? body.stepUpChallengeId : null;
+const commercialActionKind = 'focus_plan_gift' as const;
+const routePath = getSuperAdminCommercialRouteScope(commercialActionKind);
+const stepUpDeniedEnvelope = { ok: false as const, error: { code: 'forbidden', message: 'Step-up verification failed', details: ['step_up_verification_failed'] } };
+const requireChallengeId = (body: Record<string, unknown>) => typeof body.stepUpChallengeId === 'string' && body.stepUpChallengeId.trim() !== '' ? body.stepUpChallengeId.trim() : null;
 
 export const POST = withApiErrorBoundary(async (request: Request, context: { params: Promise<{ userId: string }> }) => {
   requireInternalRouteAccess(request);
@@ -17,13 +19,15 @@ export const POST = withApiErrorBoundary(async (request: Request, context: { par
   if (!stepUpChallengeId) return jsonError('forbidden', 'Step-up required', ['step_up_required'], 403);
   const duration = body.duration;
   if (duration !== 'two_weeks' && duration !== 'one_month') return jsonError('validation_error', 'Validation failed', ['invalid_duration'], 400);
+  const operatorNote = typeof body.operatorNote === 'string' ? body.operatorNote : '';
   const actor = getSecurityActorFromRequest(request, 'admin');
-  const security = await requireSecurityDecision({ request, routePath, method: 'POST', actionKind: 'admin_write', actor, subjectId: access.subject.subjectId, requestBody: body });
+  const securityRequest = { actorSuperAdminId: access.subject.userId, commercialActionKind, canonicalRouteScope: routePath, targetUserId: userId, stepUpChallengeId, duration, operatorNote };
+  const security = await requireSecurityDecision({ request, routePath, method: 'POST', actionKind: 'admin_write', actor, subjectId: access.subject.subjectId, requestBody: securityRequest });
   if (!security.ok) return security.response;
   try {
-    const result = await giftFocusPlanToUser({ actorSuperAdminId: access.subject.userId, targetUserId: userId, duration, reasonCode: 'commercial_support', operatorNote: typeof body.operatorNote === 'string' ? body.operatorNote : '', stepUpChallengeId, idempotencyKey: security.idempotencyKey, requestedAt: new Date().toISOString() });
-    if (result.status !== 'success' || !result.giftRecord) { const errorBody = { ok: false as const, error: 'step_up_verification_failed' }; await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, requestHash: security.requestHash, responseBody: errorBody, responseEnvelope: errorBody, httpStatus: 403 }); return jsonError('forbidden', 'Step-up verification failed', ['step_up_verification_failed'], 403); }
-    const response = { ok: true as const, action: 'gift_focus_plan', targetUserId: userId, giftRecordId: result.giftRecord.giftRecordId, giftStatus: result.giftRecord.status, startsAt: result.giftRecord.startsAt, endsAt: result.giftRecord.endsAt, entitlementResult: result.resultingEntitlementState, persistenceStatus: result.persistenceStatus };
+    const result = await giftFocusPlanToUser({ actorSuperAdminId: access.subject.userId, targetUserId: userId, duration, reasonCode: 'commercial_support', operatorNote, stepUpChallengeId, idempotencyKey: security.idempotencyKey, requestedAt: new Date().toISOString() });
+    if (result.status !== 'success' || !result.giftRecord) { await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, requestHash: security.requestHash, responseBody: stepUpDeniedEnvelope, responseEnvelope: stepUpDeniedEnvelope, httpStatus: 403 }); return Response.json(stepUpDeniedEnvelope, { status: 403 }); }
+    const response = { ok: true as const, action: 'gift_focus_plan', targetUserId: userId, giftStatus: result.giftRecord.status, startsAt: result.giftRecord.startsAt, endsAt: result.giftRecord.endsAt, entitlementResult: result.resultingEntitlementState, persistenceStatus: result.persistenceStatus };
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, requestHash: security.requestHash, responseBody: response, responseEnvelope: { ok: true as const, data: response }, httpStatus: 200 });
     await auditInternalMutation({ actor, subjectId: userId, actionKind: 'admin_write', routePath, method: 'POST', request, idempotencyKey: security.idempotencyKey, metadata: { action: 'gift_focus_plan', stepUpStatus: 'verified', redactionStatus: 'safe', targetUserId: userId } });
     return jsonSuccess(response);

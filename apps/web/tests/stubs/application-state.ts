@@ -114,3 +114,7 @@ export function getSuperAdminStepUpCoverageReport() {
     providerReadiness: getSuperAdminStepUpReadinessReport()
   };
 }
+
+export async function getSuperAdminStepUpPersistenceReadiness() {
+  return { selectedRepositoryMode: 'memory' as const, databaseConfigured: false, requiredRelationsAvailable: true, persistenceStatus: 'memory_fallback' as const };
+}

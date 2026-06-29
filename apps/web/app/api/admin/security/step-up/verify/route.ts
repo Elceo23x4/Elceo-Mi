@@ -18,6 +18,7 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
     requestedAt: new Date().toISOString()
   });
   if (!parsed.ok) return jsonError('validation_error', 'Validation failed', ['invalid_step_up_verification_request'], 400);
-  const result = verifySuperAdminStepUpChallenge(parsed.value);
+  const result = await verifySuperAdminStepUpChallenge(parsed.value);
+  if (result.persistenceStatus === 'unavailable') return Response.json({ ok: false, error: { code: 'service_unavailable', message: 'Step-up service unavailable', details: ['step_up_persistence_unavailable'] } }, { status: 503 });
   return jsonSuccess({ ...result, proofAccepted: undefined });
 });

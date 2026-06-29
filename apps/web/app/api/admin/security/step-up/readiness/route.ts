@@ -1,7 +1,7 @@
 import { jsonSuccess, withApiErrorBoundary } from '@/lib/server/api';
 import { requireFeatureAccess } from '@/lib/server/access';
 import { requireInternalRouteAccess } from '@/lib/server/auth';
-import { getSuperAdminStepUpCoverageReport, getSuperAdminStepUpReadinessReport } from '@elceo/application-state';
+import { getSuperAdminStepUpCoverageReport, getSuperAdminStepUpPersistenceReadiness, getSuperAdminStepUpReadinessReport } from '@elceo/application-state';
 
 export const GET = withApiErrorBoundary(async (request: Request) => {
   requireInternalRouteAccess(request);
@@ -9,6 +9,7 @@ export const GET = withApiErrorBoundary(async (request: Request) => {
   if (!access.ok) return access.response;
   return jsonSuccess({
     providerReadiness: getSuperAdminStepUpReadinessReport(),
-    coverage: getSuperAdminStepUpCoverageReport()
+    coverage: getSuperAdminStepUpCoverageReport(),
+    persistence: await getSuperAdminStepUpPersistenceReadiness()
   });
 });

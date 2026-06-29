@@ -40,7 +40,7 @@ A finding labeled `merge_blocking` or `pre_staging_blocking` in the audit descri
 
 1. Batch ID: RC-B2.
 2. Exact goal: make step-up challenge, attempts, replay, lockout, freshness, audit, and commercial mutation consumption durable across restarts and multiple instances.
-3. Findings closed: F-013 and remaining step-up portions of F-016.
+3. Findings closed: F-013 and durable challenge/replay/freshness portions related to F-020.
 4. Dependencies: RC-B1.
 5. Exact likely files: `services/application-state/src/super-admin-commercial-controls/index.ts`, `services/application-state/src/persistence/security-runtime-repository.ts`, `infra/db/schema/0037_super_admin_step_up_challenges.sql`, `apps/web/app/api/admin/security/step-up/challenge/route.ts`, `apps/web/app/api/admin/security/step-up/verify/route.ts`, tests.
 6. Prohibited scope: no real provider activation unless separately approved; no payments/notifications activation.
@@ -55,7 +55,7 @@ A finding labeled `merge_blocking` or `pre_staging_blocking` in the audit descri
 
 1. Batch ID: RC-C.
 2. Exact goal: make commercial social identifiers and super-admin commercial controls use durable, consistent repository reads/writes in SQL mode and safe DB pool lifecycle.
-3. Findings closed: F-012, F-014, F-015 policy/open-loop portion.
+3. Findings closed: F-012, F-014, and F-015 persistence/readiness portions; external social-ownership verification policy remains undecided unless approved later.
 4. Dependencies: RC-B1 for trust boundary; RC-B2 if durable step-up is kept separate.
 5. Exact likely files: `apps/web/lib/server/profile/social-identifiers-store.ts`, `services/application-state/src/super-admin-commercial-controls/index.ts`, `services/application-state/src/persistence/security-runtime-repository.ts`, `infra/db/schema/0035_user_social_identifiers.sql`, `infra/db/schema/0036_super_admin_commercial_controls.sql`, route/service tests.
 6. Prohibited scope: no payment activation, no entitlement policy changes beyond fixing durable reads, no route redesign, no 2FA provider activation.
@@ -99,12 +99,12 @@ A finding labeled `merge_blocking` or `pre_staging_blocking` in the audit descri
 ## RC-F — Provider orchestration hardening
 
 1. Batch ID: RC-F.
-2. Exact goal: convert provider orchestration from fixture/dry-run-safe to operationally robust staging-ready behavior without activating live providers by default, and establish the future ELCEO Provider API Gate boundary.
+2. Exact goal: convert provider orchestration from fixture/dry-run-safe to operationally robust staging-ready behavior without activating live providers by default, and establish the future ELCEO Provider API Gate boundary, including canonical source ID, provider/capability ID, adapter ID, capability translation, runtime resolver, and activation mode.
 3. Findings closed: F-008 code-hardening portions, F-009, F-010.
 4. Dependencies: RC-E recommended so admin/internal ingestion routes are enforceably safe.
 5. Exact likely files: `services/reasoning/src/scheduled-ingestion/retry-policy.ts`, `services/reasoning/src/scheduled-ingestion/scheduled-ingestion-service.ts`, `services/ingestion/src/scheduler/lease-repository.ts`, `services/ingestion/src/scheduler/index.ts`, `packages/providers/src/index.ts`, provider source adapter files listed in the provider matrix, scheduled-ingestion API routes, operator inspection routes, persistence repositories.
 6. Prohibited scope: no live credentials, no legal approval claims, no formula recalibration.
-7. Required tests: retry worker claim/restart/concurrency; exponential/jittered backoff if selected; replay idempotency; malformed response; payload size; duplicate response; quota/rate accounting; circuit breaker and stale-if-error tests; API Gate tests for normalized capability requests, caching, request deduplication, request coalescing, quotas, cost budgets, rate-limit accounting, retries/jitter, circuit breakers, concurrency limits, provider selection, explicit fallback, response validation, provenance, secrets, and observability.
+7. Required tests: retry worker claim/restart/concurrency; exponential/jittered backoff if selected; replay idempotency; malformed response; payload size; duplicate response; quota/rate accounting; circuit breaker and stale-if-error tests; API Gate tests for canonical source ID, provider/capability ID, adapter ID, capability translation, runtime resolver, activation mode, normalized capability requests, caching, request deduplication, request coalescing, quotas, cost budgets, rate-limit accounting, retries/jitter, circuit breakers, concurrency limits, provider selection, explicit fallback, response validation, provenance, secrets, and observability.
 8. Validation commands: `npm run typecheck`, `npm run test`, `npm run -w @elceo/reasoning lint`, `npm run build`, `npm run security:gate`.
 9. Merge blockers: non-idempotent retry side effects; live provider calls enabled by default.
 10. Remaining risks: official live response variance remains unverified until RC-H; after the API Gate is implemented, no feature or reasoning service may make an unmanaged direct third-party provider call.

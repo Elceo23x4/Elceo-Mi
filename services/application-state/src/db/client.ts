@@ -10,14 +10,23 @@ export type DbTransactionClient = {
 
 type PoolClientLike = DbTransactionClient & { release: () => void };
 
-type PoolLike = {
+export type DbPoolLike = {
   query: (sql: string, params?: unknown[]) => Promise<{ rows: QueryResultRow[] }>;
   connect: () => Promise<PoolClientLike>;
 };
 
+type PoolLike = DbPoolLike;
+
+let testPoolFactory: (() => Promise<PoolLike> | PoolLike) | null = null;
+export function __setDbPoolFactoryForTests(factory: (() => Promise<PoolLike> | PoolLike) | null): void {
+  testPoolFactory = factory;
+  poolPromise = null;
+}
+
 let poolPromise: Promise<PoolLike> | null = null;
 
 async function getPool(): Promise<PoolLike> {
+  if (testPoolFactory) return testPoolFactory();
   if (!poolPromise) {
     poolPromise = (async () => {
       const module = await import('pg');
@@ -42,6 +51,8 @@ export async function withDbTransaction<T>(callback: (transaction: DbTransaction
   const client = await pool.connect();
   let released = false;
   let operationError: unknown;
+  let result: T | undefined;
+  let releaseError: unknown;
   const guarded: DbTransactionClient = {
     query(sql, params) {
       if (released) return Promise.reject(new Error('transaction_client_released'));
@@ -50,9 +61,8 @@ export async function withDbTransaction<T>(callback: (transaction: DbTransaction
   };
   try {
     await guarded.query('BEGIN');
-    const result = await callback(guarded);
+    result = await callback(guarded);
     await guarded.query('COMMIT');
-    return result;
   } catch (error) {
     operationError = error;
     try {
@@ -60,9 +70,15 @@ export async function withDbTransaction<T>(callback: (transaction: DbTransaction
     } catch {
       // Preserve the original operation failure; cleanup failures are intentionally secondary.
     }
-    throw operationError;
   } finally {
     released = true;
-    client.release();
+    try {
+      client.release();
+    } catch (error) {
+      releaseError = error;
+    }
   }
+  if (operationError !== undefined) throw operationError;
+  if (releaseError !== undefined) throw releaseError;
+  return result as T;
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { clearAuthTestOverrides, setAuthTestOverrides } from '../lib/server/auth/subject';
 import { setCompositionTestOverrides } from './stubs/composition';
-import { commercialMutationCounts, expireStepUpChallengeFreshness, resetCommercialMutationCounts } from './stubs/application-state';
+import { commercialMutationCounts, expireStepUpChallengeFreshness, resetCommercialMutationCounts, setStepUpPersistenceFailureMode } from './stubs/application-state';
 
 import * as workspaceCurrentRoute from '../app/api/workspace/current/route';
 import * as workspaceRefreshRoute from '../app/api/workspace/refresh/route';
@@ -827,11 +827,30 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal(JSON.stringify(stepUpReadinessJson).includes('provider_pending'), true);
   assertNoSensitiveLeak(stepUpReadinessJson);
 
+  setStepUpPersistenceFailureMode('challenge');
+  const stepUpChallengePersistenceFailure = await adminStepUpChallengeRoute.POST(request('https://x/api/admin/security/step-up/challenge', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'fixture_test_only', actionKind: 'focus_plan_gift', targetUserId: 'user-5' }) }));
+  assert.equal(stepUpChallengePersistenceFailure.status, 503);
+  assert.equal(JSON.stringify(await readJson(stepUpChallengePersistenceFailure)).includes('step_up_persistence_unavailable'), true);
+  setStepUpPersistenceFailureMode('verify');
+  const stepUpVerifyPersistenceFailure = await adminStepUpVerifyRoute.POST(request('https://x/api/admin/security/step-up/verify', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ challengeId, providerKind: 'fixture_test_only', proof: 'fixture-pass' }) }));
+  assert.equal(stepUpVerifyPersistenceFailure.status, 503);
+  setStepUpPersistenceFailureMode('readiness');
+  const stepUpReadinessPersistenceFailure = await adminStepUpReadinessRoute.GET(request('https://x/api/admin/security/step-up/readiness', { headers: { 'x-elceo-internal-token': 'internal-token' } }));
+  assert.equal(stepUpReadinessPersistenceFailure.status, 200);
+  assert.equal(((await readJson(stepUpReadinessPersistenceFailure)).data as { persistence: { persistenceStatus: string } }).persistence.persistenceStatus, 'unavailable');
+  setStepUpPersistenceFailureMode('none');
+
 
   resetCommercialMutationCounts();
   const p4GiftNoToken = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', body: JSON.stringify({ duration: 'two_weeks' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
   assert.equal(p4GiftNoToken.status, 403);
   assert.equal((await readJson(p4GiftNoToken)).ok, false);
+  setStepUpPersistenceFailureMode('consume');
+  const p4GiftPersistenceFailure = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks', stepUpChallengeId: challengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4GiftPersistenceFailure.status, 503);
+  assert.equal(commercialMutationCounts.gift, 0);
+  assert.equal(JSON.stringify(await readJson(p4GiftPersistenceFailure)).includes('step_up_persistence_unavailable'), true);
+  setStepUpPersistenceFailureMode('none');
 
   const p4GiftNoStepUp = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
   assert.equal(p4GiftNoStepUp.status, 403);

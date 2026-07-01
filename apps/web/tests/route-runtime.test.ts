@@ -850,7 +850,27 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal(p4GiftPersistenceFailure.status, 503);
   assert.equal(commercialMutationCounts.gift, 0);
   assert.equal(JSON.stringify(await readJson(p4GiftPersistenceFailure)).includes('step_up_persistence_unavailable'), true);
+  const p4RetractPersistenceFailure = await adminCommercialRetractFocusGiftRoute.POST(request('https://x/api/admin/commercial/users/user-5/retract-focus-gift', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ giftRecordId: 'gift-user-5', stepUpChallengeId: challengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4RetractPersistenceFailure.status, 503);
+  assert.equal(commercialMutationCounts.retract, 0);
+  const p4RestrictPersistenceFailure = await adminCommercialRestrictUserRoute.POST(request('https://x/api/admin/commercial/users/user-5/restrict', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ restrictionKind: 'banned', stepUpChallengeId: challengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4RestrictPersistenceFailure.status, 503);
+  assert.equal(commercialMutationCounts.restrict, 0);
+  assert.equal(JSON.stringify(await readJson(p4RestrictPersistenceFailure)).includes('sql'), false);
   setStepUpPersistenceFailureMode('none');
+
+  resetCommercialMutationCounts();
+  const retryChallenge = await adminStepUpChallengeRoute.POST(request('https://x/api/admin/security/step-up/challenge', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'fixture_test_only', actionKind: 'focus_plan_gift', targetUserId: 'user-retry' }) }));
+  const retryChallengeId = ((await readJson(retryChallenge)).data as { challengeId: string }).challengeId;
+  await adminStepUpVerifyRoute.POST(request('https://x/api/admin/security/step-up/verify', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ challengeId: retryChallengeId, providerKind: 'fixture_test_only', proof: 'fixture-pass' }) }));
+  setStepUpPersistenceFailureMode('consume');
+  const retryFail = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-retry/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'idempotency-key': 'retry-key' }, body: JSON.stringify({ duration: 'two_weeks', stepUpChallengeId: retryChallengeId }) }), { params: Promise.resolve({ userId: 'user-retry' }) });
+  assert.equal(retryFail.status, 503);
+  setStepUpPersistenceFailureMode('none');
+  const retrySuccess = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-retry/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'idempotency-key': 'retry-key' }, body: JSON.stringify({ duration: 'two_weeks', stepUpChallengeId: retryChallengeId }) }), { params: Promise.resolve({ userId: 'user-retry' }) });
+  assert.equal(retrySuccess.status, 200);
+  assert.equal(commercialMutationCounts.gift, 1);
+  resetCommercialMutationCounts();
 
   const p4GiftNoStepUp = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-5/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ duration: 'two_weeks' }) }), { params: Promise.resolve({ userId: 'user-5' }) });
   assert.equal(p4GiftNoStepUp.status, 403);

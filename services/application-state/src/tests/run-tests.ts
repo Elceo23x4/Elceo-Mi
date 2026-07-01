@@ -26,6 +26,7 @@ async function main(): Promise<void> {
   const { runCommercialEntitlementsCoreTests } = await import('./commercial-entitlements-core.test.js');
   const { runDbTransactionHelperTests } = await import('./db-transaction-helper.test.js');
   const { runSuperAdminCommercialControlsCoreTests } = await import('./super-admin-commercial-controls-core.test.js');
+  const { runSuperAdminStepUpSqlRepositoryTests } = await import('./super-admin-step-up-sql-repository.test.js');
   const { runSuperAdminStepUpPersistenceTests } = await import('./super-admin-step-up-persistence.test.js');
   const { runSuperAdminMetricsCoreTests } = await import('./super-admin-metrics-core.test.js');
   const { runProviderActivationReadinessCoreTests } = await import('./provider-activation-readiness-core.test.js');
@@ -55,6 +56,7 @@ async function main(): Promise<void> {
   await runCommercialEntitlementsCoreTests();
   await runDbTransactionHelperTests();
   await runSuperAdminCommercialControlsCoreTests();
+  await runSuperAdminStepUpSqlRepositoryTests();
   await runSuperAdminStepUpPersistenceTests();
   runSuperAdminMetricsCoreTests();
   runProviderActivationReadinessCoreTests();

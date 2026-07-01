@@ -114,10 +114,10 @@ export function getSuperAdminStepUpReadinessReport() {
   ];
 }
 
-export function getSuperAdminStepUpCoverageReport() {
+export function buildSuperAdminStepUpCoverageReport(persistenceStatus: 'durable' | 'memory_fallback' | 'unavailable') {
   return {
     generatedAt: new Date().toISOString(),
-    persistenceStatus: 'memory_fallback',
+    persistenceStatus,
     freshnessWindow: { maxAgeSeconds: 600 },
     replayProtection: { enforceSingleUse: true },
     rateLimitPolicy: { maxChallengesPerWindow: 10, windowSeconds: 600 },
@@ -131,3 +131,5 @@ export async function getSuperAdminStepUpPersistenceReadiness() {
   if (stepUpPersistenceFailureMode === 'readiness') return { selectedRepositoryMode: 'sql' as const, databaseConfigured: true, requiredRelationsAvailable: false, persistenceStatus: 'unavailable' as const };
   return { selectedRepositoryMode: 'memory' as const, databaseConfigured: false, requiredRelationsAvailable: true, persistenceStatus: 'memory_fallback' as const };
 }
+
+export function getSuperAdminStepUpCoverageReport() { return buildSuperAdminStepUpCoverageReport('memory_fallback'); }

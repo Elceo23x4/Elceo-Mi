@@ -32,3 +32,9 @@
 - Super Admin commercial mutation routes still require verified step-up and do not expose OTP/proof/token secrets.
 - Persistence status for step-up challenge runtime is memory_fallback; durable provider activation remains deferred.
 - No UI work, no payment/provider/notification live activation in this batch.
+
+## RC-C commercial persistence consistency
+
+RC-C adds durable SQL foundations for Focus Plan gifts, gift retractions, user restrictions, commercial snapshots, commercial operation idempotency/audit records, and target-user serialization. The code path keeps step-up challenge consumption separate from commercial mutation transactions: a consumed challenge is not restored if the later business operation fails. Memory-backed state remains limited to explicit memory repositories for non-production and deterministic tests.
+
+The SQL implementation does not activate payments, notifications, live 2FA providers, IP bans, restriction lifting, automatic gift extension, stacked gifts, or external social-account ownership verification. Social identifiers remain authenticated self-declared identifiers.

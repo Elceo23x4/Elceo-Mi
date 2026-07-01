@@ -23,3 +23,6 @@ export * from './billing-policy-repository';
 export * from './billing-orchestration-repository';
 export * from './security-runtime-repository';
 export * from './super-admin-step-up-repository';
+export * from './commercial-persistence-error';
+export * from './user-social-identifiers-repository';
+export * from './super-admin-commercial-repository';

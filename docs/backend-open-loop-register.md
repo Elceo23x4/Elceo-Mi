@@ -317,3 +317,5 @@ Still open:
 - Empirical backtesting must determine whether these penalties are correctly composed or over-accumulating.
 - Production-data calibration remains required; this is not live confidence validation.
 - Do not close this issue merely because the golden fixtures accept the current values.
+
+- RC-C code foundations now include durable commercial repositories, commercial operation idempotency records, consolidated social identifier persistence, and shared SQL pool lifecycle handling. This is code-level foundation only; staging/managed database rehearsal, production activation, live payment readiness, and external social ownership proof remain unclaimed.

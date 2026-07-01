@@ -1,3 +1,10 @@
+
+export type StepUpPersistenceFailureMode = 'none' | 'challenge' | 'verify' | 'readiness' | 'consume';
+let stepUpPersistenceFailureMode: StepUpPersistenceFailureMode = 'none';
+export function setStepUpPersistenceFailureMode(mode: StepUpPersistenceFailureMode) { stepUpPersistenceFailureMode = mode; }
+export function isStepUpPersistenceError(error: unknown): boolean { return Boolean(error && typeof error === 'object' && (error as { code?: unknown }).code === 'step_up_persistence_unavailable'); }
+const stepUpPersistenceError = () => Object.assign(new Error('Step-up persistence unavailable'), { code: 'step_up_persistence_unavailable' });
+
 const socialStore = new Map<string, { userId: string; socialIdentifiers: Array<{ kind: 'linkedin_address' | 'telegram_id' | 'x_username'; value: string }>; paymentReadiness: { status: 'eligible' | 'blocked'; reason: string; normalizedIdentifiers: Array<{ kind: 'linkedin_address' | 'telegram_id' | 'x_username'; value: string }> }; updatedAt: string; persistenceStatus: 'memory_fallback' }>();
 
 const gifts = new Map<string, { giftRecordId: string; status: 'active' | 'retracted'; startsAt: string; endsAt: string }>();
@@ -37,6 +44,7 @@ function consume(input: { stepUpChallengeId: string; actorSuperAdminId: string; 
 }
 
 export function giftFocusPlanToUser(input: { actorSuperAdminId: string; targetUserId: string; duration: 'two_weeks' | 'one_month'; stepUpChallengeId: string; requestedAt?: string }) {
+  if (stepUpPersistenceFailureMode === 'consume') return { status: 'blocked' as const, failureReason: 'step_up_persistence_unavailable' as const };
   if (!consume({ ...input, actionKind: 'focus_plan_gift' })) return { status: 'blocked' as const };
   const now = new Date();
   const ends = new Date(now.getTime() + (input.duration === 'two_weeks' ? 14 : 30) * 24 * 3600 * 1000);
@@ -47,6 +55,7 @@ export function giftFocusPlanToUser(input: { actorSuperAdminId: string; targetUs
 }
 
 export function retractFocusPlanGift(input: { actorSuperAdminId: string; targetUserId: string; giftRecordId: string; stepUpChallengeId: string; requestedAt?: string }) {
+  if (stepUpPersistenceFailureMode === 'consume') return { status: 'blocked' as const, failureReason: 'step_up_persistence_unavailable' as const };
   if (!consume({ ...input, actionKind: 'focus_plan_gift_retract' })) return { status: 'blocked' as const };
   const found = gifts.get(input.targetUserId);
   if (!found || found.giftRecordId !== input.giftRecordId) return { status: 'blocked' as const };
@@ -57,6 +66,7 @@ export function retractFocusPlanGift(input: { actorSuperAdminId: string; targetU
 }
 
 export function restrictUserAccount(input: { actorSuperAdminId: string; targetUserId: string; restrictionKind: 'suspended' | 'banned'; stepUpChallengeId: string; requestedAt?: string }) {
+  if (stepUpPersistenceFailureMode === 'consume') return { status: 'blocked' as const, failureReason: 'step_up_persistence_unavailable' as const };
   if (!consume({ ...input, actionKind: 'user_restriction' })) return { status: 'blocked' as const };
   commercialMutationCounts.restrict += 1;
   return { status: 'success' as const, restrictionRecord: { restrictionKind: input.restrictionKind, status: 'active' as const }, resultingEntitlementState: { accountState: 'restricted' } };
@@ -68,6 +78,7 @@ export function getSuperAdminCommercialControlSnapshot(userId?: string) {
 }
 
 export function createSuperAdminStepUpChallenge(input: { actorUserId: string; actionKind: string; routeScope: string; targetUserId: string | null; providerKind: string; requestedAt: string }) {
+  if (stepUpPersistenceFailureMode === 'challenge') throw stepUpPersistenceError();
   const challengeId = `stepup-${Math.random().toString(36).slice(2, 10)}`;
   const challenge = { challengeId, actorUserId: input.actorUserId, actionKind: input.actionKind, routeScope: input.routeScope, targetUserId: input.targetUserId, providerKind: input.providerKind, verifiedProviderKind: null, status: 'pending' as const, createdAt: input.requestedAt, expiresAt: new Date(Date.parse(input.requestedAt) + 5 * 60 * 1000).toISOString(), freshUntil: null as string | null };
   stepUpChallenges.set(challengeId, challenge);
@@ -75,6 +86,7 @@ export function createSuperAdminStepUpChallenge(input: { actorUserId: string; ac
 }
 
 export function verifySuperAdminStepUpChallenge(input: { challengeId: string; actorUserId: string; providerKind: string; proof: string; requestedAt?: string }) {
+  if (stepUpPersistenceFailureMode === 'verify') throw stepUpPersistenceError();
   const found = stepUpChallenges.get(input.challengeId);
   if (!found) return { status: 'failed' as const, verified: false, failureReason: 'challenge_not_found', challengeId: input.challengeId, providerKind: input.providerKind, verifiedAt: null, freshUntil: null, persistenceStatus: 'memory_fallback' as const };
   const requestedAt = input.requestedAt ?? new Date().toISOString();
@@ -102,10 +114,10 @@ export function getSuperAdminStepUpReadinessReport() {
   ];
 }
 
-export function getSuperAdminStepUpCoverageReport() {
+export function buildSuperAdminStepUpCoverageReport(persistenceStatus: 'durable' | 'memory_fallback' | 'unavailable') {
   return {
     generatedAt: new Date().toISOString(),
-    persistenceStatus: 'memory_fallback',
+    persistenceStatus,
     freshnessWindow: { maxAgeSeconds: 600 },
     replayProtection: { enforceSingleUse: true },
     rateLimitPolicy: { maxChallengesPerWindow: 10, windowSeconds: 600 },
@@ -114,3 +126,10 @@ export function getSuperAdminStepUpCoverageReport() {
     providerReadiness: getSuperAdminStepUpReadinessReport()
   };
 }
+
+export async function getSuperAdminStepUpPersistenceReadiness() {
+  if (stepUpPersistenceFailureMode === 'readiness') return { selectedRepositoryMode: 'sql' as const, databaseConfigured: true, requiredRelationsAvailable: false, persistenceStatus: 'unavailable' as const };
+  return { selectedRepositoryMode: 'memory' as const, databaseConfigured: false, requiredRelationsAvailable: true, persistenceStatus: 'memory_fallback' as const };
+}
+
+export async function getSuperAdminStepUpCoverageReport() { const readiness = await getSuperAdminStepUpPersistenceReadiness(); return buildSuperAdminStepUpCoverageReport(readiness.persistenceStatus); }

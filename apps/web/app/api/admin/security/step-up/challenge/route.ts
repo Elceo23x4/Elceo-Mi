@@ -1,7 +1,7 @@
 import { jsonError, jsonSuccess, parseJsonBody, withApiErrorBoundary } from '@/lib/server/api';
 import { requireFeatureAccess } from '@/lib/server/access';
 import { requireInternalRouteAccess } from '@/lib/server/auth';
-import { createSuperAdminStepUpChallenge, getSuperAdminCommercialRouteScope, isSuperAdminCommercialActionKind } from '@elceo/application-state';
+import { createSuperAdminStepUpChallenge, getSuperAdminCommercialRouteScope, isStepUpPersistenceError, isSuperAdminCommercialActionKind } from '@elceo/application-state';
 import { validateSuperAdminStepUpChallengeRequest } from '@elceo/schemas';
 
 export const POST = withApiErrorBoundary(async (request: Request) => {
@@ -26,10 +26,11 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   if (!parsed.ok) return jsonError('validation_error', 'Validation failed', ['invalid_step_up_challenge_request'], 400);
   let challenge;
   try {
-    challenge = createSuperAdminStepUpChallenge(parsed.value);
+    challenge = await createSuperAdminStepUpChallenge(parsed.value);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown';
     if (message === 'step_up_rate_limited') return jsonError('bad_request', 'Rate limit exceeded', ['step_up_rate_limited'], 429);
+    if (isStepUpPersistenceError(error)) return Response.json({ ok: false, error: { code: 'service_unavailable', message: 'Step-up service unavailable', details: ['step_up_persistence_unavailable'] } }, { status: 503 });
     if (message === 'step_up_actor_locked') return jsonError('forbidden', 'Step-up actor locked', ['step_up_actor_locked'], 423);
     return jsonError('validation_error', 'Validation failed', ['invalid_step_up_challenge_request'], 400);
   }
@@ -41,6 +42,6 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
     targetUserId: challenge.targetUserId,
     expiresAt: challenge.expiresAt,
     providerStatus: challenge.providerKind === 'fixture_test_only' ? 'fixture_test_only' : 'provider_pending',
-    persistenceStatus: 'memory_fallback'
+    persistenceStatus: challenge.persistenceStatus
   });
 });

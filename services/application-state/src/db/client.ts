@@ -4,13 +4,29 @@ function runtimeEnv(): Record<string, string | undefined> {
 
 type QueryResultRow = Record<string, unknown>;
 
-type PoolLike = {
+export type DbTransactionClient = {
   query: (sql: string, params?: unknown[]) => Promise<{ rows: QueryResultRow[] }>;
 };
+
+type PoolClientLike = DbTransactionClient & { release: () => void };
+
+export type DbPoolLike = {
+  query: (sql: string, params?: unknown[]) => Promise<{ rows: QueryResultRow[] }>;
+  connect: () => Promise<PoolClientLike>;
+};
+
+type PoolLike = DbPoolLike;
+
+let testPoolFactory: (() => Promise<PoolLike> | PoolLike) | null = null;
+export function __setDbPoolFactoryForTests(factory: (() => Promise<PoolLike> | PoolLike) | null): void {
+  testPoolFactory = factory;
+  poolPromise = null;
+}
 
 let poolPromise: Promise<PoolLike> | null = null;
 
 async function getPool(): Promise<PoolLike> {
+  if (testPoolFactory) return testPoolFactory();
   if (!poolPromise) {
     poolPromise = (async () => {
       const module = await import('pg');
@@ -27,4 +43,42 @@ export async function queryDb<T extends QueryResultRow = QueryResultRow>(sql: st
   const pool = await getPool();
   const result = await pool.query(sql, params);
   return result.rows as T[];
+}
+
+
+export async function withDbTransaction<T>(callback: (transaction: DbTransactionClient) => Promise<T>): Promise<T> {
+  const pool = await getPool();
+  const client = await pool.connect();
+  let released = false;
+  let operationError: unknown;
+  let result: T | undefined;
+  let releaseError: unknown;
+  const guarded: DbTransactionClient = {
+    query(sql, params) {
+      if (released) return Promise.reject(new Error('transaction_client_released'));
+      return client.query(sql, params);
+    }
+  };
+  try {
+    await guarded.query('BEGIN');
+    result = await callback(guarded);
+    await guarded.query('COMMIT');
+  } catch (error) {
+    operationError = error;
+    try {
+      if (!released) await guarded.query('ROLLBACK');
+    } catch {
+      // Preserve the original operation failure; cleanup failures are intentionally secondary.
+    }
+  } finally {
+    released = true;
+    try {
+      client.release();
+    } catch (error) {
+      releaseError = error;
+    }
+  }
+  if (operationError !== undefined) throw operationError;
+  if (releaseError !== undefined) throw releaseError;
+  return result as T;
 }

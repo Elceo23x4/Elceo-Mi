@@ -132,4 +132,4 @@ export async function getSuperAdminStepUpPersistenceReadiness() {
   return { selectedRepositoryMode: 'memory' as const, databaseConfigured: false, requiredRelationsAvailable: true, persistenceStatus: 'memory_fallback' as const };
 }
 
-export function getSuperAdminStepUpCoverageReport() { return buildSuperAdminStepUpCoverageReport('memory_fallback'); }
+export async function getSuperAdminStepUpCoverageReport() { const readiness = await getSuperAdminStepUpPersistenceReadiness(); return buildSuperAdminStepUpCoverageReport(readiness.persistenceStatus); }

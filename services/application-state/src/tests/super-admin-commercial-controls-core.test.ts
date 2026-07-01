@@ -38,6 +38,6 @@ export async function runSuperAdminCommercialControlsCoreTests(): Promise<void> 
   assert.equal(buildSuperAdminStepUpAuditEvent({ actorUserId: 'admin-1', action: 'focus_plan_gift', targetUserId: 'user-1', challengeId: ch.challengeId, providerKind: 'fixture_test_only', verificationStatus: 'verified', failureReason: null, routeScope: getSuperAdminCommercialRouteScope('focus_plan_gift') }).redactionStatus, 'safe');
   assert.equal(getSuperAdminCommercialControlCoverageReport().ipBanSupported, false);
   assert.equal(getSuperAdminStepUpReadinessReport().find((x) => x.providerKind === 'totp')?.readiness, 'provider_pending');
-  assert.equal(getSuperAdminStepUpCoverageReport().persistenceStatus, 'memory_fallback');
+  assert.equal((await getSuperAdminStepUpCoverageReport()).persistenceStatus, 'memory_fallback');
   process.env.NODE_ENV = oldNodeEnv; if (oldFixture === undefined) delete process.env.ELCEO_ENABLE_FIXTURE_STEP_UP; else process.env.ELCEO_ENABLE_FIXTURE_STEP_UP = oldFixture;
 }

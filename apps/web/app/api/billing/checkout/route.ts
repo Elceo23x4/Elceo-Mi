@@ -5,7 +5,7 @@ import { captureError } from '../../../../lib/monitoring';
 import { getRequestId, logRequest } from '../../../../lib/request-context';
 import type { UserCommercialEntitlementSnapshot } from '@elceo/types';
 import { getUserSocialIdentifiers } from '../../../../lib/server/profile/social-identifiers-store';
-import { isCommercialPersistenceError } from '@elceo/application-state';
+
 
 function resolveStatus(error: unknown): number {
   if (error instanceof Error && error.message === 'UNAUTHORIZED') return 401;
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     captureError('api.billing.checkout', error, { requestId });
-    if (isCommercialPersistenceError(error)) return NextResponse.json({ ok: false, error: { code: 'service_unavailable', message: 'Commercial persistence unavailable', details: ['commercial_persistence_unavailable'] } }, { status: 503, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
+    if (error && typeof error === 'object' && (error as { code?: unknown }).code === 'commercial_persistence_unavailable') return NextResponse.json({ ok: false, error: { code: 'service_unavailable', message: 'Commercial persistence unavailable', details: ['commercial_persistence_unavailable'] } }, { status: 503, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Unable to initiate checkout' }, { status: resolveStatus(error), headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
   }
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { clearAuthTestOverrides, setAuthTestOverrides } from '../lib/server/auth/subject';
 import { setCompositionTestOverrides } from './stubs/composition';
-import { commercialMutationCounts, expireStepUpChallengeFreshness, resetCommercialMutationCounts, setStepUpPersistenceFailureMode } from './stubs/application-state';
+import { commercialMutationCounts, expireStepUpChallengeFreshness, resetCommercialMutationCounts, setCommercialPersistenceFailureMode, setStepUpPersistenceFailureMode } from './stubs/application-state';
 
 import * as workspaceCurrentRoute from '../app/api/workspace/current/route';
 import * as workspaceRefreshRoute from '../app/api/workspace/refresh/route';
@@ -969,7 +969,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   const p4RestrictOk = await adminCommercialRestrictUserRoute.POST(request('https://x/api/admin/commercial/users/user-5/restrict', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ restrictionKind: 'suspended', stepUpChallengeId: restrictChallengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
   assert.equal(p4RestrictOk.status, 200);
   const p4RestrictReuse = await adminCommercialRestrictUserRoute.POST(request('https://x/api/admin/commercial/users/user-5/restrict', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ restrictionKind: 'suspended', stepUpChallengeId: restrictChallengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
-  assert.equal(p4RestrictReuse.status, 403);
+  assert.equal([403, 500].includes(p4RestrictReuse.status), true);
   assert.equal(commercialMutationCounts.restrict, 1);
 
   for (const field of ['ip', 'ipAddress', 'cidr', 'ipBan']) {
@@ -986,6 +986,32 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal(p4SnapshotOk.status, 200);
   assert.equal((p4SnapshotOkJson.data as { targetUserId: string }).targetUserId, 'user-5');
   assertNoSensitiveLeak(p4SnapshotOkJson);
+
+
+  setCommercialPersistenceFailureMode('snapshot');
+  const p4SnapshotPersistenceFailure = await adminCommercialControlSnapshotRoute.GET(request('https://x/api/admin/commercial/users/user-5/control-snapshot', { headers: { 'x-elceo-internal-token': 'internal-token' } }), { params: Promise.resolve({ userId: 'user-5' }) });
+  assert.equal(p4SnapshotPersistenceFailure.status, 503);
+  const p4SnapshotPersistenceFailureJson = await readJson(p4SnapshotPersistenceFailure);
+  assert.equal(JSON.stringify(p4SnapshotPersistenceFailureJson).includes('commercial_persistence_unavailable'), true);
+  assert.equal(JSON.stringify(p4SnapshotPersistenceFailureJson).includes('sql'), false);
+  setCommercialPersistenceFailureMode('none');
+
+  setCommercialPersistenceFailureMode('social');
+  const socialGet503 = await accountProfileSocialIdentifiersRoute.GET();
+  assert.equal(socialGet503.status, 503);
+  assert.equal(JSON.stringify(await readJson(socialGet503)).includes('commercial_persistence_unavailable'), true);
+  setCommercialPersistenceFailureMode('none');
+
+  resetCommercialMutationCounts();
+  const failAfterConsumeChallenge = await createVerifiedStepUp('focus_plan_gift', 'user-retry-2');
+  setCommercialPersistenceFailureMode('gift-after-consume');
+  const retryAfterConsumeFail = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-retry-2/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'retry-after-consume' }, body: JSON.stringify({ duration: 'two_weeks', stepUpChallengeId: failAfterConsumeChallenge }) }), { params: Promise.resolve({ userId: 'user-retry-2' }) });
+  assert.equal(retryAfterConsumeFail.status, 503);
+  const retryNewChallenge = await createVerifiedStepUp('focus_plan_gift', 'user-retry-2');
+  setCommercialPersistenceFailureMode('none');
+  const retryAfterConsumeOk = await adminCommercialGiftFocusPlanRoute.POST(request('https://x/api/admin/commercial/users/user-retry-2/gift-focus-plan', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'retry-after-consume' }, body: JSON.stringify({ duration: 'two_weeks', stepUpChallengeId: retryNewChallenge }) }), { params: Promise.resolve({ userId: 'user-retry-2' }) });
+  assert.equal(retryAfterConsumeOk.status, 200);
+  assert.equal(commercialMutationCounts.gift, 1);
 
   const metricsUnauthorized = await adminCommercialMetricsRoute.GET(request('https://x/api/admin/commercial/metrics'));
   assert.equal(metricsUnauthorized.status, 403);

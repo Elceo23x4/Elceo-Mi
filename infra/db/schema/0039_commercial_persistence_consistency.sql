@@ -46,16 +46,47 @@ CREATE TABLE IF NOT EXISTS super_admin_commercial_operations (
   step_up_challenge_id text NOT NULL,
   idempotency_key text,
   request_hash text NOT NULL,
+  reason_code text NOT NULL,
+  operator_note text NOT NULL,
+  requested_resource_id text,
   operation_status text NOT NULL CHECK (operation_status IN ('pending','completed','business_denied')),
   failure_reason text,
   gift_id text,
   restriction_id text,
-  resulting_entitlement_state text NOT NULL,
+  resulting_entitlement_state text NOT NULL CHECK (resulting_entitlement_state IN ('focus_plan_active','subscription_required','restricted')),
   response_json jsonb NOT NULL,
   created_at timestamptz NOT NULL,
   completed_at timestamptz,
   version integer NOT NULL DEFAULT 0 CHECK (version >= 0)
 );
+
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_saco_actor_nonempty') THEN ALTER TABLE super_admin_commercial_operations ADD CONSTRAINT chk_saco_actor_nonempty CHECK (length(trim(actor_user_id)) > 0); END IF; END $$;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_saco_target_nonempty') THEN ALTER TABLE super_admin_commercial_operations ADD CONSTRAINT chk_saco_target_nonempty CHECK (length(trim(target_user_id)) > 0); END IF; END $$;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_saco_stepup_nonempty') THEN ALTER TABLE super_admin_commercial_operations ADD CONSTRAINT chk_saco_stepup_nonempty CHECK (length(trim(step_up_challenge_id)) > 0); END IF; END $$;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_saco_hash_nonempty') THEN ALTER TABLE super_admin_commercial_operations ADD CONSTRAINT chk_saco_hash_nonempty CHECK (length(trim(request_hash)) > 0); END IF; END $$;
+
+CREATE TABLE IF NOT EXISTS super_admin_commercial_operation_events (
+  event_id text PRIMARY KEY,
+  operation_id text,
+  actor_user_id text NOT NULL CHECK (length(trim(actor_user_id)) > 0),
+  target_user_id text NOT NULL CHECK (length(trim(target_user_id)) > 0),
+  action_kind text NOT NULL CHECK (action_kind IN ('focus_plan_gift','focus_plan_gift_retract','user_restriction')),
+  idempotency_key text,
+  request_hash text NOT NULL CHECK (length(trim(request_hash)) > 0),
+  step_up_challenge_id text NOT NULL CHECK (length(trim(step_up_challenge_id)) > 0),
+  event_kind text NOT NULL,
+  outcome text NOT NULL,
+  failure_reason text,
+  reason_code text NOT NULL,
+  operator_note text NOT NULL,
+  requested_resource_id text,
+  resulting_resource_id text,
+  occurred_at timestamptz NOT NULL,
+  redaction_status text NOT NULL CHECK (redaction_status = 'safe')
+);
+CREATE INDEX IF NOT EXISTS idx_sacoe_operation ON super_admin_commercial_operation_events(operation_id);
+CREATE INDEX IF NOT EXISTS idx_sacoe_idempotency ON super_admin_commercial_operation_events(actor_user_id, action_kind, idempotency_key);
+CREATE INDEX IF NOT EXISTS idx_sacoe_target ON super_admin_commercial_operation_events(target_user_id, occurred_at);
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_saco_idempotency_unique ON super_admin_commercial_operations(actor_user_id, action_kind, idempotency_key) WHERE idempotency_key IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_saco_target ON super_admin_commercial_operations(target_user_id, created_at);

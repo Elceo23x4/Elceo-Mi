@@ -23,7 +23,7 @@ export const POST = withApiErrorBoundary(async (request: Request, context: { par
   if (duration !== 'two_weeks' && duration !== 'one_month') return jsonError('validation_error', 'Validation failed', ['invalid_duration'], 400);
   const operatorNote = typeof body.operatorNote === 'string' ? body.operatorNote : '';
   const actor = getSecurityActorFromRequest(request, 'admin');
-  const securityRequest = { actorSuperAdminId: access.subject.userId, commercialActionKind, canonicalRouteScope: routePath, targetUserId: userId, stepUpChallengeId, duration, operatorNote };
+  const securityRequest = { actorSuperAdminId: access.subject.userId, commercialActionKind, canonicalRouteScope: routePath, targetUserId: userId, duration, reasonCode: 'commercial_support', operatorNote };
   const security = await requireSecurityDecision({ request, routePath, method: 'POST', actionKind: 'admin_write', actor, subjectId: access.subject.subjectId, requestBody: securityRequest });
   if (!security.ok) return security.response;
   try {
@@ -33,5 +33,5 @@ export const POST = withApiErrorBoundary(async (request: Request, context: { par
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, requestHash: security.requestHash, responseBody: response, responseEnvelope: { ok: true as const, data: response }, httpStatus: 200 });
     await auditInternalMutation({ actor, subjectId: userId, actionKind: 'admin_write', routePath, method: 'POST', request, idempotencyKey: security.idempotencyKey, metadata: { action: 'gift_focus_plan', stepUpStatus: 'verified', redactionStatus: 'safe', targetUserId: userId } });
     return jsonSuccess(response);
-  } catch (error) { await failSecurityDecision({ idempotencyKey: security.idempotencyKey, errorMessage: error instanceof Error ? error.message : 'unknown' }); throw error; }
+  } catch (error) { await failSecurityDecision({ idempotencyKey: security.idempotencyKey, errorMessage: error instanceof Error ? error.message : 'unknown' }); if (error && typeof error === 'object' && (error as { code?: unknown }).code === 'commercial_persistence_unavailable') return Response.json(commercialUnavailableEnvelope, { status: 503 }); throw error; }
 });

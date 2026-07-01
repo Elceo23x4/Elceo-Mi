@@ -93,6 +93,31 @@ export class SecurityIdempotencyService {
       };
     }
 
+    if (existing.status === 'failed') {
+      await this.repository.saveIdempotencyRecord({
+        ...existing,
+        status: 'started',
+        responseHash: null,
+        lastSeenAt: nowIso,
+        metadataJson: toCompactJson({ state: 'started', restart: 'failed_same_hash' })
+      });
+      return {
+        decisionId: id('sec', actionKind, actorKind, actorId, idempotencyKey, 'allowed_restarted'),
+        actionKind,
+        actorKind,
+        actorId,
+        subjectId,
+        status: 'allowed',
+        blockReason: null,
+        idempotencyKey,
+        rateLimitPolicyKey: null,
+        currentCount: null,
+        maxCount: null,
+        decidedAt: nowIso,
+        metadataJson: toCompactJson({ reason: 'idempotency_restarted_after_failure' })
+      };
+    }
+
     if (existing.status === 'completed') {
       return {
         decisionId: id('sec', actionKind, actorKind, actorId, idempotencyKey, 'replayed'),

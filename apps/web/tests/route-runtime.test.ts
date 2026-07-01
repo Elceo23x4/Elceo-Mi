@@ -969,7 +969,8 @@ export async function runRouteRuntimeTests(): Promise<void> {
   const p4RestrictOk = await adminCommercialRestrictUserRoute.POST(request('https://x/api/admin/commercial/users/user-5/restrict', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ restrictionKind: 'suspended', stepUpChallengeId: restrictChallengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
   assert.equal(p4RestrictOk.status, 200);
   const p4RestrictReuse = await adminCommercialRestrictUserRoute.POST(request('https://x/api/admin/commercial/users/user-5/restrict', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ restrictionKind: 'suspended', stepUpChallengeId: restrictChallengeId }) }), { params: Promise.resolve({ userId: 'user-5' }) });
-  assert.equal([403, 500].includes(p4RestrictReuse.status), true);
+  assert.equal(p4RestrictReuse.status, 403);
+  assert.deepEqual(await readJson(p4RestrictReuse), { ok: false, error: { code: 'forbidden', message: 'Step-up verification failed', details: ['step_up_verification_failed'] } });
   assert.equal(commercialMutationCounts.restrict, 1);
 
   for (const field of ['ip', 'ipAddress', 'cidr', 'ipBan']) {

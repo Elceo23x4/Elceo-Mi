@@ -94,27 +94,43 @@ export class SecurityIdempotencyService {
     }
 
     if (existing.status === 'failed') {
-      await this.repository.saveIdempotencyRecord({
-        ...existing,
-        status: 'started',
-        responseHash: null,
-        lastSeenAt: nowIso,
-        metadataJson: toCompactJson({ state: 'started', restart: 'failed_same_hash' })
+      const restarted = await this.repository.restartFailedIdempotencyRecordAtomically({
+        idempotencyKey,
+        requestHash,
+        metadataJson: toCompactJson({ state: 'started', restart: 'failed_same_hash' }),
+        nowIso
       });
+      if (restarted.status === 'restarted') {
+        return {
+          decisionId: id('sec', actionKind, actorKind, actorId, idempotencyKey, 'allowed_restarted'),
+          actionKind,
+          actorKind,
+          actorId,
+          subjectId,
+          status: 'allowed',
+          blockReason: null,
+          idempotencyKey,
+          rateLimitPolicyKey: null,
+          currentCount: null,
+          maxCount: null,
+          decidedAt: nowIso,
+          metadataJson: toCompactJson({ reason: 'idempotency_restarted_after_failure' })
+        };
+      }
       return {
-        decisionId: id('sec', actionKind, actorKind, actorId, idempotencyKey, 'allowed_restarted'),
+        decisionId: id('sec', actionKind, actorKind, actorId, idempotencyKey, restarted.status),
         actionKind,
         actorKind,
         actorId,
         subjectId,
-        status: 'allowed',
-        blockReason: null,
+        status: 'blocked',
+        blockReason: restarted.status === 'hash_mismatch' ? 'suspicious_replay' : 'idempotency_conflict',
         idempotencyKey,
         rateLimitPolicyKey: null,
         currentCount: null,
         maxCount: null,
         decidedAt: nowIso,
-        metadataJson: toCompactJson({ reason: 'idempotency_restarted_after_failure' })
+        metadataJson: toCompactJson({ reason: `idempotency_restart_${restarted.status}` })
       };
     }
 

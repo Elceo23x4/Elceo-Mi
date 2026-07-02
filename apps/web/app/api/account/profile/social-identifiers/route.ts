@@ -5,6 +5,7 @@ import { getUserSocialIdentifiers, setUserSocialIdentifiers } from '../../../../
 import { validateUpdateUserSocialIdentifiersRequest } from '@elceo/schemas';
 import type { CommercialProfileSocialIdentifier } from '@elceo/types';
 
+
 function toIdentifierSet(input: { linkedinAddress?: string; telegramId?: string; xUsername?: string }): CommercialProfileSocialIdentifier[] {
   const identifiers: CommercialProfileSocialIdentifier[] = [];
   if (input.linkedinAddress) identifiers.push({ kind: 'linkedin_address', value: input.linkedinAddress });
@@ -16,14 +17,12 @@ function toIdentifierSet(input: { linkedinAddress?: string; telegramId?: string;
 export const GET = withApiErrorBoundary(async () => {
   const subject = await requireAuthenticatedSubject();
   if (!assertRouteSubjectOwnership({ authenticatedSubjectId: subject.subjectId, routeSubjectId: subject.subjectId })) return buildOwnerAccessDeniedResponse();
-  const snapshot = await getUserSocialIdentifiers(subject.subjectId);
-  return jsonSuccess(snapshot);
+  try { const snapshot = await getUserSocialIdentifiers(subject.subjectId); return jsonSuccess(snapshot); } catch (error) { if (error && typeof error === 'object' && (error as { code?: unknown }).code === 'commercial_persistence_unavailable') return Response.json({ ok: false, error: { code: 'service_unavailable', message: 'Commercial persistence unavailable', details: ['commercial_persistence_unavailable'] } }, { status: 503 }); throw error; }
 });
 
 export const PATCH = withApiErrorBoundary(async (request: Request) => {
   const subject = await requireAuthenticatedSubject();
   const body = unwrapValidation(validateUpdateUserSocialIdentifiersRequest(await parseJsonBody(request)));
   if (!assertRouteSubjectOwnership({ authenticatedSubjectId: subject.subjectId, routeSubjectId: subject.subjectId })) return buildOwnerAccessDeniedResponse();
-  const snapshot = await setUserSocialIdentifiers(subject.subjectId, toIdentifierSet(body));
-  return jsonSuccess(snapshot);
+  try { const snapshot = await setUserSocialIdentifiers(subject.subjectId, toIdentifierSet(body)); return jsonSuccess(snapshot); } catch (error) { if (error && typeof error === 'object' && (error as { code?: unknown }).code === 'commercial_persistence_unavailable') return Response.json({ ok: false, error: { code: 'service_unavailable', message: 'Commercial persistence unavailable', details: ['commercial_persistence_unavailable'] } }, { status: 503 }); throw error; }
 });

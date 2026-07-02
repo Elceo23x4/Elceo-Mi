@@ -1,7 +1,13 @@
 
 export type StepUpPersistenceFailureMode = 'none' | 'challenge' | 'verify' | 'readiness' | 'consume';
+export type CommercialPersistenceFailureMode = 'none' | 'social' | 'snapshot' | 'gift-after-consume' | 'finalize-once';
 let stepUpPersistenceFailureMode: StepUpPersistenceFailureMode = 'none';
+let commercialPersistenceFailureMode: CommercialPersistenceFailureMode = 'none';
+let finalizeOnceRemaining = 0;
 export function setStepUpPersistenceFailureMode(mode: StepUpPersistenceFailureMode) { stepUpPersistenceFailureMode = mode; }
+export function setCommercialPersistenceFailureMode(mode: CommercialPersistenceFailureMode) { commercialPersistenceFailureMode = mode; finalizeOnceRemaining = mode === 'finalize-once' ? 1 : 0; }
+export function isCommercialPersistenceError(error: unknown): boolean { return Boolean(error && typeof error === 'object' && (error as { code?: unknown }).code === 'commercial_persistence_unavailable'); }
+const commercialPersistenceError = () => Object.assign(new Error('Commercial persistence unavailable'), { code: 'commercial_persistence_unavailable' });
 export function isStepUpPersistenceError(error: unknown): boolean { return Boolean(error && typeof error === 'object' && (error as { code?: unknown }).code === 'step_up_persistence_unavailable'); }
 const stepUpPersistenceError = () => Object.assign(new Error('Step-up persistence unavailable'), { code: 'step_up_persistence_unavailable' });
 
@@ -17,10 +23,12 @@ export function resetCommercialMutationCounts() { commercialMutationCounts.gift 
 export function expireStepUpChallengeFreshness(challengeId: string) { const found = stepUpChallenges.get(challengeId); if (found) found.freshUntil = new Date(Date.now() - 60_000).toISOString(); }
 
 export function getUserSocialIdentifiersSnapshot(userId: string) {
+  if (commercialPersistenceFailureMode === 'social') throw commercialPersistenceError();
   return socialStore.get(userId) ?? { userId, socialIdentifiers: [], paymentReadiness: { status: 'blocked', reason: 'missing_social_identifier', normalizedIdentifiers: [] }, updatedAt: new Date(0).toISOString(), persistenceStatus: 'memory_fallback' as const };
 }
 
 export function upsertUserSocialIdentifiersSnapshot(userId: string, socialIdentifiers: Array<{ kind: 'linkedin_address' | 'telegram_id' | 'x_username'; value: string }>) {
+  if (commercialPersistenceFailureMode === 'social') throw commercialPersistenceError();
   const next = { userId, socialIdentifiers, paymentReadiness: { status: socialIdentifiers.length > 0 ? 'eligible' as const : 'blocked' as const, reason: socialIdentifiers.length > 0 ? 'ready' : 'missing_social_identifier', normalizedIdentifiers: socialIdentifiers }, updatedAt: new Date().toISOString(), persistenceStatus: 'memory_fallback' as const };
   socialStore.set(userId, next);
   return next;
@@ -48,9 +56,11 @@ export function giftFocusPlanToUser(input: { actorSuperAdminId: string; targetUs
   if (!consume({ ...input, actionKind: 'focus_plan_gift' })) return { status: 'blocked' as const };
   const now = new Date();
   const ends = new Date(now.getTime() + (input.duration === 'two_weeks' ? 14 : 30) * 24 * 3600 * 1000);
+  if (commercialPersistenceFailureMode === 'gift-after-consume') throw commercialPersistenceError();
   const giftRecord = { giftRecordId: `gift-${input.targetUserId}`, status: 'active' as const, startsAt: now.toISOString(), endsAt: ends.toISOString() };
   commercialMutationCounts.gift += 1;
   gifts.set(input.targetUserId, giftRecord);
+  if (commercialPersistenceFailureMode === 'finalize-once' && finalizeOnceRemaining > 0) { finalizeOnceRemaining -= 1; throw commercialPersistenceError(); }
   return { status: 'success' as const, giftRecord, resultingEntitlementState: { planKind: 'focus' } };
 }
 
@@ -73,6 +83,7 @@ export function restrictUserAccount(input: { actorSuperAdminId: string; targetUs
 }
 
 export function getSuperAdminCommercialControlSnapshot(userId?: string) {
+  if (commercialPersistenceFailureMode === 'snapshot') throw commercialPersistenceError();
   const activeGift = userId ? (gifts.get(userId) ?? null) : null;
   return { gifts: Array.from(gifts.values()), activeGift };
 }

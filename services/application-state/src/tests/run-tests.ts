@@ -25,6 +25,9 @@ async function main(): Promise<void> {
   const { runSecurityRuntimeCoreTests } = await import('./security-runtime-core.test.js');
   const { runCommercialEntitlementsCoreTests } = await import('./commercial-entitlements-core.test.js');
   const { runDbTransactionHelperTests } = await import('./db-transaction-helper.test.js');
+  const { runDbClientLifecycleTests } = await import('./db-client-lifecycle.test.js');
+  const { runUserSocialIdentifiersRepositoryTests } = await import('./user-social-identifiers-repository.test.js');
+  const { runSuperAdminCommercialRepositoryTests } = await import('./super-admin-commercial-repository.test.js');
   const { runSuperAdminCommercialControlsCoreTests } = await import('./super-admin-commercial-controls-core.test.js');
   const { runSuperAdminStepUpSqlRepositoryTests } = await import('./super-admin-step-up-sql-repository.test.js');
   const { runSuperAdminStepUpPersistenceTests } = await import('./super-admin-step-up-persistence.test.js');
@@ -55,6 +58,9 @@ async function main(): Promise<void> {
   await runSecurityRuntimeCoreTests();
   await runCommercialEntitlementsCoreTests();
   await runDbTransactionHelperTests();
+  await runDbClientLifecycleTests();
+  await runUserSocialIdentifiersRepositoryTests();
+  await runSuperAdminCommercialRepositoryTests();
   await runSuperAdminCommercialControlsCoreTests();
   await runSuperAdminStepUpSqlRepositoryTests();
   await runSuperAdminStepUpPersistenceTests();

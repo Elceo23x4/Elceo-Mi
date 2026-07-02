@@ -223,3 +223,5 @@ Required architecture: durable payment operations must include immutable interna
 - The seven postponed intelligence features remain deferred until repository cleanup and full closure are complete: Expectation-Reality Delta Engine, Historical Market Memory / Analog Engine, Contradiction-to-Action Protocol, Market Cleanliness Ranking, News Half-Life / Narrative Decay, Crowd Pain / Positioning Stress Map, and Fragility Score.
 - The referral/affiliate system remains the final major commercial product implementation after billing correctness, entitlement durability, provider/API Gate closure, analytics, anti-abuse, audit, and legal rules.
 - This audit/plan PR does not implement referrals, payment activation, notification activation, provider activation, C6-R9H, C6-R10, or any new reasoning phase.
+
+- RC-C code foundations now include durable commercial repositories, commercial operation idempotency records, consolidated social identifier persistence, and shared SQL pool lifecycle handling. This is code-level foundation only; staging/managed database rehearsal, production activation, live payment readiness, and external social ownership proof remain unclaimed.

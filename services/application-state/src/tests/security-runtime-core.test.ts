@@ -78,6 +78,20 @@ export async function runSecurityRuntimeCoreTests(): Promise<void> {
   assert.equal(validateSecurityIdempotencyResponseRecord({ idempotencyKey:'sr2', actionKind:'refresh_run', actorKind:'user', actorId:'u', requestHash:'h', responseHash:'rh', httpStatus:99, responseJson:'{}', completedAt:now, expiresAt:'2026-05-03T10:00:00.000Z', metadataJson:'{}' }).ok, false);
   assert.equal(validateSecurityIdempotencyReplayResult({ replayable:false, idempotencyKey:'rk', httpStatus:null, responseJson:null, responseHash:null, reason:'wrong_reason' }).ok, false);
 
+
+  const restartRepo = new MemorySecurityIdempotencyRepository();
+  const restartSvc = new SecurityIdempotencyService(restartRepo);
+  await restartRepo.saveIdempotencyRecord({ idempotencyKey:'k-failed-retry', actionKind:'admin_write', actorKind:'admin', actorId:'admin', requestHash:'h-retry', responseHash:null, status:'failed', firstSeenAt:now, lastSeenAt:now, expiresAt:'2026-05-03T10:00:00.000Z', metadataJson:'{}' });
+  const concurrentRetries = await Promise.all([
+    restartSvc.beginIdempotentAction({ actionKind:'admin_write', actorKind:'admin', actorId:'admin', idempotencyKey:'k-failed-retry', requestHash:'h-retry', nowIso:'2026-05-02T10:01:00.000Z' }),
+    restartSvc.beginIdempotentAction({ actionKind:'admin_write', actorKind:'admin', actorId:'admin', idempotencyKey:'k-failed-retry', requestHash:'h-retry', nowIso:'2026-05-02T10:01:00.001Z' })
+  ]);
+  assert.equal(concurrentRetries.filter((decision) => decision.status === 'allowed').length, 1);
+  assert.equal(concurrentRetries.filter((decision) => decision.blockReason === 'idempotency_conflict').length, 1);
+  await restartRepo.saveIdempotencyRecord({ idempotencyKey:'k-failed-mismatch', actionKind:'admin_write', actorKind:'admin', actorId:'admin', requestHash:'h-a', responseHash:null, status:'failed', firstSeenAt:now, lastSeenAt:now, expiresAt:'2026-05-03T10:00:00.000Z', metadataJson:'{}' });
+  const mismatchRestart = await restartSvc.beginIdempotentAction({ actionKind:'admin_write', actorKind:'admin', actorId:'admin', idempotencyKey:'k-failed-mismatch', requestHash:'h-b', nowIso:now });
+  assert.equal(mismatchRestart.blockReason, 'suspicious_replay');
+
   const summary = await querySvc.getSecurityRuntimeSummary();
   assert.ok(summary.totalAuditEvents >= 0);
 }

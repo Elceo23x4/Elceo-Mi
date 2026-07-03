@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { validateMarketGoldenScenarioAcceptanceReport, validateMarketGoldenScenarioAcceptanceResult, validateMarketGoldenScenarioCandleFixture, validateMarketGoldenScenarioCoverageReport, validateMarketGoldenScenarioEvidenceFixture, validateMarketGoldenScenarioFixture, validateMarketGoldenScenarioRule, validateMarketGoldenScenarioRuleSetSnapshot } from '@elceo/schemas';
-import { MARKET_CONFIDENCE_CALIBRATION_TIERS, MARKET_GOLDEN_SCENARIO_ASSETS, marketConfidenceTierForScore } from '@elceo/types';
+import { MARKET_CONFIDENCE_CALIBRATION_TIERS, MARKET_GOLDEN_SCENARIO_ASSETS, MARKET_REASONING_DIAGNOSTIC_ASSETS, TRADING_ASSET_COVERAGE, marketConfidenceTierForScore } from '@elceo/types';
 import { CanonicalMarketIntelligenceBoundaryService } from '../runtime/canonical-market-intelligence-boundary.js';
 import { MemoryMarketEvidenceRegistrySnapshotRepository, MemorySeoContentArchitectureSnapshotRepository } from '../persistence/registry-snapshot-repository.js';
 import { assertMarketGoldenScenarioRuleSetValid, buildReasoningEvidenceItemsFromScenario, buildWeightedSnapshotFromScenario, getMarketGoldenScenarioCoverageReport, getMarketGoldenScenarioRuleSetSnapshot, listMarketGoldenScenarios, runMarketGoldenScenario, runScenarioAssetDirection, runMarketGoldenScenarioById, runMarketGoldenScenarioSuite, runScenarioConfidenceCalibration, runScenarioContradictionMatrix, runScenarioPriceReaction, runScenarioProviderReliability } from '../golden-scenarios/index.js';
@@ -59,6 +59,15 @@ export function runMarketGoldenScenarioAcceptanceTests(): void {
   assert.equal(suite.totalScenarios, 33, 'complete report remains the 33-scenario suite');
   assert(validateMarketGoldenScenarioRule(rules.rules[0]).ok, 'rule schema validates');
   assert(validateMarketGoldenScenarioRuleSetSnapshot(rules).ok, 'rule set validates');
+  assert.deepEqual(new Set(rules.launchTradableAssets), new Set(TRADING_ASSET_COVERAGE), 'golden launch tradables exact');
+  assert.deepEqual(new Set(rules.diagnosticAssets), new Set(MARKET_REASONING_DIAGNOSTIC_ASSETS), 'golden diagnostics exact');
+  assert.deepEqual(new Set(rules.reasoningAssets), new Set(MARKET_GOLDEN_SCENARIO_ASSETS), 'golden reasoning assets exact');
+  const invalidRules = (mutate: (copy: typeof rules)=>void) => { const copy=structuredClone(rules); mutate(copy); assert.equal(validateMarketGoldenScenarioRuleSetSnapshot(copy).ok,false); };
+  invalidRules((x)=>{ x.launchTradableAssets[0]=x.launchTradableAssets[1]!; });
+  invalidRules((x)=>{ x.launchTradableAssets=x.launchTradableAssets.slice(1); });
+  invalidRules((x)=>{ x.launchTradableAssets[0]='dxy' as any; });
+  invalidRules((x)=>{ x.diagnosticAssets=['dxy','dxy'] as any; });
+  invalidRules((x)=>{ x.reasoningAssets=x.reasoningAssets.filter((a)=>a!=='vix'); });
   assert(validateMarketGoldenScenarioCoverageReport(coverage).ok, 'coverage report validates');
   assertMarketGoldenScenarioRuleSetValid();
 

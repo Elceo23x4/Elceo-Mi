@@ -1,4 +1,4 @@
-import type { MarketAssetCausalityCoverageReport, MarketAssetCausalityDescriptor, MarketAssetCausalityDriver, MarketAssetCausalityMatrixSnapshot, MarketAssetContradictionTrigger, MarketAssetDirectionResolutionRequirement, MarketAssetProviderDependency, MarketAssetRegimeModifier } from '@elceo/types';
+import type { MarketAssetCausalityCoverageReport, MarketAssetCausalityDescriptor, MarketAssetCausalityGap, MarketAssetCausalityDriver, MarketAssetCausalityMatrixSnapshot, MarketAssetContradictionTrigger, MarketAssetDirectionResolutionRequirement, MarketAssetProviderDependency, MarketAssetRegimeModifier } from '@elceo/types';
 import { MARKET_ASSET_CAUSALITY_ASSETS, MARKET_ASSET_CONTRADICTION_TRIGGER_KINDS, MARKET_ASSET_COVERAGE_STATUSES, MARKET_ASSET_DRIVER_DIRECTION_SENSITIVITIES, MARKET_ASSET_DRIVER_IMPORTANCE, MARKET_ASSET_DRIVER_KINDS, MARKET_ASSET_FAMILIES, MARKET_ASSET_FRESHNESS_SENSITIVITIES, MARKET_ASSET_MACRO_EVENT_SENSITIVITIES, MARKET_ASSET_PRICE_CONFIRMATION_NEEDS, MARKET_ASSET_PROVIDER_DEPENDENCY_TIERS, MARKET_ASSET_REGIME_MODIFIER_KINDS, MARKET_REASONING_DIAGNOSTIC_ASSETS, PROVIDER_SOURCE_IDS, TRADING_ASSET_COVERAGE } from '@elceo/types';
 import { isEnumValue, isIsoDateString, isNonEmptyString, isObjectRecord, isStringArray, type SchemaValidationResult } from './validation-utils';
 import { validateExpectedMarketReasoningModuleReadiness } from './market-reasoning-readiness.schema';
@@ -102,6 +102,18 @@ export function validateMarketAssetCausalityDescriptor(input: unknown, path = ''
   return errors.length ? { ok: false, errors } : { ok: true, value: input as MarketAssetCausalityDescriptor };
 }
 
+
+export function validateMarketAssetCausalityGap(input: unknown, path = ''): SchemaValidationResult<MarketAssetCausalityGap> {
+  const errors: string[] = [];
+  if (!isObjectRecord(input)) return { ok: false, errors: [`${path}gap object required`] };
+  if (!isNonEmptyString(input.gapId)) errors.push(`${path}gapId invalid`);
+  if (!(input.asset === 'all' || isEnumValue(input.asset, MARKET_ASSET_CAUSALITY_ASSETS))) errors.push(`${path}asset invalid`);
+  if (!isEnumValue(input.readinessCategory, ['live_provider_integration','empirical_validation','production_calibration'] as const)) errors.push(`${path}readinessCategory invalid`);
+  if (!isEnumValue(input.status, ['blocked','pending','not_applicable'] as const)) errors.push(`${path}status invalid`);
+  if (!isNonEmptyString(input.description) || FORBIDDEN.test(String(input.description))) errors.push(`${path}description invalid`);
+  return errors.length ? { ok: false, errors } : { ok: true, value: input as MarketAssetCausalityGap };
+}
+
 export function validateMarketAssetCausalityCoverageReport(input: unknown, path = ''): SchemaValidationResult<MarketAssetCausalityCoverageReport> {
   const errors: string[] = [];
   if (!isObjectRecord(input)) return { ok: false, errors: [`${path}coverage report object required`] };
@@ -115,7 +127,7 @@ export function validateMarketAssetCausalityCoverageReport(input: unknown, path 
   if (!Array.isArray(input.missingAssets) || input.missingAssets.length !== 0) errors.push(`${path}missingAssets must be empty`);
   if (!Array.isArray(input.duplicateAssets) || input.duplicateAssets.length !== 0) errors.push(`${path}duplicateAssets must be empty`);
   validateTextArray(input.notes, `${path}notes`, errors);
-  if (!Array.isArray(input.gaps) || input.gaps.length === 0) errors.push(`${path}gaps required`);
+  if (!Array.isArray(input.gaps) || input.gaps.length === 0) errors.push(`${path}gaps required`); else { const categories=input.gaps.map((g)=>isObjectRecord(g)?g.readinessCategory:undefined); if(new Set(categories).size!==categories.length) errors.push(`${path}gaps duplicate readinessCategory`); input.gaps.forEach((g,i)=>{ const r=validateMarketAssetCausalityGap(g,`${path}gaps[${i}].`); if(r.ok===false) errors.push(...r.errors); }); const expected={live_provider_integration:'blocked',empirical_validation:'pending',production_calibration:'pending'} as const; for(const [cat,status] of Object.entries(expected)){ const gap=input.gaps.find((g)=>isObjectRecord(g)&&g.readinessCategory===cat); if(!gap||!isObjectRecord(gap)||gap.status!==status) errors.push(`${path}${cat} status invalid`); } }
   return errors.length ? { ok: false, errors } : { ok: true, value: input as MarketAssetCausalityCoverageReport };
 }
 

@@ -57,6 +57,8 @@ import { runPriceReactionTests } from './price-reaction.test.js';
 import { runProviderReliabilityTests } from './provider-reliability.test.js';
 import { runMarketGoldenScenarioAcceptanceTests } from './golden-scenarios.test.js';
 import { runMarketReasoningReadinessTests } from './market-reasoning-readiness.test.js';
+import { runFrontendContractSchemaTests } from './frontend-contracts.test.js';
+import { runRcAFormulaRegressionTests } from './rc-a-formula-regression.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -117,6 +119,8 @@ async function run(): Promise<void> {
   runProviderReliabilityTests();
   runMarketGoldenScenarioAcceptanceTests();
   runMarketReasoningReadinessTests();
+  runFrontendContractSchemaTests();
+  runRcAFormulaRegressionTests();
   console.log('reasoning runtime contract tests passed');
 }
 

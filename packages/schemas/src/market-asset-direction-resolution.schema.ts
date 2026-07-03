@@ -68,8 +68,6 @@ export function validateMarketAssetDirectionResolutionCoverageReport(input: unkn
   if (input.launchAssetCount !== MARKET_ASSET_CAUSALITY_ASSETS.length) errors.push(`${path}launchAssetCount invalid`);
   if (!Array.isArray(input.representedAssets) || input.representedAssets.length !== MARKET_ASSET_CAUSALITY_ASSETS.length) errors.push(`${path}representedAssets invalid`);
   if (input.genericDirectionPrimaryPathDisabled !== true) errors.push(`${path}generic path must be disabled`);
-  const pendingPhases = Array.isArray(input.pendingPhases) ? input.pendingPhases : [];
-  if (!Array.isArray(input.pendingPhases) || !['R3','R4','R7'].every((p) => pendingPhases.includes(p))) errors.push(`${path}R3/R4/R7 must remain pending`);
   if (!arr(input.warnings, MARKET_ASSET_DIRECTION_RESOLUTION_WARNINGS)) errors.push(`${path}warnings invalid`);
   if (!strArr(input.notes)) errors.push(`${path}notes required`);
   return errors.length ? { ok: false, errors } : { ok: true, value: input as MarketAssetDirectionResolutionCoverageReport };

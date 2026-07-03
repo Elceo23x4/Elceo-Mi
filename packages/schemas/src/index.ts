@@ -107,3 +107,5 @@ export * from './market-price-reaction.schema';
 export * from './market-provider-reliability.schema';
 
 export * from './market-golden-scenarios.schema';
+
+export * from './market-reasoning-readiness.schema';

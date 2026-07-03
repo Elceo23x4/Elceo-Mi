@@ -1,3 +1,4 @@
+import type { MarketReasoningModuleReadiness } from './market-reasoning-readiness';
 import type { ReasoningEvidenceInputItem } from './reasoning-market-input';
 
 export const MARKET_MACRO_INDICATOR_CATEGORIES = ['inflation','labor_market','growth_activity','consumption','business_activity','central_bank_policy','housing','trade_balance','confidence_sentiment','fiscal','commodity_inventory','unknown'] as const;
@@ -84,5 +85,5 @@ export type MarketMacroSurpriseNormalizationResult = {
 };
 export type MarketMacroSurpriseRule = { ruleId: string; indicatorKinds: MarketMacroIndicatorKind[]; category: MarketMacroIndicatorCategory; inverted: boolean; economicMeanings: MarketMacroEconomicMeaning[]; reasonCodes: MarketMacroSurpriseReasonCode[]; warnings: MarketMacroSurpriseWarning[]; rationale: string };
 export type MarketMacroSurpriseRuleSetSnapshot = { generatedAt: string; rules: MarketMacroSurpriseRule[]; coverageReport: MarketMacroSurpriseCoverageReport };
-export type MarketMacroSurpriseCoverageReport = { generatedAt: string; representedIndicatorKinds: MarketMacroIndicatorKind[]; representedCategories: MarketMacroIndicatorCategory[]; pendingPhases: Array<'R5'|'R6'|'R7'|'provider_reliability'>; warnings: MarketMacroSurpriseWarning[]; notes: string[] };
+export type MarketMacroSurpriseCoverageReport = { generatedAt: string; representedIndicatorKinds: MarketMacroIndicatorKind[]; representedCategories: MarketMacroIndicatorCategory[]; readiness: MarketReasoningModuleReadiness; warnings: MarketMacroSurpriseWarning[]; notes: string[] };
 export type MarketMacroSurpriseEvidenceItem = ReasoningEvidenceInputItem;

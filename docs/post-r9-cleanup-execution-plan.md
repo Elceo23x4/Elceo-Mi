@@ -225,3 +225,6 @@ Required architecture: durable payment operations must include immutable interna
 - This audit/plan PR does not implement referrals, payment activation, notification activation, provider activation, C6-R9H, C6-R10, or any new reasoning phase.
 
 - RC-C code foundations now include durable commercial repositories, commercial operation idempotency records, consolidated social identifier persistence, and shared SQL pool lifecycle handling. This is code-level foundation only; staging/managed database rehearsal, production activation, live payment readiness, and external social ownership proof remain unclaimed.
+
+## RC-A resolution note (2026-07-03)
+RC-A corrects terminology, readiness contracts, and asset taxonomy only. Deterministic R1-R9 reasoning foundations exist; live provider activation remains blocked, empirical validation remains pending, and production calibration remains pending. DXY and VIX are reasoning diagnostic assets, not launch-tradable instruments. No reasoning formula, confidence arithmetic, provider activation, or golden-scenario anchor changed in RC-A. RC-D remains the next reasoning-correctness batch and will address structured issuer/region/currency inference.

@@ -1,3 +1,4 @@
+import type { MarketReasoningModuleReadiness } from './market-reasoning-readiness';
 import type { EvidenceWeightHorizon, WeightedEvidenceSnapshot, WeightedEvidenceItem } from './market-evidence-weighting';
 import type { MarketAssetCausalityAsset, MarketAssetDriverKind } from './market-asset-causality';
 import type { MarketPriceReactionResult } from './market-price-reaction';
@@ -80,7 +81,7 @@ export type MarketContradictionMatrixResult = {
   warnings: MarketContradictionWarning[];
   reasonCodes: MarketContradictionReasonCode[];
   rationale: string;
-  complete: false;
+  readiness: MarketReasoningModuleReadiness; complete: false;
   pending: { confidenceCalibrationR6: true; priceReactionR7: true; providerReliabilityExpansion: true };
 };
 
@@ -96,8 +97,8 @@ export type MarketContradictionRule = {
   rationale: string;
 };
 
-export type MarketContradictionRuleSetSnapshot = { generatedAt: string; rules: MarketContradictionRule[]; warnings: MarketContradictionWarning[]; complete: false; pending: { confidenceCalibrationR6: true; priceReactionR7: true; providerReliabilityExpansion: true } };
-export type MarketContradictionCoverageReport = { generatedAt: string; familyCount: number; ruleCount: number; coveredFamilies: MarketContradictionFamily[]; missingFamilies: MarketContradictionFamily[]; warnings: MarketContradictionWarning[]; complete: false; pending: { confidenceCalibrationR6: true; priceReactionR7: true; providerReliabilityExpansion: true }; notes: string[] };
+export type MarketContradictionRuleSetSnapshot = { generatedAt: string; rules: MarketContradictionRule[]; warnings: MarketContradictionWarning[]; readiness: MarketReasoningModuleReadiness; complete: false; pending: { confidenceCalibrationR6: true; priceReactionR7: true; providerReliabilityExpansion: true } };
+export type MarketContradictionCoverageReport = { generatedAt: string; familyCount: number; ruleCount: number; coveredFamilies: MarketContradictionFamily[]; missingFamilies: MarketContradictionFamily[]; warnings: MarketContradictionWarning[]; readiness: MarketReasoningModuleReadiness; complete: false; pending: { confidenceCalibrationR6: true; priceReactionR7: true; providerReliabilityExpansion: true }; notes: string[] };
 
 export type MarketContradictionWeightedSnapshotOptions = { priceReactionAvailable?: boolean; priceReaction?: MarketPriceReactionResult; providerReliabilitySupplied?: boolean; sourceIndependenceVerified?: boolean };
 export type MarketContradictionEvidenceItemsOptions = MarketContradictionWeightedSnapshotOptions & { generatedAt?: string; horizon?: EvidenceWeightHorizon };

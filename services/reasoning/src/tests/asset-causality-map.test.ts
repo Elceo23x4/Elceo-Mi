@@ -28,7 +28,7 @@ export function runAssetCausalityMapTests(): void {
   const report = getMarketAssetCausalityCoverageReport('2026-06-03T00:00:00.000Z');
   const reportValidation = validateMarketAssetCausalityCoverageReport(report);
   assert(reportValidation.ok, `coverage report validates ${reportValidation.ok ? '' : reportValidation.errors.join(';')}`);
-  assert(report.complete === false && listMarketAssetCausalityGaps().every((g) => g.status === 'pending_r2_r9'), 'known gaps do not claim completion');
+  assert(report.complete === false && listMarketAssetCausalityGaps().every((g) => g.readinessCategory === 'live_provider_integration' || g.readinessCategory === 'empirical_validation' || g.readinessCategory === 'production_calibration'), 'known gaps do not claim completion');
 
   const fxAssets: MarketAssetCausalityAsset[] = ['eur_usd','gbp_usd','usd_jpy','usd_chf','aud_usd','nzd_usd','usd_cad'];
   for (const asset of fxAssets) {

@@ -1,3 +1,4 @@
+import type { MarketReasoningModuleReadiness } from './market-reasoning-readiness';
 import type { WeightedEvidenceSnapshot } from './market-evidence-weighting';
 import type { ReasoningEvidenceInputItem } from './reasoning-market-input';
 
@@ -91,9 +92,8 @@ export type MarketFxRelativeStrengthCoverageReport = {
   pairCount: number;
   currencies: MarketFxCurrencyCode[];
   dxyCoverage: 'limited_diagnostic' | 'not_enabled';
-  pendingPhases: Array<'R4'|'R5'|'R6'|'R7'|'provider_reliability'>;
   warnings: MarketFxRelativeStrengthWarning[];
-  notes: string[];
+  notes: string[]; readiness: MarketReasoningModuleReadiness;
 };
 
 export type MarketFxRelativeStrengthRule = {

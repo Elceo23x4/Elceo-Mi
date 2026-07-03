@@ -75,11 +75,8 @@ export function validateMarketMacroSurpriseCoverageReport(input: unknown, path =
   if (!isIsoDateString(input.generatedAt)) errors.push(`${path}generatedAt invalid`);
   if (!arr(input.representedIndicatorKinds, MARKET_MACRO_INDICATOR_KINDS)) errors.push(`${path}representedIndicatorKinds invalid`);
   if (!arr(input.representedCategories, MARKET_MACRO_INDICATOR_CATEGORIES)) errors.push(`${path}representedCategories invalid`);
-  const pending = Array.isArray(input.pendingPhases) ? input.pendingPhases : [];
-  if (!['R5','R6','R7','provider_reliability'].every((x) => pending.includes(x))) errors.push(`${path}R5/R6/R7/provider reliability must remain pending`);
   if (!arr(input.warnings, MARKET_MACRO_SURPRISE_WARNINGS)) errors.push(`${path}warnings invalid`);
   if (!Array.isArray(input.notes) || input.notes.some((n) => !isNonEmptyString(n) || forbidden.test(n))) errors.push(`${path}notes invalid`);
-  if (!/r5|r6|r7|provider_reliability/.test(text(input))) errors.push(`${path}pending coverage notes required`);
   return errors.length ? { ok: false, errors } : { ok: true, value: input as MarketMacroSurpriseCoverageReport };
 }
 

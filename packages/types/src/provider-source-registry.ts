@@ -20,16 +20,25 @@ export type ProviderCredentialRequirement = typeof PROVIDER_CREDENTIAL_REQUIREME
 export const PROVIDER_SOURCE_STATUSES = ['fixture_ready','dry_run_ready','live_blocked','not_started'] as const;
 export type ProviderSourceStatus = typeof PROVIDER_SOURCE_STATUSES[number];
 
-export type LaunchAsset = 'xau_usd'|'eur_usd'|'gbp_usd'|'usd_jpy'|'aud_usd'|'usd_chf'|'nzd_usd'|'usd_cad'|'btc_usd'|'nasdaq_100'|'sp500'|'de30'|'dxy'|'vix';
+import type { TradingAssetCoverage } from './market-evidence';
+export const MARKET_REASONING_DIAGNOSTIC_ASSETS = ['dxy','vix'] as const;
+export type TradableLaunchAsset = TradingAssetCoverage;
+export type MarketReasoningDiagnosticAsset = typeof MARKET_REASONING_DIAGNOSTIC_ASSETS[number];
+export type MarketReasoningAsset = TradableLaunchAsset | MarketReasoningDiagnosticAsset;
+export type MarketAssetSupportRole = 'launch_tradable'|'reasoning_diagnostic';
+/** @deprecated Use TradableLaunchAsset for launch-tradable assets or MarketReasoningAsset for diagnostic-inclusive registries. */
+export type LaunchAsset = MarketReasoningAsset;
+/** @deprecated Historical 14-asset provider/reasoning union. Use MarketReasoningAsset. */
+export type LegacyProviderReasoningAsset = MarketReasoningAsset;
 
 export type ProviderCapabilityDescriptor = {
   capabilityKind: ProviderSourceCapabilityKind; evidenceTypeId: string; activationStage: ProviderActivationStage; fixtureReadiness: ProviderFixtureReadiness; dryRunSupported: boolean; liveActivationMode: ProviderLiveActivationMode;
 };
-export type ProviderAssetCoverageDescriptor = { asset: LaunchAsset; sourceIds: ProviderSourceId[]; themes: string[]; };
+export type ProviderAssetCoverageDescriptor = { asset: MarketReasoningAsset; supportRole: MarketAssetSupportRole; sourceIds: ProviderSourceId[]; themes: string[]; };
 export type ProviderSourceDescriptor = {
-  sourceId: ProviderSourceId; family: ProviderSourceFamily; displayName: string; status: ProviderSourceStatus; activationStage: ProviderActivationStage; fixtureReadiness: ProviderFixtureReadiness; liveActivationMode: ProviderLiveActivationMode; credentialRequirement: ProviderCredentialRequirement; capabilities: ProviderCapabilityDescriptor[]; assets: LaunchAsset[]; notes: string;
+  sourceId: ProviderSourceId; family: ProviderSourceFamily; displayName: string; status: ProviderSourceStatus; activationStage: ProviderActivationStage; fixtureReadiness: ProviderFixtureReadiness; liveActivationMode: ProviderLiveActivationMode; credentialRequirement: ProviderCredentialRequirement; capabilities: ProviderCapabilityDescriptor[]; assets: MarketReasoningAsset[]; notes: string;
 };
-export type ProviderSourceGap = { gapId: string; sourceId: ProviderSourceId; asset: LaunchAsset | 'all'; severity: 'low'|'medium'|'high'; reason: string; blockedBy: 'fixture_missing'|'dry_run_missing'|'live_blocked_by_policy'|'integration_not_started'; };
+export type ProviderSourceGap = { gapId: string; sourceId: ProviderSourceId; asset: MarketReasoningAsset | 'all'; severity: 'low'|'medium'|'high'; reason: string; blockedBy: 'fixture_missing'|'dry_run_missing'|'live_blocked_by_policy'|'integration_not_started'; };
 export type ProviderSourceActivationChecklistItem = { checklistItemId: string; sourceId: ProviderSourceId; order: number; description: string; required: boolean; done: boolean; blocked: boolean; };
 
 export type ProviderSourceRegistrySnapshot = {

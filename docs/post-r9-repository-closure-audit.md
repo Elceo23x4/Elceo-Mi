@@ -892,3 +892,6 @@ Recurring combinations across the 25 zero-confidence results include `provider_a
 - No production credentials, staging URLs, WAF, payment, notification, backup, or monitoring systems were available for live verification.
 - The route matrix is included in this audit; rows marked `partial`, `gap_found`, or `environment_verification_required` still require implementation, exact test evidence, or external deployment verification.
 - Validation command outputs are reported separately and honestly; environment-dependent commands are not counted as code failures when required variables are absent.
+
+## RC-A resolution note (2026-07-03)
+RC-A corrects terminology, readiness contracts, and asset taxonomy only. Deterministic R1-R9 reasoning foundations exist; live provider activation remains blocked, empirical validation remains pending, and production calibration remains pending. DXY and VIX are reasoning diagnostic assets, not launch-tradable instruments. No reasoning formula, confidence arithmetic, provider activation, or golden-scenario anchor changed in RC-A. RC-D remains the next reasoning-correctness batch and will address structured issuer/region/currency inference.

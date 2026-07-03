@@ -18,7 +18,7 @@ export function runMacroSurpriseNormalizationTests(): void {
   assert(validateMarketMacroSurpriseNormalizationResult(valid).ok, 'normalization result validates');
   assert(validateMarketMacroSurpriseRuleSetSnapshot(getMacroSurpriseRuleSetSnapshot()).ok && assertMacroSurpriseRuleSetValid(), 'rule set validates');
   const coverage = getMacroSurpriseCoverageReport();
-  assert(validateMarketMacroSurpriseCoverageReport(coverage).ok && coverage.pendingPhases.includes('R5') && coverage.pendingPhases.includes('R6') && coverage.pendingPhases.includes('R7') && coverage.pendingPhases.includes('provider_reliability'), 'coverage keeps R5/R6/R7/provider reliability pending');
+  assert(validateMarketMacroSurpriseCoverageReport(coverage).ok && coverage.readiness.deterministicFoundationStatus === 'implemented', 'coverage uses canonical readiness');
   const boundary = CanonicalMarketIntelligenceBoundaryService.prototype;
   assert(boundary.normalizeMacroSurprise({ releaseId: 'b', indicatorKind: 'gdp', actual: 2, forecast: 1, unit: 'pct' }).economicMeaning === 'stronger_growth', 'canonical boundary exposes normalizeMacroSurprise');
   assert(!/\b(buy|sell|hold|guaranteed profit|risk-free)\b/i.test(valid.rationale), 'no advice language');

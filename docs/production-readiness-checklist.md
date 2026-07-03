@@ -360,3 +360,6 @@ _Date: 2026-05-16_
 - [ ] Empirical backtesting must determine whether stacked readiness, coverage, confirmation, contradiction, and provider penalties are correctly composed or over-accumulating.
 - [ ] Production-data calibration remains required before treating confidence levels as live-validated.
 - Passing golden fixtures do not close this open loop by themselves.
+
+## RC-A resolution note (2026-07-03)
+RC-A corrects terminology, readiness contracts, and asset taxonomy only. Deterministic R1-R9 reasoning foundations exist; live provider activation remains blocked, empirical validation remains pending, and production calibration remains pending. DXY and VIX are reasoning diagnostic assets, not launch-tradable instruments. No reasoning formula, confidence arithmetic, provider activation, or golden-scenario anchor changed in RC-A. RC-D remains the next reasoning-correctness batch and will address structured issuer/region/currency inference.

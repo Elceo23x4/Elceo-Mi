@@ -1,5 +1,5 @@
 import type { MarketAssetCausalityCoverageReport, MarketAssetCausalityDescriptor, MarketAssetCausalityDriver, MarketAssetCausalityMatrixSnapshot, MarketAssetContradictionTrigger, MarketAssetDirectionResolutionRequirement, MarketAssetProviderDependency, MarketAssetRegimeModifier } from '@elceo/types';
-import { MARKET_ASSET_CAUSALITY_ASSETS, MARKET_ASSET_CONTRADICTION_TRIGGER_KINDS, MARKET_ASSET_COVERAGE_STATUSES, MARKET_ASSET_DRIVER_DIRECTION_SENSITIVITIES, MARKET_ASSET_DRIVER_IMPORTANCE, MARKET_ASSET_DRIVER_KINDS, MARKET_ASSET_FAMILIES, MARKET_ASSET_FRESHNESS_SENSITIVITIES, MARKET_ASSET_MACRO_EVENT_SENSITIVITIES, MARKET_ASSET_PRICE_CONFIRMATION_NEEDS, MARKET_ASSET_PROVIDER_DEPENDENCY_TIERS, MARKET_ASSET_REGIME_MODIFIER_KINDS, PROVIDER_SOURCE_IDS } from '@elceo/types';
+import { MARKET_ASSET_CAUSALITY_ASSETS, MARKET_ASSET_CONTRADICTION_TRIGGER_KINDS, MARKET_ASSET_COVERAGE_STATUSES, MARKET_ASSET_DRIVER_DIRECTION_SENSITIVITIES, MARKET_ASSET_DRIVER_IMPORTANCE, MARKET_ASSET_DRIVER_KINDS, MARKET_ASSET_FAMILIES, MARKET_ASSET_FRESHNESS_SENSITIVITIES, MARKET_ASSET_MACRO_EVENT_SENSITIVITIES, MARKET_ASSET_PRICE_CONFIRMATION_NEEDS, MARKET_ASSET_PROVIDER_DEPENDENCY_TIERS, MARKET_ASSET_REGIME_MODIFIER_KINDS, MARKET_REASONING_DIAGNOSTIC_ASSETS, PROVIDER_SOURCE_IDS, TRADING_ASSET_COVERAGE } from '@elceo/types';
 import { isEnumValue, isIsoDateString, isNonEmptyString, isObjectRecord, isStringArray, type SchemaValidationResult } from './validation-utils';
 
 const FORBIDDEN = /\b(buy|sell|hold|guaranteed profit|risk-free)\b/i;
@@ -82,7 +82,7 @@ export function validateMarketAssetCausalityDescriptor(input: unknown, path = ''
   if (!isEnumValue(input.macroEventSensitivity, MARKET_ASSET_MACRO_EVENT_SENSITIVITIES)) errors.push(`${path}macroEventSensitivity invalid`);
   if (!arrayOfObjects(input.providerDependencies) || input.providerDependencies.length === 0) errors.push(`${path}providerDependencies required`); else input.providerDependencies.forEach((d, i) => { const r = validateDependency(d, `${path}providerDependencies[${i}].`); if ('errors' in r) errors.push(...r.errors); });
   if (!arrayOfObjects(input.directionResolutionRequirements) || input.directionResolutionRequirements.length === 0) errors.push(`${path}directionResolutionRequirements required`); else input.directionResolutionRequirements.forEach((r0, i) => { const r = validateRequirement(r0, `${path}directionResolutionRequirements[${i}].`); if ('errors' in r) errors.push(...r.errors); });
-  validateTextArray(input.currentCodeCoverage, `${path}currentCodeCoverage`, errors); validateTextArray(input.implementationPhaseDependencies, `${path}implementationPhaseDependencies`, errors); noBad(input.rationale, `${path}rationale`, errors);
+  validateTextArray(input.currentCodeCoverage, `${path}currentCodeCoverage`, errors); validateTextArray(input.deterministicModuleDependencies, `${path}deterministicModuleDependencies`, errors); noBad(input.rationale, `${path}rationale`, errors);
   if (!Array.isArray(input.knownGaps) || input.knownGaps.length === 0) errors.push(`${path}knownGaps required`);
   const asset = typeof input.asset === 'string' ? input.asset : '';
   const kinds = ids.join('|'); const deps = JSON.stringify(input.providerDependencies ?? []); const all = JSON.stringify(input);
@@ -105,11 +105,15 @@ export function validateMarketAssetCausalityCoverageReport(input: unknown, path 
   const errors: string[] = [];
   if (!isObjectRecord(input)) return { ok: false, errors: [`${path}coverage report object required`] };
   if (!isIsoDateString(input.generatedAt)) errors.push(`${path}generatedAt invalid`);
-  if (input.launchAssetCount !== required.length) errors.push(`${path}launchAssetCount invalid`);
+  if (input.launchTradableAssetCount !== TRADING_ASSET_COVERAGE.length) errors.push(`${path}launchTradableAssetCount invalid`);
+  if (input.diagnosticAssetCount !== MARKET_REASONING_DIAGNOSTIC_ASSETS.length) errors.push(`${path}diagnosticAssetCount invalid`);
+  if (input.representedReasoningAssetCount !== required.length) errors.push(`${path}representedReasoningAssetCount invalid`);
+  if (!isObjectRecord(input.assetSupportRoles)) errors.push(`${path}assetSupportRoles invalid`); else { for (const a of TRADING_ASSET_COVERAGE) if (input.assetSupportRoles[a] !== 'launch_tradable') errors.push(`${path}${a} role invalid`); for (const a of MARKET_REASONING_DIAGNOSTIC_ASSETS) if (input.assetSupportRoles[a] !== 'reasoning_diagnostic') errors.push(`${path}${a} role invalid`); }
+  if (!isObjectRecord(input.readiness)) errors.push(`${path}readiness invalid`);
   if (!Array.isArray(input.representedAssets) || input.representedAssets.length !== required.length) errors.push(`${path}representedAssets invalid`);
   if (!Array.isArray(input.missingAssets) || input.missingAssets.length !== 0) errors.push(`${path}missingAssets must be empty`);
   if (!Array.isArray(input.duplicateAssets) || input.duplicateAssets.length !== 0) errors.push(`${path}duplicateAssets must be empty`);
-  if (input.complete !== false) errors.push(`${path}complete must remain false for pending R2-R9 work`);
+  if (typeof input.complete !== 'boolean') errors.push(`${path}complete compatibility flag invalid`);
   validateTextArray(input.notes, `${path}notes`, errors);
   if (!Array.isArray(input.gaps) || input.gaps.length === 0) errors.push(`${path}gaps required`);
   return errors.length ? { ok: false, errors } : { ok: true, value: input as MarketAssetCausalityCoverageReport };

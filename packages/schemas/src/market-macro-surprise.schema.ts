@@ -1,6 +1,7 @@
 import type { MarketMacroReleaseInput, MarketMacroSurpriseCoverageReport, MarketMacroSurpriseNormalizationResult, MarketMacroSurpriseRule, MarketMacroSurpriseRuleSetSnapshot } from '@elceo/types';
 import { MARKET_MACRO_CURRENCIES, MARKET_MACRO_ECONOMIC_MEANINGS, MARKET_MACRO_GROWTH_PRESSURES, MARKET_MACRO_INDICATOR_CATEGORIES, MARKET_MACRO_INDICATOR_KINDS, MARKET_MACRO_INFLATION_PRESSURES, MARKET_MACRO_POLICY_PRESSURES, MARKET_MACRO_REGIONS, MARKET_MACRO_RELEASE_IMPORTANCES, MARKET_MACRO_RISK_PRESSURES, MARKET_MACRO_SURPRISE_CONFIDENCE_TIERS, MARKET_MACRO_SURPRISE_DIRECTIONS, MARKET_MACRO_SURPRISE_REASON_CODES, MARKET_MACRO_SURPRISE_SEVERITIES, MARKET_MACRO_SURPRISE_WARNINGS } from '@elceo/types';
 import { isEnumValue, isFiniteNumber, isIsoDateString, isNonEmptyString, isObjectRecord, isScore0to100, type SchemaValidationResult } from './validation-utils';
+import { validateExpectedMarketReasoningModuleReadiness } from './market-reasoning-readiness.schema';
 
 const forbidden = /\b(buy|sell|hold|guaranteed profit|risk-free)\b/i;
 const arr = <T extends string>(v: unknown, allowed: readonly T[]): v is T[] => Array.isArray(v) && v.every((x) => isEnumValue(x, allowed));
@@ -76,7 +77,7 @@ export function validateMarketMacroSurpriseCoverageReport(input: unknown, path =
   if (!arr(input.representedIndicatorKinds, MARKET_MACRO_INDICATOR_KINDS)) errors.push(`${path}representedIndicatorKinds invalid`);
   if (!arr(input.representedCategories, MARKET_MACRO_INDICATOR_CATEGORIES)) errors.push(`${path}representedCategories invalid`);
   if (!arr(input.warnings, MARKET_MACRO_SURPRISE_WARNINGS)) errors.push(`${path}warnings invalid`);
-  if (!Array.isArray(input.notes) || input.notes.some((n) => !isNonEmptyString(n) || forbidden.test(n))) errors.push(`${path}notes invalid`);
+  if (!Array.isArray(input.notes) || input.notes.some((n) => !isNonEmptyString(n) || forbidden.test(n))) errors.push(`${path}notes invalid`); const rr=validateExpectedMarketReasoningModuleReadiness(input.readiness,'macro_surprise',`${path}readiness.`); if(rr.ok===false) errors.push(...rr.errors);
   return errors.length ? { ok: false, errors } : { ok: true, value: input as MarketMacroSurpriseCoverageReport };
 }
 

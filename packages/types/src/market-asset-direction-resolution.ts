@@ -63,7 +63,10 @@ export type MarketAssetDirectionResolutionRule = {
 };
 export type MarketAssetDirectionResolutionCoverageReport = {
   generatedAt: string;
-  launchAssetCount: number;
+  launchTradableAssetCount: number;
+  diagnosticAssetCount: number;
+  representedReasoningAssetCount: number;
+  assetSupportRoles: Record<MarketAssetCausalityAsset, 'launch_tradable'|'reasoning_diagnostic'>;
   representedAssets: MarketAssetCausalityAsset[];
   genericDirectionPrimaryPathDisabled: boolean;
   ruleCount: number;

@@ -228,3 +228,10 @@ Required architecture: durable payment operations must include immutable interna
 
 ## RC-A resolution note (2026-07-03)
 RC-A corrects terminology, readiness contracts, and asset taxonomy only. Deterministic R1-R9 reasoning foundations exist; live provider activation remains blocked, empirical validation remains pending, and production calibration remains pending. DXY and VIX are reasoning diagnostic assets, not launch-tradable instruments. No reasoning formula, confidence arithmetic, provider activation, or golden-scenario anchor changed in RC-A. RC-D remains the next reasoning-correctness batch and will address structured issuer/region/currency inference.
+
+## RC-A current truth source (2026-07-03)
+- Current status: deterministic R1-R9 foundations are implemented and reported through the canonical readiness contract.
+- Current status: live provider activation remains blocked; empirical validation and production calibration remain pending.
+- Asset taxonomy: DXY and VIX are reasoning diagnostics only; the launch-tradable set remains the 12 `TRADING_ASSET_COVERAGE` instruments.
+- RC-A scope: terminology, readiness-contract, and taxonomy correction only; no formula, provider activation, or golden-anchor changes.
+- Next reasoning-correctness dependency: RC-D structured issuer/region/currency inference.

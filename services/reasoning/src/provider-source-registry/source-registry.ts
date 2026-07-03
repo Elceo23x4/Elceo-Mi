@@ -20,7 +20,7 @@ providerSources.sort((a,b)=>a.sourceId.localeCompare(b.sourceId));
 
 const supportRole=(asset:MarketReasoningAsset)=>asset==='dxy'||asset==='vix'?'reasoning_diagnostic':'launch_tradable';
 const coverage = (asset:MarketReasoningAsset,sourceIds:ProviderSourceId[],themes:string[]): ProviderAssetCoverageDescriptor => ({asset,supportRole:supportRole(asset),sourceIds:[...sourceIds].sort(),themes:[...themes]});
-const launchAssetCoverage: ProviderAssetCoverageDescriptor[] = [
+const reasoningAssetCoverage: ProviderAssetCoverageDescriptor[] = [
 coverage('xau_usd',['tiingo_market_data','us_treasury_official','federal_reserve_official','cftc_cot','etf_flows_shell','marketaux_news'],['market_price','real_yields','fed_policy','usd_context','cot_gold','etf_holdings','safe_haven_news']),
 coverage('eur_usd',['tiingo_market_data','ecb_official','eurostat_official','destatis_official','federal_reserve_official','cftc_cot','newsapi_news'],['ecb_policy','euro_macro','german_macro','fed_us','cot_eur','yield_differentials','political_news']),
 coverage('gbp_usd',['tiingo_market_data','boe_official','ons_official','federal_reserve_official','cftc_cot','newsapi_news'],['boe_policy','uk_macro','fed_us','gilt_context','cot_gbp']),
@@ -48,10 +48,10 @@ export const getDefaultProviderSourceRegistry=():ProviderSourceDescriptor[]=>pro
 export const getProviderSourceRegistrySnapshot=(asOfIso?:string):ProviderSourceRegistrySnapshot=>{
 const gaps:ProviderSourceGap[]=providerSources.filter((x)=>x.status!=='fixture_ready').map((x)=>({gapId:`gap:${x.sourceId}`,sourceId:x.sourceId,asset:'all',severity:x.status==='not_started'?'high':'medium',reason:x.status==='not_started'?'Implementation not started':'Fixture/dry-run incomplete',blockedBy:x.status==='not_started'?'integration_not_started':'fixture_missing'}));
 const activationChecklistBySource = Object.fromEntries(PROVIDER_SOURCE_IDS.map((id)=>[id,baseChecklist(id)])) as ProviderSourceRegistrySnapshot['activationChecklistBySource'];
-return {generatedAt:asOfIso ?? new Date().toISOString(),sources:getDefaultProviderSourceRegistry(),launchAssetCoverage:[...launchAssetCoverage],gaps,activationChecklistBySource};
+const launchTradableAssetCoverage=reasoningAssetCoverage.filter((x)=>x.supportRole==='launch_tradable'); const reasoningDiagnosticAssetCoverage=reasoningAssetCoverage.filter((x)=>x.supportRole==='reasoning_diagnostic'); return {generatedAt:asOfIso ?? new Date().toISOString(),sources:getDefaultProviderSourceRegistry(),reasoningAssetCoverage:[...reasoningAssetCoverage],launchTradableAssetCoverage,reasoningDiagnosticAssetCoverage,launchTradableAssetCount:launchTradableAssetCoverage.length,reasoningDiagnosticAssetCount:reasoningDiagnosticAssetCoverage.length,representedReasoningAssetCount:reasoningAssetCoverage.length,gaps,activationChecklistBySource};
 };
 export const listProviderSourcesByFamily=(family:ProviderSourceFamily)=>getDefaultProviderSourceRegistry().filter((x)=>x.family===family);
 export const getProviderSourceDescriptor=(sourceId:ProviderSourceId)=>getDefaultProviderSourceRegistry().find((x)=>x.sourceId===sourceId)??null;
-export const listProviderSourcesForAsset=(asset:MarketReasoningAsset)=>{const row=launchAssetCoverage.find((x)=>x.asset===asset); return row?row.sourceIds.map((id)=>getProviderSourceDescriptor(id as ProviderSourceId)).filter(Boolean) as ProviderSourceDescriptor[]:[];};
+export const listProviderSourcesForAsset=(asset:MarketReasoningAsset)=>{const row=reasoningAssetCoverage.find((x)=>x.asset===asset); return row?row.sourceIds.map((id)=>getProviderSourceDescriptor(id as ProviderSourceId)).filter(Boolean) as ProviderSourceDescriptor[]:[];};
 export const listProviderSourceGaps=()=>getProviderSourceRegistrySnapshot('2026-01-01T00:00:00.000Z').gaps;
 export const buildProviderActivationChecklist=(sourceId:ProviderSourceId)=>baseChecklist(sourceId);

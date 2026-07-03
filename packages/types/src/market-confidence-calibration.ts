@@ -62,9 +62,8 @@ export type MarketConfidenceCalibrationResult = {
   warnings: MarketConfidenceCalibrationWarning[];
   reasonCodes: MarketConfidenceCalibrationReasonCode[];
   rationale: string;
-  readiness: MarketReasoningModuleReadiness; complete: false;
-  pending: { priceReactionR7: true; providerReliabilityExpansion: true; goldenScenarioExpansion: true; empiricalBacktesting: true };
+  readiness: MarketReasoningModuleReadiness;
 };
 export type MarketConfidenceCalibrationRule = { ruleId: string; componentKind?: MarketConfidenceCalibrationComponentKind; penaltyKind?: MarketConfidenceCalibrationPenaltyKind; boostKind?: MarketConfidenceCalibrationBoostKind; rationale: string; };
-export type MarketConfidenceCalibrationRuleSetSnapshot = { generatedAt: string; rules: MarketConfidenceCalibrationRule[]; warnings: MarketConfidenceCalibrationWarning[]; readiness: MarketReasoningModuleReadiness; complete: false; pending: MarketConfidenceCalibrationResult['pending']; };
-export type MarketConfidenceCalibrationCoverageReport = { generatedAt: string; componentKinds: MarketConfidenceCalibrationComponentKind[]; penaltyKinds: MarketConfidenceCalibrationPenaltyKind[]; boostKinds: MarketConfidenceCalibrationBoostKind[]; warnings: MarketConfidenceCalibrationWarning[]; notes: string[]; readiness: MarketReasoningModuleReadiness; complete: false; pending: MarketConfidenceCalibrationResult['pending']; };
+export type MarketConfidenceCalibrationRuleSetSnapshot = { generatedAt: string; rules: MarketConfidenceCalibrationRule[]; warnings: MarketConfidenceCalibrationWarning[]; readiness: MarketReasoningModuleReadiness; };
+export type MarketConfidenceCalibrationCoverageReport = { generatedAt: string; componentKinds: MarketConfidenceCalibrationComponentKind[]; penaltyKinds: MarketConfidenceCalibrationPenaltyKind[]; boostKinds: MarketConfidenceCalibrationBoostKind[]; warnings: MarketConfidenceCalibrationWarning[]; notes: string[]; readiness: MarketReasoningModuleReadiness; };

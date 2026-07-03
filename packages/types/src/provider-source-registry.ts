@@ -26,8 +26,7 @@ export type TradableLaunchAsset = TradingAssetCoverage;
 export type MarketReasoningDiagnosticAsset = typeof MARKET_REASONING_DIAGNOSTIC_ASSETS[number];
 export type MarketReasoningAsset = TradableLaunchAsset | MarketReasoningDiagnosticAsset;
 export type MarketAssetSupportRole = 'launch_tradable'|'reasoning_diagnostic';
-/** @deprecated Use TradableLaunchAsset for launch-tradable assets or MarketReasoningAsset for diagnostic-inclusive registries. */
-export type LaunchAsset = MarketReasoningAsset;
+export type LaunchAsset = TradingAssetCoverage;
 /** @deprecated Historical 14-asset provider/reasoning union. Use MarketReasoningAsset. */
 export type LegacyProviderReasoningAsset = MarketReasoningAsset;
 
@@ -42,5 +41,5 @@ export type ProviderSourceGap = { gapId: string; sourceId: ProviderSourceId; ass
 export type ProviderSourceActivationChecklistItem = { checklistItemId: string; sourceId: ProviderSourceId; order: number; description: string; required: boolean; done: boolean; blocked: boolean; };
 
 export type ProviderSourceRegistrySnapshot = {
-  generatedAt: string; sources: ProviderSourceDescriptor[]; launchAssetCoverage: ProviderAssetCoverageDescriptor[]; gaps: ProviderSourceGap[]; activationChecklistBySource: Record<ProviderSourceId, ProviderSourceActivationChecklistItem[]>;
+  generatedAt: string; sources: ProviderSourceDescriptor[]; reasoningAssetCoverage: ProviderAssetCoverageDescriptor[]; launchTradableAssetCoverage: ProviderAssetCoverageDescriptor[]; reasoningDiagnosticAssetCoverage: ProviderAssetCoverageDescriptor[]; launchTradableAssetCount: number; reasoningDiagnosticAssetCount: number; representedReasoningAssetCount: number; gaps: ProviderSourceGap[]; activationChecklistBySource: Record<ProviderSourceId, ProviderSourceActivationChecklistItem[]>;
 };

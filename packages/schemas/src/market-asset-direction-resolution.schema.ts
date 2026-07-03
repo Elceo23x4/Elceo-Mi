@@ -1,6 +1,7 @@
 import type { MarketAssetDirectionResolutionCoverageReport, MarketAssetDirectionResolutionInput, MarketAssetDirectionResolutionResult, MarketAssetDirectionResolutionRule, MarketAssetDirectionResolutionRuleSetSnapshot } from '@elceo/types';
-import { MARKET_ASSET_CAUSALITY_ASSETS, MARKET_ASSET_DIRECTION_RESOLUTION_REASON_CODES, MARKET_ASSET_DIRECTION_RESOLUTION_WARNINGS, MARKET_ASSET_DRIVER_IMPACT_POLARITIES, MARKET_ASSET_POLICY_TONES, MARKET_ASSET_RAW_DIRECTION_HINTS, MARKET_ASSET_RESOLVED_PRESSURE_TARGETS, MARKET_ASSET_RISK_REGIME_HINTS, WEIGHTED_EVIDENCE_DIRECTIONS } from '@elceo/types';
+import { MARKET_ASSET_CAUSALITY_ASSETS, MARKET_REASONING_DIAGNOSTIC_ASSETS, TRADING_ASSET_COVERAGE, MARKET_ASSET_DIRECTION_RESOLUTION_REASON_CODES, MARKET_ASSET_DIRECTION_RESOLUTION_WARNINGS, MARKET_ASSET_DRIVER_IMPACT_POLARITIES, MARKET_ASSET_POLICY_TONES, MARKET_ASSET_RAW_DIRECTION_HINTS, MARKET_ASSET_RESOLVED_PRESSURE_TARGETS, MARKET_ASSET_RISK_REGIME_HINTS, WEIGHTED_EVIDENCE_DIRECTIONS } from '@elceo/types';
 import { isEnumValue, isIsoDateString, isNonEmptyString, isObjectRecord, isScore0to100, type SchemaValidationResult } from './validation-utils';
+import { validateExpectedMarketReasoningModuleReadiness } from './market-reasoning-readiness.schema';
 
 const forbidden = /\b(buy|sell|hold|guaranteed profit|risk-free)\b/i;
 const fx = new Set(['eur_usd','gbp_usd','usd_jpy','usd_chf','aud_usd','nzd_usd','usd_cad']);
@@ -65,11 +66,14 @@ export function validateMarketAssetDirectionResolutionCoverageReport(input: unkn
   const errors: string[] = [];
   if (!isObjectRecord(input)) return { ok: false, errors: [`${path}coverage object required`] };
   if (!isIsoDateString(input.generatedAt)) errors.push(`${path}generatedAt invalid`);
-  if (input.launchAssetCount !== MARKET_ASSET_CAUSALITY_ASSETS.length) errors.push(`${path}launchAssetCount invalid`);
+  if (input.launchTradableAssetCount !== TRADING_ASSET_COVERAGE.length) errors.push(`${path}launchTradableAssetCount invalid`);
+  if (input.diagnosticAssetCount !== MARKET_REASONING_DIAGNOSTIC_ASSETS.length) errors.push(`${path}diagnosticAssetCount invalid`);
+  if (input.representedReasoningAssetCount !== MARKET_ASSET_CAUSALITY_ASSETS.length) errors.push(`${path}representedReasoningAssetCount invalid`);
+  if (!isObjectRecord(input.assetSupportRoles)) errors.push(`${path}assetSupportRoles invalid`); else { for (const a of TRADING_ASSET_COVERAGE) if (input.assetSupportRoles[a] !== 'launch_tradable') errors.push(`${path}${a} role invalid`); for (const a of MARKET_REASONING_DIAGNOSTIC_ASSETS) if (input.assetSupportRoles[a] !== 'reasoning_diagnostic') errors.push(`${path}${a} role invalid`); }
   if (!Array.isArray(input.representedAssets) || input.representedAssets.length !== MARKET_ASSET_CAUSALITY_ASSETS.length) errors.push(`${path}representedAssets invalid`);
   if (input.genericDirectionPrimaryPathDisabled !== true) errors.push(`${path}generic path must be disabled`);
   if (!arr(input.warnings, MARKET_ASSET_DIRECTION_RESOLUTION_WARNINGS)) errors.push(`${path}warnings invalid`);
-  if (!strArr(input.notes)) errors.push(`${path}notes required`);
+  if (!strArr(input.notes)) errors.push(`${path}notes required`); const rr=validateExpectedMarketReasoningModuleReadiness(input.readiness,'asset_direction',`${path}readiness.`); if(rr.ok===false) errors.push(...rr.errors);
   return errors.length ? { ok: false, errors } : { ok: true, value: input as MarketAssetDirectionResolutionCoverageReport };
 }
 

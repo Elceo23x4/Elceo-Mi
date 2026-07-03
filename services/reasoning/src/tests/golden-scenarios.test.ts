@@ -77,8 +77,8 @@ export function runMarketGoldenScenarioAcceptanceTests(): void {
   for (const asset of MARKET_GOLDEN_SCENARIO_ASSETS) assert(coverage.assetsCovered.includes(asset), `asset covered: ${asset}`);
   for (const group of ['A','B','C','D','E','F']) assert(coverage.groupsCovered.includes(group), `required scenario group covered: ${group}`);
   for (const engine of ['asset direction','FX relative strength','macro surprise','contradiction matrix','confidence calibration','price reaction','provider reliability']) assert(coverage.enginesCovered.includes(engine), `engine covered: ${engine}`);
-  assert.equal(suite.complete, false, 'suite complete remains false');
-  assert(suite.pending.liveProviderActivation && suite.pending.empiricalBacktesting && suite.pending.productionDataCalibration, 'pending flags remain active');
+  assert.equal(suite.readiness.moduleId, 'golden_scenarios', 'suite uses canonical readiness');
+  assert(suite.readiness.liveProviderIntegrationStatus === 'blocked' && suite.readiness.empiricalValidationStatus === 'pending' && suite.readiness.productionCalibrationStatus === 'pending', 'pending flags remain active');
 
   assert.equal(result('c6r9_us_cpi_upside_dxy_support').observedDirection, 'bullish', 'CPI upside supports DXY context');
   assert(['bearish','mixed'].includes(result('c6r9_us_cpi_upside_xau_pressure').observedDirection), 'CPI upside pressures or tensions XAU/USD context');

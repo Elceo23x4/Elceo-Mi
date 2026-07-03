@@ -86,8 +86,7 @@ export type MarketProviderReliabilityResult = {
   warnings: MarketProviderReliabilityWarning[];
   reasonCodes: MarketProviderReliabilityReasonCode[];
   rationale: string;
-  readiness: MarketReasoningModuleReadiness; complete: false;
-  pending: { liveProviderActivation: true; empiricalReliabilityBacktesting: true; goldenScenarioExpansion: true };
+  readiness: MarketReasoningModuleReadiness;
 };
 export type MarketProviderReliabilityCoverageReport = {
   generatedAt: string;
@@ -95,8 +94,7 @@ export type MarketProviderReliabilityCoverageReport = {
   evidenceClasses: MarketProviderReliabilityEvidenceClass[];
   rules: MarketProviderReliabilityRule[];
   warnings: MarketProviderReliabilityWarning[];
-  notes: string[]; readiness: MarketReasoningModuleReadiness; complete: false;
-  pending: MarketProviderReliabilityResult['pending'];
+  notes: string[]; readiness: MarketReasoningModuleReadiness;
 };
 export type MarketProviderReliabilityRule = {
   ruleId: string;
@@ -110,6 +108,5 @@ export type MarketProviderReliabilityRuleSetSnapshot = {
   generatedAt: string;
   rules: MarketProviderReliabilityRule[];
   warnings: MarketProviderReliabilityWarning[];
-  readiness: MarketReasoningModuleReadiness; complete: false;
-  pending: MarketProviderReliabilityResult['pending'];
+  readiness: MarketReasoningModuleReadiness;
 };

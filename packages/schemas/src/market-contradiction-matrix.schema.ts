@@ -1,6 +1,7 @@
 import type { MarketContradictionCoverageReport, MarketContradictionEvidencePoint, MarketContradictionInput, MarketContradictionMatrixResult, MarketContradictionRule, MarketContradictionRuleSetSnapshot, MarketContradictionSignal } from '@elceo/types';
 import { EVIDENCE_WEIGHT_HORIZONS, MARKET_ASSET_CAUSALITY_ASSETS, MARKET_CONTRADICTION_CONFIDENCE_TIERS, MARKET_CONTRADICTION_EVIDENCE_SIDES, MARKET_CONTRADICTION_FAMILIES, MARKET_CONTRADICTION_REASON_CODES, MARKET_CONTRADICTION_SEVERITIES, MARKET_CONTRADICTION_STATUSES, MARKET_CONTRADICTION_WARNINGS, MARKET_EVIDENCE_CLASSES } from '@elceo/types';
 import { isBoolean, isEnumValue, isIsoDateString, isNonEmptyString, isObjectRecord, isScore0to100, isStringArray, type SchemaValidationResult } from './validation-utils';
+import { validateExpectedMarketReasoningModuleReadiness } from './market-reasoning-readiness.schema';
 
 const FORBIDDEN_ADVICE = /\b(buy|sell|hold|guaranteed profit|risk-free)\b/i;
 const DRIVER_KINDS = ['real_yields','nominal_yields','central_bank_policy','policy_rate_expectations','inflation_surprise','growth_surprise','labor_market_surprise','dollar_liquidity','financial_conditions','credit_stress','risk_sentiment','volatility_surface','equity_breadth','earnings_macro','positioning_cot','futures_positioning','etf_flows','fund_flows','central_bank_demand','safe_haven_demand','geopolitical_risk','energy_commodities','oil_energy','crypto_onchain','crypto_derivatives','crypto_etf_flows','regulatory_risk','cross_market_rates','yield_differentials','intervention_risk','fiscal_risk','industrial_cycle','china_demand','commodity_terms_of_trade','liquidity_conditions','market_price_structure','event_reaction','macro_surprise','price_confirmation','provider_freshness','source_independence','dollar_strength','real_yield_pressure','breadth','funding','unknown'] as const;
@@ -8,13 +9,6 @@ const DIRECTIONS = ['bullish','bearish','neutral','mixed','unknown'] as const;
 function pushAdviceError(text: unknown, errors: string[], path: string): void { if (typeof text === 'string' && FORBIDDEN_ADVICE.test(text)) errors.push(`${path} contains forbidden advice language`); }
 function validateWarnings(value: unknown, errors: string[], path: string): void { if (!Array.isArray(value)) { errors.push(`${path} must contain valid contradiction warnings`); return; } const invalid = value.filter((x) => !isEnumValue(x, MARKET_CONTRADICTION_WARNINGS)); if (invalid.length > 0) errors.push(`${path} must contain valid contradiction warnings:${invalid.join(',')}`); }
 function validateReasons(value: unknown, errors: string[], path: string): void { if (!Array.isArray(value) || value.some((x) => !isEnumValue(x, MARKET_CONTRADICTION_REASON_CODES))) errors.push(`${path} must contain valid contradiction reason codes`); }
-function validatePending(input: Record<string, unknown>, errors: string[], path: string): void {
-  if (input.complete !== false) errors.push(`${path}complete must remain false while R6/R7/provider reliability remain pending`);
-  if (!isObjectRecord(input.pending)) { errors.push(`${path}pending must be object`); return; }
-  if (input.pending.confidenceCalibrationR6 !== true) errors.push(`${path}pending.confidenceCalibrationR6 must remain true`);
-  if (input.pending.priceReactionR7 !== true) errors.push(`${path}pending.priceReactionR7 must remain true`);
-  if (input.pending.providerReliabilityExpansion !== true) errors.push(`${path}pending.providerReliabilityExpansion must remain true`);
-}
 
 export function validateMarketContradictionEvidencePoint(input: unknown, p = ''): SchemaValidationResult<MarketContradictionEvidencePoint> {
   const e: string[] = []; if (!isObjectRecord(input)) return { ok: false, errors: [`${p}MarketContradictionEvidencePoint must be object`] };
@@ -76,7 +70,7 @@ export function validateMarketContradictionMatrixResult(input: unknown, p = ''):
   if (!isEnumValue(input.highestSeverity, MARKET_CONTRADICTION_SEVERITIES)) e.push(`${p}highestSeverity is invalid`);
   if (!Array.isArray(input.signals)) e.push(`${p}signals must be array`); else input.signals.forEach((x, i) => { const r = validateMarketContradictionSignal(x, `${p}signals[${i}].`); if (r.ok === false) e.push(...r.errors); });
   if (!Array.isArray(input.evidencePoints)) e.push(`${p}evidencePoints must be array`); else input.evidencePoints.forEach((x, i) => { const r = validateMarketContradictionEvidencePoint(x, `${p}evidencePoints[${i}].`); if (r.ok === false) e.push(...r.errors); });
-  validateWarnings(input.warnings, e, `${p}warnings`); validateReasons(input.reasonCodes, e, `${p}reasonCodes`); validatePending(input, e, p); pushAdviceError(input.rationale, e, `${p}rationale`);
+  validateWarnings(input.warnings, e, `${p}warnings`); validateReasons(input.reasonCodes, e, `${p}reasonCodes`); { const rr=validateExpectedMarketReasoningModuleReadiness(input.readiness,'contradiction_matrix',`${p}readiness.`); if(rr.ok===false)e.push(...rr.errors); } pushAdviceError(input.rationale, e, `${p}rationale`);
   if (input.status === 'pending_confirmation' && Array.isArray(input.warnings) && !(input.warnings.includes('pending_price_confirmation') || input.warnings.includes('missing_price_reaction'))) e.push(`${p}pending result requires pending/missing price warning`);
   return e.length ? { ok: false, errors: e } : { ok: true, value: input as MarketContradictionMatrixResult };
 }
@@ -98,7 +92,7 @@ export function validateMarketContradictionRuleSetSnapshot(input: unknown, p = '
   const e: string[] = []; if (!isObjectRecord(input)) return { ok: false, errors: [`${p}MarketContradictionRuleSetSnapshot must be object`] };
   if (!isIsoDateString(input.generatedAt)) e.push(`${p}generatedAt invalid`);
   if (!Array.isArray(input.rules)) e.push(`${p}rules must be array`); else input.rules.forEach((x, i) => { const r = validateMarketContradictionRule(x, `${p}rules[${i}].`); if (r.ok === false) e.push(...r.errors); });
-  validateWarnings(input.warnings, e, `${p}warnings`); validatePending(input, e, p);
+  validateWarnings(input.warnings, e, `${p}warnings`); { const rr=validateExpectedMarketReasoningModuleReadiness(input.readiness,'contradiction_matrix',`${p}readiness.`); if(rr.ok===false)e.push(...rr.errors); }
   return e.length ? { ok: false, errors: e } : { ok: true, value: input as MarketContradictionRuleSetSnapshot };
 }
 
@@ -110,6 +104,6 @@ export function validateMarketContradictionCoverageReport(input: unknown, p = ''
   if (!Array.isArray(input.coveredFamilies) || input.coveredFamilies.some((x) => !isEnumValue(x, MARKET_CONTRADICTION_FAMILIES))) e.push(`${p}coveredFamilies invalid`);
   if (!Array.isArray(input.missingFamilies) || input.missingFamilies.some((x) => !isEnumValue(x, MARKET_CONTRADICTION_FAMILIES))) e.push(`${p}missingFamilies invalid`);
   if (!isStringArray(input.notes)) e.push(`${p}notes must be string[]`); else input.notes.forEach((n, i) => pushAdviceError(n, e, `${p}notes[${i}]`));
-  validateWarnings(input.warnings, e, `${p}warnings`); validatePending(input, e, p);
+  validateWarnings(input.warnings, e, `${p}warnings`); { const rr=validateExpectedMarketReasoningModuleReadiness(input.readiness,'contradiction_matrix',`${p}readiness.`); if(rr.ok===false)e.push(...rr.errors); }
   return e.length ? { ok: false, errors: e } : { ok: true, value: input as MarketContradictionCoverageReport };
 }

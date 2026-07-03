@@ -58,11 +58,10 @@ export type MarketPriceReactionResult = {
   warnings: MarketPriceReactionWarning[];
   reasonCodes: MarketPriceReactionReasonCode[];
   rationale: string;
-  readiness: MarketReasoningModuleReadiness; complete: false;
-  pending: { providerReliabilityExpansion: true; goldenScenarioExpansion: true; empiricalBacktesting: true };
+  readiness: MarketReasoningModuleReadiness;
 };
 export type MarketPriceReactionRule = { ruleId: string; asset?: MarketPriceReactionAsset; status?: MarketPriceReactionStatus; warning?: MarketPriceReactionWarning; reasonCodes: MarketPriceReactionReasonCode[]; rationale: string };
-export type MarketPriceReactionRuleSetSnapshot = { generatedAt: string; rules: MarketPriceReactionRule[]; warnings: MarketPriceReactionWarning[]; readiness: MarketReasoningModuleReadiness; complete: false; pending: MarketPriceReactionResult['pending'] };
-export type MarketPriceReactionCoverageReport = { generatedAt: string; assetCount: number; statusCoverage: MarketPriceReactionStatus[]; windowKinds: MarketPriceReactionWindowKind[]; warnings: MarketPriceReactionWarning[]; notes: string[]; readiness: MarketReasoningModuleReadiness; complete: false; pending: MarketPriceReactionResult['pending'] };
+export type MarketPriceReactionRuleSetSnapshot = { generatedAt: string; rules: MarketPriceReactionRule[]; warnings: MarketPriceReactionWarning[]; readiness: MarketReasoningModuleReadiness };
+export type MarketPriceReactionCoverageReport = { generatedAt: string; assetCount: number; statusCoverage: MarketPriceReactionStatus[]; windowKinds: MarketPriceReactionWindowKind[]; warnings: MarketPriceReactionWarning[]; notes: string[]; readiness: MarketReasoningModuleReadiness };
 export type MarketPriceReactionEvidenceItem = ReasoningEvidenceInputItem;
 export type MarketPriceReactionWeightedSnapshot = WeightedEvidenceSnapshot;

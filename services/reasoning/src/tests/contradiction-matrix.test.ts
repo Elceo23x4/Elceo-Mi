@@ -27,12 +27,12 @@ export function runContradictionMatrixTests(): void {
   assertMarketContradictionRuleSetValid();
   const coverage = getMarketContradictionCoverageReport(at);
   assert(validateMarketContradictionCoverageReport(coverage).ok, 'coverage report validates');
-  assert(coverage.complete === false && coverage.pending.confidenceCalibrationR6 && coverage.pending.priceReactionR7 && coverage.pending.providerReliabilityExpansion, 'coverage keeps R6/R7/provider reliability pending');
+  assert(coverage.readiness.moduleId === 'contradiction_matrix' && coverage.readiness.deterministicFoundationStatus === 'implemented', 'coverage uses canonical readiness');
   assert(!/\b(buy|sell|hold|guaranteed profit|risk-free)\b/i.test(JSON.stringify(sample)), 'matrix output avoids direct advice language');
 
   const boundary = new CanonicalMarketIntelligenceBoundaryService(new MemoryMarketEvidenceRegistrySnapshotRepository(), new MemorySeoContentArchitectureSnapshotRepository());
   assert(boundary.getMarketContradictionRuleSetSnapshot(at).rules.length === ruleSet.rules.length, 'canonical boundary exposes rule set');
-  assert(boundary.getMarketContradictionCoverageReport(at).pending.priceReactionR7, 'canonical boundary exposes coverage');
+  assert(boundary.getMarketContradictionCoverageReport(at).readiness.moduleId === 'contradiction_matrix', 'canonical boundary exposes coverage');
   assert(boundary.listMarketContradictionWarnings('eur_usd').includes('fx_relative_strength_context_required'), 'canonical boundary exposes warning list');
   assert(boundary.listMarketContradictionRules('btc_usd').some((r) => r.family === 'crypto_vs_derivatives'), 'canonical boundary exposes rules by asset');
   assert(boundary.assertMarketContradictionRuleSetValid().rules.length > 0, 'canonical boundary validates rules');

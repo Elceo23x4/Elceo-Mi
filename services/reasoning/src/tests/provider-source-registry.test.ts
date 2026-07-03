@@ -10,7 +10,7 @@ export async function runProviderSourceRegistryTests(){
   assert.deepEqual(snap.sources.map((x)=>x.sourceId), [...snap.sources.map((x)=>x.sourceId)].sort());
   assert.equal(new Set(snap.sources.map((x)=>x.family)).size,7);
   ['tiingo_market_data','fred_macro','cftc_cot','marketaux_news','sec_edgar','crypto_onchain_public','credit_stress_source'].forEach((id)=>assert.equal(snap.sources.some((x)=>x.sourceId===id),true));
-  assert.equal(snap.launchAssetCoverage.every((x)=>x.sourceIds.length>0),true);
+  assert.equal(snap.reasoningAssetCoverage.every((x)=>x.sourceIds.length>0),true);
   const forbiddenKeys = new Set(['apiKey','secret','token','password']);
   snap.sources.forEach((x)=>{ assert.notEqual(x.liveActivationMode,'manual_gated'); assert.equal(Object.keys(x).some((k)=>forbiddenKeys.has(k)),false); });
   assert.deepEqual(listProviderSourceGaps(),listProviderSourceGaps());

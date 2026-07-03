@@ -81,8 +81,7 @@ export type MarketContradictionMatrixResult = {
   warnings: MarketContradictionWarning[];
   reasonCodes: MarketContradictionReasonCode[];
   rationale: string;
-  readiness: MarketReasoningModuleReadiness; complete: false;
-  pending: { confidenceCalibrationR6: true; priceReactionR7: true; providerReliabilityExpansion: true };
+  readiness: MarketReasoningModuleReadiness;
 };
 
 export type MarketContradictionRule = {
@@ -97,8 +96,8 @@ export type MarketContradictionRule = {
   rationale: string;
 };
 
-export type MarketContradictionRuleSetSnapshot = { generatedAt: string; rules: MarketContradictionRule[]; warnings: MarketContradictionWarning[]; readiness: MarketReasoningModuleReadiness; complete: false; pending: { confidenceCalibrationR6: true; priceReactionR7: true; providerReliabilityExpansion: true } };
-export type MarketContradictionCoverageReport = { generatedAt: string; familyCount: number; ruleCount: number; coveredFamilies: MarketContradictionFamily[]; missingFamilies: MarketContradictionFamily[]; warnings: MarketContradictionWarning[]; readiness: MarketReasoningModuleReadiness; complete: false; pending: { confidenceCalibrationR6: true; priceReactionR7: true; providerReliabilityExpansion: true }; notes: string[] };
+export type MarketContradictionRuleSetSnapshot = { generatedAt: string; rules: MarketContradictionRule[]; warnings: MarketContradictionWarning[]; readiness: MarketReasoningModuleReadiness };
+export type MarketContradictionCoverageReport = { generatedAt: string; familyCount: number; ruleCount: number; coveredFamilies: MarketContradictionFamily[]; missingFamilies: MarketContradictionFamily[]; warnings: MarketContradictionWarning[]; readiness: MarketReasoningModuleReadiness; notes: string[] };
 
 export type MarketContradictionWeightedSnapshotOptions = { priceReactionAvailable?: boolean; priceReaction?: MarketPriceReactionResult; providerReliabilitySupplied?: boolean; sourceIndependenceVerified?: boolean };
 export type MarketContradictionEvidenceItemsOptions = MarketContradictionWeightedSnapshotOptions & { generatedAt?: string; horizon?: EvidenceWeightHorizon };

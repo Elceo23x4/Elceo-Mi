@@ -244,3 +244,13 @@ C6-R8 added deterministic provider/source reliability and data-gap weighting. Th
 - The saturation may be caused by conservative stacked readiness, coverage, confirmation, contradiction, and provider penalties.
 - Empirical backtesting and production-data calibration remain required to determine whether these penalties are correctly composed or over-accumulating.
 - This is fixture-driven dry-run acceptance, not live confidence validation, and should not be treated as closed only because the golden scenarios pass.
+
+## RC-A resolution note (2026-07-03)
+RC-A corrects terminology, readiness contracts, and asset taxonomy only. Deterministic R1-R9 reasoning foundations exist; live provider activation remains blocked, empirical validation remains pending, and production calibration remains pending. DXY and VIX are reasoning diagnostic assets, not launch-tradable instruments. No reasoning formula, confidence arithmetic, provider activation, or golden-scenario anchor changed in RC-A. RC-D remains the next reasoning-correctness batch and will address structured issuer/region/currency inference.
+
+## RC-A current truth source (2026-07-03)
+- Current status: deterministic R1-R9 foundations are implemented and reported through the canonical readiness contract.
+- Current status: live provider activation remains blocked; empirical validation and production calibration remain pending.
+- Asset taxonomy: DXY and VIX are reasoning diagnostics only; the launch-tradable set remains the 12 `TRADING_ASSET_COVERAGE` instruments.
+- RC-A scope: terminology, readiness-contract, and taxonomy correction only; no formula, provider activation, or golden-anchor changes.
+- Next reasoning-correctness dependency: RC-D structured issuer/region/currency inference.

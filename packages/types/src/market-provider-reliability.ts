@@ -1,3 +1,4 @@
+import type { MarketReasoningModuleReadiness } from './market-reasoning-readiness';
 import type { EvidenceWeightHorizon } from './market-evidence-weighting';
 import type { MarketAssetCausalityAsset } from './market-asset-causality';
 import type { MarketEvidenceClass } from './market-evidence';
@@ -85,8 +86,7 @@ export type MarketProviderReliabilityResult = {
   warnings: MarketProviderReliabilityWarning[];
   reasonCodes: MarketProviderReliabilityReasonCode[];
   rationale: string;
-  complete: false;
-  pending: { liveProviderActivation: true; empiricalReliabilityBacktesting: true; goldenScenarioExpansion: true };
+  readiness: MarketReasoningModuleReadiness;
 };
 export type MarketProviderReliabilityCoverageReport = {
   generatedAt: string;
@@ -94,9 +94,7 @@ export type MarketProviderReliabilityCoverageReport = {
   evidenceClasses: MarketProviderReliabilityEvidenceClass[];
   rules: MarketProviderReliabilityRule[];
   warnings: MarketProviderReliabilityWarning[];
-  notes: string[];
-  complete: false;
-  pending: MarketProviderReliabilityResult['pending'];
+  notes: string[]; readiness: MarketReasoningModuleReadiness;
 };
 export type MarketProviderReliabilityRule = {
   ruleId: string;
@@ -110,6 +108,5 @@ export type MarketProviderReliabilityRuleSetSnapshot = {
   generatedAt: string;
   rules: MarketProviderReliabilityRule[];
   warnings: MarketProviderReliabilityWarning[];
-  complete: false;
-  pending: MarketProviderReliabilityResult['pending'];
+  readiness: MarketReasoningModuleReadiness;
 };

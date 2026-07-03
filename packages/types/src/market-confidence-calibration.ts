@@ -1,3 +1,4 @@
+import type { MarketReasoningModuleReadiness } from './market-reasoning-readiness';
 import type { EvidenceWeightHorizon, WeightedEvidenceSnapshot } from './market-evidence-weighting';
 import type { TradingAssetCoverage } from './market-evidence';
 import type { MarketContradictionMatrixResult } from './market-contradiction-matrix';
@@ -61,9 +62,8 @@ export type MarketConfidenceCalibrationResult = {
   warnings: MarketConfidenceCalibrationWarning[];
   reasonCodes: MarketConfidenceCalibrationReasonCode[];
   rationale: string;
-  complete: false;
-  pending: { priceReactionR7: true; providerReliabilityExpansion: true; goldenScenarioExpansion: true; empiricalBacktesting: true };
+  readiness: MarketReasoningModuleReadiness;
 };
 export type MarketConfidenceCalibrationRule = { ruleId: string; componentKind?: MarketConfidenceCalibrationComponentKind; penaltyKind?: MarketConfidenceCalibrationPenaltyKind; boostKind?: MarketConfidenceCalibrationBoostKind; rationale: string; };
-export type MarketConfidenceCalibrationRuleSetSnapshot = { generatedAt: string; rules: MarketConfidenceCalibrationRule[]; warnings: MarketConfidenceCalibrationWarning[]; complete: false; pending: MarketConfidenceCalibrationResult['pending']; };
-export type MarketConfidenceCalibrationCoverageReport = { generatedAt: string; componentKinds: MarketConfidenceCalibrationComponentKind[]; penaltyKinds: MarketConfidenceCalibrationPenaltyKind[]; boostKinds: MarketConfidenceCalibrationBoostKind[]; warnings: MarketConfidenceCalibrationWarning[]; notes: string[]; complete: false; pending: MarketConfidenceCalibrationResult['pending']; };
+export type MarketConfidenceCalibrationRuleSetSnapshot = { generatedAt: string; rules: MarketConfidenceCalibrationRule[]; warnings: MarketConfidenceCalibrationWarning[]; readiness: MarketReasoningModuleReadiness; };
+export type MarketConfidenceCalibrationCoverageReport = { generatedAt: string; componentKinds: MarketConfidenceCalibrationComponentKind[]; penaltyKinds: MarketConfidenceCalibrationPenaltyKind[]; boostKinds: MarketConfidenceCalibrationBoostKind[]; warnings: MarketConfidenceCalibrationWarning[]; notes: string[]; readiness: MarketReasoningModuleReadiness; };

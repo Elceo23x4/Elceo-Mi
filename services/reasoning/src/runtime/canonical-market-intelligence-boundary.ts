@@ -16,7 +16,7 @@ import { buildProviderLiveSmokePlan, getProviderLiveActivationPolicy, getProvide
 import { buildEvidenceQualityReport, evaluateEvidencePayloadQuality, evaluateEvidencePayloadsQuality } from '../evidence-quality/index';
 import { assembleReasoningEvidenceInputSnapshot as assembleSnapshot, buildReasoningEvidenceInputAssemblyReport as buildSnapshotReport } from '../reasoning-input/index';
 import type { ReasoningEvidenceFilterPolicy, ReasoningEvidenceInputSnapshot, ReasoningEvidenceInputAssemblyReport, MarketEvidenceClass, EvidenceWeightHorizon, WeightedEvidenceSnapshot, WeightedEvidenceAssemblyReport, WeightedEvidencePolicySnapshot, MarketCognitionAssemblyReport, MarketCognitionSnapshot, SeoContentFeedAssemblyReport, SeoContentFeedSnapshot, SeoPageKind, SeoContentFeedItem } from '@elceo/types';
-import type { LaunchAsset, TradingAssetCoverage } from '@elceo/types';
+import type { TradableLaunchAsset, TradingAssetCoverage } from '@elceo/types';
 import { buildWeightedEvidenceAssemblyReport, buildWeightedEvidenceSnapshot, getWeightedEvidencePolicySnapshot } from '../evidence-weighting/index';
 import { buildMarketCognitionAssemblyReport as buildCognitionReport, buildMarketCognitionSnapshot as buildCognitionSnapshot } from '../market-cognition/index';
 import { buildSeoContentFeedAssemblyReport as buildSeoFeedReport, buildSeoContentFeedSnapshot as buildSeoFeedSnapshot } from '../seo-feed/index';
@@ -36,7 +36,8 @@ import { assertMarketProviderReliabilityRuleSetValid, evaluateAssetProviderCover
 import { assertMarketConfidenceCalibrationRuleSetValid, buildConfidenceCalibrationInputFromWeightedSnapshot, calibrateConfidenceFromMarketCognition, calibrateConfidenceFromWeightedSnapshot, calibrateMarketConfidence, getMarketConfidenceCalibrationCoverageReport, getMarketConfidenceCalibrationRuleSetSnapshot, listMarketConfidenceCalibrationRules, listMarketConfidenceCalibrationWarnings } from '../confidence-calibration/index';
 import { assertMarketContradictionRuleSetValid, evaluateContradictionsFromEvidenceItems, evaluateContradictionsFromWeightedSnapshot, evaluateMarketContradictionMatrix, getMarketContradictionCoverageReport, getMarketContradictionRuleSetSnapshot, listMarketContradictionRules, listMarketContradictionWarnings } from '../contradiction-matrix/index';
 import { assertMacroSurpriseRuleSetValid, getMacroSurpriseCoverageReport, getMacroSurpriseRuleSetSnapshot, listMacroSurpriseWarnings, normalizeMacroSurprise, normalizeMacroSurpriseFromEvidenceItem, normalizeMacroSurprisesFromEvidenceItems } from '../macro-surprise-normalization/index';
-import { assertMarketAssetCausalityMatrixValid as assertAssetCausalityMatrixValid, assertMarketAssetCausalityMatrixComplete as assertAssetCausalityMatrixComplete, buildMarketAssetCausalityMatrixSnapshot, getMarketAssetCausalityCoverageReport as getAssetCausalityCoverageReport, getMarketAssetCausalityDescriptor as getAssetCausalityDescriptor, listContradictionTriggersForAsset as listAssetContradictionTriggers, listDirectionResolutionRequirements as listAssetDirectionRequirements, listMarketAssetCausalityGaps, listProviderDependenciesForAsset as listAssetProviderDependencies, listRegimeModifiersForAsset as listAssetRegimeModifiers } from '../asset-causality-map/index';
+import { assertMarketAssetCausalityDescriptorCoverageComplete as assertAssetCausalityDescriptorCoverageComplete, assertMarketAssetCausalityMatrixValid as assertAssetCausalityMatrixValid, buildMarketAssetCausalityMatrixSnapshot, getMarketAssetCausalityCoverageReport as getAssetCausalityCoverageReport, getMarketAssetCausalityDescriptor as getAssetCausalityDescriptor, listContradictionTriggersForAsset as listAssetContradictionTriggers, listDirectionResolutionRequirements as listAssetDirectionRequirements, listMarketAssetCausalityGaps, listProviderDependenciesForAsset as listAssetProviderDependencies, listRegimeModifiersForAsset as listAssetRegimeModifiers } from '../asset-causality-map/index';
+import { assertMarketReasoningReadinessValid, getMarketReasoningModuleReadiness, getMarketReasoningReadinessReport } from '../readiness/index';
 import { getFrontendAssetDashboardPayload, getFrontendContractCoverageReport, getFrontendContradictionPanelPayload, getFrontendConfidenceDecompositionPayload, getFrontendEvidenceFeedPayload, getFrontendGoldenScenarioPreviewPayload, getFrontendJournalPortfolioContextPlaceholder, getFrontendMacroContextPayload, getFrontendMarketCognitionSnapshot, getFrontendMarketOverviewPayload, getFrontendMockPayloadRegistry, getFrontendNewsNarrativePayload, getFrontendProviderReadinessPayload, getFrontendRiskLiquidityPayload, getFrontendScheduledIngestionStatusPayload, getFrontendSupportedAssets } from '../frontend-contracts/index';
 
 export type TiingoFixtureIngestionParams = { asset: TradingAssetCoverage; frequency?: string | null; requestedAt?: string | null };
@@ -257,25 +258,24 @@ export class CanonicalMarketIntelligenceBoundaryService {
   }
   getFrontendSupportedAssets() { return getFrontendSupportedAssets(); }
   getFrontendMarketOverviewPayload() { return getFrontendMarketOverviewPayload(); }
-  getFrontendAssetDashboardPayload(asset: LaunchAsset) { return getFrontendAssetDashboardPayload(asset); }
-  getFrontendMarketCognitionSnapshot(asset: LaunchAsset) { return getFrontendMarketCognitionSnapshot(asset); }
-  getFrontendEvidenceFeedPayload(asset?: LaunchAsset) { return getFrontendEvidenceFeedPayload(asset); }
-  getFrontendMacroContextPayload(asset?: LaunchAsset) { return getFrontendMacroContextPayload(asset); }
-  getFrontendNewsNarrativePayload(asset?: LaunchAsset) { return getFrontendNewsNarrativePayload(asset); }
-  getFrontendRiskLiquidityPayload(asset?: LaunchAsset) { return getFrontendRiskLiquidityPayload(asset); }
-  getFrontendConfidenceDecompositionPayload(asset: LaunchAsset) { return getFrontendConfidenceDecompositionPayload(asset); }
-  getFrontendContradictionPanelPayload(asset: LaunchAsset) { return getFrontendContradictionPanelPayload(asset); }
+  getFrontendAssetDashboardPayload(asset: TradableLaunchAsset) { return getFrontendAssetDashboardPayload(asset); }
+  getFrontendMarketCognitionSnapshot(asset: TradableLaunchAsset) { return getFrontendMarketCognitionSnapshot(asset); }
+  getFrontendEvidenceFeedPayload(asset?: TradableLaunchAsset) { return getFrontendEvidenceFeedPayload(asset); }
+  getFrontendMacroContextPayload(asset?: TradableLaunchAsset) { return getFrontendMacroContextPayload(asset); }
+  getFrontendNewsNarrativePayload(asset?: TradableLaunchAsset) { return getFrontendNewsNarrativePayload(asset); }
+  getFrontendRiskLiquidityPayload(asset?: TradableLaunchAsset) { return getFrontendRiskLiquidityPayload(asset); }
+  getFrontendConfidenceDecompositionPayload(asset: TradableLaunchAsset) { return getFrontendConfidenceDecompositionPayload(asset); }
+  getFrontendContradictionPanelPayload(asset: TradableLaunchAsset) { return getFrontendContradictionPanelPayload(asset); }
   getFrontendProviderReadinessPayload() { return getFrontendProviderReadinessPayload(); }
   getFrontendScheduledIngestionStatusPayload() { return getFrontendScheduledIngestionStatusPayload(); }
-  getFrontendGoldenScenarioPreviewPayload(asset?: LaunchAsset) { return getFrontendGoldenScenarioPreviewPayload(asset); }
-  getFrontendJournalPortfolioContextPlaceholder(asset?: LaunchAsset) { return getFrontendJournalPortfolioContextPlaceholder(asset); }
+  getFrontendGoldenScenarioPreviewPayload(asset?: TradableLaunchAsset) { return getFrontendGoldenScenarioPreviewPayload(asset); }
+  getFrontendJournalPortfolioContextPlaceholder(asset?: TradableLaunchAsset) { return getFrontendJournalPortfolioContextPlaceholder(asset); }
   getFrontendMockPayloadRegistry() { return getFrontendMockPayloadRegistry(); }
   getFrontendContractCoverageReport() { return getFrontendContractCoverageReport(); }
   getMarketAssetCausalityMatrixSnapshot(asOfIso?: string) { return buildMarketAssetCausalityMatrixSnapshot(asOfIso); }
   getMarketAssetCausalityDescriptor(asset: Parameters<typeof getAssetCausalityDescriptor>[0]) { return getAssetCausalityDescriptor(asset); }
   listMarketAssetCausalityGaps() { return listMarketAssetCausalityGaps(); }
   getMarketAssetCausalityCoverageReport() { return getAssetCausalityCoverageReport(); }
-  assertMarketAssetCausalityMatrixComplete() { return assertAssetCausalityMatrixComplete(); }
   assertMarketAssetCausalityMatrixValid() { return assertAssetCausalityMatrixValid(); }
   resolveAssetContextualEvidenceDirection(input: Parameters<typeof resolveAssetContextualEvidenceDirection>[0]) { return resolveAssetContextualEvidenceDirection(input); }
   getAssetDirectionResolutionRuleSetSnapshot(asOfIso?: string) { return getAssetDirectionResolutionRuleSetSnapshot(asOfIso); }
@@ -339,6 +339,10 @@ export class CanonicalMarketIntelligenceBoundaryService {
   listProviderDependenciesForAsset(asset: Parameters<typeof listAssetProviderDependencies>[0]) { return listAssetProviderDependencies(asset); }
   listContradictionTriggersForAsset(asset: Parameters<typeof listAssetContradictionTriggers>[0]) { return listAssetContradictionTriggers(asset); }
   listRegimeModifiersForAsset(asset: Parameters<typeof listAssetRegimeModifiers>[0]) { return listAssetRegimeModifiers(asset); }
+  getMarketReasoningModuleReadiness(moduleId: Parameters<typeof getMarketReasoningModuleReadiness>[0]) { return getMarketReasoningModuleReadiness(moduleId); }
+  getMarketReasoningReadinessReport(asOfIso?: string) { return getMarketReasoningReadinessReport(asOfIso); }
+  assertMarketReasoningReadinessValid() { return assertMarketReasoningReadinessValid(); }
+  assertMarketAssetCausalityDescriptorCoverageComplete() { return assertAssetCausalityDescriptorCoverageComplete(); }
 
   buildSeoContentFeedSnapshot(generatedAt?: string): SeoContentFeedSnapshot { return buildSeoFeedSnapshot(getSeoContentArchitectureSnapshot(generatedAt??new Date().toISOString()), generatedAt); }
   buildSeoContentFeedAssemblyReport(snapshot: SeoContentFeedSnapshot): SeoContentFeedAssemblyReport { return buildSeoFeedReport(snapshot); }

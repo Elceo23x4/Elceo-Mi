@@ -1,3 +1,4 @@
+import type { MarketReasoningModuleReadiness } from './market-reasoning-readiness';
 import type { MarketEvidenceClass, TradingAssetCoverage } from './market-evidence';
 import type { MarketAssetCausalityAsset, MarketAssetDriverKind, MarketAssetFamily } from './market-asset-causality';
 import type { WeightedEvidenceDirection } from './market-evidence-weighting';
@@ -62,13 +63,15 @@ export type MarketAssetDirectionResolutionRule = {
 };
 export type MarketAssetDirectionResolutionCoverageReport = {
   generatedAt: string;
-  launchAssetCount: number;
+  launchTradableAssetCount: number;
+  diagnosticAssetCount: number;
+  representedReasoningAssetCount: number;
+  assetSupportRoles: Record<MarketAssetCausalityAsset, 'launch_tradable'|'reasoning_diagnostic'>;
   representedAssets: MarketAssetCausalityAsset[];
   genericDirectionPrimaryPathDisabled: boolean;
   ruleCount: number;
-  pendingPhases: Array<'R3'|'R4'|'R5'|'R6'|'R7'|'R8'|'R9'>;
   warnings: MarketAssetDirectionResolutionWarning[];
-  notes: string[];
+  notes: string[]; readiness: MarketReasoningModuleReadiness;
 };
 export type MarketAssetDirectionResolutionRuleSetSnapshot = {
   generatedAt: string;

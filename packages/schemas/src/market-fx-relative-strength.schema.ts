@@ -1,6 +1,7 @@
 import type { MarketFxCurrencyPressureComponent, MarketFxCurrencyPressureSnapshot, MarketFxRelativeStrengthCoverageReport, MarketFxRelativeStrengthInput, MarketFxRelativeStrengthResult, MarketFxRelativeStrengthRule, MarketFxRelativeStrengthRuleSetSnapshot } from '@elceo/types';
 import { MARKET_FX_CURRENCY_CODES, MARKET_FX_CURRENCY_PRESSURE_COMPONENT_KINDS, MARKET_FX_CURRENCY_PRESSURE_DIRECTIONS, MARKET_FX_CURRENCY_PRESSURE_SOURCES, MARKET_FX_PAIR_ASSETS, MARKET_FX_RELATIVE_PAIR_DIRECTIONS, MARKET_FX_RELATIVE_STRENGTH_CONFIDENCE_TIERS, MARKET_FX_RELATIVE_STRENGTH_REASON_CODES, MARKET_FX_RELATIVE_STRENGTH_WARNINGS } from '@elceo/types';
 import { isEnumValue, isIsoDateString, isNonEmptyString, isObjectRecord, isScore0to100, type SchemaValidationResult } from './validation-utils';
+import { validateExpectedMarketReasoningModuleReadiness } from './market-reasoning-readiness.schema';
 
 const forbidden = /\b(buy|sell|hold|guaranteed profit|risk-free)\b/i;
 const orientation = {
@@ -102,10 +103,8 @@ export function validateMarketFxRelativeStrengthCoverageReport(input: unknown, p
   if (input.pairCount !== MARKET_FX_PAIR_ASSETS.length) errors.push(`${path}pairCount invalid`);
   if (!arr(input.currencies, MARKET_FX_CURRENCY_CODES)) errors.push(`${path}currencies invalid`);
   if (input.dxyCoverage !== 'limited_diagnostic' && input.dxyCoverage !== 'not_enabled') errors.push(`${path}dxyCoverage invalid`);
-  const pendingPhases = Array.isArray(input.pendingPhases) ? input.pendingPhases : [];
-  if (!Array.isArray(input.pendingPhases) || !['R5','R6','R7','provider_reliability'].every((p) => pendingPhases.includes(p))) errors.push(`${path}pending phases invalid`);
   if (!arr(input.warnings, MARKET_FX_RELATIVE_STRENGTH_WARNINGS)) errors.push(`${path}warnings invalid`);
-  if (!strArr(input.notes)) errors.push(`${path}notes required`);
+  if (!strArr(input.notes)) errors.push(`${path}notes required`); const rr=validateExpectedMarketReasoningModuleReadiness(input.readiness,'fx_relative_strength',`${path}readiness.`); if(rr.ok===false) errors.push(...rr.errors);
   return errors.length ? { ok: false, errors } : { ok: true, value: input as MarketFxRelativeStrengthCoverageReport };
 }
 

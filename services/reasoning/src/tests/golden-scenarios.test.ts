@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { validateMarketGoldenScenarioAcceptanceReport, validateMarketGoldenScenarioAcceptanceResult, validateMarketGoldenScenarioCandleFixture, validateMarketGoldenScenarioCoverageReport, validateMarketGoldenScenarioEvidenceFixture, validateMarketGoldenScenarioFixture, validateMarketGoldenScenarioRule, validateMarketGoldenScenarioRuleSetSnapshot } from '@elceo/schemas';
-import { MARKET_CONFIDENCE_CALIBRATION_TIERS, MARKET_GOLDEN_SCENARIO_ASSETS, marketConfidenceTierForScore } from '@elceo/types';
+import { MARKET_CONFIDENCE_CALIBRATION_TIERS, MARKET_GOLDEN_SCENARIO_ASSETS, MARKET_REASONING_DIAGNOSTIC_ASSETS, TRADING_ASSET_COVERAGE, marketConfidenceTierForScore } from '@elceo/types';
 import { CanonicalMarketIntelligenceBoundaryService } from '../runtime/canonical-market-intelligence-boundary.js';
 import { MemoryMarketEvidenceRegistrySnapshotRepository, MemorySeoContentArchitectureSnapshotRepository } from '../persistence/registry-snapshot-repository.js';
 import { assertMarketGoldenScenarioRuleSetValid, buildReasoningEvidenceItemsFromScenario, buildWeightedSnapshotFromScenario, getMarketGoldenScenarioCoverageReport, getMarketGoldenScenarioRuleSetSnapshot, listMarketGoldenScenarios, runMarketGoldenScenario, runScenarioAssetDirection, runMarketGoldenScenarioById, runMarketGoldenScenarioSuite, runScenarioConfidenceCalibration, runScenarioContradictionMatrix, runScenarioPriceReaction, runScenarioProviderReliability } from '../golden-scenarios/index.js';
@@ -59,6 +59,15 @@ export function runMarketGoldenScenarioAcceptanceTests(): void {
   assert.equal(suite.totalScenarios, 33, 'complete report remains the 33-scenario suite');
   assert(validateMarketGoldenScenarioRule(rules.rules[0]).ok, 'rule schema validates');
   assert(validateMarketGoldenScenarioRuleSetSnapshot(rules).ok, 'rule set validates');
+  assert.deepEqual(new Set(rules.launchTradableAssets), new Set(TRADING_ASSET_COVERAGE), 'golden launch tradables exact');
+  assert.deepEqual(new Set(rules.diagnosticAssets), new Set(MARKET_REASONING_DIAGNOSTIC_ASSETS), 'golden diagnostics exact');
+  assert.deepEqual(new Set(rules.reasoningAssets), new Set(MARKET_GOLDEN_SCENARIO_ASSETS), 'golden reasoning assets exact');
+  const invalidRules = (mutate: (copy: typeof rules)=>void) => { const copy=structuredClone(rules); mutate(copy); assert.equal(validateMarketGoldenScenarioRuleSetSnapshot(copy).ok,false); };
+  invalidRules((x)=>{ x.launchTradableAssets[0]=x.launchTradableAssets[1]!; });
+  invalidRules((x)=>{ x.launchTradableAssets=x.launchTradableAssets.slice(1); });
+  invalidRules((x)=>{ x.launchTradableAssets[0]='dxy' as any; });
+  invalidRules((x)=>{ x.diagnosticAssets=['dxy','dxy'] as any; });
+  invalidRules((x)=>{ x.reasoningAssets=x.reasoningAssets.filter((a)=>a!=='vix'); });
   assert(validateMarketGoldenScenarioCoverageReport(coverage).ok, 'coverage report validates');
   assertMarketGoldenScenarioRuleSetValid();
 
@@ -77,8 +86,8 @@ export function runMarketGoldenScenarioAcceptanceTests(): void {
   for (const asset of MARKET_GOLDEN_SCENARIO_ASSETS) assert(coverage.assetsCovered.includes(asset), `asset covered: ${asset}`);
   for (const group of ['A','B','C','D','E','F']) assert(coverage.groupsCovered.includes(group), `required scenario group covered: ${group}`);
   for (const engine of ['asset direction','FX relative strength','macro surprise','contradiction matrix','confidence calibration','price reaction','provider reliability']) assert(coverage.enginesCovered.includes(engine), `engine covered: ${engine}`);
-  assert.equal(suite.complete, false, 'suite complete remains false');
-  assert(suite.pending.liveProviderActivation && suite.pending.empiricalBacktesting && suite.pending.productionDataCalibration, 'pending flags remain active');
+  assert.equal(suite.readiness.moduleId, 'golden_scenarios', 'suite uses canonical readiness');
+  assert(suite.readiness.liveProviderIntegrationStatus === 'blocked' && suite.readiness.empiricalValidationStatus === 'pending' && suite.readiness.productionCalibrationStatus === 'pending', 'pending flags remain active');
 
   assert.equal(result('c6r9_us_cpi_upside_dxy_support').observedDirection, 'bullish', 'CPI upside supports DXY context');
   assert(['bearish','mixed'].includes(result('c6r9_us_cpi_upside_xau_pressure').observedDirection), 'CPI upside pressures or tensions XAU/USD context');

@@ -1,0 +1,14 @@
+export const MARKET_REASONING_MODULE_IDS = ['asset_causality','asset_direction','fx_relative_strength','macro_surprise','contradiction_matrix','confidence_calibration','price_reaction','provider_reliability','golden_scenarios'] as const;
+export type MarketReasoningModuleId = typeof MARKET_REASONING_MODULE_IDS[number];
+export const MARKET_REASONING_CONTRACT_SHAPE_STATUSES = ['valid','invalid'] as const;
+export type MarketReasoningContractShapeStatus = typeof MARKET_REASONING_CONTRACT_SHAPE_STATUSES[number];
+export const MARKET_REASONING_DETERMINISTIC_FOUNDATION_STATUSES = ['implemented','partial','not_implemented'] as const;
+export type MarketReasoningDeterministicFoundationStatus = typeof MARKET_REASONING_DETERMINISTIC_FOUNDATION_STATUSES[number];
+export const MARKET_REASONING_LIVE_PROVIDER_INTEGRATION_STATUSES = ['live_verified','dry_run_only','fixture_only','blocked','not_applicable'] as const;
+export type MarketReasoningLiveProviderIntegrationStatus = typeof MARKET_REASONING_LIVE_PROVIDER_INTEGRATION_STATUSES[number];
+export const MARKET_REASONING_EMPIRICAL_VALIDATION_STATUSES = ['validated','pending','not_applicable'] as const;
+export type MarketReasoningEmpiricalValidationStatus = typeof MARKET_REASONING_EMPIRICAL_VALIDATION_STATUSES[number];
+export const MARKET_REASONING_PRODUCTION_CALIBRATION_STATUSES = ['calibrated','pending','not_applicable'] as const;
+export type MarketReasoningProductionCalibrationStatus = typeof MARKET_REASONING_PRODUCTION_CALIBRATION_STATUSES[number];
+export type MarketReasoningModuleReadiness = { moduleId: MarketReasoningModuleId; contractShapeStatus: MarketReasoningContractShapeStatus; deterministicFoundationStatus: MarketReasoningDeterministicFoundationStatus; liveProviderIntegrationStatus: MarketReasoningLiveProviderIntegrationStatus; empiricalValidationStatus: MarketReasoningEmpiricalValidationStatus; productionCalibrationStatus: MarketReasoningProductionCalibrationStatus; notes: string[]; };
+export type MarketReasoningReadinessReport = { generatedAt: string; modules: MarketReasoningModuleReadiness[]; moduleCount: number; notes: string[]; };

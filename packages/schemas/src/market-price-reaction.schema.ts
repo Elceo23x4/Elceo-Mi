@@ -1,15 +1,11 @@
 import type { MarketPriceCandle, MarketPriceReactionCoverageReport, MarketPriceReactionInput, MarketPriceReactionResult, MarketPriceReactionRule, MarketPriceReactionRuleSetSnapshot, MarketPriceReactionWindow } from '@elceo/types';
 import { EVIDENCE_WEIGHT_HORIZONS, MARKET_ASSET_CAUSALITY_ASSETS, MARKET_PRICE_REACTION_DIRECTIONS, MARKET_PRICE_REACTION_EVENT_KINDS, MARKET_PRICE_REACTION_IMPULSE_CLASSES, MARKET_PRICE_REACTION_REASON_CODES, MARKET_PRICE_REACTION_STATUSES, MARKET_PRICE_REACTION_VOLATILITY_BASES, MARKET_PRICE_REACTION_WARNINGS, MARKET_PRICE_REACTION_WINDOW_KINDS } from '@elceo/types';
 import { isEnumValue, isFiniteNumber, isIsoDateString, isNonEmptyString, isObjectRecord, isScore0to100, type SchemaValidationResult } from './validation-utils';
+import { validateExpectedMarketReasoningModuleReadiness } from './market-reasoning-readiness.schema';
 
 const forbidden = /\b(buy|sell|hold|guaranteed profit|risk-free)\b/i;
 const arr = <T extends string>(v: unknown, allowed: readonly T[]): v is T[] => Array.isArray(v) && v.every((x) => isEnumValue(x, allowed));
 function advice(v: unknown, errors: string[], p: string): void { if (typeof v === 'string' && forbidden.test(v)) errors.push(`${p} contains forbidden advice language`); }
-function pending(input: Record<string, unknown>, errors: string[], p: string): void {
-  if (input.complete !== false) errors.push(`${p}complete must remain false`);
-  if (!isObjectRecord(input.pending)) errors.push(`${p}pending required`);
-  else for (const k of ['providerReliabilityExpansion','goldenScenarioExpansion','empiricalBacktesting'] as const) if (input.pending[k] !== true) errors.push(`${p}pending.${k} must remain true`);
-}
 function numeric(input: Record<string, unknown>, keys: readonly string[], errors: string[], p: string): void { for (const k of keys) if (!isFiniteNumber(input[k])) errors.push(`${p}${k} must be finite number`); }
 
 export function validateMarketPriceCandle(input: unknown, p = ''): SchemaValidationResult<MarketPriceCandle> {
@@ -67,7 +63,7 @@ export function validateMarketPriceReactionResult(input: unknown, p = ''): Schem
   if (input.eventTime === null && Array.isArray(input.warnings) && !input.warnings.includes('missing_event_time')) e.push(`${p}missing eventTime requires missing_event_time warning`);
   if (input.expectedDirection === 'unknown' && Array.isArray(input.warnings) && !input.warnings.includes('missing_expected_direction')) e.push(`${p}unknown expectedDirection requires missing_expected_direction warning`);
   if (input.status === 'insufficient_data' && Array.isArray(input.warnings) && !input.warnings.includes('insufficient_candles')) e.push(`${p}insufficient_data requires insufficient_candles warning`);
-  pending(input, e, p);
+  { const rr=validateExpectedMarketReasoningModuleReadiness(input.readiness,'price_reaction',`${p}readiness.`); if(rr.ok===false)e.push(...rr.errors); }
   return e.length ? { ok:false, errors:e } : { ok:true, value:input as MarketPriceReactionResult };
 }
 
@@ -87,7 +83,7 @@ export function validateMarketPriceReactionRuleSetSnapshot(input: unknown, p = '
   if (!isIsoDateString(input.generatedAt)) e.push(`${p}generatedAt invalid`);
   if (!Array.isArray(input.rules)) e.push(`${p}rules must be array`); else input.rules.forEach((x, i) => { const r = validateMarketPriceReactionRule(x, `${p}rules[${i}].`); if (r.ok === false) e.push(...r.errors); });
   if (!arr(input.warnings, MARKET_PRICE_REACTION_WARNINGS)) e.push(`${p}warnings invalid`);
-  pending(input, e, p);
+  { const rr=validateExpectedMarketReasoningModuleReadiness(input.readiness,'price_reaction',`${p}readiness.`); if(rr.ok===false)e.push(...rr.errors); }
   return e.length ? { ok:false, errors:e } : { ok:true, value:input as MarketPriceReactionRuleSetSnapshot };
 }
 
@@ -99,6 +95,6 @@ export function validateMarketPriceReactionCoverageReport(input: unknown, p = ''
   if (!arr(input.windowKinds, MARKET_PRICE_REACTION_WINDOW_KINDS)) e.push(`${p}windowKinds invalid`);
   if (!arr(input.warnings, MARKET_PRICE_REACTION_WARNINGS)) e.push(`${p}warnings invalid`);
   if (!Array.isArray(input.notes) || input.notes.some((x) => typeof x !== 'string')) e.push(`${p}notes invalid`); else input.notes.forEach((x, i) => advice(x, e, `${p}notes[${i}]`));
-  pending(input, e, p);
+  { const rr=validateExpectedMarketReasoningModuleReadiness(input.readiness,'price_reaction',`${p}readiness.`); if(rr.ok===false)e.push(...rr.errors); }
   return e.length ? { ok:false, errors:e } : { ok:true, value:input as MarketPriceReactionCoverageReport };
 }

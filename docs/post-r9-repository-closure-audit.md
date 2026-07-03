@@ -101,6 +101,9 @@ Validation commands run on `codex/conduct-post-c6-r9-repository-audit` after edi
 - Dependency/blocker: truth-source rename or alias deprecation only.
 - Recommended remediation boundary: add a validity/descriptor-completeness API name, keep compatibility alias if needed, and update docs/tests to distinguish descriptor completeness from engine/provider/live readiness.
 - Proposed cleanup batch: RC-A.
+- RC-A status: resolved.
+- Resolved by: PR #171.
+- Remaining dependency: RC-D for issuer/region/currency inference plus live integration, empirical validation, and production calibration.
 - Explicit non-goals: do not alter reasoning formulas, assets, providers, or phase state.
 - Confidence: `proven`.
 
@@ -120,6 +123,9 @@ Validation commands run on `codex/conduct-post-c6-r9-repository-audit` after edi
 - Dependency/blocker: contract semantics cleanup.
 - Recommended remediation boundary: replace phase-name booleans with scoped pending categories or add explicit foundation/live/empirical fields without changing formulas.
 - Proposed cleanup batch: RC-A.
+- RC-A status: resolved.
+- Resolved by: PR #171.
+- Remaining dependency: RC-D for issuer/region/currency inference plus live integration, empirical validation, and production calibration.
 - Explicit non-goals: do not create C6-R10 or a new reasoning phase.
 - Confidence: `strongly_indicated`.
 
@@ -892,3 +898,6 @@ Recurring combinations across the 25 zero-confidence results include `provider_a
 - No production credentials, staging URLs, WAF, payment, notification, backup, or monitoring systems were available for live verification.
 - The route matrix is included in this audit; rows marked `partial`, `gap_found`, or `environment_verification_required` still require implementation, exact test evidence, or external deployment verification.
 - Validation command outputs are reported separately and honestly; environment-dependent commands are not counted as code failures when required variables are absent.
+
+## RC-A resolution note (2026-07-03)
+RC-A corrects terminology, readiness contracts, and asset taxonomy only. Deterministic R1-R9 reasoning foundations exist; live provider activation remains blocked, empirical validation remains pending, and production calibration remains pending. DXY and VIX are reasoning diagnostic assets, not launch-tradable instruments. No reasoning formula, confidence arithmetic, provider activation, or golden-scenario anchor changed in RC-A. RC-D remains the next reasoning-correctness batch and will address structured issuer/region/currency inference.

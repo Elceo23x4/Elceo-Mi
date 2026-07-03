@@ -1,6 +1,6 @@
-import { validateMarketAssetCausalityCoverageReport, validateMarketAssetCausalityDescriptor, validateMarketAssetCausalityMatrixSnapshot } from '@elceo/schemas';
-import { MARKET_ASSET_CAUSALITY_ASSETS, type MarketAssetCausalityAsset, type MarketAssetCausalityDescriptor } from '@elceo/types';
-import { assertMarketAssetCausalityMatrixComplete, buildMarketAssetCausalityMatrixSnapshot, getMarketAssetCausalityCoverageReport, getMarketAssetCausalityDescriptor, listContradictionTriggersForAsset, listDirectionResolutionRequirements, listMarketAssetCausalityGaps, listProviderDependenciesForAsset, listRegimeModifiersForAsset } from '../asset-causality-map/index.js';
+import { validateMarketAssetCausalityCoverageReport, validateMarketAssetCausalityDescriptor, validateMarketAssetCausalityGap, validateMarketAssetCausalityMatrixSnapshot } from '@elceo/schemas';
+import { MARKET_ASSET_CAUSALITY_ASSETS, MARKET_REASONING_DIAGNOSTIC_ASSETS, TRADING_ASSET_COVERAGE, type MarketAssetCausalityAsset, type MarketAssetCausalityDescriptor } from '@elceo/types';
+import { assertMarketAssetCausalityDescriptorCoverageComplete, buildMarketAssetCausalityMatrixSnapshot, getMarketAssetCausalityCoverageReport, getMarketAssetCausalityDescriptor, listContradictionTriggersForAsset, listDirectionResolutionRequirements, listMarketAssetCausalityGaps, listProviderDependenciesForAsset, listRegimeModifiersForAsset } from '../asset-causality-map/index.js';
 import { CanonicalMarketIntelligenceBoundaryService } from '../runtime/canonical-market-intelligence-boundary.js';
 import { MemoryMarketEvidenceRegistrySnapshotRepository, MemorySeoContentArchitectureSnapshotRepository } from '../persistence/registry-snapshot-repository.js';
 
@@ -11,9 +11,11 @@ function assertContains(d: MarketAssetCausalityDescriptor, words: string[], labe
 
 export function runAssetCausalityMapTests(): void {
   const snapshot = buildMarketAssetCausalityMatrixSnapshot('2026-06-03T00:00:00.000Z');
-  assert(snapshot.descriptors.length === MARKET_ASSET_CAUSALITY_ASSETS.length, 'all 14 launch assets represented');
+  assert(snapshot.descriptors.length === MARKET_ASSET_CAUSALITY_ASSETS.length, 'all 14 reasoning assets represented');
   assert(JSON.stringify(snapshot.descriptors.map((x) => x.asset)) === JSON.stringify(MARKET_ASSET_CAUSALITY_ASSETS), 'deterministic ordering');
   assert(new Set(snapshot.descriptors.map((x) => x.asset)).size === MARKET_ASSET_CAUSALITY_ASSETS.length, 'assets represented exactly once');
+  assert(TRADING_ASSET_COVERAGE.every((a)=>snapshot.descriptors.some((d)=>d.asset===a)), 'all 12 launch-tradable assets represented');
+  assert(MARKET_REASONING_DIAGNOSTIC_ASSETS.every((a)=>snapshot.descriptors.some((d)=>d.asset===a)), 'two reasoning diagnostic assets represented');
   for (const descriptor of snapshot.descriptors) {
     const validation = validateMarketAssetCausalityDescriptor(descriptor);
     assert(validation.ok, `${descriptor.asset} descriptor validates ${validation.ok ? '' : validation.errors.join(';')}`);
@@ -28,7 +30,14 @@ export function runAssetCausalityMapTests(): void {
   const report = getMarketAssetCausalityCoverageReport('2026-06-03T00:00:00.000Z');
   const reportValidation = validateMarketAssetCausalityCoverageReport(report);
   assert(reportValidation.ok, `coverage report validates ${reportValidation.ok ? '' : reportValidation.errors.join(';')}`);
-  assert(report.complete === false && listMarketAssetCausalityGaps().every((g) => g.status === 'pending_r2_r9'), 'known gaps do not claim completion');
+  assert(listMarketAssetCausalityGaps().every((g) => g.readinessCategory === 'live_provider_integration' || g.readinessCategory === 'empirical_validation' || g.readinessCategory === 'production_calibration'), 'known gaps use readiness categories');
+  const gaps=listMarketAssetCausalityGaps();
+  gaps.forEach((g)=>assert(validateMarketAssetCausalityGap(g).ok, `${g.gapId} gap validates`));
+  assert(gaps.find((g)=>g.readinessCategory==='live_provider_integration')?.status === 'blocked', 'live provider gap blocked');
+  assert(gaps.find((g)=>g.readinessCategory==='empirical_validation')?.status === 'pending', 'gap pending');
+  assert(gaps.find((g)=>g.readinessCategory==='production_calibration')?.status === 'pending', 'production gap pending');
+  assert(validateMarketAssetCausalityCoverageReport({...report,gaps:[...report.gaps,report.gaps[0]]}).ok === false, 'duplicate gap category rejected');
+  assert(validateMarketAssetCausalityGap({...gaps[0],description:'buy now'}).ok === false, 'advisory gap rejected');
 
   const fxAssets: MarketAssetCausalityAsset[] = ['eur_usd','gbp_usd','usd_jpy','usd_chf','aud_usd','nzd_usd','usd_cad'];
   for (const asset of fxAssets) {
@@ -48,13 +57,13 @@ export function runAssetCausalityMapTests(): void {
   assertContains(getMarketAssetCausalityDescriptor('de30'), ['ecb','german','energy','credit'], 'DE30 eurozone context');
   assert(hasKinds(getMarketAssetCausalityDescriptor('dxy'), ['central_bank_policy','growth_surprise','yield_differentials','dollar_liquidity','risk_sentiment']), 'DXY includes required drivers');
   assert(hasKinds(getMarketAssetCausalityDescriptor('vix'), ['volatility_surface','risk_sentiment','credit_stress','equity_breadth']), 'VIX includes required drivers');
-  assertMarketAssetCausalityMatrixComplete();
+  assertMarketAssetCausalityDescriptorCoverageComplete();
 
   const boundary = new CanonicalMarketIntelligenceBoundaryService(new MemoryMarketEvidenceRegistrySnapshotRepository(), new MemorySeoContentArchitectureSnapshotRepository());
   assert(boundary.getMarketAssetCausalityMatrixSnapshot('2026-06-03T00:00:00.000Z').descriptors.length === 14, 'boundary exposes matrix');
   assert(boundary.getMarketAssetCausalityDescriptor('xau_usd').asset === 'xau_usd', 'boundary exposes descriptor');
   assert(boundary.listMarketAssetCausalityGaps().length > 0, 'boundary exposes gaps');
-  assert(boundary.getMarketAssetCausalityCoverageReport().complete === false, 'boundary exposes report');
+  assert(boundary.getMarketAssetCausalityCoverageReport().readiness.moduleId === 'asset_causality', 'boundary exposes report');
   assert(boundary.listDirectionResolutionRequirements('eur_usd').length > 0, 'boundary exposes direction requirements');
   assert(boundary.listProviderDependenciesForAsset('btc_usd').length === listProviderDependenciesForAsset('btc_usd').length, 'boundary exposes dependencies');
   assert(boundary.listContradictionTriggersForAsset('vix').length === listContradictionTriggersForAsset('vix').length, 'boundary exposes triggers');

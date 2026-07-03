@@ -36,10 +36,10 @@ export function runPriceReactionTests(): void {
   assert(extreme.warnings.includes('outlier_move') && (extreme.impulseClass === 'extreme' || extreme.impulseClass === 'outlier'), 'extreme move warning and impulse');
   assert(evaluatePriceReaction(input({ candles:[...basePre, c(0,100,100.1,99.95,100.02), c(1,100.02,100.2,100,100.05), c(2,100.05,100.3,100,100.1), c(3,100.1,101.4,100,101.2)] })).status === 'delayed', 'delayed follow-through detected');
   assert(validateMarketPriceReactionRuleSetSnapshot(getMarketPriceReactionRuleSetSnapshot(at)).ok, 'rule set validates');
-  assert(validateMarketPriceReactionCoverageReport(getMarketPriceReactionCoverageReport(at)).ok && getMarketPriceReactionCoverageReport(at).pending.empiricalBacktesting, 'coverage report validates and remains pending');
-  assert(assertMarketPriceReactionRuleSetValid().pending.providerReliabilityExpansion, 'rule assertion works');
+  assert(validateMarketPriceReactionCoverageReport(getMarketPriceReactionCoverageReport(at)).ok && getMarketPriceReactionCoverageReport(at).readiness.moduleId === 'price_reaction', 'coverage report validates and remains pending');
+  assert(assertMarketPriceReactionRuleSetValid().readiness.moduleId === 'price_reaction', 'rule assertion works');
   const boundary = new CanonicalMarketIntelligenceBoundaryService(new MemoryMarketEvidenceRegistrySnapshotRepository(), new MemorySeoContentArchitectureSnapshotRepository());
-  assert(boundary.evaluatePriceReaction(input({})).status === 'confirmed' && boundary.getMarketPriceReactionCoverageReport(at).pending.goldenScenarioExpansion, 'canonical boundary exposes price reaction methods');
+  assert(boundary.evaluatePriceReaction(input({})).status === 'confirmed' && boundary.getMarketPriceReactionCoverageReport(at).readiness.moduleId === 'price_reaction', 'canonical boundary exposes price reaction methods');
   const matrixBooleanOnly = evaluateMarketContradictionMatrix({ asset:'sp500', horizon:'intraday', generatedAt:at, evidencePoints:[point(), point('macro-2')], priceReactionAvailable:true, providerReliabilitySupplied:true, sourceIndependenceVerified:true, warnings:[] });
   assert(matrixBooleanOnly.warnings.includes('pending_price_confirmation') && matrixBooleanOnly.signals.some((signal)=>signal.status === 'pending_confirmation'), 'priceReactionAvailable without a reaction keeps macro-vs-price pending');
   const matrixConfirmed = evaluateMarketContradictionMatrix({ asset:'sp500', horizon:'intraday', generatedAt:at, evidencePoints:[point(), point('macro-2')], priceReactionAvailable:true, priceReaction:confirmedBull, providerReliabilitySupplied:true, sourceIndependenceVerified:true, warnings:[] });

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { MARKET_REASONING_DIAGNOSTIC_ASSETS, TRADING_ASSET_COVERAGE } from '@elceo/types';
 import { validateProviderSourceRegistrySnapshot } from '@elceo/schemas';
 import { buildProviderActivationChecklist, getProviderSourceDescriptor, getProviderSourceRegistrySnapshot, listProviderSourceGaps, listProviderSourcesByFamily, listProviderSourcesForAsset } from '../provider-source-registry/index.js';
 import { CanonicalMarketIntelligenceBoundaryService } from '../runtime/canonical-market-intelligence-boundary.js';
@@ -10,7 +11,23 @@ export async function runProviderSourceRegistryTests(){
   assert.deepEqual(snap.sources.map((x)=>x.sourceId), [...snap.sources.map((x)=>x.sourceId)].sort());
   assert.equal(new Set(snap.sources.map((x)=>x.family)).size,7);
   ['tiingo_market_data','fred_macro','cftc_cot','marketaux_news','sec_edgar','crypto_onchain_public','credit_stress_source'].forEach((id)=>assert.equal(snap.sources.some((x)=>x.sourceId===id),true));
-  assert.equal(snap.launchAssetCoverage.every((x)=>x.sourceIds.length>0),true);
+  assert.equal(snap.reasoningAssetCoverage.every((x)=>x.sourceIds.length>0),true);
+
+  assert.equal(snap.reasoningAssetCoverage.length,14);
+  assert.equal(snap.launchTradableAssetCoverage.length,12);
+  assert.equal(snap.reasoningDiagnosticAssetCoverage.length,2);
+  assert.deepEqual(new Set(snap.launchTradableAssetCoverage.map((x)=>x.asset)), new Set(TRADING_ASSET_COVERAGE));
+  assert.deepEqual(new Set(snap.reasoningDiagnosticAssetCoverage.map((x)=>x.asset)), new Set(MARKET_REASONING_DIAGNOSTIC_ASSETS));
+  const invalid = (mutate: (copy: typeof snap)=>void) => { const copy=structuredClone(snap); mutate(copy); assert.equal(validateProviderSourceRegistrySnapshot(copy).ok,false); };
+  invalid((x)=>{ x.launchTradableAssetCoverage[0]=x.launchTradableAssetCoverage[1]!; });
+  invalid((x)=>{ x.launchTradableAssetCoverage=x.launchTradableAssetCoverage.slice(1); });
+  invalid((x)=>{ x.launchTradableAssetCoverage[0]=snap.reasoningDiagnosticAssetCoverage[0]!; });
+  invalid((x)=>{ x.reasoningDiagnosticAssetCoverage[0]=snap.launchTradableAssetCoverage[0]!; });
+  invalid((x)=>{ x.reasoningDiagnosticAssetCoverage[1]=x.reasoningDiagnosticAssetCoverage[0]!; });
+  invalid((x)=>{ x.reasoningAssetCoverage[0]={...x.reasoningAssetCoverage[0],supportRole:'reasoning_diagnostic'} as any; });
+  invalid((x)=>{ x.launchTradableAssetCount=13; });
+  invalid((x)=>{ x.reasoningDiagnosticAssetCoverage[0]={...x.reasoningDiagnosticAssetCoverage[0]!,themes:['different']}; });
+
   const forbiddenKeys = new Set(['apiKey','secret','token','password']);
   snap.sources.forEach((x)=>{ assert.notEqual(x.liveActivationMode,'manual_gated'); assert.equal(Object.keys(x).some((k)=>forbiddenKeys.has(k)),false); });
   assert.deepEqual(listProviderSourceGaps(),listProviderSourceGaps());

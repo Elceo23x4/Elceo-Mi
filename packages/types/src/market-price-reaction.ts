@@ -1,3 +1,4 @@
+import type { MarketReasoningModuleReadiness } from './market-reasoning-readiness';
 import type { MarketAssetCausalityAsset } from './market-asset-causality';
 import type { EvidenceWeightHorizon, WeightedEvidenceSnapshot } from './market-evidence-weighting';
 import type { ReasoningEvidenceInputItem } from './reasoning-market-input';
@@ -57,11 +58,10 @@ export type MarketPriceReactionResult = {
   warnings: MarketPriceReactionWarning[];
   reasonCodes: MarketPriceReactionReasonCode[];
   rationale: string;
-  complete: false;
-  pending: { providerReliabilityExpansion: true; goldenScenarioExpansion: true; empiricalBacktesting: true };
+  readiness: MarketReasoningModuleReadiness;
 };
 export type MarketPriceReactionRule = { ruleId: string; asset?: MarketPriceReactionAsset; status?: MarketPriceReactionStatus; warning?: MarketPriceReactionWarning; reasonCodes: MarketPriceReactionReasonCode[]; rationale: string };
-export type MarketPriceReactionRuleSetSnapshot = { generatedAt: string; rules: MarketPriceReactionRule[]; warnings: MarketPriceReactionWarning[]; complete: false; pending: MarketPriceReactionResult['pending'] };
-export type MarketPriceReactionCoverageReport = { generatedAt: string; assetCount: number; statusCoverage: MarketPriceReactionStatus[]; windowKinds: MarketPriceReactionWindowKind[]; warnings: MarketPriceReactionWarning[]; notes: string[]; complete: false; pending: MarketPriceReactionResult['pending'] };
+export type MarketPriceReactionRuleSetSnapshot = { generatedAt: string; rules: MarketPriceReactionRule[]; warnings: MarketPriceReactionWarning[]; readiness: MarketReasoningModuleReadiness };
+export type MarketPriceReactionCoverageReport = { generatedAt: string; assetCount: number; statusCoverage: MarketPriceReactionStatus[]; windowKinds: MarketPriceReactionWindowKind[]; warnings: MarketPriceReactionWarning[]; notes: string[]; readiness: MarketReasoningModuleReadiness };
 export type MarketPriceReactionEvidenceItem = ReasoningEvidenceInputItem;
 export type MarketPriceReactionWeightedSnapshot = WeightedEvidenceSnapshot;

@@ -75,7 +75,7 @@ export function runAssetDirectionResolutionTests(): void {
   const valid = res('dxy', hawkish); assert(validateMarketAssetDirectionResolutionResult(valid).ok, 'valid result schema passes');
   const bad = { ...valid, resolvedDirection: 'up', rationale: 'buy now' }; assert(!validateMarketAssetDirectionResolutionResult(bad).ok, 'invalid direction and advice language rejected');
   const snap = getAssetDirectionResolutionRuleSetSnapshot('2026-06-03T00:00:00.000Z'); assert(validateMarketAssetDirectionResolutionRuleSetSnapshot(snap).ok, 'rule set snapshot validates');
-  const coverage = getAssetDirectionResolutionCoverageReport('2026-06-03T00:00:00.000Z'); assert(validateMarketAssetDirectionResolutionCoverageReport(coverage).ok && coverage.pendingPhases.includes('R3') && coverage.pendingPhases.includes('R4') && coverage.pendingPhases.includes('R7'), 'coverage report validates and marks pending phases');
+  const coverage = getAssetDirectionResolutionCoverageReport('2026-06-03T00:00:00.000Z'); assert(validateMarketAssetDirectionResolutionCoverageReport(coverage).ok && coverage.readiness.deterministicFoundationStatus === 'implemented', 'coverage report validates and uses canonical readiness');
 
   const boundary = new CanonicalMarketIntelligenceBoundaryService(new MemoryMarketEvidenceRegistrySnapshotRepository(), new MemorySeoContentArchitectureSnapshotRepository());
   assert(boundary.assertAssetDirectionResolutionRuleSetValid(), 'boundary exposes valid assertion');

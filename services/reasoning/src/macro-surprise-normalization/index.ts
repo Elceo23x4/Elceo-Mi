@@ -2,6 +2,7 @@ import { getMarketReasoningModuleReadiness } from '../readiness/index';
 import type { MarketMacroCurrency, MarketMacroEconomicMeaning, MarketMacroGrowthPressure, MarketMacroIndicatorCategory, MarketMacroIndicatorKind, MarketMacroInflationPressure, MarketMacroPolicyPressure, MarketMacroRegion, MarketMacroReleaseInput, MarketMacroRiskPressure, MarketMacroSurpriseCoverageReport, MarketMacroSurpriseNormalizationResult, MarketMacroSurpriseReasonCode, MarketMacroSurpriseRule, MarketMacroSurpriseRuleSetSnapshot, MarketMacroSurpriseSeverity, MarketMacroSurpriseWarning, ReasoningEvidenceInputItem } from '@elceo/types';
 import { MARKET_MACRO_CURRENCIES, MARKET_MACRO_INDICATOR_CATEGORIES, MARKET_MACRO_INDICATOR_KINDS, MARKET_MACRO_REGIONS } from '@elceo/types';
 import { validateMarketMacroReleaseInput, validateMarketMacroSurpriseCoverageReport, validateMarketMacroSurpriseNormalizationResult, validateMarketMacroSurpriseRuleSetSnapshot } from '@elceo/schemas';
+import { resolveMarketEconomicContext } from '../economic-context/index';
 
 type Metadata = Record<string, unknown>;
 type Pressure = { economicMeaning: MarketMacroEconomicMeaning; policyPressure: MarketMacroPolicyPressure; growthPressure: MarketMacroGrowthPressure; inflationPressure: MarketMacroInflationPressure; riskPressure: MarketMacroRiskPressure };
@@ -56,21 +57,20 @@ export function inferMacroIndicatorCategory(input: Partial<MarketMacroReleaseInp
   if (kind === 'oil_inventory') return 'commodity_inventory';
   return 'unknown';
 }
+function macroCurrency(v: string): MarketMacroCurrency { return (MARKET_MACRO_CURRENCIES as readonly string[]).includes(v) ? v as MarketMacroCurrency : 'unknown'; }
+function macroRegion(v: string): MarketMacroRegion { return (MARKET_MACRO_REGIONS as readonly string[]).includes(v) ? v as MarketMacroRegion : 'unknown'; }
 export function inferMacroCurrencyRegion(input: Partial<MarketMacroReleaseInput> | Metadata): { currency: MarketMacroCurrency; region: MarketMacroRegion } {
-  const currency = enumOrUnknown(input.currency, MARKET_MACRO_CURRENCIES, 'unknown');
-  const region = enumOrUnknown(input.region, MARKET_MACRO_REGIONS, 'unknown');
-  if (currency !== 'unknown' || region !== 'unknown') return { currency, region };
-  const text = JSON.stringify(input).toLowerCase().replace(/[\s-]+/g, '_');
-  if (/usd|fed|fomc|united_states|\bus\b/.test(text)) return { currency: 'USD', region: 'US' };
-  if (/eur|ecb|eurozone|euro_area/.test(text)) return { currency: 'EUR', region: 'eurozone' };
-  if (/gbp|boe|united_kingdom|\buk\b/.test(text)) return { currency: 'GBP', region: 'UK' };
-  if (/jpy|boj|japan/.test(text)) return { currency: 'JPY', region: 'Japan' };
-  if (/chf|snb|switzerland|swiss/.test(text)) return { currency: 'CHF', region: 'Switzerland' };
-  if (/aud|rba|australia/.test(text)) return { currency: 'AUD', region: 'Australia' };
-  if (/nzd|rbnz|new_zealand/.test(text)) return { currency: 'NZD', region: 'New_Zealand' };
-  if (/cad|boc|canada/.test(text)) return { currency: 'CAD', region: 'Canada' };
-  if (/cny|pboc|china/.test(text)) return { currency: 'CNY', region: 'China' };
-  return { currency: 'unknown', region: 'unknown' };
+  const record = input as Metadata;
+  const source = record.metadata && typeof record.metadata === 'object' && !Array.isArray(record.metadata) ? record.metadata as Metadata : record;
+  const context = resolveMarketEconomicContext({
+    issuerCurrency: source.issuerCurrency ?? source.releaseCurrency ?? source.currency ?? record.currency,
+    issuerRegion: source.issuerRegion ?? source.releaseRegion ?? source.region ?? (!source.eventRegion ? record.region : undefined),
+    eventRegion: source.eventRegion ?? source.releaseRegion ?? source.region ?? record.region,
+    affectedCurrencies: source.affectedCurrencies ?? record.affectedCurrencies,
+    affectedCurrency: source.affectedCurrency ?? record.affectedCurrency,
+    metadata: {}
+  });
+  return { currency: macroCurrency(context.issuerCurrency), region: macroRegion(context.eventRegion !== 'unknown' ? context.eventRegion : context.issuerRegion) };
 }
 function pressure(kind: MarketMacroIndicatorKind, signed: number): Pressure {
   if (signed === 0) return { economicMeaning: 'mixed', policyPressure: 'neutral', growthPressure: 'neutral', inflationPressure: 'neutral', riskPressure: 'neutral' };

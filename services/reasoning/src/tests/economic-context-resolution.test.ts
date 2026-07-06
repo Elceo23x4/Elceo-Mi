@@ -4,6 +4,12 @@ import { resolveFxRelativeStrength } from '../fx-relative-strength/index.js';
 import { normalizeMacroSurprise, parseMacroReleaseInputFromMetadata } from '../macro-surprise-normalization/index.js';
 import { resolveAssetContextualEvidenceDirection } from '../asset-direction-resolution/index.js';
 function assert(condition: boolean, message: string): void { if (!condition) throw new Error(`Assertion failed: ${message}`); }
+
+function validResolution(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return { issuerInstitution:'unknown', issuerRegion:'unknown', issuerCurrency:'unknown', eventRegion:'unknown', affectedCurrencies:[], resolutionSource:'unresolved', resolutionConfidence:'unresolved', warnings:['issuer_context_missing'], conflictFields:[], ignoredIdentityFields:[], ...overrides };
+}
+function assertInvalidResolution(value: Record<string, unknown>, message: string): void { assert(!validateMarketEconomicContextResolution(value).ok, message); }
+function macroFromMetadata(value: Record<string, unknown>) { return normalizeMacroSurprise(parseMacroReleaseInputFromMetadata(JSON.stringify({ indicatorKind:'gdp', actual:1, forecast:2, previous:1, ...value }))); }
 export function runEconomicContextResolutionTests(): void {
   const eur = resolveMarketEconomicContext({ issuerCurrency:'EUR', providerId:'fed_usd_archive' });
   assert(eur.issuerCurrency === 'EUR' && eur.warnings.includes('provider_identity_ignored'), 'explicit EUR wins while provider identity is ignored');
@@ -35,4 +41,26 @@ export function runEconomicContextResolutionTests(): void {
   assert(fx.basePressure.componentCount === 1, 'FX consumes canonical resolver');
   const macro = normalizeMacroSurprise(parseMacroReleaseInputFromMetadata(JSON.stringify({ indicatorKind:'gdp', actual:1, forecast:2, previous:1, affectedCurrency:'AUD', eventRegion:'China', driverKind:'china_demand', driverDirection:'weaker' })));
   assert(macro.currency === 'unknown' && String(macro.region) === 'China', 'macro keeps affected currency separate from issuer currency');
+
+  for (const forbidden of [{ providerId:'fed_archive' }, { source:'ECB archive' }, { title:'Federal Reserve GDP nowcast' }, { note:'industrial use case' }]) {
+    const release = macroFromMetadata(forbidden);
+    assert(release.currency === 'unknown' && release.region === 'unknown', `${Object.keys(forbidden)[0]} alone does not infer macro issuer`);
+  }
+  const affectedMacro = macroFromMetadata({ affectedCurrency:'AUD', eventRegion:'China' });
+  assert(affectedMacro.currency === 'unknown' && String(affectedMacro.region) === 'China' && affectedMacro.affectedCurrencies?.includes('AUD') === true && affectedMacro.warnings.includes('affected_currency_not_issuer') && affectedMacro.warnings.includes('issuer_context_missing'), 'macro affected currency is preserved without issuer authority');
+  assertInvalidResolution(validResolution({ providerId:'fed' }), 'canonical resolution rejects providerId extra field');
+  assertInvalidResolution(validResolution({ source:'ECB archive' }), 'canonical resolution rejects source extra field');
+  assertInvalidResolution(validResolution({ title:'Federal Reserve' }), 'canonical resolution rejects title extra field');
+  assertInvalidResolution(validResolution({ note:'industrial use case' }), 'canonical resolution rejects note extra field');
+  assertInvalidResolution(validResolution({ issuerCurrency:'EUR', issuerRegion:'US', resolutionSource:'explicit_issuer_currency', resolutionConfidence:'high', warnings:[], conflictFields:[] }), 'schema computes issuer currency/region mismatch');
+  assertInvalidResolution(validResolution({ issuerCurrency:'EUR', issuerInstitution:'fed', issuerRegion:'eurozone', resolutionSource:'explicit_issuer_currency', resolutionConfidence:'high', warnings:[], conflictFields:[] }), 'schema computes issuer currency/institution mismatch');
+  assertInvalidResolution(validResolution({ issuerInstitution:'ecb', issuerRegion:'US', issuerCurrency:'EUR', resolutionSource:'explicit_issuer_institution', resolutionConfidence:'high', warnings:[], conflictFields:[] }), 'schema computes issuer region/institution mismatch');
+  assertInvalidResolution(validResolution({ issuerCurrency:'EUR', issuerRegion:'US', resolutionSource:'explicit_issuer_currency', resolutionConfidence:'high', warnings:['issuer_region_currency_conflict'], conflictFields:[] }), 'schema rejects empty conflictFields on contradiction');
+  assertInvalidResolution(validResolution({ warnings:[], conflictFields:['issuerCurrency'] }), 'schema rejects conflictFields without conflict warning');
+  assertInvalidResolution(validResolution({ affectedCurrencies:['AUD'], warnings:['issuer_context_missing'] }), 'schema rejects affectedCurrencies unresolved without affected_currency_not_issuer');
+  assertInvalidResolution(validResolution({ issuerCurrency:'unknown', resolutionSource:'explicit_issuer_currency', resolutionConfidence:'high' }), 'schema rejects explicit issuer currency unknown');
+  assertInvalidResolution(validResolution({ issuerInstitution:'unknown', resolutionSource:'explicit_issuer_institution', resolutionConfidence:'high' }), 'schema rejects explicit issuer institution unknown');
+  assertInvalidResolution(validResolution({ issuerRegion:'unknown', resolutionSource:'explicit_issuer_region', resolutionConfidence:'high' }), 'schema rejects explicit issuer region unknown');
+  assertInvalidResolution(validResolution({ issuerCurrency:'EUR', issuerRegion:'eurozone', resolutionSource:'unresolved' }), 'schema rejects unresolved with known issuer');
+  assert(!validateMarketEconomicDriverContext({ driverKind:'oil_energy', driverDirection:'unknown', warnings:[] }).ok, 'driver schema rejects missing direction without warning');
 }

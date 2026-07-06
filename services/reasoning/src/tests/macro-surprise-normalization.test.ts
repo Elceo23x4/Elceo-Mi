@@ -23,6 +23,13 @@ export function runMacroSurpriseNormalizationTests(): void {
   assert(boundary.normalizeMacroSurprise({ releaseId: 'b', indicatorKind: 'gdp', actual: 2, forecast: 1, unit: 'pct' }).economicMeaning === 'stronger_growth', 'canonical boundary exposes normalizeMacroSurprise');
   assert(!/\b(buy|sell|hold|guaranteed profit|risk-free)\b/i.test(valid.rationale), 'no advice language');
 
+  for (const forbidden of [{ providerId:'fed_archive' }, { source:'ECB archive' }, { title:'Federal Reserve GDP nowcast' }, { note:'industrial use case' }]) {
+    const release = normalizeMacroSurprise({ releaseId:`macro-forbidden-${Object.keys(forbidden)[0]}`, indicatorKind:'gdp', actual:1, forecast:2, previous:1, metadata: forbidden });
+    assert(release.currency === 'unknown' && release.region === 'unknown', `${Object.keys(forbidden)[0]} cannot infer macro issuer`);
+  }
+  const affectedChina = normalizeMacroSurprise({ releaseId:'china-aud-affected', indicatorKind:'gdp', actual:1, forecast:2, previous:1, region:'China', metadata:{ affectedCurrency:'AUD', eventRegion:'China' } });
+  assert(affectedChina.currency === 'unknown' && String(affectedChina.region) === 'China' && affectedChina.affectedCurrencies?.includes('AUD'), 'affected AUD under China event remains non-issuer context');
+
   assert(valid.surpriseDirection === 'upside_surprise' && valid.economicMeaning === 'hotter_inflation' && valid.policyPressure === 'hawkish' && valid.inflationPressure === 'hotter', 'CPI upside is hotter/hawkish');
   assert(cpi({ forecast: 3.5 }).surpriseDirection === 'downside_surprise' && cpi({ forecast: 3.5 }).economicMeaning === 'cooler_inflation', 'CPI downside is cooler');
   assert(cpi({ actual: 3.2, forecast: 3 }).surpriseDirection !== cpi({ actual: 3.2, forecast: 3.5 }).surpriseDirection, 'same CPI actual changes direction under different forecasts');

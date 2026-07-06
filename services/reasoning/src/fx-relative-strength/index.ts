@@ -4,6 +4,7 @@ import { MARKET_FX_CURRENCY_CODES, MARKET_FX_PAIR_ASSETS } from '@elceo/types';
 import { validateMarketFxRelativeStrengthCoverageReport, validateMarketFxRelativeStrengthResult, validateMarketFxRelativeStrengthRuleSetSnapshot } from '@elceo/schemas';
 import { getMarketAssetCausalityDescriptor } from '../asset-causality-map/index';
 import { normalizeMacroSurprise, parseMacroReleaseInputFromMetadata } from '../macro-surprise-normalization/index';
+import { resolveMarketEconomicContext, resolveMarketEconomicDriverContext } from '../economic-context/index';
 
 const THRESHOLD = 15;
 const ORIENTATION: Record<MarketFxPairAsset, { base: MarketFxCurrencyCode; quote: MarketFxCurrencyCode }> = {
@@ -35,7 +36,6 @@ function unique<T extends string>(values: T[]): T[] { return [...new Set(values)
 function clamp(n: number, lo: number, hi: number): number { return Math.max(lo, Math.min(hi, Math.round(n))); }
 function parse(json?: string | null): Metadata { if (!json) return {}; try { const parsed: unknown = JSON.parse(json); return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? parsed as Metadata : {}; } catch { return {}; } }
 function norm(v: unknown): string { return typeof v === 'string' ? v.trim().toLowerCase().replace(/[\s-]+/g, '_') : ''; }
-function body(v: unknown): string { return JSON.stringify(v).toLowerCase(); }
 function pressureDirection(score: number, componentCount: number): MarketFxCurrencyPressureDirection { if (componentCount === 0) return 'unknown'; if (score > 10) return 'strengthening'; if (score < -10) return 'weakening'; return 'neutral'; }
 function confidenceTier(confidence: number): MarketFxRelativeStrengthResult['confidenceTier'] { return confidence >= 70 ? 'high' : confidence >= 40 ? 'medium' : 'low'; }
 function isFxPair(v: unknown): v is MarketFxPairAsset { return typeof v === 'string' && (MARKET_FX_PAIR_ASSETS as readonly string[]).includes(v); }
@@ -53,19 +53,10 @@ export function resolveFxPairOrientation(pairAsset: PairLike): { baseCurrency: M
 }
 
 function issuerCurrency(metadata: Metadata): MarketFxCurrencyCode | null {
-  const candidates = [metadata.affectedCurrency, metadata.currency, metadata.policyIssuerCurrency, metadata.policyCurrency, metadata.policyIssuerRegion, metadata.issuer, metadata.centralBank, metadata.region, metadata.source, metadata.provider, metadata.providerId].map(norm).join('|');
-  if (/\b(usd|fed|fomc|federal_reserve|united_states|usa|us)\b/.test(candidates)) return 'USD';
-  if (/\b(eur|ecb|eurozone|euro_area|euro_area|european_central_bank)\b/.test(candidates)) return 'EUR';
-  if (/\b(gbp|boe|bank_of_england|united_kingdom|uk|britain)\b/.test(candidates)) return 'GBP';
-  if (/\b(jpy|boj|bank_of_japan|japan)\b/.test(candidates)) return 'JPY';
-  if (/\b(chf|snb|swiss|switzerland)\b/.test(candidates)) return 'CHF';
-  if (/\b(aud|rba|reserve_bank_of_australia|australia)\b/.test(candidates)) return 'AUD';
-  if (/\b(nzd|rbnz|reserve_bank_of_new_zealand|new_zealand)\b/.test(candidates)) return 'NZD';
-  if (/\b(cad|boc|bank_of_canada|canada)\b/.test(candidates)) return 'CAD';
-  return null;
+  const c = resolveMarketEconomicContext({ metadata, providerId: metadata.providerId, provider: metadata.provider, source: metadata.source }).issuerCurrency;
+  return (MARKET_FX_CURRENCY_CODES as readonly string[]).includes(c) ? c as MarketFxCurrencyCode : null;
 }
 function tone(metadata: Metadata): 'hawkish' | 'dovish' | null { const values = [metadata.direction, metadata.sentiment, metadata.bias, metadata.tone, metadata.policyTone, metadata.impact].map(norm); if (values.includes('hawkish')) return 'hawkish'; if (values.includes('dovish')) return 'dovish'; return null; }
-function positive(metadata: Metadata): boolean { const values = [metadata.direction, metadata.sentiment, metadata.bias, metadata.tone, metadata.impact].map(norm); return !values.some((x) => ['negative','bearish','lower','weaker','weak','risk_off'].includes(x)); }
 function add(drafts: ComponentDraft[], draft: ComponentDraft): void { drafts.push({ ...draft, score: clamp(draft.score, -100, 100), confidence: clamp(draft.confidence, 0, 100) }); }
 function pressureForTone(policyTone: 'hawkish'|'dovish'): { direction: MarketFxCurrencyPressureDirection; score: number } { return policyTone === 'hawkish' ? { direction: 'strengthening', score: 42 } : { direction: 'weakening', score: -42 }; }
 
@@ -74,7 +65,7 @@ function macroDraft(pairAsset: PairLike, evidence: ReasoningEvidenceInputItem | 
   const hasMacroFields = ['actual','forecast','consensus','expected','previous','prior','revisedPrevious','indicatorKind','indicatorName'].some((k) => Object.prototype.hasOwnProperty.call(metadata, k));
   if (!hasMacroFields) return null;
   const release = normalizeMacroSurprise(parseMacroReleaseInputFromMetadata(JSON.stringify(metadata), evidence ? { releaseId: evidence.payloadId, indicatorName: evidence.evidenceClass, region: evidence.region, observedAt: evidence.observedAt, providerQualityScore: evidence.qualityScore.finalQualityScore } : undefined));
-  if (release.currency === 'global' || release.currency === 'unknown') return null;
+  if (release.currency === 'global' || release.currency === 'unknown' || !(MARKET_FX_CURRENCY_CODES as readonly string[]).includes(release.currency)) return null;
   const o = resolveFxPairOrientation(pairAsset);
   if (pairAsset !== 'dxy' && release.currency !== o.baseCurrency && release.currency !== o.quoteCurrency) return null;
   const incomplete = release.warnings.includes('missing_forecast') || release.warnings.includes('missing_actual') || release.indicatorKind === 'unknown';
@@ -82,13 +73,13 @@ function macroDraft(pairAsset: PairLike, evidence: ReasoningEvidenceInputItem | 
   const score = direction === 'strengthening' ? Math.max(18, Math.abs(release.normalizedSurpriseScore) * 0.7) : direction === 'weakening' ? -Math.max(18, Math.abs(release.normalizedSurpriseScore) * 0.7) : 0;
   const kind: MarketFxCurrencyPressureComponentKind = release.category === 'inflation' ? 'normalized_inflation_pressure' : release.category === 'labor_market' ? 'normalized_labor_pressure' : release.category === 'central_bank_policy' ? 'normalized_policy_pressure' : 'normalized_growth_pressure';
   const sideCode: MarketFxRelativeStrengthReasonCode = release.currency === o.baseCurrency ? 'base_currency_pressure' : 'quote_currency_pressure';
-  return { currency: release.currency, kind, direction, score, confidence: incomplete ? Math.min(42, release.confidence) : Math.min(72, release.confidence), source, evidenceIds: evidence ? [evidence.payloadId] : [], reasonCodes: ['normalized_macro_surprise_applied', sideCode], warnings: unique([...(incomplete ? ['pending_macro_surprise_normalization' as const] : []), 'requires_price_confirmation' as const, 'provider_activation_gap' as const]), rationale: `${release.currency} ${release.indicatorKind} normalized macro surprise is mapped to its own currency side before pair netting.` };
+  return { currency: release.currency as MarketFxCurrencyCode, kind, direction, score, confidence: incomplete ? Math.min(42, release.confidence) : Math.min(72, release.confidence), source, evidenceIds: evidence ? [evidence.payloadId] : [], reasonCodes: ['normalized_macro_surprise_applied', sideCode], warnings: unique([...(incomplete ? ['pending_macro_surprise_normalization' as const] : []), 'requires_price_confirmation' as const, 'provider_activation_gap' as const]), rationale: `${release.currency} ${release.indicatorKind} normalized macro surprise is mapped to its own currency side before pair netting.` };
 }
 
 function draftsFromEvidence(pairAsset: PairLike, evidence: ReasoningEvidenceInputItem | null, metadata: Metadata, source: MarketFxCurrencyPressureComponent['source']): ComponentDraft[] {
   const drafts: ComponentDraft[] = [];
   const o = resolveFxPairOrientation(pairAsset);
-  const text = body(metadata);
+  const driver = resolveMarketEconomicDriverContext({ metadata });
   const evidenceIds = evidence ? [evidence.payloadId] : [];
   const quality = evidence ? evidence.qualityScore.finalQualityScore : 74;
   const macro = macroDraft(pairAsset, evidence, metadata, source); if (macro) add(drafts, macro);
@@ -98,7 +89,7 @@ function draftsFromEvidence(pairAsset: PairLike, evidence: ReasoningEvidenceInpu
     const p = pressureForTone(policyTone);
     add(drafts, { currency, kind: 'central_bank_policy', direction: p.direction, score: p.score, confidence: Math.min(78, quality), source, evidenceIds, reasonCodes: unique(['central_bank_policy_side_mapped', currency === 'USD' ? 'usd_side_policy_pressure' : 'non_usd_issuer_side_mapped', currency === o.baseCurrency ? 'base_currency_pressure' : 'quote_currency_pressure']), warnings: ['pending_macro_surprise_normalization','requires_price_confirmation','provider_activation_gap'], rationale: `${currency} policy tone is mapped to its own currency side before pair pressure is netted.` });
   }
-  if (/risk_off|liquidity_stress|credit_stress|volatility_shock/.test(text)) {
+  if (driver.driverDirection === 'risk_off' || driver.driverKind === 'credit_stress') {
     if (pairAsset === 'aud_usd' || pairAsset === 'nzd_usd') add(drafts, { currency: o.baseCurrency, kind: 'risk_regime', direction: 'weakening', score: -38, confidence: Math.min(72, quality), source, evidenceIds, reasonCodes: ['risk_regime_asset_context','base_currency_pressure'], warnings: ['requires_price_confirmation','provider_activation_gap'], rationale: 'Risk-off pressure weakens high-beta AUD/NZD base currency context.' });
     if (pairAsset === 'usd_jpy') add(drafts, { currency: 'JPY', kind: 'safe_haven_demand', direction: 'strengthening', score: 36, confidence: Math.min(64, quality), source, evidenceIds, reasonCodes: ['safe_haven_context','quote_currency_pressure'], warnings: ['haven_conflict','requires_price_confirmation','provider_activation_gap'], rationale: 'Risk-off can strengthen JPY quote through haven demand, but USD funding can conflict.' });
     if (pairAsset === 'usd_chf') {
@@ -107,22 +98,22 @@ function draftsFromEvidence(pairAsset: PairLike, evidence: ReasoningEvidenceInpu
     }
     if (pairAsset === 'dxy') add(drafts, { currency: 'USD', kind: 'funding_stress', direction: 'strengthening', score: 34, confidence: Math.min(60, quality), source, evidenceIds, reasonCodes: ['funding_stress_context','dxy_limited_diagnostic'], warnings: ['limited_dxy_diagnostic','requires_price_confirmation','provider_activation_gap'], rationale: 'DXY handling is limited to broad USD funding pressure without basket weights.' });
   }
-  if (/risk_on/.test(text) && (pairAsset === 'aud_usd' || pairAsset === 'nzd_usd')) add(drafts, { currency: o.baseCurrency, kind: 'risk_regime', direction: 'strengthening', score: 30, confidence: Math.min(66, quality), source, evidenceIds, reasonCodes: ['risk_regime_asset_context','base_currency_pressure'], warnings: ['requires_price_confirmation','provider_activation_gap'], rationale: 'Risk-on pressure supports high-beta AUD/NZD base currency context.' });
-  if (/safe_haven|haven/.test(text)) {
+  if (driver.driverDirection === 'risk_on' && (pairAsset === 'aud_usd' || pairAsset === 'nzd_usd')) add(drafts, { currency: o.baseCurrency, kind: 'risk_regime', direction: 'strengthening', score: 30, confidence: Math.min(66, quality), source, evidenceIds, reasonCodes: ['risk_regime_asset_context','base_currency_pressure'], warnings: ['requires_price_confirmation','provider_activation_gap'], rationale: 'Risk-on pressure supports high-beta AUD/NZD base currency context.' });
+  if (driver.driverKind === 'safe_haven') {
     if (pairAsset === 'usd_jpy') add(drafts, { currency: 'JPY', kind: 'safe_haven_demand', direction: 'strengthening', score: 36, confidence: Math.min(64, quality), source, evidenceIds, reasonCodes: ['safe_haven_context','quote_currency_pressure'], warnings: ['haven_conflict','requires_price_confirmation','provider_activation_gap'], rationale: 'JPY haven demand is mapped to the quote side with conflict caveats.' });
     if (pairAsset === 'usd_chf') add(drafts, { currency: 'CHF', kind: 'safe_haven_demand', direction: 'strengthening', score: 36, confidence: Math.min(64, quality), source, evidenceIds, reasonCodes: ['safe_haven_context','quote_currency_pressure'], warnings: ['haven_conflict','requires_price_confirmation','provider_activation_gap'], rationale: 'CHF haven demand is mapped to the quote side with conflict caveats.' });
   }
-  if (/funding_stress|dollar_liquidity|liquidity_stress/.test(text) && (o.baseCurrency === 'USD' || o.quoteCurrency === 'USD' || pairAsset === 'dxy')) add(drafts, { currency: 'USD', kind: /dollar_liquidity/.test(text) ? 'dollar_liquidity' : 'funding_stress', direction: positive(metadata) ? 'strengthening' : 'weakening', score: positive(metadata) ? 36 : -30, confidence: Math.min(68, quality), source, evidenceIds, reasonCodes: ['funding_stress_context','usd_side_policy_pressure'], warnings: ['requires_price_confirmation','provider_activation_gap'], rationale: 'Dollar liquidity or funding stress is mapped to the USD side before pair netting.' });
-  if (/intervention/.test(text) && (pairAsset === 'usd_jpy' || pairAsset === 'usd_chf')) add(drafts, { currency: o.quoteCurrency, kind: 'intervention_risk', direction: 'mixed', score: 0, confidence: 36, source, evidenceIds, reasonCodes: ['intervention_risk_caveat','quote_currency_pressure'], warnings: ['intervention_risk','requires_price_confirmation','provider_activation_gap'], rationale: 'Intervention risk is a confidence-lowering caveat rather than a forced pair direction.' });
-  if (/fiscal/.test(text) && pairAsset === 'gbp_usd') add(drafts, { currency: 'GBP', kind: 'fiscal_risk', direction: 'weakening', score: -36, confidence: Math.min(66, quality), source, evidenceIds, reasonCodes: ['fiscal_risk_pressure','base_currency_pressure'], warnings: ['requires_price_confirmation','provider_activation_gap'], rationale: 'UK fiscal stress weakens GBP base-side pressure.' });
-  if (/oil|energy/.test(text) && pairAsset === 'usd_cad') add(drafts, { currency: 'CAD', kind: 'oil_energy', direction: positive(metadata) ? 'strengthening' : 'weakening', score: positive(metadata) ? 38 : -34, confidence: Math.min(72, quality), source, evidenceIds, reasonCodes: ['commodity_quote_currency_pressure','quote_currency_pressure'], warnings: ['commodity_context_missing','requires_price_confirmation','provider_activation_gap'], rationale: 'Oil and energy terms are mapped to CAD quote-side pressure for USD/CAD.' });
-  if (/china|global_demand/.test(text) && (pairAsset === 'aud_usd' || pairAsset === 'nzd_usd')) add(drafts, { currency: o.baseCurrency, kind: 'china_global_demand', direction: positive(metadata) ? 'strengthening' : 'weakening', score: positive(metadata) ? 36 : -34, confidence: Math.min(70, quality), source, evidenceIds, reasonCodes: ['china_demand_commodity_fx','base_currency_pressure'], warnings: ['commodity_context_missing','requires_price_confirmation','provider_activation_gap'], rationale: 'China/global-demand context is mapped to AUD/NZD base-side commodity-beta pressure.' });
+  if (driver.driverKind === 'dollar_liquidity' && driver.driverDirection !== 'unknown' && (o.baseCurrency === 'USD' || o.quoteCurrency === 'USD' || pairAsset === 'dxy')) add(drafts, { currency: 'USD', kind: 'dollar_liquidity', direction: ['positive','stronger','higher'].includes(driver.driverDirection) ? 'strengthening' : 'weakening', score: ['positive','stronger','higher'].includes(driver.driverDirection) ? 36 : -30, confidence: Math.min(68, quality), source, evidenceIds, reasonCodes: ['funding_stress_context','usd_side_policy_pressure'], warnings: ['requires_price_confirmation','provider_activation_gap'], rationale: 'Dollar liquidity is mapped to the USD side before pair netting.' });
+  if (driver.driverKind === 'intervention' && (pairAsset === 'usd_jpy' || pairAsset === 'usd_chf')) add(drafts, { currency: o.quoteCurrency, kind: 'intervention_risk', direction: 'mixed', score: 0, confidence: 36, source, evidenceIds, reasonCodes: ['intervention_risk_caveat','quote_currency_pressure'], warnings: ['intervention_risk','requires_price_confirmation','provider_activation_gap'], rationale: 'Intervention risk is a confidence-lowering caveat rather than a forced pair direction.' });
+  if (metadata.driverKind === 'fiscal_risk' && pairAsset === 'gbp_usd') add(drafts, { currency: 'GBP', kind: 'fiscal_risk', direction: 'weakening', score: -36, confidence: Math.min(66, quality), source, evidenceIds, reasonCodes: ['fiscal_risk_pressure','base_currency_pressure'], warnings: ['requires_price_confirmation','provider_activation_gap'], rationale: 'UK fiscal stress weakens GBP base-side pressure.' });
+  if (driver.driverKind === 'oil_energy' && driver.driverDirection !== 'unknown' && pairAsset === 'usd_cad') add(drafts, { currency: 'CAD', kind: 'oil_energy', direction: ['positive','stronger','higher'].includes(driver.driverDirection) ? 'strengthening' : 'weakening', score: ['positive','stronger','higher'].includes(driver.driverDirection) ? 38 : -34, confidence: Math.min(72, quality), source, evidenceIds, reasonCodes: ['commodity_quote_currency_pressure','quote_currency_pressure'], warnings: ['commodity_context_missing','requires_price_confirmation','provider_activation_gap'], rationale: 'Oil and energy terms are mapped to CAD quote-side pressure for USD/CAD.' });
+  if (driver.driverKind === 'china_demand' && driver.driverDirection !== 'unknown' && (pairAsset === 'aud_usd' || pairAsset === 'nzd_usd')) add(drafts, { currency: o.baseCurrency, kind: 'china_global_demand', direction: ['positive','stronger','higher'].includes(driver.driverDirection) ? 'strengthening' : 'weakening', score: ['positive','stronger','higher'].includes(driver.driverDirection) ? 36 : -34, confidence: Math.min(70, quality), source, evidenceIds, reasonCodes: ['china_demand_commodity_fx','base_currency_pressure'], warnings: ['commodity_context_missing','requires_price_confirmation','provider_activation_gap'], rationale: 'China/global-demand context is mapped to AUD/NZD base-side commodity-beta pressure.' });
   return drafts;
 }
 
 function weightedDrafts(snapshot: WeightedEvidenceSnapshot): ComponentDraft[] {
   const pairAsset = resolveWeightedSnapshotPairAsset(snapshot);
-  return snapshot.items.flatMap((item) => draftsFromEvidence(pairAsset, null, { evidenceClass: item.evidenceClass, direction: item.direction, reasons: item.reasons.join('|'), contributionScore: item.contributionScore }, 'weighted_evidence').map((draft) => ({
+  return snapshot.items.flatMap((item) => draftsFromEvidence(pairAsset, null, { evidenceClass: item.evidenceClass, direction: item.direction, contributionScore: item.contributionScore }, 'weighted_evidence').map((draft) => ({
     ...draft,
     confidence: Math.min(draft.confidence, 58),
     warnings: unique([...draft.warnings, 'weighted_snapshot_metadata_limited' as const]),

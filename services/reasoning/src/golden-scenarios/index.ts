@@ -69,6 +69,26 @@ scenario({scenarioId:'c6r9_vix_diagnostic_risk_context_limited',title:'VIX diagn
 ];
 
 
+
+const fixtureEconomicContextByEvidenceId: Record<string, Record<string, string>> = {
+  'ecb-hawk': { issuerInstitution:'ecb', issuerCurrency:'EUR', issuerRegion:'eurozone' },
+  'boe-hawk': { issuerInstitution:'boe', issuerCurrency:'GBP', issuerRegion:'UK' },
+  'boj-hawk': { issuerInstitution:'boj', issuerCurrency:'JPY', issuerRegion:'Japan' },
+  'boj-hawk-conflict': { issuerInstitution:'boj', issuerCurrency:'JPY', issuerRegion:'Japan' },
+  'fed-hawk': { issuerInstitution:'fed', issuerCurrency:'USD', issuerRegion:'US' },
+  'fed-neutral': { issuerInstitution:'fed', issuerCurrency:'USD', issuerRegion:'US' },
+  'fed-policy-dxy': { issuerInstitution:'fed', issuerCurrency:'USD', issuerRegion:'US' },
+  'oil-cad': { issuerCurrency:'CAD', issuerRegion:'Canada', affectedCurrency:'CAD', driverKind:'oil_energy', driverDirection:'positive' },
+  'china-demand-aud': { eventRegion:'China', affectedCurrency:'AUD', driverKind:'china_demand', driverDirection:'weaker' },
+  'nzd-risk': { issuerCurrency:'NZD', issuerRegion:'New_Zealand', affectedCurrency:'NZD' }
+};
+function applyFixtureEconomicContexts(): void {
+  for (const scenario of fixtures) for (const evidence of scenario.evidence) {
+    const context = fixtureEconomicContextByEvidenceId[evidence.evidenceId];
+    if (context && evidence.metadata.economicContext === undefined) evidence.metadata = { ...evidence.metadata, economicContext: context, ...context };
+  }
+}
+applyFixtureEconomicContexts();
 type ScenarioDirectionOutput = ReturnType<typeof resolveAssetContextualDirectionForEvidenceItem>;
 type ScenarioFxOutput = ReturnType<typeof resolveFxRelativeStrengthFromEvidenceItems> | null;
 type ScenarioEngineOutputs = { evidenceItems: ReasoningEvidenceInputItem[]; weightedSnapshot: WeightedEvidenceSnapshot; direction: ScenarioDirectionOutput[]; macro: MarketMacroSurpriseNormalizationResult[]; fx: ScenarioFxOutput; priceReaction: MarketPriceReactionResult | null; providerReliability: MarketProviderReliabilityResult[]; contradictionMatrix: MarketContradictionMatrixResult; confidence: ReturnType<typeof calibrateConfidenceFromWeightedSnapshot> | null };
@@ -92,8 +112,6 @@ function fxAsset(asset: MarketGoldenScenarioAsset): asset is Parameters<typeof r
 function confidenceSupported(asset: MarketGoldenScenarioAsset): boolean { return asset !== 'vix'; }
 function metadataDirection(direction: WeightedEvidenceDirection): 'bullish' | 'bearish' | 'neutral' | 'mixed' | 'unknown' { return direction; }
 function policyTone(direction: WeightedEvidenceDirection): 'hawkish' | 'dovish' | 'neutral' | 'mixed' | 'unknown' { return direction === 'bullish' ? 'hawkish' : direction === 'bearish' ? 'dovish' : direction === 'mixed' ? 'mixed' : direction === 'neutral' ? 'neutral' : 'unknown'; }
-function inferredRegion(asset: MarketGoldenScenarioAsset, providerId: string): string { if (/official_fixture|fed|federal_reserve|usd/.test(providerId)) return 'united_states'; if (/ecb|eur/.test(providerId) || asset === 'eur_usd' || asset === 'de30') return 'euro_area'; if (/boe|gbp/.test(providerId) || asset === 'gbp_usd') return 'united_kingdom'; if (/boj|jpy/.test(providerId) || asset === 'usd_jpy') return 'japan'; if (/chf|snb/.test(providerId) || asset === 'usd_chf') return 'switzerland'; if (/aud|rba/.test(providerId) || asset === 'aud_usd') return 'australia'; if (/nzd|rbnz/.test(providerId) || asset === 'nzd_usd') return 'new_zealand'; if (/cad|boc/.test(providerId) || asset === 'usd_cad') return 'canada'; return 'united_states'; }
-function inferredCurrency(asset: MarketGoldenScenarioAsset, providerId: string): string { if (/official_fixture|fed|federal_reserve|usd/.test(providerId)) return 'USD'; if (/ecb|eur/.test(providerId) || asset === 'eur_usd') return 'EUR'; if (/boe|gbp/.test(providerId) || asset === 'gbp_usd') return 'GBP'; if (/boj|jpy/.test(providerId) || asset === 'usd_jpy') return 'JPY'; if (/chf|snb/.test(providerId) || asset === 'usd_chf') return 'CHF'; if (/aud|rba/.test(providerId) || asset === 'aud_usd') return 'AUD'; if (/nzd|rbnz/.test(providerId) || asset === 'nzd_usd') return 'NZD'; if (/cad|boc/.test(providerId) || asset === 'usd_cad') return 'CAD'; return 'USD'; }
 function macroMetadata(scenario: MarketGoldenScenarioFixture, evidence: MarketGoldenScenarioEvidenceFixture): Record<string, string | number | boolean | null> {
   const input = scenario.macroInput;
   if (!input) return {};
@@ -109,13 +127,14 @@ function sourceMetadata(evidence: MarketGoldenScenarioEvidenceFixture): Record<s
 }
 function textMeta(evidence: MarketGoldenScenarioEvidenceFixture, key: string, fallback: string): string { const value = evidence.metadata[key]; return typeof value === 'string' && value ? value : fallback; }
 function driverMetadata(scenario: MarketGoldenScenarioFixture, evidence: MarketGoldenScenarioEvidenceFixture): Record<string, string | number | boolean | null> {
-  const region = inferredRegion(scenario.asset, evidence.providerId);
-  const currency = inferredCurrency(scenario.asset, evidence.providerId);
+  const structured = evidence.metadata.economicContext && typeof evidence.metadata.economicContext === 'object' && !Array.isArray(evidence.metadata.economicContext) ? evidence.metadata.economicContext as Record<string, string | number | boolean | null> : {};
+  const region = String(structured.issuerRegion ?? structured.eventRegion ?? scenario.macroInput?.region ?? 'unknown');
+  const currency = String(structured.issuerCurrency ?? scenario.macroInput?.currency ?? 'unknown');
   const statefulDriverClasses = ['volatility_surface','credit_stress','equity_index_breadth','crypto_market_structure','liquidity_conditions','energy_commodities','real_yields'] as const;
   const requiresExplicitState = (statefulDriverClasses as readonly string[]).includes(evidence.evidenceClass) && evidence.metadata.driverDirection === undefined;
   const explicitDirection = textMeta(evidence, 'driverDirection', requiresExplicitState ? 'unknown' : metadataDirection(evidence.directionHint));
-  const base = { direction: explicitDirection, expectedDirection: explicitDirection, driverKind: textMeta(evidence, 'driverKind', evidence.evidenceClass), region, currency, affectedCurrency: currency, sourceId: evidence.providerId, sourceIndependenceVerified: evidence.independent };
-  if (['inflation','labor_market','growth_activity','economic_indicator','macro_calendar','central_bank_policy'].includes(evidence.evidenceClass)) return { ...base, ...macroMetadata(scenario, evidence), policyTone: textMeta(evidence, 'policyTone', policyTone(evidence.directionHint)), issuer: evidence.providerId };
+  const base = { direction: explicitDirection, expectedDirection: explicitDirection, driverKind: textMeta(evidence, 'driverKind', evidence.evidenceClass), driverDirection: explicitDirection, issuerRegion: region, issuerCurrency: currency, eventRegion: region, affectedCurrency: String(structured.affectedCurrency ?? currency), sourceId: evidence.providerId, sourceIndependenceVerified: evidence.independent };
+  if (['inflation','labor_market','growth_activity','economic_indicator','macro_calendar','central_bank_policy'].includes(evidence.evidenceClass)) return { ...base, ...macroMetadata(scenario, evidence), policyTone: textMeta(evidence, 'policyTone', policyTone(evidence.directionHint)) };
   if (evidence.evidenceClass === 'risk_sentiment') return { ...base, riskRegime:textMeta(evidence, 'riskRegime', evidence.directionHint === 'bullish' ? 'risk_on' : 'risk_off'), sentiment:textMeta(evidence, 'sentiment', evidence.directionHint === 'bullish' ? 'risk_on' : 'risk_off') };
   if (evidence.evidenceClass === 'real_yields') return { ...base, impact:textMeta(evidence, 'impact', 'unknown') };
   if (evidence.evidenceClass === 'dollar_liquidity') return base;
@@ -127,7 +146,7 @@ function driverMetadata(scenario: MarketGoldenScenarioFixture, evidence: MarketG
   if (evidence.evidenceClass === 'equity_index_breadth') return { ...base, breadth:textMeta(evidence, 'breadth', 'unknown') };
   return base;
 }
-function metadataForScenarioEvidence(scenario: MarketGoldenScenarioFixture, evidence: MarketGoldenScenarioEvidenceFixture): Record<string, string | number | boolean | null> { return { ...driverMetadata(scenario, evidence), ...sourceMetadata(evidence), ...evidence.metadata }; }
+function metadataForScenarioEvidence(scenario: MarketGoldenScenarioFixture, evidence: MarketGoldenScenarioEvidenceFixture): Record<string, unknown> { return { ...driverMetadata(scenario, evidence), ...sourceMetadata(evidence), ...evidence.metadata }; }
 function reasonTags(_scenario: MarketGoldenScenarioFixture, evidence: MarketGoldenScenarioEvidenceFixture): string[] { const explicitReasonTag = typeof evidence.metadata.reasonTag === 'string' ? [evidence.metadata.reasonTag] : []; return [`fixture_direction:${evidence.directionHint}`, `fixture_source:${evidence.sourceKind}`, ...explicitReasonTag, ...(evidence.duplicateGroupId ? ['duplicate same headline scraped duplicate'] : []), ...(evidence.sourceKind === 'scraped' ? ['scraped source risk'] : []), ...(evidence.sourceKind === 'fixture_only' ? ['fixture_only provider'] : []), evidence.rationale]; }
 export function buildReasoningEvidenceItemsFromScenario(scenario: MarketGoldenScenarioFixture): ReasoningEvidenceInputItem[] {
   return scenario.evidence.map((evidence): ReasoningEvidenceInputItem => {

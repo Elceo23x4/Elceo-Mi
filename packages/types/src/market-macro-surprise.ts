@@ -5,9 +5,9 @@ export const MARKET_MACRO_INDICATOR_CATEGORIES = ['inflation','labor_market','gr
 export type MarketMacroIndicatorCategory = typeof MARKET_MACRO_INDICATOR_CATEGORIES[number];
 export const MARKET_MACRO_INDICATOR_KINDS = ['cpi_headline','cpi_core','pce_headline','pce_core','average_hourly_earnings','nonfarm_payrolls','unemployment_rate','jobless_claims','jolt_openings','gdp','retail_sales','pmi_manufacturing','pmi_services','ism_manufacturing','ism_services','consumer_confidence','policy_rate_decision','central_bank_statement_tone','oil_inventory','unknown'] as const;
 export type MarketMacroIndicatorKind = typeof MARKET_MACRO_INDICATOR_KINDS[number];
-export const MARKET_MACRO_REGIONS = ['US','eurozone','UK','Japan','Switzerland','Australia','New_Zealand','Canada','global','unknown'] as const;
+export const MARKET_MACRO_REGIONS = ['US','eurozone','UK','Japan','Switzerland','Australia','New_Zealand','Canada','China','global','unknown'] as const;
 export type MarketMacroRegion = typeof MARKET_MACRO_REGIONS[number];
-export const MARKET_MACRO_CURRENCIES = ['USD','EUR','GBP','JPY','CHF','AUD','NZD','CAD','global','unknown'] as const;
+export const MARKET_MACRO_CURRENCIES = ['USD','EUR','GBP','JPY','CHF','AUD','NZD','CAD','CNY','global','unknown'] as const;
 export type MarketMacroCurrency = typeof MARKET_MACRO_CURRENCIES[number];
 export const MARKET_MACRO_RELEASE_IMPORTANCES = ['low','medium','high','systemic','unknown'] as const;
 export type MarketMacroReleaseImportance = typeof MARKET_MACRO_RELEASE_IMPORTANCES[number];
@@ -29,7 +29,7 @@ export const MARKET_MACRO_SURPRISE_SEVERITIES = ['inline','mild','moderate','lar
 export type MarketMacroSurpriseSeverity = typeof MARKET_MACRO_SURPRISE_SEVERITIES[number];
 export const MARKET_MACRO_SURPRISE_CONFIDENCE_TIERS = ['low','medium','high'] as const;
 export type MarketMacroSurpriseConfidenceTier = typeof MARKET_MACRO_SURPRISE_CONFIDENCE_TIERS[number];
-export const MARKET_MACRO_SURPRISE_WARNINGS = ['missing_actual','missing_forecast','missing_previous','previous_used_without_forecast','revision_present','revision_missing','consensus_dispersion_missing','historical_distribution_missing','unit_ambiguous','indicator_direction_ambiguous','low_magnitude_surprise','outlier_surprise','pending_asset_direction_resolution','pending_fx_relative_strength','requires_price_confirmation','provider_activation_gap'] as const;
+export const MARKET_MACRO_SURPRISE_WARNINGS = ['issuer_context_missing','affected_currency_not_issuer','missing_actual','missing_forecast','missing_previous','previous_used_without_forecast','revision_present','revision_missing','consensus_dispersion_missing','historical_distribution_missing','unit_ambiguous','indicator_direction_ambiguous','low_magnitude_surprise','outlier_surprise','pending_asset_direction_resolution','pending_fx_relative_strength','requires_price_confirmation','provider_activation_gap'] as const;
 export type MarketMacroSurpriseWarning = typeof MARKET_MACRO_SURPRISE_WARNINGS[number];
 export const MARKET_MACRO_SURPRISE_REASON_CODES = ['actual_vs_forecast','actual_vs_previous_fallback','revision_adjusted','indicator_direction_inverted','inflation_policy_pressure','labor_policy_pressure','growth_policy_pressure','central_bank_policy_surprise','magnitude_bucket_applied','normalized_surprise_score','forecast_missing_penalty','consensus_dispersion_missing_penalty','historical_distribution_missing_penalty','asset_direction_pending','fx_relative_strength_pending'] as const;
 export type MarketMacroSurpriseReasonCode = typeof MARKET_MACRO_SURPRISE_REASON_CODES[number];
@@ -77,13 +77,13 @@ export type MarketMacroSurpriseNormalizationResult = {
   confidenceTier: MarketMacroSurpriseConfidenceTier;
   comparisonBasis: MarketMacroComparisonBasis;
   reasonCodes: MarketMacroSurpriseReasonCode[];
-  warnings: MarketMacroSurpriseWarning[];
+  warnings: MarketMacroSurpriseWarning[]; affectedCurrencies?: string[]; transmissionDriver?: string;
   requiresAssetDirectionResolution: boolean;
   requiresFxRelativeStrength: boolean;
   requiresPriceConfirmation: boolean;
   rationale: string;
 };
-export type MarketMacroSurpriseRule = { ruleId: string; indicatorKinds: MarketMacroIndicatorKind[]; category: MarketMacroIndicatorCategory; inverted: boolean; economicMeanings: MarketMacroEconomicMeaning[]; reasonCodes: MarketMacroSurpriseReasonCode[]; warnings: MarketMacroSurpriseWarning[]; rationale: string };
+export type MarketMacroSurpriseRule = { ruleId: string; indicatorKinds: MarketMacroIndicatorKind[]; category: MarketMacroIndicatorCategory; inverted: boolean; economicMeanings: MarketMacroEconomicMeaning[]; reasonCodes: MarketMacroSurpriseReasonCode[]; warnings: MarketMacroSurpriseWarning[]; affectedCurrencies?: string[]; transmissionDriver?: string; rationale: string };
 export type MarketMacroSurpriseRuleSetSnapshot = { generatedAt: string; rules: MarketMacroSurpriseRule[]; coverageReport: MarketMacroSurpriseCoverageReport };
-export type MarketMacroSurpriseCoverageReport = { generatedAt: string; representedIndicatorKinds: MarketMacroIndicatorKind[]; representedCategories: MarketMacroIndicatorCategory[]; readiness: MarketReasoningModuleReadiness; warnings: MarketMacroSurpriseWarning[]; notes: string[] };
+export type MarketMacroSurpriseCoverageReport = { generatedAt: string; representedIndicatorKinds: MarketMacroIndicatorKind[]; representedCategories: MarketMacroIndicatorCategory[]; readiness: MarketReasoningModuleReadiness; warnings: MarketMacroSurpriseWarning[]; affectedCurrencies?: string[]; transmissionDriver?: string; notes: string[] };
 export type MarketMacroSurpriseEvidenceItem = ReasoningEvidenceInputItem;

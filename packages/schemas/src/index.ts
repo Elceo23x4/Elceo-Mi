@@ -109,3 +109,4 @@ export * from './market-provider-reliability.schema';
 export * from './market-golden-scenarios.schema';
 
 export * from './market-reasoning-readiness.schema';
+export * from './market-economic-context.schema';

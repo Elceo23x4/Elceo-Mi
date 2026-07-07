@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { buildRouteInventory, type RuntimeEnforcementExpectation } from '../lib/server/access/route-policy-inventory';
 import { clearAuthTestOverrides, setAuthTestOverrides } from '../lib/server/auth/subject';
 import { setCompositionTestOverrides } from './stubs/composition';
 import { commercialMutationCounts, expireStepUpChallengeFreshness, resetCommercialMutationCounts, setCommercialPersistenceFailureMode, setStepUpPersistenceFailureMode } from './stubs/application-state';
@@ -418,6 +420,44 @@ function clearMocks(): void {
   setCompositionTestOverrides(null);
 }
 
+
+function assertRouteInventorySynchronized(): void {
+  const inventory = buildRouteInventory();
+  assert.equal(inventory.length, 145);
+  const byPath = new Map(inventory.map((row) => [row.routePath, row]));
+  assert.equal(byPath.size, inventory.length);
+  for (const row of inventory) {
+    assert.ok(row.methods.length > 0, `${row.routePath} exports no HTTP methods`);
+    assert.notEqual(row.runtimeExpectation, 'partial' as RuntimeEnforcementExpectation);
+    assert.notEqual(row.testCoverageStatus, 'representative_only' as RuntimeEnforcementExpectation);
+    if (row.routePath.startsWith('/api/admin/')) {
+      assert.equal(row.internalToken, 'required', `${row.routePath} admin route requires internal token`);
+      assert.notEqual(row.adminPermission, 'not_required', `${row.routePath} admin route requires permission`);
+    }
+    if (row.routePath.startsWith('/api/internal/') || row.routePath.startsWith('/api/ops/')) {
+      assert.equal(row.internalToken, 'required', `${row.routePath} internal/ops route requires token`);
+    }
+    if (row.routePath.startsWith('/api/account/') && !row.routePath.startsWith('/api/account/billing')) {
+      assert.equal(row.ownerBoundary, 'required', `${row.routePath} account route is owner scoped`);
+    }
+    if (['/api/workspace/', '/api/portfolio/', '/api/analytics/', '/api/coaching/', '/api/refresh/'].some((prefix) => row.routePath.startsWith(prefix))) {
+      assert.equal(row.commercialRestrictionFirst, 'required', `${row.routePath} product route requires restriction-first guard`);
+    }
+  }
+  assert.equal(byPath.get('/api/auth/{...nextauth}')?.classification, 'no_product_entitlement_required');
+  assert.equal(byPath.get('/api/dashboard/{asset}')?.classification, 'kick_off_allowed');
+  assert.equal(byPath.get('/api/journal/influence/generate')?.classification, 'focus_plan_required');
+  assert.equal(byPath.get('/api/notifications/delivery/dispatch')?.classification, 'blocked_live_activation');
+  assert.equal(byPath.get('/api/account/profile/social-identifiers')?.ownerBoundary, 'required');
+  assert.equal(byPath.get('/api/admin/commercial/users/{userId}/restrict')?.classification, 'super_admin_required');
+  assert.equal(byPath.get('/api/admin/commercial/users/{userId}/restrict')?.stepUp, 'required');
+  const docs = readFileSync('../../docs/route-entitlement-enforcement-map.md', 'utf8');
+  assert.match(docs, /RC-E generated live route count: 145/);
+  assert.match(docs, /runtime_enforced/);
+  assert.match(docs, /environment_verification_required/);
+  assert.match(docs, /blocked_live_activation/);
+}
+
 function request(url: string, init?: RequestInit): Request {
   const headers = new Headers(init?.headers);
   if (!headers.has('x-elceo-commercial-snapshot')) {
@@ -433,6 +473,7 @@ async function readJson(response: Response): Promise<{ ok: boolean; [key: string
 }
 
 export async function runRouteRuntimeTests(): Promise<void> {
+  assertRouteInventorySynchronized();
   installMocks();
   blockedFeatures = new Set();
   usageIncremented = [];

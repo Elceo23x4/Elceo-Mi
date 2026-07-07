@@ -905,3 +905,7 @@ RC-A corrects terminology, readiness contracts, and asset taxonomy only. Determi
 ## RC-D structured economic-context resolution evidence
 
 RC-D corrects structured economic-context inference across reasoning paths. Provider/source identity is provenance, not issuer authority. Affected currency is not issuer currency. Target asset is not issuer identity. Unresolved or conflicting context must be surfaced, not silently defaulted to US/USD. Live provider activation remains blocked. Empirical validation and production calibration remain pending. RC-A readiness taxonomy remains sealed; this note adds RC-D evidence/status documentation only.
+
+## RC-E route-runtime closure annotation (2026-07-07)
+
+RC-E adds a generated live inventory over `apps/web/app/api/**/route.ts` (145 route files), canonical policy classification, synchronized route-map documentation, and executable route runtime synchronization checks. Historical findings remain preserved above; RC-E status is recorded in `docs/route-entitlement-enforcement-map.md` and enforced by `apps/web/tests/route-runtime.test.ts`.

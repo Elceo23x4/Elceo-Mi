@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { guardRouteCommercialEntitlement } from '../lib/server/access/route-entitlement';
+import { buildRouteInventory, type RuntimeEnforcementExpectation, type RouteRuntimeAssertion } from '../lib/server/access/route-policy-inventory';
 import { clearAuthTestOverrides, setAuthTestOverrides } from '../lib/server/auth/subject';
 import { setCompositionTestOverrides } from './stubs/composition';
 import { commercialMutationCounts, expireStepUpChallengeFreshness, resetCommercialMutationCounts, setCommercialPersistenceFailureMode, setStepUpPersistenceFailureMode } from './stubs/application-state';
@@ -418,6 +421,94 @@ function clearMocks(): void {
   setCompositionTestOverrides(null);
 }
 
+
+
+function assertCommercialRestrictionAndSliceEvidence(): void {
+  const baseSnapshot = { userId: subject.userId, nowIso: '2026-01-01T00:00:00.000Z', trialStartedAt: '2026-01-01T00:00:00.000Z', activePlanCode: 'kick_off' as const, subscriptionActive: false, socialIdentifiers: [{ kind: 'x_username' as const, value: '@fixture' }], userRestrictionStatus: 'none' as const };
+  const focusSnapshot = { ...baseSnapshot, activePlanCode: 'focus_plan' as const, subscriptionActive: true, trialStartedAt: null };
+  const suspendedSnapshot = { ...focusSnapshot, userRestrictionStatus: 'suspended' as const };
+  const bannedSnapshot = { ...focusSnapshot, userRestrictionStatus: 'banned' as const };
+  assert.equal(guardRouteCommercialEntitlement({ routePath: '/api/dashboard/[asset]', method: 'GET', featureKey: 'dashboard.chart', snapshot: baseSnapshot }).allowed, true);
+  assert.equal(guardRouteCommercialEntitlement({ routePath: '/api/dashboard/[asset]', method: 'GET', featureKey: 'premium.full_access', snapshot: baseSnapshot }).allowed, false);
+  assert.equal(guardRouteCommercialEntitlement({ routePath: '/api/dashboard/[asset]', method: 'GET', featureKey: 'premium.full_access', snapshot: focusSnapshot }).allowed, true);
+  assert.equal(guardRouteCommercialEntitlement({ routePath: '/api/journal/cases', method: 'GET', featureKey: 'journal.page', snapshot: baseSnapshot }).allowed, true);
+  assert.equal(guardRouteCommercialEntitlement({ routePath: '/api/journal/influence/generate', method: 'POST', featureKey: 'premium.full_access', snapshot: baseSnapshot }).allowed, false);
+  for (const routePath of ['/api/workspace/current', '/api/portfolio/watchlist', '/api/analytics/latest', '/api/coaching/latest', '/api/refresh/run', '/api/dashboard/[asset]', '/api/journal/influence/generate', '/api/notifications/summary']) {
+    assert.equal(guardRouteCommercialEntitlement({ routePath, method: routePath.includes('run') || routePath.includes('generate') ? 'POST' : 'GET', featureKey: 'premium.full_access', snapshot: suspendedSnapshot }).allowed, false, `${routePath} denies suspended before payload/side effect`);
+    assert.equal(guardRouteCommercialEntitlement({ routePath, method: routePath.includes('run') || routePath.includes('generate') ? 'POST' : 'GET', featureKey: 'premium.full_access', snapshot: bannedSnapshot }).allowed, false, `${routePath} denies banned before payload/side effect`);
+  }
+}
+
+function assertRouteInventorySynchronized(): void {
+  const inventory = buildRouteInventory();
+  assert.equal(inventory.length, 145);
+  const byPath = new Map(inventory.map((row) => [row.routePath, row]));
+  assert.equal(byPath.size, inventory.length);
+  for (const row of inventory) {
+    assert.ok(row.methods.length > 0, `${row.routePath} exports no HTTP methods`);
+    assert.notEqual(row.runtimeExpectation, 'partial' as RuntimeEnforcementExpectation);
+    assert.notEqual(row.testCoverageStatus, 'representative_only' as RuntimeEnforcementExpectation);
+    const handler = row.handlerGuardEvidence;
+    const runtimeAssertions = new Set<RouteRuntimeAssertion>(row.runtimeTestEvidence.testedAssertions);
+    assert.ok(row.declaredPolicyExpectation.classification, `${row.routePath} has declared policy expectation`);
+    assert.ok(row.handlerGuardEvidence, `${row.routePath} has handler guard evidence`);
+    assert.ok(row.runtimeTestEvidence, `${row.routePath} has runtime test evidence`);
+    if (row.runtimeExpectation === 'runtime_enforced') {
+      assert.ok(row.runtimeTestEvidence.evidenceLevel === 'direct_route' || row.runtimeTestEvidence.evidenceLevel === 'helper_family', `${row.routePath} runtime_enforced requires direct or helper runtime evidence`);
+    }
+    if (row.routePath.startsWith('/api/admin/')) {
+      assert.equal(row.internalToken, 'required', `${row.routePath} admin route requires internal token`);
+      assert.notEqual(row.adminPermission, 'not_required', `${row.routePath} admin route requires permission`);
+      assert.equal(handler.requiresInternalRequestCall, true, `${row.routePath} admin route has internal-token handler evidence`);
+      assert.ok(handler.requireFeatureAccessCall || runtimeAssertions.has('admin_permission_required'), `${row.routePath} admin route has admin permission handler/runtime evidence`);
+    }
+    if (row.routePath.startsWith('/api/internal/') || row.routePath.startsWith('/api/ops/')) {
+      assert.equal(row.internalToken, 'required', `${row.routePath} internal/ops route requires token`);
+      assert.equal(handler.requiresInternalRequestCall, true, `${row.routePath} internal/ops route has internal-token handler evidence`);
+    }
+    if (row.ownerBoundary === 'required') {
+      assert.equal(handler.authenticatedSubjectResolverCall, true, `${row.routePath} owner route has authenticated-subject handler evidence`);
+    }
+    if (['focus_plan_required', 'kick_off_allowed', 'notification_preference_owner_only'].includes(row.classification)) {
+      assert.ok(handler.requireFeatureAccessCall || handler.guardRouteCommercialEntitlementCall || handler.authenticatedSubjectResolverCall || handler.helperWrapperEvidence.length > 0, `${row.routePath} product route has guard/helper handler evidence`);
+    }
+    if (row.stepUp === 'required') {
+      assert.equal(handler.stepUpChallengeReference, true, `${row.routePath} super-admin mutation has step-up handler evidence`);
+      assert.equal(handler.idempotencyKeyReference, true, `${row.routePath} super-admin mutation has idempotency handler evidence`);
+      assert.ok(handler.auditReference || handler.securityDecisionReference, `${row.routePath} super-admin mutation has audit/security handler evidence`);
+      assert.ok(runtimeAssertions.has('step_up_required'), `${row.routePath} super-admin mutation has runtime step-up evidence`);
+    }
+    if (row.classification === 'blocked_live_activation' || row.runtimeExpectation === 'blocked_or_disabled') {
+      assert.ok(handler.blockedLiveActivationReference || runtimeAssertions.has('blocked_live_activation'), `${row.routePath} blocked live activation has handler or runtime evidence`);
+    }
+    if (row.routePath.startsWith('/api/account/') && !row.routePath.startsWith('/api/account/billing')) {
+      assert.equal(row.ownerBoundary, 'required', `${row.routePath} account route is owner scoped`);
+    }
+    if (['/api/workspace/', '/api/portfolio/', '/api/analytics/', '/api/coaching/', '/api/refresh/'].some((prefix) => row.routePath.startsWith(prefix))) {
+      assert.equal(row.commercialRestrictionFirst, 'required', `${row.routePath} product route requires restriction-first guard`);
+    }
+  }
+  assert.equal(byPath.get('/api/auth/{...nextauth}')?.classification, 'no_product_entitlement_required');
+  assert.equal(byPath.get('/api/dashboard/{asset}')?.classification, 'kick_off_allowed');
+  assert.equal(byPath.get('/api/journal/influence/generate')?.classification, 'focus_plan_required');
+  assert.equal(byPath.get('/api/notifications/delivery/dispatch')?.classification, 'blocked_live_activation');
+  assert.equal(byPath.get('/api/account/profile/social-identifiers')?.ownerBoundary, 'required');
+  assert.equal(byPath.get('/api/admin/commercial/users/{userId}/restrict')?.classification, 'super_admin_required');
+  assert.equal(byPath.get('/api/admin/commercial/users/{userId}/restrict')?.stepUp, 'required');
+
+  assert.equal(byPath.get('/api/admin/commercial/users/{userId}/gift-focus-plan')?.targetUserBoundary, 'required');
+  assert.equal(byPath.get('/api/admin/billing/operations/subject')?.targetUserBoundary, 'required');
+  assert.equal(byPath.get('/api/admin/billing/orchestration/subject')?.targetUserBoundary, 'required');
+  assert.equal(byPath.get('/api/admin/billing/provider-plan-mapping')?.targetUserBoundary, 'not_applicable');
+  assert.equal(byPath.get('/api/admin/billing/provider-plan-mappings')?.targetUserBoundary, 'not_applicable');
+  assert.equal(byPath.get('/api/admin/billing/policy')?.targetUserBoundary, 'not_applicable');
+  const docs = readFileSync('../../docs/route-entitlement-enforcement-map.md', 'utf8');
+  assert.match(docs, /RC-E generated live route count: 145/);
+  assert.match(docs, /runtime_enforced/);
+  assert.match(docs, /environment_verification_required/);
+  assert.match(docs, /blocked_live_activation/);
+}
+
 function request(url: string, init?: RequestInit): Request {
   const headers = new Headers(init?.headers);
   if (!headers.has('x-elceo-commercial-snapshot')) {
@@ -433,6 +524,8 @@ async function readJson(response: Response): Promise<{ ok: boolean; [key: string
 }
 
 export async function runRouteRuntimeTests(): Promise<void> {
+  assertRouteInventorySynchronized();
+  assertCommercialRestrictionAndSliceEvidence();
   installMocks();
   blockedFeatures = new Set();
   usageIncremented = [];

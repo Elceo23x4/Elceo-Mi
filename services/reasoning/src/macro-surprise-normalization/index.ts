@@ -2,6 +2,7 @@ import { getMarketReasoningModuleReadiness } from '../readiness/index';
 import type { MarketMacroCurrency, MarketMacroEconomicMeaning, MarketMacroGrowthPressure, MarketMacroIndicatorCategory, MarketMacroIndicatorKind, MarketMacroInflationPressure, MarketMacroPolicyPressure, MarketMacroRegion, MarketMacroReleaseInput, MarketMacroRiskPressure, MarketMacroSurpriseCoverageReport, MarketMacroSurpriseNormalizationResult, MarketMacroSurpriseReasonCode, MarketMacroSurpriseRule, MarketMacroSurpriseRuleSetSnapshot, MarketMacroSurpriseSeverity, MarketMacroSurpriseWarning, ReasoningEvidenceInputItem } from '@elceo/types';
 import { MARKET_MACRO_CURRENCIES, MARKET_MACRO_INDICATOR_CATEGORIES, MARKET_MACRO_INDICATOR_KINDS, MARKET_MACRO_REGIONS } from '@elceo/types';
 import { validateMarketMacroReleaseInput, validateMarketMacroSurpriseCoverageReport, validateMarketMacroSurpriseNormalizationResult, validateMarketMacroSurpriseRuleSetSnapshot } from '@elceo/schemas';
+import { resolveMarketEconomicContext } from '../economic-context/index';
 
 type Metadata = Record<string, unknown>;
 type Pressure = { economicMeaning: MarketMacroEconomicMeaning; policyPressure: MarketMacroPolicyPressure; growthPressure: MarketMacroGrowthPressure; inflationPressure: MarketMacroInflationPressure; riskPressure: MarketMacroRiskPressure };
@@ -56,20 +57,20 @@ export function inferMacroIndicatorCategory(input: Partial<MarketMacroReleaseInp
   if (kind === 'oil_inventory') return 'commodity_inventory';
   return 'unknown';
 }
+function macroCurrency(v: string): MarketMacroCurrency { return (MARKET_MACRO_CURRENCIES as readonly string[]).includes(v) ? v as MarketMacroCurrency : 'unknown'; }
+function macroRegion(v: string): MarketMacroRegion { return (MARKET_MACRO_REGIONS as readonly string[]).includes(v) ? v as MarketMacroRegion : 'unknown'; }
 export function inferMacroCurrencyRegion(input: Partial<MarketMacroReleaseInput> | Metadata): { currency: MarketMacroCurrency; region: MarketMacroRegion } {
-  const currency = enumOrUnknown(input.currency, MARKET_MACRO_CURRENCIES, 'unknown');
-  const region = enumOrUnknown(input.region, MARKET_MACRO_REGIONS, 'unknown');
-  if (currency !== 'unknown' || region !== 'unknown') return { currency, region };
-  const text = JSON.stringify(input).toLowerCase().replace(/[\s-]+/g, '_');
-  if (/usd|fed|fomc|united_states|\bus\b/.test(text)) return { currency: 'USD', region: 'US' };
-  if (/eur|ecb|eurozone|euro_area/.test(text)) return { currency: 'EUR', region: 'eurozone' };
-  if (/gbp|boe|united_kingdom|\buk\b/.test(text)) return { currency: 'GBP', region: 'UK' };
-  if (/jpy|boj|japan/.test(text)) return { currency: 'JPY', region: 'Japan' };
-  if (/chf|snb|switzerland|swiss/.test(text)) return { currency: 'CHF', region: 'Switzerland' };
-  if (/aud|rba|australia/.test(text)) return { currency: 'AUD', region: 'Australia' };
-  if (/nzd|rbnz|new_zealand/.test(text)) return { currency: 'NZD', region: 'New_Zealand' };
-  if (/cad|boc|canada/.test(text)) return { currency: 'CAD', region: 'Canada' };
-  return { currency: 'unknown', region: 'unknown' };
+  const record = input as Metadata;
+  const source = record.metadata && typeof record.metadata === 'object' && !Array.isArray(record.metadata) ? record.metadata as Metadata : record;
+  const context = resolveMarketEconomicContext({
+    issuerCurrency: source.issuerCurrency ?? source.releaseCurrency ?? source.currency ?? record.currency,
+    issuerRegion: source.issuerRegion ?? source.releaseRegion ?? source.region ?? (!source.eventRegion ? record.region : undefined),
+    eventRegion: source.eventRegion ?? source.releaseRegion ?? source.region ?? record.region,
+    affectedCurrencies: source.affectedCurrencies ?? record.affectedCurrencies,
+    affectedCurrency: source.affectedCurrency ?? record.affectedCurrency,
+    metadata: {}
+  });
+  return { currency: macroCurrency(context.issuerCurrency), region: macroRegion(context.eventRegion !== 'unknown' ? context.eventRegion : context.issuerRegion) };
 }
 function pressure(kind: MarketMacroIndicatorKind, signed: number): Pressure {
   if (signed === 0) return { economicMeaning: 'mixed', policyPressure: 'neutral', growthPressure: 'neutral', inflationPressure: 'neutral', riskPressure: 'neutral' };
@@ -116,7 +117,7 @@ export function normalizeMacroSurprise(input: MarketMacroReleaseInput): MarketMa
   if (category === 'labor_market') reasonCodes.push('labor_policy_pressure');
   if (category === 'growth_activity' || category === 'consumption' || category === 'business_activity') reasonCodes.push('growth_policy_pressure');
   if (category === 'central_bank_policy') reasonCodes.push('central_bank_policy_surprise');
-  if (cr.currency !== 'unknown' && cr.currency !== 'global') { warnings.push('pending_fx_relative_strength'); reasonCodes.push('fx_relative_strength_pending'); }
+  if (cr.currency !== 'unknown' && cr.currency !== 'global') { warnings.push('pending_fx_relative_strength'); reasonCodes.push('fx_relative_strength_pending'); } else if (typeof input.metadata?.affectedCurrency === 'string' || Array.isArray(input.metadata?.affectedCurrencies)) warnings.push('affected_currency_not_issuer','issuer_context_missing');
   let confidence = 76;
   if (actual === null) confidence = 10;
   if (forecast === null) confidence = Math.min(confidence, previous !== null ? 52 : 24);
@@ -128,14 +129,14 @@ export function normalizeMacroSurprise(input: MarketMacroReleaseInput): MarketMa
   if (input.providerQualityScore !== undefined && input.providerQualityScore !== null) confidence = Math.min(confidence, Math.max(0, input.providerQualityScore));
   confidence = clamp(confidence, 0, 100);
   const surpriseDirection = rawDelta === null ? 'unknown' : sev === 'inline' ? 'inline' : rawDelta > 0 ? 'upside_surprise' : rawDelta < 0 ? 'downside_surprise' : 'inline';
-  const result: MarketMacroSurpriseNormalizationResult = { releaseId: input.releaseId, indicatorKind: kind, category, region: cr.region, currency: cr.currency, actual, forecast, previous, revisedPrevious, rawDelta, percentDelta: pct, normalizedSurpriseScore, surpriseDirection, severity: sev, ...p, confidence, confidenceTier: confidenceTier(confidence), comparisonBasis, reasonCodes: unique(reasonCodes), warnings: unique(warnings), requiresAssetDirectionResolution: true, requiresFxRelativeStrength: cr.currency !== 'unknown' && cr.currency !== 'global', requiresPriceConfirmation: true, rationale: `Macro release ${input.releaseId} normalized with ${comparisonBasis}; actual-vs-forecast is primary when available and asset implication remains context dependent.` };
+  const result: MarketMacroSurpriseNormalizationResult = { releaseId: input.releaseId, affectedCurrencies: Array.isArray(input.metadata?.affectedCurrencies) ? input.metadata.affectedCurrencies.map(String) : (typeof input.metadata?.affectedCurrency === 'string' ? [input.metadata.affectedCurrency] : []), transmissionDriver: typeof input.metadata?.driverKind === 'string' ? input.metadata.driverKind : 'unknown', indicatorKind: kind, category, region: cr.region, currency: cr.currency, actual, forecast, previous, revisedPrevious, rawDelta, percentDelta: pct, normalizedSurpriseScore, surpriseDirection, severity: sev, ...p, confidence, confidenceTier: confidenceTier(confidence), comparisonBasis, reasonCodes: unique(reasonCodes), warnings: unique(warnings), requiresAssetDirectionResolution: true, requiresFxRelativeStrength: cr.currency !== 'unknown' && cr.currency !== 'global', requiresPriceConfirmation: true, rationale: `Macro release ${input.releaseId} normalized with ${comparisonBasis}; actual-vs-forecast is primary when available and asset implication remains context dependent.` };
   const validation = validateMarketMacroSurpriseNormalizationResult(result); if ('errors' in validation) throw new Error(`macro_surprise_result_invalid:${validation.errors.join('|')}`);
   return result;
 }
 
 export function parseMacroReleaseInputFromMetadata(metadataJson?: string | null, fallback?: Partial<MarketMacroReleaseInput>): MarketMacroReleaseInput {
   const m = parse(metadataJson);
-  const input: MarketMacroReleaseInput = { releaseId: String(m.releaseId ?? m.eventId ?? fallback?.releaseId ?? 'macro-release'), indicatorKind: String(m.indicatorKind ?? m.indicator ?? fallback?.indicatorKind ?? ''), indicatorName: String(m.indicatorName ?? m.name ?? m.title ?? fallback?.indicatorName ?? ''), category: String(m.category ?? fallback?.category ?? ''), region: String(m.region ?? m.country ?? fallback?.region ?? ''), currency: String(m.currency ?? m.affectedCurrency ?? fallback?.currency ?? ''), actual: numFromMetadata(m, ['actual','actualValue','releaseActual']) ?? fallback?.actual ?? null, forecast: numFromMetadata(m, ['forecast','consensus','expected','estimate','releaseForecast']) ?? fallback?.forecast ?? null, previous: numFromMetadata(m, ['previous','prior','previousValue']) ?? fallback?.previous ?? null, revisedPrevious: numFromMetadata(m, ['revisedPrevious','revised','revision','priorRevised']) ?? fallback?.revisedPrevious ?? null, unit: typeof m.unit === 'string' ? m.unit : fallback?.unit ?? null, observedAt: typeof m.observedAt === 'string' ? m.observedAt : fallback?.observedAt ?? null, historicalStandardDeviation: numFromMetadata(m, ['historicalStandardDeviation','historicalSigma']) ?? fallback?.historicalStandardDeviation ?? null, consensusDispersion: numFromMetadata(m, ['consensusDispersion']) ?? fallback?.consensusDispersion ?? null, providerQualityScore: numFromMetadata(m, ['providerQualityScore']) ?? fallback?.providerQualityScore ?? null, metadata: m };
+  const input: MarketMacroReleaseInput = { releaseId: String(m.releaseId ?? m.eventId ?? fallback?.releaseId ?? 'macro-release'), indicatorKind: String(m.indicatorKind ?? m.indicator ?? fallback?.indicatorKind ?? ''), indicatorName: String(m.indicatorName ?? m.name ?? m.title ?? fallback?.indicatorName ?? ''), category: String(m.category ?? fallback?.category ?? ''), region: String(m.eventRegion ?? m.releaseRegion ?? m.region ?? m.country ?? fallback?.region ?? ''), currency: String(m.issuerCurrency ?? m.releaseCurrency ?? m.currency ?? fallback?.currency ?? ''), actual: numFromMetadata(m, ['actual','actualValue','releaseActual']) ?? fallback?.actual ?? null, forecast: numFromMetadata(m, ['forecast','consensus','expected','estimate','releaseForecast']) ?? fallback?.forecast ?? null, previous: numFromMetadata(m, ['previous','prior','previousValue']) ?? fallback?.previous ?? null, revisedPrevious: numFromMetadata(m, ['revisedPrevious','revised','revision','priorRevised']) ?? fallback?.revisedPrevious ?? null, unit: typeof m.unit === 'string' ? m.unit : fallback?.unit ?? null, observedAt: typeof m.observedAt === 'string' ? m.observedAt : fallback?.observedAt ?? null, historicalStandardDeviation: numFromMetadata(m, ['historicalStandardDeviation','historicalSigma']) ?? fallback?.historicalStandardDeviation ?? null, consensusDispersion: numFromMetadata(m, ['consensusDispersion']) ?? fallback?.consensusDispersion ?? null, providerQualityScore: numFromMetadata(m, ['providerQualityScore']) ?? fallback?.providerQualityScore ?? null, metadata: m };
   return input;
 }
 export function normalizeMacroSurpriseFromEvidenceItem(evidenceItem: ReasoningEvidenceInputItem): MarketMacroSurpriseNormalizationResult { return normalizeMacroSurprise(parseMacroReleaseInputFromMetadata(evidenceItem.metadataJson, { releaseId: evidenceItem.payloadId, indicatorName: evidenceItem.evidenceClass, region: evidenceItem.region, observedAt: evidenceItem.observedAt, providerQualityScore: evidenceItem.qualityScore.finalQualityScore })); }

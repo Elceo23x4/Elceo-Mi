@@ -38,6 +38,21 @@ export function runMarketGoldenScenarioAcceptanceTests(): void {
   const normalConfidenceScenario = fixture('c6r9_us_unemployment_above_forecast_labor_weakness');
   assert(normalConfidenceScenario.confidenceExpectation.maxConfidence - normalConfidenceScenario.confidenceExpectation.minConfidence <= 30, 'default confidence band is not wider than ±15');
   assert.deepEqual(normalConfidenceScenario.confidenceExpectation.allowedTiers, [normalConfidenceScenario.confidenceExpectation.expectedTier], 'default confidence acceptance pins the expected tier');
+
+  const providerOnlyScenario = { ...fixture('c6r9_eurusd_ecb_hawkish_fed_neutral'), macroInput: undefined, asset:'eur_usd' as const, evidence:[{ ...fixture('c6r9_eurusd_ecb_hawkish_fed_neutral').evidence[0]!, providerId:'official_fixture', metadata:{} }] };
+  const providerOnlyMetadata = JSON.parse(buildReasoningEvidenceItemsFromScenario(providerOnlyScenario as any)[0]!.metadataJson);
+  assert.notEqual(providerOnlyMetadata.issuerCurrency, 'USD', 'official_fixture provider ID alone does not create USD issuer during fixture assembly');
+  assert.notEqual(providerOnlyMetadata.issuerRegion, 'US', 'official_fixture provider ID alone does not create US issuer during fixture assembly');
+  const targetOnlyScenario = { ...providerOnlyScenario, evidence:[{ ...providerOnlyScenario.evidence[0]!, providerId:'neutral_fixture', metadata:{} }] };
+  const targetOnlyMetadata = JSON.parse(buildReasoningEvidenceItemsFromScenario(targetOnlyScenario as any)[0]!.metadataJson);
+  assert.notEqual(targetOnlyMetadata.issuerCurrency, 'EUR', 'EUR/USD target asset alone does not create EUR issuer during fixture assembly');
+  assert.notEqual(targetOnlyMetadata.issuerRegion, 'eurozone', 'EUR/USD target asset alone does not create eurozone issuer during fixture assembly');
+  for (const scenario of scenarios.filter((x) => x.enginesCovered.includes('macro surprise') || x.category === 'central_bank_policy')) {
+    const hasExplicitMacro = scenario.macroInput !== undefined;
+    const hasStructuredEvidence = scenario.evidence.some((e) => e.metadata.economicContext !== undefined || e.metadata.issuerCurrency !== undefined || e.metadata.issuerInstitution !== undefined || e.metadata.issuerRegion !== undefined);
+    assert(hasExplicitMacro || hasStructuredEvidence, `issuer-dependent golden fixture has explicit economic context: ${scenario.scenarioId}`);
+  }
+
   assert(validateMarketGoldenScenarioFixture(scenarios[0]).ok, 'scenario fixture schema validates');
   for (const scenario of scenarios) assert(validateMarketGoldenScenarioFixture(scenario).ok, `scenario fixture schema validates: ${scenario.scenarioId}`);
   assert(validateMarketGoldenScenarioEvidenceFixture(scenarios[0]!.evidence[0]).ok, 'evidence fixture schema validates');

@@ -23,3 +23,5 @@ export * from './regulatory-liquidity/index';
 
 export * from './commodities-metals/index';
 export * from './crypto-earnings-geopolitical/index';
+
+export * from './provider-api-gate';

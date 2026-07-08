@@ -271,3 +271,9 @@ RC-E adds a generated live inventory over `apps/web/app/api/**/route.ts` (145 ro
 - Unmanaged provider calls from reasoning, ingestion, admin, scheduled, or operator paths are prohibited. Direct adapters may exist only behind the Provider API Gate or as fixture/dry-run/replay descriptors.
 - RC-H remains responsible for live-provider payload validation and staging smoke with real credentials. This document does not claim live provider readiness.
 - RC-G database rehearsal remains required before relying on durable provider orchestration state beyond current memory/SQL repository contracts.
+
+### RC-F adoption correction (2026-07-08)
+- Provider API Gate foundation is now adopted by scheduled ingestion before fixture adapter persistence executes; scheduled replay uses the gate replay/captured-payload path and live staging/production requests remain blocked by default.
+- Unmanaged provider-call inventory is executable and fails on runtime direct provider adapter execution outside the gate; direct adapters remain allowed only as fixture/provider-source implementations or tests.
+- Live execution remains explicitly not implemented until RC-H (`live_execution_not_implemented_until_rc_h`) even when resolver policy can classify a theoretically live-allowed request.
+- RC-G database rehearsal is still required before durable provider orchestration state can be treated as production-rehearsed.

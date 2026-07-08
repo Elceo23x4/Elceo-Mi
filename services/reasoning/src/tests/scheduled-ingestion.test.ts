@@ -3,6 +3,7 @@ import { validateScheduledIngestionJobPolicy, validateScheduledIngestionRunRecor
 import { MemoryNormalizedMarketEvidencePayloadRepository, MemoryProviderSourceRequestRepository, MemoryProviderSourceResponseRepository } from '../persistence/market-evidence-ingestion-repository.js';
 import { MemoryScheduledIngestionRunRepository } from '../persistence/scheduled-ingestion-repository.js';
 import { IngestionPersistenceService } from '../provider-sources/ingestion-persistence-service.js';
+import type { ScheduledIngestionJobPolicy } from '@elceo/types';
 import { CanonicalMarketIntelligenceBoundaryService } from '../runtime/canonical-market-intelligence-boundary.js';
 import { computeNextRetryAt, deserializeScheduledIngestionRunRecord, deriveRetryStatus, deriveStalenessStatus, getDefaultScheduledIngestionPolicies, ScheduledIngestionService, serializeScheduledIngestionRunRecord } from '../scheduled-ingestion/index.js';
 
@@ -47,6 +48,32 @@ export async function runScheduledIngestionTests(){
   assert.equal(replayLiveModeBlocked.run.status,'blocked');
   assert.equal(replayLiveModeBlocked.run.errorCode,'unsupported_replay_mode');
   assert.equal(replayLiveModeBlocked.run.operatorNote,'replay_blocked:unsupported_replay_mode');
+  const replayAgain=await svc.replayScheduledIngestionRun(ti.run.runId,'dry_run_fixture','2026-01-06T00:00:00.000Z');
+  assert.equal(replayAgain.run.runId,replayExec.run.runId);
+
+
+  let blockedCalls=0;
+  const blockingIngestion = { persistAdapterFetchAndNormalize: async () => { blockedCalls += 1; throw new Error('adapter_should_not_execute_without_gate'); } } as unknown as IngestionPersistenceService;
+  const gateBlockedReasons: Array<[string, (policy: ScheduledIngestionJobPolicy) => Record<string, unknown>]> = [
+    ['quota_exceeded', () => ({ quotaLimit: 1, quotaUsed: 1 })],
+    ['rate_limit_exceeded', () => ({ rateLimitRemaining: 0 })],
+    ['cost_budget_exceeded', () => ({ costBudgetRemaining: 0 })],
+    ['circuit_open', () => ({ circuitState: 'open' })],
+    ['secret_like_request_metadata', () => ({ requestMetadata: { providerCredential: 'token sentinel should_not_emit' } })],
+    ['adapter_capability_mismatch', () => ({ expectedAdapterId: 'wrong_adapter' })],
+    ['source_capability_mismatch', () => ({ requestCapabilityOverride: 'cot_report' })]
+  ];
+  for (const [reason, resolver] of gateBlockedReasons) {
+    const blockedSvc = new ScheduledIngestionService(blockingIngestion, new MemoryScheduledIngestionRunRepository(), (_policy) => resolver(_policy) as never);
+    const result = await blockedSvc.runScheduledIngestionDryRun(tiJob, `2026-02-01T00:00:00.000Z-${reason}`);
+    assert.equal(result.run.status, 'blocked');
+    assert.equal(result.run.errorCode, reason);
+  }
+  assert.equal(blockedCalls, 0);
+  const liveBlockedSvc = new ScheduledIngestionService(blockingIngestion, new MemoryScheduledIngestionRunRepository());
+  assert.equal((await liveBlockedSvc.runScheduledIngestionJob(tiJob,'production_live','2026-02-02T00:00:00.000Z')).run.errorCode,'production_live_requires_explicit_allow');
+  assert.equal((await liveBlockedSvc.runScheduledIngestionJob(tiJob,'staging_live','2026-02-03T00:00:00.000Z')).run.errorCode,'staging_live_requires_explicit_allow');
+  assert.equal(blockedCalls, 0);
 
 
   const boundary = new CanonicalMarketIntelligenceBoundaryService({} as never, {} as never, reqRepo, resRepo, payRepo, runRepo);

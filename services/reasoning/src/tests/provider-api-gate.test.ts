@@ -31,16 +31,27 @@ export async function runProviderApiGateTests(){
   assert.equal(resolveProviderRuntimeRequest(base({ policy:{ costBudgetRemaining:0 } })).costStatus,'exceeded');
   assert.equal(resolveProviderRuntimeRequest(base({ policy:{ circuitState:'open' } })).reason,'circuit_open');
   assert.equal(resolveProviderRuntimeRequest(base({ policy:{ circuitState:'half_open' } })).allowed,true);
+  assert.equal(resolveProviderRuntimeRequest(base({ policy:{ expectedAdapterId:'wrong_adapter' as never } })).reason,'adapter_capability_mismatch');
+  assert.equal(resolveProviderRuntimeRequest(base({ policy:{ requiredFields:['endAt'] }, endAt:null })).reason,'missing_required_field:endAt');
+  assert.equal(resolveProviderRuntimeRequest(base()).normalizedRequestKey, resolveProviderRuntimeRequest(base({ requestId:'req-2' })).normalizedRequestKey);
+  assert.equal(resolveProviderRuntimeRequest(base({ policy:{ circuitState:'half_open' } })).circuitUpdateRecommendation,'close_after_successful_probe');
 
   const dry=await executeProviderApiGateRequest(base()); assert.equal(dry.response?.payloadSchemaStatus,'valid');
   const fixture=await executeProviderApiGateRequest(base({ activationMode:'fixture_only' }), new TiingoMarketDataAdapter({mode:'fixture'})); assert.equal(fixture.response?.sourceId,'tiingo_market_data');
   const replay=await executeProviderApiGateRequest(base({ activationMode:'replay', idempotencyKey:'idem-1', replayPayload: response({ responseId:'replay-1' }) })); assert.equal(replay.response?.responseId,'replay-1');
-  const cache=await executeProviderApiGateRequest(base({ policy:{ cacheHitPayload: response({ responseId:'cache-1' }) } })); assert.equal(cache.decision.cacheStatus,'hit'); assert.equal(cache.response?.responseId,'cache-1');
+  let adapterCalls=0; const countingAdapter={ descriptor:new TiingoMarketDataAdapter({mode:'fixture'}).descriptor, fetch:async (request: never)=>{ adapterCalls+=1; return new TiingoMarketDataAdapter({mode:'fixture'}).fetch(request); }, normalize:async()=>[] };
+  const cache=await executeProviderApiGateRequest(base({ policy:{ cacheHitPayload: response({ responseId:'cache-1' }) } }), countingAdapter); assert.equal(cache.decision.cacheStatus,'hit'); assert.equal(cache.response?.responseId,'cache-1'); assert.equal(adapterCalls,0);
+  const live=await executeProviderApiGateRequest(base({ activationMode:'staging_live_allowed', policy:{ explicitStagingLiveAllow:true } })); assert.equal(live.response?.error?.category,'live_execution_not_implemented_until_rc_h');
+  const stale=await executeProviderApiGateRequest(base({ policy:{ circuitState:'open', fallbackMode:'stale_if_error', stalePayload:response({responseId:'stale-1'}) } })); assert.equal(stale.response?.responseId,'stale-1');
+  const noStale=await executeProviderApiGateRequest(base({ policy:{ circuitState:'open', stalePayload:response({responseId:'stale-2'}) } })); assert.equal(noStale.response,null);
 
   assert.throws(()=>validateProviderRuntimeResponse(response({ sourceId:'cftc_cot' }), resolveProviderRuntimeRequest(base())),/response_provenance_mismatch/);
   assert.throws(()=>validateProviderRuntimeResponse(response({ payloadSizeBytes:2_000_000 }), resolveProviderRuntimeRequest(base())),/oversized_response/);
-  const valid=validateProviderRuntimeResponse(response({ payload:{ rows:[{providerId:'dup'},{providerId:'dup'}], optional:null, extra:'explicitly_allowed_in_gate_v1' }, duplicateProviderIds:['dup'], revision:'backfill-1', rateLimit:{remaining:3,resetAt:null} }), resolveProviderRuntimeRequest(base()));
-  assert.deepEqual(valid.duplicateProviderIds,['dup']); assert.equal(valid.revision,'backfill-1'); assert.equal(valid.rateLimit?.remaining,3);
+  assert.throws(()=>validateProviderRuntimeResponse(response({ responseId:'res-1' }), resolveProviderRuntimeRequest(base()), { observedResponseIds:['res-1'] }),/duplicate_response_id/);
+  assert.throws(()=>validateProviderRuntimeResponse(response({ unknownFields:['surprise'] }), resolveProviderRuntimeRequest(base())),/unknown_response_fields/);
+  assert.throws(()=>validateProviderRuntimeResponse(response({ nullableFields:['requiredClose'] }), resolveProviderRuntimeRequest(base()), { allowedNullableFields:['optionalClose'] }),/nullable_field_not_allowed/);
+  const valid=validateProviderRuntimeResponse(response({ payload:{ rows:[{providerId:'dup'},{providerId:'dup'}], optional:null, extra:'explicitly_allowed_in_gate_v1' }, duplicateProviderIds:['dup'], nullableFields:['optional'], unknownFields:['extra'], revision:'backfill-1', rateLimit:{remaining:3,resetAt:null} }), resolveProviderRuntimeRequest(base()), { allowUnknownFields:true, allowedNullableFields:['optional'], dedupeRecordKey:'providerId' });
+  assert.deepEqual(valid.duplicateProviderIds,['dup']); assert.deepEqual(valid.duplicateRecordKeys,['dup']); assert.equal(valid.revision,'backfill-1'); assert.equal(valid.rateLimit?.remaining,3);
   const err=validateProviderRuntimeResponse(response({ payloadSchemaStatus:'provider_error', error:{ category:'provider_error', message:'redacted bearer token hidden' } }), resolveProviderRuntimeRequest(base()));
   assert.equal(err.error?.message,'[REDACTED]');
   const snap=buildProviderApiGateSnapshot(resolveProviderRuntimeRequest(base()), 'req-1', null, new Error('apiKey=secret'));

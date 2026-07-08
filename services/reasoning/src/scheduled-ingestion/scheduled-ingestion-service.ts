@@ -6,17 +6,22 @@ import type { ScheduledIngestionRunRepository } from '../persistence/scheduled-i
 import { deriveRetryStatus } from './retry-policy';
 import { deriveStalenessStatus } from './staleness-policy';
 import { getScheduledIngestionPolicy } from './schedule-policies';
+import { resolveProviderRuntimeRequest, type ProviderActivationMode, type ProviderApiGatePolicy, type ProviderRuntimeResolverDecision, type ProviderRuntimeRequest, type ProviderRuntimeResponse } from '../provider-sources/provider-api-gate';
+
+export type ScheduledIngestionGatePolicyResolver = (policy: ScheduledIngestionJobPolicy, runMode: ScheduledIngestionRunMode, requestedAt: string) => ProviderApiGatePolicy | undefined;
 
 export class ScheduledIngestionService {
-  constructor(private readonly ingestion: IngestionPersistenceService, private readonly runs: ScheduledIngestionRunRepository) {}
+  constructor(private readonly ingestion: IngestionPersistenceService, private readonly runs: ScheduledIngestionRunRepository, private readonly gatePolicyResolver?: ScheduledIngestionGatePolicyResolver) {}
 
   async runScheduledIngestionJob(jobId: string, modeOverride?: ScheduledIngestionRunMode, startedAt?: string): Promise<ScheduledIngestionRunReport> {
     const policy = getScheduledIngestionPolicy(jobId);
     const runMode = modeOverride ?? policy?.runMode ?? 'dry_run_fixture';
     const at = startedAt ?? new Date().toISOString();
     if (!policy) return this.persistSimple(jobId, runMode, at, 'skipped', 'unsupported_job_id');
-    if (runMode === 'production_live') return this.persistSimple(jobId, runMode, at, 'blocked', 'production_live_blocked', policy);
-    if (runMode === 'staging_live') return this.persistSimple(jobId, runMode, at, 'blocked', 'staging_live_not_enabled_in_c5_a22', policy);
+    if (runMode === 'production_live' || runMode === 'staging_live') {
+      const gate = this.resolveGate(policy, runMode, at);
+      return this.persistSimple(jobId, runMode, at, 'blocked', gate.reason, policy, gate);
+    }
     return this.runScheduledIngestionDryRun(jobId, at);
   }
 
@@ -46,15 +51,9 @@ export class ScheduledIngestionService {
     const duplicate = await this.runs.getRunById(replayRunId);
     if (duplicate) return this.buildScheduledIngestionRunReport(duplicate);
 
-    const replayRun = await this.executeFixtureDryRun(policy, at, replayRunId);
-    replayRun.warnings = [...replayRun.warnings, 'replay_duplicate_decision:created'];
-    replayRun.replayOfRunId = original.runId;
-    replayRun.originalJobId = original.jobId;
-    replayRun.originalExecutionMode = original.runMode;
-    replayRun.replayMode = replayMode;
-    replayRun.replayedAt = at;
-    replayRun.originalSourceRef = original.originalSourceRef ?? original.requestId ?? null;
-    replayRun.operatorNote = `replay_of:${original.runId}`;
+    const gate = this.resolveGate(policy, replayMode, at, 'replay', original, replayRunId);
+    if (!gate.allowed || gate.providerCallMode !== 'replay_captured_payload') return this.persistReplayBlocked(gate.reason, runId, replayMode, at, original);
+    const replayRun = this.buildReplayRunFromOriginal(original, policy, at, replayRunId, gate);
     await this.runs.saveRun(replayRun);
     return this.buildScheduledIngestionRunReport(replayRun);
   }
@@ -70,15 +69,19 @@ export class ScheduledIngestionService {
   }
 
   private async executeFixtureDryRun(policy: ScheduledIngestionJobPolicy, requestedAt: string, runId: string): Promise<ScheduledIngestionRunRecord> {
+    const gate = this.resolveGate(policy, 'dry_run_fixture', requestedAt, 'fixture_only');
+    if (!gate.allowed || gate.providerCallMode !== 'fixture_response') return this.buildSimpleRun(runId, policy.jobId, 'dry_run_fixture', requestedAt, 'blocked', gate.reason, policy, gate);
+
     let report: IngestionPersistenceReport | null = null;
+    const request = this.buildRequest(policy, requestedAt, policy.capability);
     if (policy.providerId === 'tiingo_market_data') {
-      report = await this.ingestion.persistAdapterFetchAndNormalize(new TiingoMarketDataAdapter({ mode: 'fixture' }), this.buildRequest(policy, requestedAt, 'market_price_history'));
+      report = await this.ingestion.persistAdapterFetchAndNormalize(new TiingoMarketDataAdapter({ mode: 'fixture' }), request);
     } else if (policy.providerId === 'cftc_cot') {
-      report = await this.ingestion.persistAdapterFetchAndNormalize(new CftcCotAdapter(), this.buildRequest(policy, requestedAt, 'cot_report'));
+      report = await this.ingestion.persistAdapterFetchAndNormalize(new CftcCotAdapter(), request);
     }
 
     if (!report) {
-      return this.buildSimpleRun(runId, policy.jobId, 'dry_run_fixture', requestedAt, 'skipped', 'fixture_adapter_not_wired', policy);
+      return this.buildSimpleRun(runId, policy.jobId, 'dry_run_fixture', requestedAt, 'skipped', 'fixture_adapter_not_wired', policy, gate);
     }
 
     const status: ScheduledIngestionRunRecord['status'] = report.errors.length > 0 ? 'failed' : 'succeeded';
@@ -103,7 +106,7 @@ export class ScheduledIngestionService {
       retryCount: 0,
       nextRetryAt: null,
       stalenessStatus: deriveStalenessStatus(requestedAt, requestedAt, policy.staleAfterMinutes, policy.expiresAfterMinutes),
-      warnings: report.errors,
+      warnings: [...report.errors, `provider_api_gate:${gate.providerCallMode}`],
       originalSourceRef: report.requestId
     };
   }
@@ -112,7 +115,7 @@ export class ScheduledIngestionService {
     return { requestId: `${policy.jobId}-${requestedAt}`, providerId: policy.providerId, capability: policy.capability, asset: policy.asset, region: policy.region, evidenceTypeId, requestedAt, paramsJson: JSON.stringify({ mode: 'fixture', scheduled: true }) };
   }
 
-  private buildSimpleRun(runId: string, jobId: string, runMode: ScheduledIngestionRunMode, startedAt: string, status: ScheduledIngestionRunRecord['status'], reason: string, policy?: ScheduledIngestionJobPolicy): ScheduledIngestionRunRecord {
+  private buildSimpleRun(runId: string, jobId: string, runMode: ScheduledIngestionRunMode, startedAt: string, status: ScheduledIngestionRunRecord['status'], reason: string, policy?: ScheduledIngestionJobPolicy, gate?: ProviderRuntimeResolverDecision): ScheduledIngestionRunRecord {
     return {
       runId,
       jobId,
@@ -134,14 +137,34 @@ export class ScheduledIngestionService {
       retryCount: 0,
       nextRetryAt: null,
       stalenessStatus: 'unknown',
-      warnings: [reason]
+      warnings: gate ? [reason, `provider_api_gate:${gate.providerCallMode}`, `provider_api_gate_reason:${gate.reason}`] : [reason]
     };
   }
 
-  private async persistSimple(jobId: string, runMode: ScheduledIngestionRunMode, startedAt: string, status: ScheduledIngestionRunRecord['status'], reason: string, policy?: ScheduledIngestionJobPolicy): Promise<ScheduledIngestionRunReport> {
-    const run = this.buildSimpleRun(`run-${jobId}-${startedAt}`, jobId, runMode, startedAt, status, reason, policy);
+  private async persistSimple(jobId: string, runMode: ScheduledIngestionRunMode, startedAt: string, status: ScheduledIngestionRunRecord['status'], reason: string, policy?: ScheduledIngestionJobPolicy, gate?: ProviderRuntimeResolverDecision): Promise<ScheduledIngestionRunReport> {
+    const run = this.buildSimpleRun(`run-${jobId}-${startedAt}`, jobId, runMode, startedAt, status, reason, policy, gate);
     await this.runs.saveRun(run);
     return this.buildScheduledIngestionRunReport(run);
+  }
+
+  private buildGateRequest(policy: ScheduledIngestionJobPolicy, requestedAt: string, activationMode: ProviderActivationMode, runId?: string, original?: ScheduledIngestionRunRecord): ProviderRuntimeRequest {
+    const gatePolicy = this.gatePolicyResolver?.(policy, activationMode === 'replay' ? 'dry_run_fixture' : policy.runMode, requestedAt);
+    const replayPayload: ProviderRuntimeResponse | undefined = original ? { requestId: runId ?? `${policy.jobId}-${requestedAt}`, responseId: original.originalSourceRef ?? original.requestId ?? original.runId, sourceId: original.providerId, capabilityId: original.capability, adapterId: `${original.providerId}_${original.capability}_adapter`, receivedAt: original.completedAt ?? requestedAt, payload: { replayOfRunId: original.runId, persistedPayloadIds: original.persistedPayloadIds }, payloadSchemaStatus: 'valid', payloadSizeBytes: JSON.stringify(original.persistedPayloadIds).length, recordCount: original.payloadCount, provenance: { requestId: original.requestId ?? original.runId, sourceId: original.providerId }, error: null, rateLimit: null } : undefined;
+    const request: ProviderRuntimeRequest = { requestId: runId ?? `${policy.jobId}-${requestedAt}`, sourceId: policy.providerId, capabilityId: gatePolicy?.requestCapabilityOverride ?? policy.capability, asset: policy.asset, region: policy.region, activationMode, provenance: { actor: 'scheduled_ingestion_service', purpose: 'scheduled_provider_orchestration' } };
+    if (activationMode === 'replay') request.idempotencyKey = `replay:${original?.runId ?? runId}`;
+    if (gatePolicy) request.policy = gatePolicy;
+    if (gatePolicy?.requestMetadata) request.metadata = gatePolicy.requestMetadata;
+    if (replayPayload) request.replayPayload = replayPayload;
+    return request;
+  }
+
+  private resolveGate(policy: ScheduledIngestionJobPolicy, runMode: ScheduledIngestionRunMode, requestedAt: string, activationOverride?: ProviderActivationMode, original?: ScheduledIngestionRunRecord, runId?: string): ProviderRuntimeResolverDecision {
+    const activationMode: ProviderActivationMode = activationOverride ?? (runMode === 'production_live' ? 'production_live_allowed' : runMode === 'staging_live' ? 'staging_live_allowed' : 'fixture_only');
+    return resolveProviderRuntimeRequest(this.buildGateRequest(policy, requestedAt, activationMode, runId, original));
+  }
+
+  private buildReplayRunFromOriginal(original: ScheduledIngestionRunRecord, policy: ScheduledIngestionJobPolicy, startedAt: string, runId: string, gate: ProviderRuntimeResolverDecision): ScheduledIngestionRunRecord {
+    return { ...original, runId, jobId: policy.jobId, runMode: 'dry_run_fixture', status: 'succeeded', startedAt, completedAt: startedAt, retryStatus: 'not_needed', retryCount: 0, nextRetryAt: null, warnings: [...original.warnings, 'replay_duplicate_decision:created', `provider_api_gate:${gate.providerCallMode}`], replayOfRunId: original.runId, originalJobId: original.jobId, originalExecutionMode: original.runMode, replayMode: 'dry_run_fixture', replayedAt: startedAt, duplicateDecision: 'created', originalSourceRef: original.originalSourceRef ?? original.requestId ?? null, operatorNote: `replay_of:${original.runId}` };
   }
 
   private async persistReplayBlocked(reason: string, replayOfRunId: string, replayMode: ScheduledIngestionRunMode, startedAt: string, original?: ScheduledIngestionRunRecord): Promise<ScheduledIngestionRunReport> {

@@ -61,6 +61,7 @@ import { runMarketReasoningReadinessTests } from './market-reasoning-readiness.t
 import { runFrontendContractSchemaTests } from './frontend-contracts.test.js';
 import { runRcAFormulaRegressionTests } from './rc-a-formula-regression.test.js';
 import { runProviderApiGateTests } from './provider-api-gate.test.js';
+import { runProviderUnmanagedCallInventoryTests } from './provider-unmanaged-call-inventory.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -124,6 +125,7 @@ async function run(): Promise<void> {
   runMarketReasoningReadinessTests();
   runFrontendContractSchemaTests();
   await runProviderApiGateTests();
+  runProviderUnmanagedCallInventoryTests();
   runRcAFormulaRegressionTests();
   console.log('reasoning runtime contract tests passed');
 }

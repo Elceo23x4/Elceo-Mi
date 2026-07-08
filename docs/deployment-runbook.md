@@ -148,3 +148,13 @@ Track API errors, security audit events, billing/notification runtime metrics, a
 - Required sequence before production deploy: staging smoke + staging attack drill.
 - Required sequence after production deploy: production smoke.
 - Public/frontend launch remains blocked until security sign-off is complete.
+
+## RC-G migration and database rehearsal update
+- Local deterministic rehearsal is performed with `npm run check:migrations`, `npm run rehearse:migrations:dry-run`, and `npm run test:migrations`; canonical ordering is full filename lexicographic order, not numeric-prefix order.
+- Duplicate numeric prefixes (`0027`, `0028`) are non-fatal warnings only because full filenames are the migration identity for this repository. Exact duplicate filenames remain fatal.
+- The rehearsal ledger table `elceo_migration_rehearsal_ledger` is a local/staging rehearsal artifact when created by `scripts/rehearse-db-migrations.mjs`; it is not production migration state unless a future explicit migration-state strategy promotes it.
+- Clean rehearsal must apply every migration in ordered sequence. Repeat rehearsal must skip ledger-recorded migrations with matching checksums and must fail on checksum drift.
+- Staging DB rehearsal must run against a disposable or restored staging database with `DATABASE_URL` and `ELCEO_MIGRATION_REHEARSAL=1`; production credentials are never required for CI.
+- Production migration window approval still requires verified backup creation, backup restore rehearsal evidence, staging rehearsal evidence, checksum drift review, and a rollback decision tree before applying production migrations.
+- Rollback strategy is restore-first for destructive or unknown migration risk; potentially destructive migrations require explicit mitigation/rehearsal notes before use.
+- This document does not claim production DB migration readiness until staging/prod rehearsal with actual managed environment migration state has been performed.

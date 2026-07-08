@@ -393,3 +393,13 @@ RC-E adds a generated live inventory over `apps/web/app/api/**/route.ts` (145 ro
 - Unmanaged provider-call inventory is executable and fails on runtime direct provider adapter execution outside the gate; direct adapters remain allowed only as fixture/provider-source implementations or tests.
 - Live execution remains explicitly not implemented until RC-H (`live_execution_not_implemented_until_rc_h`) even when resolver policy can classify a theoretically live-allowed request.
 - RC-G database rehearsal is still required before durable provider orchestration state can be treated as production-rehearsed.
+
+## RC-G migration and database rehearsal update
+- Local deterministic rehearsal is performed with `npm run check:migrations`, `npm run rehearse:migrations:dry-run`, and `npm run test:migrations`; canonical ordering is full filename lexicographic order, not numeric-prefix order.
+- Duplicate numeric prefixes (`0027`, `0028`) are non-fatal warnings only because full filenames are the migration identity for this repository. Exact duplicate filenames remain fatal.
+- The rehearsal ledger table `elceo_migration_rehearsal_ledger` is a local/staging rehearsal artifact when created by `scripts/rehearse-db-migrations.mjs`; it is not production migration state unless a future explicit migration-state strategy promotes it.
+- Clean rehearsal must apply every migration in ordered sequence. Repeat rehearsal must skip ledger-recorded migrations with matching checksums and must fail on checksum drift.
+- Staging DB rehearsal must run against a disposable or restored staging database with `DATABASE_URL` and `ELCEO_MIGRATION_REHEARSAL=1`; production credentials are never required for CI.
+- Production migration window approval still requires verified backup creation, backup restore rehearsal evidence, staging rehearsal evidence, checksum drift review, and a rollback decision tree before applying production migrations.
+- Rollback strategy is restore-first for destructive or unknown migration risk; potentially destructive migrations require explicit mitigation/rehearsal notes before use.
+- This document does not claim production DB migration readiness until staging/prod rehearsal with actual managed environment migration state has been performed.

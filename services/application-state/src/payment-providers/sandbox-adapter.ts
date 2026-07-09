@@ -4,25 +4,7 @@ export type PaymentProviderKind = 'stripe';
 export type SandboxPaymentProviderMode = 'disabled'|'local_fake_provider'|'replay_provider_event'|'sandbox_provider'|'production_provider_blocked';
 export type NormalizedPaymentStatus = 'created'|'processing'|'succeeded'|'failed'|'refunded'|'partially_refunded'|'reversed'|'chargeback'|'unknown';
 export type NormalizedProviderEvent = {
-  providerKind: PaymentProviderKind;
-  providerRequestId: string|null;
-  providerPaymentReference: string|null;
-  providerSessionReference: string|null;
-  providerCustomerReference: string|null;
-  providerEventId: string|null;
-  providerEventType: string;
-  amount: number|null;
-  currency: string|null;
-  status: NormalizedPaymentStatus;
-  createdAt: string|null;
-  paidAt: string|null;
-  failedAt: string|null;
-  refundOrReversalOrChargeback: 'none'|'refund'|'partial_refund'|'reversal'|'chargeback';
-  rawStatus: string|null;
-  safeRedactedPayloadChecksum: string;
-  retryable: boolean;
-  unknownOutcome: boolean;
-  redactedPayload: Record<string, unknown>;
+  providerKind: PaymentProviderKind; providerRequestId: string|null; providerPaymentReference: string|null; providerSessionReference: string|null; providerCustomerReference: string|null; providerEventId: string|null; providerEventType: string; amount: number|null; currency: string|null; status: NormalizedPaymentStatus; createdAt: string|null; paidAt: string|null; failedAt: string|null; refundOrReversalOrChargeback: 'none'|'refund'|'partial_refund'|'reversal'|'chargeback'; rawStatus: string|null; safeRedactedPayloadChecksum: string; retryable: boolean; unknownOutcome: boolean; redactedPayload: Record<string, unknown>; metadataOperationId: string|null; metadataProviderIdempotencyKey: string|null; metadataSubjectUserId: string|null;
 };
 export type CheckoutSessionInput = { subjectUserId:string; email?:string|null; amount:number; currency:string; targetPlan:string; providerIdempotencyKey:string; operationId:string; successUrl?:string; cancelUrl?:string };
 export type CheckoutSessionResult = NormalizedProviderEvent & { checkoutUrl:string|null };
@@ -31,110 +13,23 @@ export type ProviderErrorNormalization = { providerKind: PaymentProviderKind; pr
 const SECRET_KEY_PATTERN = /^(?:sk|rk)_(?:live|test)_/;
 const SECRET_VALUE_PATTERN = /(?:sk|rk|whsec)_(?:live|test)?_?[A-Za-z0-9]{12,}/g;
 const SENSITIVE_KEYS = new Set(['authorization','client_secret','secret','webhook_secret','card','number','cvc','source','payment_method_details','billing_details','email','name','phone','address']);
-
 function env(): Record<string,string|undefined> { return (globalThis as { process?: { env?: Record<string,string|undefined> } }).process?.env ?? {}; }
-function checksum(value: unknown): string { return createHash('sha256').update(JSON.stringify(value)).digest('hex'); }
+export function stableProviderChecksum(value: unknown): string { return createHash('sha256').update(JSON.stringify(value)).digest('hex'); }
 function asObj(v: unknown): Record<string,unknown> { return v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string,unknown> : {}; }
 function asString(v: unknown): string|null { return typeof v === 'string' && v ? v : null; }
 function asNumber(v: unknown): number|null { return typeof v === 'number' && Number.isFinite(v) ? v : null; }
 function toIso(v: unknown): string|null { const n=asNumber(v); return n ? new Date(n*1000).toISOString() : null; }
-function redactValue(key:string, value:unknown): unknown {
-  if (SENSITIVE_KEYS.has(key.toLowerCase())) return '[redacted]';
-  if (typeof value === 'string') return value.replace(SECRET_VALUE_PATTERN, '[redacted-secret]');
-  if (Array.isArray(value)) return value.map((x) => redactProviderPayload(x));
-  if (value && typeof value === 'object') return redactProviderPayload(value);
-  return value;
-}
-export function redactProviderPayload(payload: unknown): Record<string,unknown> {
-  const obj = asObj(payload);
-  return Object.fromEntries(Object.entries(obj).map(([k,v]) => [k, redactValue(k,v)]));
-}
-export function secretLikeValuesFound(payload: unknown): boolean { return SECRET_VALUE_PATTERN.test(JSON.stringify(payload)); }
-export function resolvePaymentProviderMode(e=env()): SandboxPaymentProviderMode {
-  if ((e.PAYMENT_PROVIDER_MODE ?? e.ELCEO_PAYMENT_PROVIDER_MODE) === 'sandbox_provider') return 'sandbox_provider';
-  if ((e.PAYMENT_PROVIDER_MODE ?? e.ELCEO_PAYMENT_PROVIDER_MODE) === 'replay_provider_event') return 'replay_provider_event';
-  if ((e.PAYMENT_PROVIDER_MODE ?? e.ELCEO_PAYMENT_PROVIDER_MODE) === 'disabled') return 'disabled';
-  if ((e.PAYMENT_PROVIDER_MODE ?? e.ELCEO_PAYMENT_PROVIDER_MODE) === 'production_provider') return 'production_provider_blocked';
-  return 'local_fake_provider';
-}
-export function requireSandboxProviderConfig(e=env()): { providerKind:PaymentProviderKind; secretKey:string; publicKey:string; webhookSecret:string; priceId:string } {
-  if (e.ELCEO_PAYMENT_SANDBOX_SMOKE !== '1') throw new Error('sandbox_smoke_refused_requires_ELCEO_PAYMENT_SANDBOX_SMOKE');
-  if (resolvePaymentProviderMode(e) === 'production_provider_blocked') throw new Error('production_payment_provider_blocked');
-  const providerKind = e.PAYMENT_PROVIDER_KIND;
-  if (providerKind !== 'stripe') throw new Error('sandbox execution not completed: provider sandbox credentials unavailable');
-  const secretKey = e.STRIPE_SECRET_KEY ?? '';
-  const publicKey = e.STRIPE_PUBLIC_KEY ?? e.STRIPE_PUBLISHABLE_KEY ?? '';
-  const webhookSecret = e.STRIPE_WEBHOOK_SECRET ?? e.PAYMENT_PROVIDER_WEBHOOK_SECRET ?? '';
-  const priceId = e.STRIPE_PRICE_ID_PREMIUM ?? '';
-  if (!secretKey || !publicKey || !webhookSecret || !priceId) throw new Error('sandbox execution not completed: provider sandbox credentials unavailable');
-  if (!secretKey.startsWith('sk_test_') || SECRET_KEY_PATTERN.test(secretKey) === false || secretKey.startsWith('sk_live_')) throw new Error('production_payment_provider_blocked');
-  if (publicKey.startsWith('pk_live_')) throw new Error('production_payment_provider_blocked');
-  return { providerKind, secretKey, publicKey, webhookSecret, priceId };
-}
-function parseStripeSignature(signature: string|null): { timestamp:string; digest:string } {
-  if (!signature) throw new Error('missing_provider_webhook_signature');
-  const timestamp = signature.split(',').find((p) => p.trim().startsWith('t='))?.trim().slice(2);
-  const digest = signature.split(',').find((p) => p.trim().startsWith('v1='))?.trim().slice(3);
-  if (!timestamp || !digest) throw new Error('invalid_provider_webhook_signature_format');
-  return { timestamp, digest };
-}
-export function verifyStripeWebhookSignature(rawBody:string, signature:string|null, webhookSecret:string): true {
-  if (!webhookSecret || webhookSecret === 'local-fixed-literal') throw new Error('sandbox_webhook_secret_required');
-  const { timestamp, digest } = parseStripeSignature(signature);
-  const expected = createHmac('sha256', webhookSecret).update(`${timestamp}.${rawBody}`).digest('hex');
-  const a = Buffer.from(expected, 'hex'); const b = Buffer.from(digest, 'hex');
-  if (a.length !== b.length || !timingSafeEqual(a,b)) throw new Error('invalid_provider_webhook_signature');
-  return true;
-}
-function statusFrom(type:string, raw:string|null): { status:NormalizedPaymentStatus; marker:NormalizedProviderEvent['refundOrReversalOrChargeback'] } {
-  if (type.includes('chargeback')) return { status:'chargeback', marker:'chargeback' };
-  if (type.includes('refund')) return { status: raw === 'partial' ? 'partially_refunded' : 'refunded', marker: raw === 'partial' ? 'partial_refund' : 'refund' };
-  if (type.includes('payment_failed') || raw === 'failed') return { status:'failed', marker:'none' };
-  if (type.includes('completed') || type.includes('paid') || raw === 'paid' || raw === 'complete') return { status:'succeeded', marker:'none' };
-  return { status:'unknown', marker:'none' };
-}
-export function parseStripeWebhookEvent(rawBody:string, signature:string|null, webhookSecret:string): NormalizedProviderEvent {
-  verifyStripeWebhookSignature(rawBody, signature, webhookSecret);
-  const payload = JSON.parse(rawBody) as Record<string,unknown>;
-  return normalizeStripeProviderPayload(payload, null);
-}
-export function normalizeStripeProviderPayload(payload: Record<string,unknown>, requestId:string|null): NormalizedProviderEvent {
-  const eventType = asString(payload.type) ?? asString(payload.object) ?? 'unknown';
-  const object = asObj(asObj(asObj(payload.data).object).id ? asObj(payload.data).object : payload);
-  const rawStatus = asString(object.status) ?? asString(object.payment_status);
-  const mapped = statusFrom(eventType, rawStatus);
-  const redactedPayload = redactProviderPayload(payload);
-  return { providerKind:'stripe', providerRequestId:requestId, providerPaymentReference:asString(object.payment_intent) ?? (String(object.id ?? '').startsWith('pi_') ? String(object.id) : null), providerSessionReference:String(object.id ?? '').startsWith('cs_') ? String(object.id) : null, providerCustomerReference:asString(object.customer), providerEventId:asString(payload.id), providerEventType:eventType, amount:asNumber(object.amount_total) ?? asNumber(object.amount_paid) ?? asNumber(object.amount), currency:asString(object.currency)?.toUpperCase() ?? null, status:mapped.status, createdAt:toIso(payload.created) ?? toIso(object.created), paidAt:mapped.status==='succeeded' ? (toIso(payload.created) ?? toIso(object.created)) : null, failedAt:mapped.status==='failed' ? (toIso(payload.created) ?? toIso(object.created)) : null, refundOrReversalOrChargeback:mapped.marker, rawStatus, safeRedactedPayloadChecksum:checksum(redactedPayload), retryable:false, unknownOutcome:mapped.status==='unknown', redactedPayload };
-}
-export function normalizeProviderError(error: unknown, providerKind:PaymentProviderKind='stripe'): ProviderErrorNormalization {
-  const e = error as { status?:number; code?:string; type?:string; requestId?:string; headers?:Record<string,string> };
-  const statusCode = typeof e?.status === 'number' ? e.status : null;
-  const retryable = statusCode === 409 || statusCode === 429 || (statusCode !== null && statusCode >= 500);
-  const acceptedByProvider = statusCode === 409 || e?.code === 'idempotency_key_in_use';
-  return { providerKind, providerRequestId:e?.requestId ?? e?.headers?.['request-id'] ?? null, safeErrorCategory: statusCode === 429 ? 'provider_rate_limited' : retryable ? 'provider_retryable_error' : 'provider_error', retryable, unknownOutcome: retryable || acceptedByProvider, acceptedByProvider, statusCode };
-}
+function redactValue(key:string, value:unknown): unknown { if (SENSITIVE_KEYS.has(key.toLowerCase())) return '[redacted]'; if (typeof value === 'string') return value.replace(SECRET_VALUE_PATTERN, '[redacted-secret]'); if (Array.isArray(value)) return value.map((x) => redactProviderPayload(x)); if (value && typeof value === 'object') return redactProviderPayload(value); return value; }
+export function redactProviderPayload(payload: unknown): Record<string,unknown> { const obj = asObj(payload); return Object.fromEntries(Object.entries(obj).map(([k,v]) => [k, redactValue(k,v)])); }
+export function secretLikeValuesFound(payload: unknown): boolean { SECRET_VALUE_PATTERN.lastIndex = 0; return SECRET_VALUE_PATTERN.test(JSON.stringify(payload)); }
+export function resolvePaymentProviderMode(e=env()): SandboxPaymentProviderMode { const m=e.PAYMENT_PROVIDER_MODE ?? e.ELCEO_PAYMENT_PROVIDER_MODE; if (m === 'sandbox_provider') return 'sandbox_provider'; if (m === 'replay_provider_event') return 'replay_provider_event'; if (m === 'disabled') return 'disabled'; if (m === 'production_provider') return 'production_provider_blocked'; return 'local_fake_provider'; }
+export function requireSandboxProviderConfig(e=env()): { providerKind:PaymentProviderKind; secretKey:string; publicKey:string; webhookSecret:string; priceId:string } { if (e.ELCEO_PAYMENT_SANDBOX_SMOKE !== '1') throw new Error('sandbox_smoke_refused_requires_ELCEO_PAYMENT_SANDBOX_SMOKE'); if (resolvePaymentProviderMode(e) === 'production_provider_blocked') throw new Error('production_payment_provider_blocked'); if (e.PAYMENT_PROVIDER_KIND !== 'stripe') throw new Error('sandbox execution not completed: provider sandbox credentials unavailable'); const secretKey=e.STRIPE_SECRET_KEY??''; const publicKey=e.STRIPE_PUBLIC_KEY??e.STRIPE_PUBLISHABLE_KEY??''; const webhookSecret=e.STRIPE_WEBHOOK_SECRET??e.PAYMENT_PROVIDER_WEBHOOK_SECRET??''; const priceId=e.STRIPE_PRICE_ID_PREMIUM??''; if (!secretKey || !publicKey || !webhookSecret || !priceId) throw new Error('sandbox execution not completed: provider sandbox credentials unavailable'); if (!secretKey.startsWith('sk_test_') || SECRET_KEY_PATTERN.test(secretKey) === false || secretKey.startsWith('sk_live_')) throw new Error('production_payment_provider_blocked'); if (!publicKey.startsWith('pk_test_') || publicKey.startsWith('pk_live_')) throw new Error('production_payment_provider_blocked'); return { providerKind:'stripe', secretKey, publicKey, webhookSecret, priceId }; }
+function parseStripeSignature(signature: string|null): { timestamp:string; digest:string } { if (!signature) throw new Error('missing_provider_webhook_signature'); const timestamp = signature.split(',').find((p) => p.trim().startsWith('t='))?.trim().slice(2); const digest = signature.split(',').find((p) => p.trim().startsWith('v1='))?.trim().slice(3); if (!timestamp || !digest) throw new Error('invalid_provider_webhook_signature_format'); return { timestamp, digest }; }
+export function buildStripeTestSignature(rawBody:string, webhookSecret:string, timestamp='1700000000'): string { return `t=${timestamp},v1=${createHmac('sha256', webhookSecret).update(`${timestamp}.${rawBody}`).digest('hex')}`; }
+export function verifyStripeWebhookSignature(rawBody:string, signature:string|null, webhookSecret:string): true { if (!webhookSecret || webhookSecret === 'local-fixed-literal') throw new Error('sandbox_webhook_secret_required'); const { timestamp, digest } = parseStripeSignature(signature); const expected = createHmac('sha256', webhookSecret).update(`${timestamp}.${rawBody}`).digest('hex'); const a=Buffer.from(expected,'hex'); const b=Buffer.from(digest,'hex'); if (a.length !== b.length || !timingSafeEqual(a,b)) throw new Error('invalid_provider_webhook_signature'); return true; }
+function statusFrom(type:string, raw:string|null): { status:NormalizedPaymentStatus; marker:NormalizedProviderEvent['refundOrReversalOrChargeback'] } { if (type === 'checkout.session.async_payment_succeeded' || type === 'payment_intent.succeeded') return { status:'succeeded', marker:'none' }; if (type === 'checkout.session.async_payment_failed' || type === 'payment_intent.payment_failed' || type.includes('payment_failed') || raw === 'failed') return { status:'failed', marker:'none' }; if (type === 'checkout.session.completed') return raw === 'paid' ? { status:'succeeded', marker:'none' } : { status:'processing', marker:'none' }; if (type.includes('chargeback') || type === 'charge.dispute.created') return { status:'chargeback', marker:'chargeback' }; if (type === 'charge.dispute.funds_reinstated') return { status:'reversed', marker:'reversal' }; if (type.includes('refund')) return { status: raw === 'partial' ? 'partially_refunded' : 'refunded', marker: raw === 'partial' ? 'partial_refund' : 'refund' }; if (raw === 'succeeded' || raw === 'paid') return { status:'succeeded', marker:'none' }; return { status:'unknown', marker:'none' }; }
+export function parseStripeWebhookEvent(rawBody:string, signature:string|null, webhookSecret:string): NormalizedProviderEvent { verifyStripeWebhookSignature(rawBody, signature, webhookSecret); return normalizeStripeProviderPayload(JSON.parse(rawBody) as Record<string,unknown>, null); }
+export function normalizeStripeProviderPayload(payload: Record<string,unknown>, requestId:string|null): NormalizedProviderEvent { const eventType=asString(payload.type) ?? asString(payload.object) ?? 'unknown'; const dataObject=asObj(asObj(payload.data).object); const object=asObj(dataObject.id ? dataObject : payload); const metadata=asObj(object.metadata); const rawStatus=asString(object.payment_status) ?? asString(object.status); const mapped=statusFrom(eventType, rawStatus); const redactedPayload=redactProviderPayload(payload); const providerPaymentReference=asString(object.payment_intent) ?? (String(object.id ?? '').startsWith('pi_') ? String(object.id) : null); const providerSessionReference=String(object.id ?? '').startsWith('cs_') ? String(object.id) : null; return { providerKind:'stripe', providerRequestId:requestId, providerPaymentReference, providerSessionReference, providerCustomerReference:asString(object.customer), providerEventId:asString(payload.id), providerEventType:eventType, amount:asNumber(object.amount_total) ?? asNumber(object.amount_paid) ?? asNumber(object.amount), currency:asString(object.currency)?.toUpperCase() ?? null, status:mapped.status, createdAt:toIso(payload.created) ?? toIso(object.created), paidAt:mapped.status==='succeeded' ? (toIso(payload.created) ?? toIso(object.created)) : null, failedAt:mapped.status==='failed' ? (toIso(payload.created) ?? toIso(object.created)) : null, refundOrReversalOrChargeback:mapped.marker, rawStatus, safeRedactedPayloadChecksum:stableProviderChecksum(redactedPayload), retryable:false, unknownOutcome:mapped.status==='unknown'||mapped.status==='processing', redactedPayload, metadataOperationId:asString(metadata.operationId), metadataProviderIdempotencyKey:asString(metadata.providerIdempotencyKey), metadataSubjectUserId:asString(metadata.subjectUserId) }; }
+export function normalizeProviderError(error: unknown, providerKind:PaymentProviderKind='stripe'): ProviderErrorNormalization { const e=error as { status?:number; code?:string; requestId?:string; headers?:Record<string,string> }; const statusCode=typeof e?.status==='number'?e.status:null; const retryable=statusCode===409||statusCode===429||(statusCode!==null&&statusCode>=500); const acceptedByProvider=statusCode===409||e?.code==='idempotency_key_in_use'; return { providerKind, providerRequestId:e?.requestId ?? e?.headers?.['request-id'] ?? null, safeErrorCategory: statusCode===429?'provider_rate_limited':retryable?'provider_retryable_error':'provider_error', retryable, unknownOutcome:retryable||acceptedByProvider, acceptedByProvider, statusCode }; }
 export const normalizeProviderRateLimitOrRetrySignal = normalizeProviderError;
-
-export class StripeSandboxPaymentProviderAdapter {
-  readonly providerKind:PaymentProviderKind='stripe';
-  constructor(private readonly config = requireSandboxProviderConfig()) {}
-  async createCheckoutOrPaymentSession(input: CheckoutSessionInput): Promise<CheckoutSessionResult> {
-    const body = new URLSearchParams();
-    body.set('mode','payment'); body.set('success_url', input.successUrl ?? 'https://example.invalid/billing/success'); body.set('cancel_url', input.cancelUrl ?? 'https://example.invalid/billing/cancel');
-    body.set('line_items[0][price]', this.config.priceId); body.set('line_items[0][quantity]','1');
-    body.set('client_reference_id', input.subjectUserId); body.set('metadata[subjectUserId]', input.subjectUserId); body.set('metadata[operationId]', input.operationId); body.set('metadata[providerIdempotencyKey]', input.providerIdempotencyKey);
-    const response = await fetch('https://api.stripe.com/v1/checkout/sessions', { method:'POST', headers:{ Authorization:`Bearer ${this.config.secretKey}`, 'Content-Type':'application/x-www-form-urlencoded', 'Idempotency-Key':input.providerIdempotencyKey }, body });
-    const payload = await response.json() as Record<string,unknown>;
-    if (!response.ok) throw Object.assign(new Error('provider_checkout_session_failed'), { status: response.status, requestId: response.headers.get('request-id') ?? null });
-    const normalized = normalizeStripeProviderPayload(payload, response.headers.get('request-id'));
-    return { ...normalized, providerSessionReference: asString(payload.id), checkoutUrl: asString(payload.url) };
-  }
-  verifyWebhookSignature(rawBody:string, signature:string|null): true { return verifyStripeWebhookSignature(rawBody, signature, this.config.webhookSecret); }
-  parseWebhookEvent(rawBody:string, signature:string|null): NormalizedProviderEvent { return parseStripeWebhookEvent(rawBody, signature, this.config.webhookSecret); }
-  async retrievePaymentOrSession(reference:string): Promise<NormalizedProviderEvent> { return this.retrieve(`checkout/sessions/${encodeURIComponent(reference)}`); }
-  async retrieveEvent(reference:string): Promise<NormalizedProviderEvent> { return this.retrieve(`events/${encodeURIComponent(reference)}`); }
-  normalizeProviderError(error: unknown): ProviderErrorNormalization { return normalizeProviderError(error, this.providerKind); }
-  normalizeProviderRateLimitOrRetrySignal(error: unknown): ProviderErrorNormalization { return normalizeProviderRateLimitOrRetrySignal(error, this.providerKind); }
-  redactProviderPayload(payload:unknown): Record<string,unknown> { return redactProviderPayload(payload); }
-  private async retrieve(path:string): Promise<NormalizedProviderEvent> { const r=await fetch(`https://api.stripe.com/v1/${path}`, { headers:{ Authorization:`Bearer ${this.config.secretKey}` } }); const p=await r.json() as Record<string,unknown>; if(!r.ok) throw Object.assign(new Error('provider_retrieve_failed'), { status:r.status, requestId:r.headers.get('request-id') }); return normalizeStripeProviderPayload(p, r.headers.get('request-id')); }
-}
+export class StripeSandboxPaymentProviderAdapter { readonly providerKind:PaymentProviderKind='stripe'; constructor(private readonly config = requireSandboxProviderConfig()) {} async createCheckoutOrPaymentSession(input: CheckoutSessionInput): Promise<CheckoutSessionResult> { const body=new URLSearchParams(); body.set('mode','payment'); body.set('success_url', input.successUrl ?? 'https://example.invalid/billing/success'); body.set('cancel_url', input.cancelUrl ?? 'https://example.invalid/billing/cancel'); body.set('line_items[0][price]', this.config.priceId); body.set('line_items[0][quantity]','1'); body.set('client_reference_id', input.subjectUserId); body.set('metadata[subjectUserId]', input.subjectUserId); body.set('metadata[operationId]', input.operationId); body.set('metadata[providerIdempotencyKey]', input.providerIdempotencyKey); const response=await fetch('https://api.stripe.com/v1/checkout/sessions',{method:'POST',headers:{Authorization:`Bearer ${this.config.secretKey}`,'Content-Type':'application/x-www-form-urlencoded','Idempotency-Key':input.providerIdempotencyKey},body}); const payload=await response.json() as Record<string,unknown>; if(!response.ok) throw Object.assign(new Error('provider_checkout_session_failed'),{status:response.status,requestId:response.headers.get('request-id')??null}); const normalized=normalizeStripeProviderPayload(payload,response.headers.get('request-id')); return {...normalized, providerSessionReference:asString(payload.id), checkoutUrl:asString(payload.url)}; } verifyWebhookSignature(rawBody:string, signature:string|null): true { return verifyStripeWebhookSignature(rawBody, signature, this.config.webhookSecret); } parseWebhookEvent(rawBody:string, signature:string|null): NormalizedProviderEvent { return parseStripeWebhookEvent(rawBody, signature, this.config.webhookSecret); } async retrievePaymentOrSession(reference:string): Promise<NormalizedProviderEvent> { return this.retrieve(`checkout/sessions/${encodeURIComponent(reference)}`); } async retrieveEvent(reference:string): Promise<NormalizedProviderEvent> { return this.retrieve(`events/${encodeURIComponent(reference)}`); } normalizeProviderError(error: unknown): ProviderErrorNormalization { return normalizeProviderError(error, this.providerKind); } normalizeProviderRateLimitOrRetrySignal(error: unknown): ProviderErrorNormalization { return normalizeProviderRateLimitOrRetrySignal(error, this.providerKind); } redactProviderPayload(payload:unknown): Record<string,unknown> { return redactProviderPayload(payload); } private async retrieve(path:string): Promise<NormalizedProviderEvent> { const r=await fetch(`https://api.stripe.com/v1/${path}`,{headers:{Authorization:`Bearer ${this.config.secretKey}`}}); const p=await r.json() as Record<string,unknown>; if(!r.ok) throw Object.assign(new Error('provider_retrieve_failed'),{status:r.status,requestId:r.headers.get('request-id')}); return normalizeStripeProviderPayload(p,r.headers.get('request-id')); } }

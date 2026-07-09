@@ -1,11 +1,553 @@
 {
   "suite": "RC-I2 payment provider replay fixtures",
   "samples": [
-    {"providerKind":"stripe","sampleKind":"replay_fixture","capturedAt":"2026-07-09T00:00:00.000Z","requestId":"req_replay_success","providerPaymentReference":"pi_replay_success","providerSessionReference":"cs_replay_success","providerEventId":"evt_replay_success","eventType":"checkout.session.completed","amount":2000,"currency":"USD","status":"succeeded","rawPayloadChecksum":"sha256:78a2f7e9b6b56af4","normalizedPayloadChecksum":"sha256:0f0c49c6146c1fd7","redactionProof":"sanitized_redacted_payload_only","secretLikeValuesFound":false},
-    {"providerKind":"stripe","sampleKind":"replay_fixture","capturedAt":"2026-07-09T00:00:00.000Z","requestId":"req_replay_duplicate","providerPaymentReference":"pi_replay_success","providerSessionReference":"cs_replay_success","providerEventId":"evt_replay_success","eventType":"checkout.session.completed","amount":2000,"currency":"USD","status":"succeeded","rawPayloadChecksum":"sha256:78a2f7e9b6b56af4","normalizedPayloadChecksum":"sha256:0f0c49c6146c1fd7","redactionProof":"sanitized_redacted_payload_only","secretLikeValuesFound":false},
-    {"providerKind":"stripe","sampleKind":"replay_fixture","capturedAt":"2026-07-09T00:00:00.000Z","requestId":"req_replay_refund","providerPaymentReference":"pi_replay_success","providerSessionReference":"cs_replay_success","providerEventId":"evt_replay_refund","eventType":"charge.refunded","amount":2000,"currency":"USD","status":"refunded","rawPayloadChecksum":"sha256:af46f7dd78317e3d","normalizedPayloadChecksum":"sha256:1f72f63f1bb26c4f","redactionProof":"sanitized_redacted_payload_only","secretLikeValuesFound":false},
-    {"providerKind":"stripe","sampleKind":"replay_fixture","capturedAt":"2026-07-09T00:00:00.000Z","requestId":"req_replay_partial_refund","providerPaymentReference":"pi_replay_partial","providerSessionReference":"cs_replay_partial","providerEventId":"evt_replay_partial_refund","eventType":"charge.refund.updated","amount":700,"currency":"USD","status":"partially_refunded","rawPayloadChecksum":"sha256:c8e8f10c8dfbe37c","normalizedPayloadChecksum":"sha256:02750d72f3aa2a76","redactionProof":"sanitized_redacted_payload_only","secretLikeValuesFound":false},
-    {"providerKind":"stripe","sampleKind":"replay_fixture","capturedAt":"2026-07-09T00:00:00.000Z","requestId":"req_replay_reversal","providerPaymentReference":"pi_replay_reversal","providerSessionReference":"cs_replay_reversal","providerEventId":"evt_replay_reversal","eventType":"charge.dispute.funds_reinstated","amount":2000,"currency":"USD","status":"reversed","rawPayloadChecksum":"sha256:aa0120edc905667b","normalizedPayloadChecksum":"sha256:88ab8f3672a0b2ff","redactionProof":"sanitized_redacted_payload_only","secretLikeValuesFound":false},
-    {"providerKind":"stripe","sampleKind":"replay_fixture","capturedAt":"2026-07-09T00:00:00.000Z","requestId":"req_replay_chargeback","providerPaymentReference":"pi_replay_chargeback","providerSessionReference":"cs_replay_chargeback","providerEventId":"evt_replay_chargeback","eventType":"charge.dispute.created","amount":2000,"currency":"USD","status":"chargeback","rawPayloadChecksum":"sha256:e9808b49362abdc9","normalizedPayloadChecksum":"sha256:a3ac3d43726e46fd","redactionProof":"sanitized_redacted_payload_only","secretLikeValuesFound":false}
+    {
+      "providerKind": "stripe",
+      "sampleKind": "replay_fixture",
+      "capturedAt": "2026-07-09T00:00:00.000Z",
+      "requestId": "req_success",
+      "providerPaymentReference": "pi_replay_success",
+      "providerSessionReference": "cs_replay_success",
+      "providerEventId": "evt_replay_success",
+      "eventType": "checkout.session.completed",
+      "amount": 2000,
+      "currency": "USD",
+      "status": "succeeded",
+      "rawPayload": {
+        "id": "evt_replay_success",
+        "type": "checkout.session.completed",
+        "created": 1700000000,
+        "data": {
+          "object": {
+            "id": "cs_replay_success",
+            "payment_intent": "pi_replay_success",
+            "amount_total": 2000,
+            "currency": "usd",
+            "payment_status": "paid",
+            "metadata": {
+              "operationId": "ipo_replay_success",
+              "providerIdempotencyKey": "pik_replay_success",
+              "subjectUserId": "user_replay"
+            }
+          }
+        }
+      },
+      "expectedNormalized": {
+        "providerKind": "stripe",
+        "providerPaymentReference": "pi_replay_success",
+        "providerSessionReference": "cs_replay_success",
+        "providerEventId": "evt_replay_success",
+        "providerEventType": "checkout.session.completed",
+        "amount": 2000,
+        "currency": "USD",
+        "status": "succeeded",
+        "refundOrReversalOrChargeback": "none",
+        "metadataOperationId": "ipo_replay_success",
+        "metadataProviderIdempotencyKey": "pik_replay_success",
+        "metadataSubjectUserId": "user_replay"
+      },
+      "rawPayloadChecksum": "4cef3ecb56310d7fdd0741ad74c55d9f90554d2f12f91f8a2d66da3c6da29021",
+      "normalizedPayloadChecksum": "7ba04674c3a19e4be8fd3102f5882305197de44c4f31ae5df035c4a52dab68fc",
+      "redactionProof": "sanitized_redacted_payload_only",
+      "secretLikeValuesFound": false
+    },
+    {
+      "providerKind": "stripe",
+      "sampleKind": "replay_fixture",
+      "capturedAt": "2026-07-09T00:00:00.000Z",
+      "requestId": "req_duplicate",
+      "providerPaymentReference": "pi_replay_success",
+      "providerSessionReference": "cs_replay_success",
+      "providerEventId": "evt_replay_success",
+      "eventType": "checkout.session.completed",
+      "amount": 2000,
+      "currency": "USD",
+      "status": "succeeded",
+      "rawPayload": {
+        "id": "evt_replay_success",
+        "type": "checkout.session.completed",
+        "created": 1700000000,
+        "data": {
+          "object": {
+            "id": "cs_replay_success",
+            "payment_intent": "pi_replay_success",
+            "amount_total": 2000,
+            "currency": "usd",
+            "payment_status": "paid",
+            "metadata": {
+              "operationId": "ipo_replay_success",
+              "providerIdempotencyKey": "pik_replay_success",
+              "subjectUserId": "user_replay"
+            }
+          }
+        }
+      },
+      "expectedNormalized": {
+        "providerKind": "stripe",
+        "providerPaymentReference": "pi_replay_success",
+        "providerSessionReference": "cs_replay_success",
+        "providerEventId": "evt_replay_success",
+        "providerEventType": "checkout.session.completed",
+        "amount": 2000,
+        "currency": "USD",
+        "status": "succeeded",
+        "refundOrReversalOrChargeback": "none",
+        "metadataOperationId": "ipo_replay_success",
+        "metadataProviderIdempotencyKey": "pik_replay_success",
+        "metadataSubjectUserId": "user_replay"
+      },
+      "rawPayloadChecksum": "4cef3ecb56310d7fdd0741ad74c55d9f90554d2f12f91f8a2d66da3c6da29021",
+      "normalizedPayloadChecksum": "71e163fb0aee0ee4318605c1b14e2fe74dba7875888649d6aaf33455c267330d",
+      "redactionProof": "sanitized_redacted_payload_only",
+      "secretLikeValuesFound": false
+    },
+    {
+      "providerKind": "stripe",
+      "sampleKind": "replay_fixture",
+      "capturedAt": "2026-07-09T00:00:00.000Z",
+      "requestId": "req_unpaid",
+      "providerPaymentReference": "pi_replay_unpaid",
+      "providerSessionReference": "cs_replay_unpaid",
+      "providerEventId": "evt_replay_unpaid",
+      "eventType": "checkout.session.completed",
+      "amount": 2000,
+      "currency": "USD",
+      "status": "processing",
+      "rawPayload": {
+        "id": "evt_replay_unpaid",
+        "type": "checkout.session.completed",
+        "created": 1700000001,
+        "data": {
+          "object": {
+            "id": "cs_replay_unpaid",
+            "payment_intent": "pi_replay_unpaid",
+            "amount_total": 2000,
+            "currency": "usd",
+            "payment_status": "unpaid",
+            "metadata": {
+              "operationId": "ipo_replay_unpaid",
+              "providerIdempotencyKey": "pik_replay_unpaid",
+              "subjectUserId": "user_replay"
+            }
+          }
+        }
+      },
+      "expectedNormalized": {
+        "providerKind": "stripe",
+        "providerPaymentReference": "pi_replay_unpaid",
+        "providerSessionReference": "cs_replay_unpaid",
+        "providerEventId": "evt_replay_unpaid",
+        "providerEventType": "checkout.session.completed",
+        "amount": 2000,
+        "currency": "USD",
+        "status": "processing",
+        "refundOrReversalOrChargeback": "none",
+        "metadataOperationId": "ipo_replay_unpaid",
+        "metadataProviderIdempotencyKey": "pik_replay_unpaid",
+        "metadataSubjectUserId": "user_replay"
+      },
+      "rawPayloadChecksum": "08d8b8b0bde48ebdf7fa12eec5ea539e538ae4c30049c4b4856e5df1fcc58bb8",
+      "normalizedPayloadChecksum": "652901562bdee953d1b3dd4d3495dbdc7d0222161e7d9aae2ad989e86a2255ed",
+      "redactionProof": "sanitized_redacted_payload_only",
+      "secretLikeValuesFound": false
+    },
+    {
+      "providerKind": "stripe",
+      "sampleKind": "replay_fixture",
+      "capturedAt": "2026-07-09T00:00:00.000Z",
+      "requestId": "req_async_success",
+      "providerPaymentReference": "pi_replay_async",
+      "providerSessionReference": "cs_replay_async",
+      "providerEventId": "evt_replay_async_success",
+      "eventType": "checkout.session.async_payment_succeeded",
+      "amount": 2000,
+      "currency": "USD",
+      "status": "succeeded",
+      "rawPayload": {
+        "id": "evt_replay_async_success",
+        "type": "checkout.session.async_payment_succeeded",
+        "created": 1700000002,
+        "data": {
+          "object": {
+            "id": "cs_replay_async",
+            "payment_intent": "pi_replay_async",
+            "amount_total": 2000,
+            "currency": "usd",
+            "payment_status": "paid",
+            "metadata": {
+              "operationId": "ipo_replay_async",
+              "providerIdempotencyKey": "pik_replay_async",
+              "subjectUserId": "user_replay"
+            }
+          }
+        }
+      },
+      "expectedNormalized": {
+        "providerKind": "stripe",
+        "providerPaymentReference": "pi_replay_async",
+        "providerSessionReference": "cs_replay_async",
+        "providerEventId": "evt_replay_async_success",
+        "providerEventType": "checkout.session.async_payment_succeeded",
+        "amount": 2000,
+        "currency": "USD",
+        "status": "succeeded",
+        "refundOrReversalOrChargeback": "none",
+        "metadataOperationId": "ipo_replay_async",
+        "metadataProviderIdempotencyKey": "pik_replay_async",
+        "metadataSubjectUserId": "user_replay"
+      },
+      "rawPayloadChecksum": "4dfa42ad98f71c3a1dd0da60a5080b081258f071920f20f9847d83c99336f2eb",
+      "normalizedPayloadChecksum": "b1caddb0adf6d1f02a7ea31f3bd3faa00e6ff458e2adac44b2547095dfb61bbf",
+      "redactionProof": "sanitized_redacted_payload_only",
+      "secretLikeValuesFound": false
+    },
+    {
+      "providerKind": "stripe",
+      "sampleKind": "replay_fixture",
+      "capturedAt": "2026-07-09T00:00:00.000Z",
+      "requestId": "req_async_failed",
+      "providerPaymentReference": "pi_replay_async_failed",
+      "providerSessionReference": "cs_replay_async_failed",
+      "providerEventId": "evt_replay_async_failed",
+      "eventType": "checkout.session.async_payment_failed",
+      "amount": 2000,
+      "currency": "USD",
+      "status": "failed",
+      "rawPayload": {
+        "id": "evt_replay_async_failed",
+        "type": "checkout.session.async_payment_failed",
+        "created": 1700000003,
+        "data": {
+          "object": {
+            "id": "cs_replay_async_failed",
+            "payment_intent": "pi_replay_async_failed",
+            "amount_total": 2000,
+            "currency": "usd",
+            "payment_status": "unpaid",
+            "metadata": {
+              "operationId": "ipo_replay_async_failed",
+              "providerIdempotencyKey": "pik_replay_async_failed",
+              "subjectUserId": "user_replay"
+            }
+          }
+        }
+      },
+      "expectedNormalized": {
+        "providerKind": "stripe",
+        "providerPaymentReference": "pi_replay_async_failed",
+        "providerSessionReference": "cs_replay_async_failed",
+        "providerEventId": "evt_replay_async_failed",
+        "providerEventType": "checkout.session.async_payment_failed",
+        "amount": 2000,
+        "currency": "USD",
+        "status": "failed",
+        "refundOrReversalOrChargeback": "none",
+        "metadataOperationId": "ipo_replay_async_failed",
+        "metadataProviderIdempotencyKey": "pik_replay_async_failed",
+        "metadataSubjectUserId": "user_replay"
+      },
+      "rawPayloadChecksum": "be821f021e78c1e76715d45e793ba03c0b2657cd44781b9ef443e9ad48efeec1",
+      "normalizedPayloadChecksum": "d28800160328d1091d74146e57688e4f687e3330ea5a26b543f71ed29ac664da",
+      "redactionProof": "sanitized_redacted_payload_only",
+      "secretLikeValuesFound": false
+    },
+    {
+      "providerKind": "stripe",
+      "sampleKind": "replay_fixture",
+      "capturedAt": "2026-07-09T00:00:00.000Z",
+      "requestId": "req_pi_success",
+      "providerPaymentReference": "pi_replay_direct_success",
+      "providerSessionReference": null,
+      "providerEventId": "evt_replay_pi_success",
+      "eventType": "payment_intent.succeeded",
+      "amount": 2000,
+      "currency": "USD",
+      "status": "succeeded",
+      "rawPayload": {
+        "id": "evt_replay_pi_success",
+        "type": "payment_intent.succeeded",
+        "created": 1700000004,
+        "data": {
+          "object": {
+            "id": "pi_replay_direct_success",
+            "amount": 2000,
+            "currency": "usd",
+            "status": "succeeded",
+            "metadata": {
+              "operationId": "ipo_replay_pi_success",
+              "providerIdempotencyKey": "pik_replay_pi_success",
+              "subjectUserId": "user_replay"
+            }
+          }
+        }
+      },
+      "expectedNormalized": {
+        "providerKind": "stripe",
+        "providerPaymentReference": "pi_replay_direct_success",
+        "providerSessionReference": null,
+        "providerEventId": "evt_replay_pi_success",
+        "providerEventType": "payment_intent.succeeded",
+        "amount": 2000,
+        "currency": "USD",
+        "status": "succeeded",
+        "refundOrReversalOrChargeback": "none",
+        "metadataOperationId": "ipo_replay_pi_success",
+        "metadataProviderIdempotencyKey": "pik_replay_pi_success",
+        "metadataSubjectUserId": "user_replay"
+      },
+      "rawPayloadChecksum": "288bb4bfd773b35e269d1aeb14898e7656e5028e6391a3ea8a1ea40b5cdb90a5",
+      "normalizedPayloadChecksum": "f5f118b65ae9c5d4e2db4aed391fda8398f3700311bd01910ceec12c3542979d",
+      "redactionProof": "sanitized_redacted_payload_only",
+      "secretLikeValuesFound": false
+    },
+    {
+      "providerKind": "stripe",
+      "sampleKind": "replay_fixture",
+      "capturedAt": "2026-07-09T00:00:00.000Z",
+      "requestId": "req_pi_failed",
+      "providerPaymentReference": "pi_replay_direct_failed",
+      "providerSessionReference": null,
+      "providerEventId": "evt_replay_pi_failed",
+      "eventType": "payment_intent.payment_failed",
+      "amount": 2000,
+      "currency": "USD",
+      "status": "failed",
+      "rawPayload": {
+        "id": "evt_replay_pi_failed",
+        "type": "payment_intent.payment_failed",
+        "created": 1700000005,
+        "data": {
+          "object": {
+            "id": "pi_replay_direct_failed",
+            "amount": 2000,
+            "currency": "usd",
+            "status": "failed",
+            "metadata": {
+              "operationId": "ipo_replay_pi_failed",
+              "providerIdempotencyKey": "pik_replay_pi_failed",
+              "subjectUserId": "user_replay"
+            }
+          }
+        }
+      },
+      "expectedNormalized": {
+        "providerKind": "stripe",
+        "providerPaymentReference": "pi_replay_direct_failed",
+        "providerSessionReference": null,
+        "providerEventId": "evt_replay_pi_failed",
+        "providerEventType": "payment_intent.payment_failed",
+        "amount": 2000,
+        "currency": "USD",
+        "status": "failed",
+        "refundOrReversalOrChargeback": "none",
+        "metadataOperationId": "ipo_replay_pi_failed",
+        "metadataProviderIdempotencyKey": "pik_replay_pi_failed",
+        "metadataSubjectUserId": "user_replay"
+      },
+      "rawPayloadChecksum": "627543cbbe28ca29ba64e06ec2149bc4a53145aea0785462238bc0c9462e61f2",
+      "normalizedPayloadChecksum": "904b6beffb7cf3c9c5fdfb2c7ce66de5d06a156ae90be1a79a8ea2ef3ef7b375",
+      "redactionProof": "sanitized_redacted_payload_only",
+      "secretLikeValuesFound": false
+    },
+    {
+      "providerKind": "stripe",
+      "sampleKind": "replay_fixture",
+      "capturedAt": "2026-07-09T00:00:00.000Z",
+      "requestId": "req_refund",
+      "providerPaymentReference": "pi_replay_success",
+      "providerSessionReference": null,
+      "providerEventId": "evt_replay_refund",
+      "eventType": "charge.refunded",
+      "amount": 2000,
+      "currency": "USD",
+      "status": "refunded",
+      "rawPayload": {
+        "id": "evt_replay_refund",
+        "type": "charge.refunded",
+        "created": 1700000006,
+        "data": {
+          "object": {
+            "id": "ch_replay_refund",
+            "payment_intent": "pi_replay_success",
+            "amount": 2000,
+            "currency": "usd",
+            "status": "succeeded",
+            "metadata": {
+              "operationId": "ipo_replay_success",
+              "providerIdempotencyKey": "pik_replay_success",
+              "subjectUserId": "user_replay"
+            }
+          }
+        }
+      },
+      "expectedNormalized": {
+        "providerKind": "stripe",
+        "providerPaymentReference": "pi_replay_success",
+        "providerSessionReference": null,
+        "providerEventId": "evt_replay_refund",
+        "providerEventType": "charge.refunded",
+        "amount": 2000,
+        "currency": "USD",
+        "status": "refunded",
+        "refundOrReversalOrChargeback": "refund",
+        "metadataOperationId": "ipo_replay_success",
+        "metadataProviderIdempotencyKey": "pik_replay_success",
+        "metadataSubjectUserId": "user_replay"
+      },
+      "rawPayloadChecksum": "8f207d5e7d0385ed7542e67a03d47901ec2e5e576a3197f90705bc4bcffc0c5a",
+      "normalizedPayloadChecksum": "74bb391ea886cfc1d834b5af4d18b97802b0bacf4ae1f8ef713434d226c8da81",
+      "redactionProof": "sanitized_redacted_payload_only",
+      "secretLikeValuesFound": false
+    },
+    {
+      "providerKind": "stripe",
+      "sampleKind": "replay_fixture",
+      "capturedAt": "2026-07-09T00:00:00.000Z",
+      "requestId": "req_partial_refund",
+      "providerPaymentReference": "pi_replay_partial",
+      "providerSessionReference": null,
+      "providerEventId": "evt_replay_partial_refund",
+      "eventType": "charge.refund.updated",
+      "amount": 700,
+      "currency": "USD",
+      "status": "partially_refunded",
+      "rawPayload": {
+        "id": "evt_replay_partial_refund",
+        "type": "charge.refund.updated",
+        "created": 1700000007,
+        "data": {
+          "object": {
+            "id": "re_replay_partial",
+            "payment_intent": "pi_replay_partial",
+            "amount": 700,
+            "currency": "usd",
+            "status": "partial",
+            "metadata": {
+              "operationId": "ipo_replay_partial",
+              "providerIdempotencyKey": "pik_replay_partial",
+              "subjectUserId": "user_replay"
+            }
+          }
+        }
+      },
+      "expectedNormalized": {
+        "providerKind": "stripe",
+        "providerPaymentReference": "pi_replay_partial",
+        "providerSessionReference": null,
+        "providerEventId": "evt_replay_partial_refund",
+        "providerEventType": "charge.refund.updated",
+        "amount": 700,
+        "currency": "USD",
+        "status": "partially_refunded",
+        "refundOrReversalOrChargeback": "partial_refund",
+        "metadataOperationId": "ipo_replay_partial",
+        "metadataProviderIdempotencyKey": "pik_replay_partial",
+        "metadataSubjectUserId": "user_replay"
+      },
+      "rawPayloadChecksum": "af0a286b5512e573aa3679062ae9ce85b29c92e4b30b4b38dcc155c7cbcf292c",
+      "normalizedPayloadChecksum": "47af0dc158ec6dc73c2f84536108133454a0c85267a9dcdbd744abe79c66b5b8",
+      "redactionProof": "sanitized_redacted_payload_only",
+      "secretLikeValuesFound": false
+    },
+    {
+      "providerKind": "stripe",
+      "sampleKind": "replay_fixture",
+      "capturedAt": "2026-07-09T00:00:00.000Z",
+      "requestId": "req_reversal",
+      "providerPaymentReference": "pi_replay_reversal",
+      "providerSessionReference": null,
+      "providerEventId": "evt_replay_reversal",
+      "eventType": "charge.dispute.funds_reinstated",
+      "amount": 2000,
+      "currency": "USD",
+      "status": "reversed",
+      "rawPayload": {
+        "id": "evt_replay_reversal",
+        "type": "charge.dispute.funds_reinstated",
+        "created": 1700000008,
+        "data": {
+          "object": {
+            "id": "dp_replay_reversal",
+            "payment_intent": "pi_replay_reversal",
+            "amount": 2000,
+            "currency": "usd",
+            "status": "won",
+            "metadata": {
+              "operationId": "ipo_replay_reversal",
+              "providerIdempotencyKey": "pik_replay_reversal",
+              "subjectUserId": "user_replay"
+            }
+          }
+        }
+      },
+      "expectedNormalized": {
+        "providerKind": "stripe",
+        "providerPaymentReference": "pi_replay_reversal",
+        "providerSessionReference": null,
+        "providerEventId": "evt_replay_reversal",
+        "providerEventType": "charge.dispute.funds_reinstated",
+        "amount": 2000,
+        "currency": "USD",
+        "status": "reversed",
+        "refundOrReversalOrChargeback": "reversal",
+        "metadataOperationId": "ipo_replay_reversal",
+        "metadataProviderIdempotencyKey": "pik_replay_reversal",
+        "metadataSubjectUserId": "user_replay"
+      },
+      "rawPayloadChecksum": "6043b8edd28d62149f231eaa5df0b4f62e93260b0a5ddcb56b48688572cb7981",
+      "normalizedPayloadChecksum": "a43e95f70d267fdc5f622df1fa4c739cadbcbe0c0a97a6397d0c650a5c32a4e2",
+      "redactionProof": "sanitized_redacted_payload_only",
+      "secretLikeValuesFound": false
+    },
+    {
+      "providerKind": "stripe",
+      "sampleKind": "replay_fixture",
+      "capturedAt": "2026-07-09T00:00:00.000Z",
+      "requestId": "req_chargeback",
+      "providerPaymentReference": "pi_replay_chargeback",
+      "providerSessionReference": null,
+      "providerEventId": "evt_replay_chargeback",
+      "eventType": "charge.dispute.created",
+      "amount": 2000,
+      "currency": "USD",
+      "status": "chargeback",
+      "rawPayload": {
+        "id": "evt_replay_chargeback",
+        "type": "charge.dispute.created",
+        "created": 1700000009,
+        "data": {
+          "object": {
+            "id": "dp_replay_chargeback",
+            "payment_intent": "pi_replay_chargeback",
+            "amount": 2000,
+            "currency": "usd",
+            "status": "needs_response",
+            "metadata": {
+              "operationId": "ipo_replay_chargeback",
+              "providerIdempotencyKey": "pik_replay_chargeback",
+              "subjectUserId": "user_replay"
+            }
+          }
+        }
+      },
+      "expectedNormalized": {
+        "providerKind": "stripe",
+        "providerPaymentReference": "pi_replay_chargeback",
+        "providerSessionReference": null,
+        "providerEventId": "evt_replay_chargeback",
+        "providerEventType": "charge.dispute.created",
+        "amount": 2000,
+        "currency": "USD",
+        "status": "chargeback",
+        "refundOrReversalOrChargeback": "chargeback",
+        "metadataOperationId": "ipo_replay_chargeback",
+        "metadataProviderIdempotencyKey": "pik_replay_chargeback",
+        "metadataSubjectUserId": "user_replay"
+      },
+      "rawPayloadChecksum": "96253cca0e40aa1250c1550fa0f1ee09617da4a0cf4765179d3bde96ddf9fe0f",
+      "normalizedPayloadChecksum": "d8d9a708befc66a35a18e48250fc76215745fe178b14db96731267f11d884a1f",
+      "redactionProof": "sanitized_redacted_payload_only",
+      "secretLikeValuesFound": false
+    }
   ]
 }

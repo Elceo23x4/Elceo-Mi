@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { internalPaymentRuntime, type FakeProviderOutcome } from '@elceo/application-state';
+import { StripeSandboxPaymentProviderAdapter, internalPaymentRuntime, normalizeProviderError, type FakeProviderOutcome } from '@elceo/application-state';
 import { requireAppUserState } from '../../../../lib/auth/session';
 import { guardRoutePaymentReadiness } from '../../../../lib/server/access/route-entitlement';
 import { captureError } from '../../../../lib/monitoring';
@@ -26,9 +26,32 @@ export async function POST(request: Request) {
     const businessIdempotencyKey = body.idempotencyKey || request.headers.get('idempotency-key') || `checkout:${session.user.id}:focus_plan:${interval}`;
     const fakeOutcomesEnabled = process.env.ELCEO_PAYMENT_FAKE_OUTCOMES_ENABLED === '1';
     if (body.fakeProviderOutcome && !fakeOutcomesEnabled) return NextResponse.json({ ok: false, error: 'fake_provider_outcome_disabled', liveActivation: 'blocked' }, { status: 400, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
+    const providerMode = process.env.PAYMENT_PROVIDER_MODE ?? process.env.ELCEO_PAYMENT_PROVIDER_MODE;
+    if (providerMode === 'sandbox_provider') {
+      if (process.env.ELCEO_PAYMENT_SANDBOX_SMOKE !== '1') throw new Error('sandbox_checkout_requires_explicit_smoke_context');
+      const repo = internalPaymentRuntime.repository;
+      const created = await repo.createOrReuseOperation({ subjectUserId: session.user.id, targetPlan: 'focus_plan', amount: amountFor(interval), currency: 'USD', businessIdempotencyKey, provider: 'stripe' });
+      let operation = created.operation;
+      let checkoutUrl: string | null = null;
+      if (!created.reused && !operation.providerCheckoutSessionReference && !operation.providerPaymentReference) {
+        try {
+          const adapter = new StripeSandboxPaymentProviderAdapter();
+          const origin = new URL(request.url).origin;
+          const provider = await adapter.createCheckoutOrPaymentSession({ subjectUserId: session.user.id, targetPlan: 'focus_plan', amount: operation.amount, currency: operation.currency, providerIdempotencyKey: operation.providerIdempotencyKey, operationId: operation.internalPaymentOperationId, successUrl: `${origin}/settings?billing=sandbox_success`, cancelUrl: `${origin}/settings?billing=sandbox_cancel` });
+          checkoutUrl = provider.checkoutUrl;
+          operation = await repo.recordProviderAccepted(operation.internalPaymentOperationId, provider.providerPaymentReference ?? provider.providerSessionReference ?? operation.providerIdempotencyKey, provider.providerSessionReference ?? provider.providerPaymentReference ?? operation.providerIdempotencyKey);
+          operation = await repo.transition(operation.internalPaymentOperationId, operation.version, 'processing', { lastProviderComparisonSnapshot: { providerKind: provider.providerKind, providerRequestId: provider.providerRequestId, providerPaymentReference: provider.providerPaymentReference, providerSessionReference: provider.providerSessionReference, safeRedactedPayloadChecksum: provider.safeRedactedPayloadChecksum } }, 'sandbox provider accepted');
+        } catch (providerError) {
+          const normalized = normalizeProviderError(providerError);
+          operation = await repo.transition(operation.internalPaymentOperationId, operation.version, normalized.acceptedByProvider ? 'reconciliation_required' : normalized.unknownOutcome ? 'unknown' : 'failed', { safeErrorCategory: normalized.safeErrorCategory, reconciliationState: normalized.unknownOutcome || normalized.acceptedByProvider ? 'required' : operation.reconciliationState, lastProviderComparisonSnapshot: { providerKind: normalized.providerKind, providerRequestId: normalized.providerRequestId, retryable: normalized.retryable, unknownOutcome: normalized.unknownOutcome, acceptedByProvider: normalized.acceptedByProvider } }, 'sandbox provider error');
+        }
+      }
+      logRequest('api.billing.checkout', requestId, 'RC-I2 sandbox checkout operation recorded', { userId: session.user.id, state: operation.state, reused: created.reused });
+      return NextResponse.json({ ok: true, liveActivation: 'blocked', sandboxOnly: true, productionLive: false, providerMode, reused: created.reused, checkoutUrl, operation }, { status: 202, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
+    }
     const result = await internalPaymentRuntime.checkout({ subjectUserId: session.user.id, targetPlan: 'focus_plan', amount: amountFor(interval), currency: 'USD', businessIdempotencyKey, outcome: fakeOutcomesEnabled ? body.fakeProviderOutcome : undefined });
     logRequest('api.billing.checkout', requestId, 'RC-I1 local checkout operation recorded', { userId: session.user.id, state: result.operation.state, reused: result.reused });
-    return NextResponse.json({ ok: true, liveActivation: 'blocked', sandboxOnly: process.env.ELCEO_PAYMENT_SANDBOX_SMOKE === '1' && result.providerMode === 'sandbox_provider', productionLive: false, providerMode: result.providerMode, reused: result.reused, operation: result.operation }, { status: 202, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
+    return NextResponse.json({ ok: true, liveActivation: 'blocked', sandboxOnly: false, productionLive: false, providerMode: result.providerMode, reused: result.reused, operation: result.operation }, { status: 202, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
   } catch (error) {
     captureError('api.billing.checkout', error, { requestId });
     if (error && typeof error === 'object' && (error as { code?: unknown }).code === 'commercial_persistence_unavailable') return NextResponse.json({ ok: false, error: { code: 'service_unavailable', message: 'Commercial persistence unavailable', details: ['commercial_persistence_unavailable'] } }, { status: 503, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });

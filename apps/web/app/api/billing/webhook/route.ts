@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       const rawBody = await request.text();
       const normalized = parseStripeWebhookEvent(rawBody, request.headers.get('stripe-signature'), process.env.STRIPE_WEBHOOK_SECRET ?? process.env.PAYMENT_PROVIDER_WEBHOOK_SECRET ?? '');
       const kind = normalized.refundOrReversalOrChargeback === 'refund' ? 'refund' : normalized.refundOrReversalOrChargeback === 'partial_refund' ? 'partial_refund' : normalized.refundOrReversalOrChargeback === 'reversal' ? 'reversal' : normalized.refundOrReversalOrChargeback === 'chargeback' ? 'chargeback' : normalized.status === 'succeeded' ? 'success' : normalized.status === 'failed' ? 'provider_500_before_accepting' : 'unknown_result';
-      body = { eventId: normalized.providerEventId ?? normalized.safeRedactedPayloadChecksum, kind, providerPaymentReference: normalized.providerPaymentReference, providerCheckoutSessionReference: normalized.providerSessionReference, payload: { normalized } };
+      body = { eventId: normalized.providerEventId ?? normalized.safeRedactedPayloadChecksum, kind, operationId: normalized.metadataOperationId ?? undefined, providerPaymentReference: normalized.providerPaymentReference, providerCheckoutSessionReference: normalized.providerSessionReference, payload: { normalized, orphaned: !normalized.metadataOperationId && !normalized.providerPaymentReference && !normalized.providerSessionReference && !normalized.metadataProviderIdempotencyKey } };
     } else {
       if (process.env.ELCEO_PAYMENT_LOCAL_WEBHOOK_REPLAY !== '1') throw new Error('local_webhook_replay_disabled_not_live_provider_verification');
       const configuredSignature = process.env.ELCEO_PAYMENT_LOCAL_WEBHOOK_SECRET;

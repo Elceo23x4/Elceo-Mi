@@ -398,8 +398,8 @@ RC-H replay smoke validates captured payload metadata, pagination cursor fields,
 
 ## RC-I2 payment provider sandbox validation
 - RC-I1 local correctness is sealed: one genuine customer payment intention may create at most one provider charge and exactly one local billing, ledger, and entitlement effect.
-- RC-I2 validates provider sandbox behavior against the discovered canonical Stripe-compatible provider contract while production-live payment activation remains blocked.
-- Real sandbox completion requires `ELCEO_PAYMENT_SANDBOX_SMOKE=1`, `PAYMENT_PROVIDER_KIND=stripe`, Stripe test public/secret credentials, a Stripe test webhook secret, `APP_STATE_REPOSITORY=sql`, and `DATABASE_URL`; replay tests are not equivalent to provider sandbox validation.
+- RC-I2 foundation validates Stripe-compatible provider normalization/replay behavior, and RC-I2 remains incomplete until real Stripe sandbox smoke has run with credentials; production-live payment activation remains blocked.
+- Real sandbox end-to-end completion requires `ELCEO_PAYMENT_SANDBOX_SMOKE=1`, `PAYMENT_PROVIDER_KIND=stripe`, Stripe test public/secret credentials, a Stripe test webhook secret, `APP_STATE_REPOSITORY=sql`, and `DATABASE_URL`; replay smoke is not equivalent to sandbox provider validation.
 - Provider modes are explicit: disabled, local_fake_provider, replay_provider_event, sandbox_provider, and production_provider_blocked.
 - Webhook sandbox processing verifies the raw Stripe signature before trusting the body; local fixed replay literals are not accepted in sandbox_provider mode.
 - Reconciliation inspects unknown/reconciliation_required operations with the existing provider idempotency key/reference and never creates a new provider charge.

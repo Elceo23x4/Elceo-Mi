@@ -379,3 +379,13 @@ Validation states are distinguished as follows:
 - **provider blocked**: descriptor-only, placeholder, or later-batch execution.
 
 RC-H replay smoke validates captured payload metadata, pagination cursor fields, nullable/unknown-field policy, duplicate/revision/backfill markers, provider error bodies, rate-limit bodies, and secret redaction proof. Staging smoke refuses to run unless explicitly enabled and never prints secrets. No public production claims, entitlement policy, payment activation, notification sends, formulas, golden scenarios, migrations, or C6 phase numbering are changed by this batch.
+
+## RC-I1 local payment correctness and resilience
+- RC-I1 implements local payment correctness only for F-016 local portions.
+- Production-live payment activation remains blocked; default runtime uses disabled/local fake/replay boundaries and no real provider credential usage.
+- Real provider sandbox behavior remains RC-I2.
+- Notifications remain RC-I3.
+- Referral/affiliate implementation remains later.
+- Unknown and reconciliation_required are safe states that preserve the original provider idempotency key and do not create a second provider charge.
+- Duplicate charge prevention is enforced locally by business-idempotency and provider-idempotency uniqueness.
+- Exactly-once entitlement and immutable ledger effects are enforced locally by operation/effect keys.

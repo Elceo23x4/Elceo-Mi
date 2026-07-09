@@ -1,6 +1,6 @@
 # Post-R9 Cleanup Execution Plan
 
-This plan is derived from proven and strongly indicated findings in `docs/post-r9-repository-closure-audit.md`. It does not define a new C6-R phase, C6-R9H, C6-R10, or any postponed intelligence feature.
+This plan is derived from proven and strongly indicated findings in `docs/post-r9-repository-closure-audit.md`. It does not define a new C6-R phase, C6-R9H, C6-R10, or any Intelligence Feature Program item.
 
 ## Blocker-scope rule for this plan
 
@@ -210,7 +210,7 @@ Required architecture: durable payment operations must include immutable interna
 3. Findings closed: remaining documentation-only and environment-verification entries once evidence exists.
 4. Dependencies: RC-A, RC-B1, RC-B2, RC-C, RC-D, RC-E, RC-F, RC-G, RC-H, RC-I1, RC-I2, RC-I3, and RC-J complete.
 5. Exact likely files: `docs/backend-open-loop-register.md`, `docs/final-production-status-report.md`, `docs/production-readiness-checklist.md`, `docs/final-backend-foundation-readiness-review.md`, `docs/backend-foundation-completion-map.md`, `docs/route-entitlement-enforcement-map.md`, `docs/provider-live-activation-readiness.md`, `docs/deployment-runbook.md`, `docs/observability-security-final-review-checklist.md`.
-6. Prohibited scope: no runtime implementation, no new C6-R phase, no postponed intelligence features.
+6. Prohibited scope: no runtime implementation, no new C6-R phase, no Intelligence Feature Program items.
 7. Required tests: full validation suite and documentation consistency checks.
 8. Validation commands: `npm install`, `npm run typecheck`, `npm run test`, `npm run build`, `npm run -w @elceo/reasoning lint`, `npm run -w apps/web lint`, `npm run check:migrations`, `npm run check:c5-readiness`, `npm run check:infra-security`, `npm run security:gate`, `npm run release:gate`, `git diff --check`.
 9. Merge blockers: any production claim without code/runtime/environment evidence.
@@ -220,7 +220,7 @@ Required architecture: durable payment operations must include immutable interna
 
 ## Final roadmap order guardrails
 
-- The seven postponed intelligence features remain deferred until repository cleanup and full closure are complete: Expectation-Reality Delta Engine, Historical Market Memory / Analog Engine, Contradiction-to-Action Protocol, Market Cleanliness Ranking, News Half-Life / Narrative Decay, Crowd Pain / Positioning Stress Map, and Fragility Score.
+- The seven Intelligence Feature Program items remain mandatory pre-launch dependency work until repository cleanup and full closure are complete: Expectation-Reality Delta Engine, Historical Market Memory / Analog Engine, Contradiction-to-Action Protocol, Market Cleanliness Ranking, News Half-Life / Narrative Decay, Crowd Pain / Positioning Stress Map, and Fragility Score.
 - The referral/affiliate system remains the final major commercial product implementation after billing correctness, entitlement durability, provider/API Gate closure, analytics, anti-abuse, audit, and legal rules.
 - This audit/plan PR does not implement referrals, payment activation, notification activation, provider activation, C6-R9H, C6-R10, or any new reasoning phase.
 
@@ -282,7 +282,7 @@ Validation states are distinguished as follows:
 - **credentials unavailable**: provider has an official/live-style adapter contract but cannot be claimed live validated without environment credentials.
 - **provider manually reviewed**: manual/download provider requires human source review before live claims.
 - **provider live validated**: reserved for future batches after real staging credentials and official payload contracts pass.
-- **provider blocked**: descriptor-only, placeholder, or later-batch execution.
+- **provider blocked**: descriptor-only, placeholder, or mandatory subsequent launch batch execution.
 
 RC-H replay smoke validates captured payload metadata, pagination cursor fields, nullable/unknown-field policy, duplicate/revision/backfill markers, provider error bodies, rate-limit bodies, and secret redaction proof. Staging smoke refuses to run unless explicitly enabled and never prints secrets. No public production claims, entitlement policy, payment activation, notification sends, formulas, golden scenarios, migrations, or C6 phase numbering are changed by this batch.
 
@@ -291,7 +291,7 @@ RC-H replay smoke validates captured payload metadata, pagination cursor fields,
 - Production-live payment activation remains blocked; default runtime uses disabled/local fake/replay boundaries and no real provider credential usage.
 - Real provider sandbox behavior remains RC-I2.
 - Notifications remain RC-I3.
-- Referral/affiliate implementation remains later.
+- Referral/affiliate implementation remains a mandatory subsequent launch batch.
 - Unknown and reconciliation_required are safe states that preserve the original provider idempotency key and do not create a second provider charge.
 - Duplicate charge prevention is enforced locally by business-idempotency and provider-idempotency uniqueness.
 - Exactly-once entitlement and immutable ledger effects are enforced locally by operation/effect keys.
@@ -300,4 +300,14 @@ RC-H replay smoke validates captured payload metadata, pagination cursor fields,
 - SQL-backed durable local payment correctness is used only when `APP_STATE_REPOSITORY=sql` and `DATABASE_URL` are configured.
 - Memory payment correctness storage is local/test fallback only and is not production durability.
 - Local fake/replay provider outcomes remain test-safe boundaries; production-live payment activation remains blocked.
-- Real provider sandbox validation remains RC-I2, notification delivery remains RC-I3, and referral/affiliate work remains later.
+- Real provider sandbox validation remains RC-I2, notification delivery remains RC-I3, and referral/affiliate work remains a mandatory subsequent launch batch.
+
+## RC-I2 payment provider sandbox validation
+- RC-I1 local correctness is sealed: one genuine customer payment intention may create at most one provider charge and exactly one local billing, ledger, and entitlement effect.
+- RC-I2 validates provider sandbox behavior against the discovered canonical Stripe-compatible provider contract while production-live payment activation remains blocked.
+- Real sandbox completion requires `ELCEO_PAYMENT_SANDBOX_SMOKE=1`, `PAYMENT_PROVIDER_KIND=stripe`, Stripe test public/secret credentials, a Stripe test webhook secret, `APP_STATE_REPOSITORY=sql`, and `DATABASE_URL`; replay tests are not equivalent to provider sandbox validation.
+- Provider modes are explicit: disabled, local_fake_provider, replay_provider_event, sandbox_provider, and production_provider_blocked.
+- Webhook sandbox processing verifies the raw Stripe signature before trusting the body; local fixed replay literals are not accepted in sandbox_provider mode.
+- Reconciliation inspects unknown/reconciliation_required operations with the existing provider idempotency key/reference and never creates a new provider charge.
+- Notification delivery remains mandatory RC-I3; RC-J, the Intelligence Feature Program, and RC-K remain mandatory pre-launch dependency work and not in this RC-I2 scope.
+- No launch workflow item is labeled outside the approved language; remaining launch work is a mandatory subsequent launch batch or mandatory pre-launch dependency.

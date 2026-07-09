@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
 import { InternalPaymentRuntime, MemoryInternalPaymentRepository, SQLInternalPaymentRepository, createMemoryPaymentStore, type FakeProviderOutcome, type InternalPaymentRepository, type InternalPaymentOperation } from '../billing/internal-payment';
+import { parseStripeWebhookEvent, verifyStripeWebhookSignature, normalizeStripeProviderPayload, redactProviderPayload, secretLikeValuesFound, resolvePaymentProviderMode } from '../payment-providers/sandbox-adapter';
 import { __setDbPoolFactoryForTests, closeDbPool } from '../db/client';
 
 
@@ -67,6 +69,22 @@ async function runSqlTransactionIntegrityTests(): Promise<void> {
 }
 
 export async function runPaymentCorrectnessCoreTests(): Promise<void> {
+  const rawBody = JSON.stringify({ id:'evt_rc_i2_valid', type:'checkout.session.completed', created:1700000000, data:{ object:{ id:'cs_rc_i2', payment_intent:'pi_rc_i2', amount_total:2000, currency:'usd', payment_status:'paid', metadata:{ operationId:'ipo_rc_i2' } } } });
+  const signature = `t=1700000000,v1=${createHmac('sha256','whsec_rc_i2_fixture_secret').update(`1700000000.${rawBody}`).digest('hex')}`;
+  assert.throws(() => verifyStripeWebhookSignature(rawBody, null, 'whsec_rc_i2_fixture_secret'), /missing_provider_webhook_signature/, 'missing sandbox provider signature rejected');
+  assert.throws(() => verifyStripeWebhookSignature(rawBody, 't=1700000000,v1=00', 'whsec_rc_i2_fixture_secret'), /invalid_provider_webhook_signature/, 'wrong sandbox provider signature rejected');
+  assert.equal(verifyStripeWebhookSignature(rawBody, signature, 'whsec_rc_i2_fixture_secret'), true, 'valid sandbox provider signature accepted');
+  const normalizedFixture = parseStripeWebhookEvent(rawBody, signature, 'whsec_rc_i2_fixture_secret');
+  assert.equal(normalizedFixture.providerKind, 'stripe', 'canonical payment provider discovered as stripe-compatible');
+  assert.equal(normalizedFixture.providerSessionReference, 'cs_rc_i2', 'webhook event normalization carries session reference');
+  assert.equal(normalizedFixture.providerPaymentReference, 'pi_rc_i2', 'webhook event normalization carries payment reference');
+  assert.equal(normalizedFixture.status, 'succeeded', 'webhook event normalization maps success');
+  assert.equal(resolvePaymentProviderMode({ PAYMENT_PROVIDER_MODE:'production_provider' }), 'production_provider_blocked', 'production provider mode blocked');
+  const redacted = redactProviderPayload({ tokenHeader:'Bearer example_redacted_value', nested:{ hookValue:'example_redacted_hook_value' } });
+  assert.equal(secretLikeValuesFound(redacted), false, 'redacted provider payload contains no secret-like values');
+  const refund = normalizeStripeProviderPayload({ id:'evt_refund', type:'charge.refunded', data:{ object:{ id:'ch_refund', payment_intent:'pi_refund', amount:2000, currency:'usd', status:'succeeded' } } }, 'req_refund');
+  assert.equal(refund.refundOrReversalOrChargeback, 'refund', 'refund represented in normalized event');
+
   const repo = new MemoryInternalPaymentRepository(createMemoryPaymentStore());
   const rt = new InternalPaymentRuntime('local_fake_provider', repo);
   const base={subjectUserId:'user_1',targetPlan:'focus_plan',amount:2000,currency:'USD',businessIdempotencyKey:'intent_1'};

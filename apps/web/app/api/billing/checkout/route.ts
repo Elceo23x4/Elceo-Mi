@@ -22,13 +22,13 @@ export async function POST(request: Request) {
     const persisted = await getUserSocialIdentifiers(session.user.id);
     const socialIdentifiers = persisted.socialIdentifiers.length > 0 ? persisted.socialIdentifiers : snapshot.socialIdentifiers;
     const readiness = guardRoutePaymentReadiness(socialIdentifiers);
-    if (readiness.status !== 'eligible') return NextResponse.json({ error: 'payment_readiness_blocked', code: readiness.reason, subscriptionWall: { required: true, reason: 'focus_plan_required', targetPlanCode: 'focus_plan' }, liveActivation: 'blocked' }, { status: 403, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
+    if (readiness.status !== 'eligible') return NextResponse.json({ error: 'payment_readiness_blocked', code: readiness.reason, subscriptionWall: { required: true, reason: 'focus_plan_required', targetPlanCode: 'focus_plan' }, liveActivation: 'blocked', sandboxOnly: false, productionLive: false }, { status: 403, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
     const businessIdempotencyKey = body.idempotencyKey || request.headers.get('idempotency-key') || `checkout:${session.user.id}:focus_plan:${interval}`;
     const fakeOutcomesEnabled = process.env.ELCEO_PAYMENT_FAKE_OUTCOMES_ENABLED === '1';
     if (body.fakeProviderOutcome && !fakeOutcomesEnabled) return NextResponse.json({ ok: false, error: 'fake_provider_outcome_disabled', liveActivation: 'blocked' }, { status: 400, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
     const result = await internalPaymentRuntime.checkout({ subjectUserId: session.user.id, targetPlan: 'focus_plan', amount: amountFor(interval), currency: 'USD', businessIdempotencyKey, outcome: fakeOutcomesEnabled ? body.fakeProviderOutcome : undefined });
     logRequest('api.billing.checkout', requestId, 'RC-I1 local checkout operation recorded', { userId: session.user.id, state: result.operation.state, reused: result.reused });
-    return NextResponse.json({ ok: true, liveActivation: 'blocked', providerMode: result.providerMode, reused: result.reused, operation: result.operation }, { status: 202, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
+    return NextResponse.json({ ok: true, liveActivation: 'blocked', sandboxOnly: process.env.ELCEO_PAYMENT_SANDBOX_SMOKE === '1' && result.providerMode === 'sandbox_provider', productionLive: false, providerMode: result.providerMode, reused: result.reused, operation: result.operation }, { status: 202, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
   } catch (error) {
     captureError('api.billing.checkout', error, { requestId });
     if (error && typeof error === 'object' && (error as { code?: unknown }).code === 'commercial_persistence_unavailable') return NextResponse.json({ ok: false, error: { code: 'service_unavailable', message: 'Commercial persistence unavailable', details: ['commercial_persistence_unavailable'] } }, { status: 503, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });

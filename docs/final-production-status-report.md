@@ -104,7 +104,7 @@ This is **not** final production launch approval.
 - Added production step-up/2FA contract foundation: challenge creation, verification, freshness window, replay protection, rate-limit/lockout policy, and safe audit metadata.
 - Provider readiness remains blocked: totp/webauthn/authenticator_app are provider_pending; fixture_test_only is test-mode only.
 - Super Admin commercial mutation routes still require verified step-up and do not expose OTP/proof/token secrets.
-- Persistence status for step-up challenge runtime is memory_fallback; durable provider activation remains deferred.
+- Persistence status for step-up challenge runtime is memory_fallback; durable provider activation remains a mandatory pre-launch dependency.
 - No UI work, no payment/provider/notification live activation in this batch.
 
 ## C6-R0 — Market Realism Truth-Source Audit (2026-06-03)
@@ -301,7 +301,7 @@ Validation states are distinguished as follows:
 - **credentials unavailable**: provider has an official/live-style adapter contract but cannot be claimed live validated without environment credentials.
 - **provider manually reviewed**: manual/download provider requires human source review before live claims.
 - **provider live validated**: reserved for future batches after real staging credentials and official payload contracts pass.
-- **provider blocked**: descriptor-only, placeholder, or later-batch execution.
+- **provider blocked**: descriptor-only, placeholder, or mandatory subsequent launch batch execution.
 
 RC-H replay smoke validates captured payload metadata, pagination cursor fields, nullable/unknown-field policy, duplicate/revision/backfill markers, provider error bodies, rate-limit bodies, and secret redaction proof. Staging smoke refuses to run unless explicitly enabled and never prints secrets. No public production claims, entitlement policy, payment activation, notification sends, formulas, golden scenarios, migrations, or C6 phase numbering are changed by this batch.
 
@@ -310,7 +310,7 @@ RC-H replay smoke validates captured payload metadata, pagination cursor fields,
 - Production-live payment activation remains blocked; default runtime uses disabled/local fake/replay boundaries and no real provider credential usage.
 - Real provider sandbox behavior remains RC-I2.
 - Notifications remain RC-I3.
-- Referral/affiliate implementation remains later.
+- Referral/affiliate implementation remains a mandatory subsequent launch batch.
 - Unknown and reconciliation_required are safe states that preserve the original provider idempotency key and do not create a second provider charge.
 - Duplicate charge prevention is enforced locally by business-idempotency and provider-idempotency uniqueness.
 - Exactly-once entitlement and immutable ledger effects are enforced locally by operation/effect keys.
@@ -319,4 +319,14 @@ RC-H replay smoke validates captured payload metadata, pagination cursor fields,
 - SQL-backed durable local payment correctness is used only when `APP_STATE_REPOSITORY=sql` and `DATABASE_URL` are configured.
 - Memory payment correctness storage is local/test fallback only and is not production durability.
 - Local fake/replay provider outcomes remain test-safe boundaries; production-live payment activation remains blocked.
-- Real provider sandbox validation remains RC-I2, notification delivery remains RC-I3, and referral/affiliate work remains later.
+- Real provider sandbox validation remains RC-I2, notification delivery remains RC-I3, and referral/affiliate work remains a mandatory subsequent launch batch.
+
+## RC-I2 payment provider sandbox validation
+- RC-I1 local correctness is sealed: one genuine customer payment intention may create at most one provider charge and exactly one local billing, ledger, and entitlement effect.
+- RC-I2 validates provider sandbox behavior against the discovered canonical Stripe-compatible provider contract while production-live payment activation remains blocked.
+- Real sandbox completion requires `ELCEO_PAYMENT_SANDBOX_SMOKE=1`, `PAYMENT_PROVIDER_KIND=stripe`, Stripe test public/secret credentials, a Stripe test webhook secret, `APP_STATE_REPOSITORY=sql`, and `DATABASE_URL`; replay tests are not equivalent to provider sandbox validation.
+- Provider modes are explicit: disabled, local_fake_provider, replay_provider_event, sandbox_provider, and production_provider_blocked.
+- Webhook sandbox processing verifies the raw Stripe signature before trusting the body; local fixed replay literals are not accepted in sandbox_provider mode.
+- Reconciliation inspects unknown/reconciliation_required operations with the existing provider idempotency key/reference and never creates a new provider charge.
+- Notification delivery remains mandatory RC-I3; RC-J, the Intelligence Feature Program, and RC-K remain mandatory pre-launch dependency work and not in this RC-I2 scope.
+- No launch workflow item is labeled outside the approved language; remaining launch work is a mandatory subsequent launch batch or mandatory pre-launch dependency.

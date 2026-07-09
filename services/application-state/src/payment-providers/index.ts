@@ -9,3 +9,4 @@ export * from './customer-sync';
 export * from './subscription-sync';
 export * from './translator';
 export * from './ingest-service';
+export * from './sandbox-adapter';

@@ -1,5 +1,70 @@
 import assert from 'node:assert/strict';
-import { InternalPaymentRuntime, MemoryInternalPaymentRepository, createMemoryPaymentStore, type FakeProviderOutcome } from '../billing/internal-payment';
+import { InternalPaymentRuntime, MemoryInternalPaymentRepository, SQLInternalPaymentRepository, createMemoryPaymentStore, type FakeProviderOutcome, type InternalPaymentRepository, type InternalPaymentOperation } from '../billing/internal-payment';
+import { __setDbPoolFactoryForTests, closeDbPool } from '../db/client';
+
+
+class TransactionProbeRepository extends MemoryInternalPaymentRepository {
+  failLedger = false;
+  failEntitlement = false;
+  failAudit = false;
+  constructor(){ super(createMemoryPaymentStore()); }
+  async transaction<T>(fn:(repo:InternalPaymentRepository)=>Promise<T>):Promise<T>{
+    const snapshot = {
+      operations: new Map([...this.store.operations].map(([k,v]) => [k, { ...v, providerEventReferences: [...v.providerEventReferences], lastProviderComparisonSnapshot: v.lastProviderComparisonSnapshot ? { ...v.lastProviderComparisonSnapshot } : null }])),
+      byBusiness: new Map(this.store.byBusiness),
+      byProviderKey: new Map(this.store.byProviderKey),
+      byPaymentRef: new Map(this.store.byPaymentRef),
+      bySessionRef: new Map(this.store.bySessionRef),
+      inbox: new Map(this.store.inbox),
+      ledger: new Map(this.store.ledger),
+      entitlements: new Map(this.store.entitlements),
+      audit: [...this.store.audit],
+      providerCharges: new Map(this.store.providerCharges)
+    };
+    try { return await fn(this); } catch (error) { this.store.operations=snapshot.operations; this.store.byBusiness=snapshot.byBusiness; this.store.byProviderKey=snapshot.byProviderKey; this.store.byPaymentRef=snapshot.byPaymentRef; this.store.bySessionRef=snapshot.bySessionRef; this.store.inbox=snapshot.inbox; this.store.ledger=snapshot.ledger; this.store.entitlements=snapshot.entitlements; this.store.audit=snapshot.audit; this.store.providerCharges=snapshot.providerCharges; throw error; }
+  }
+  async writeLedgerOnce(op:InternalPaymentOperation,kind:'payment_success'|'refund'|'partial_refund'|'reversal'|'chargeback'){ if(this.failLedger) throw new Error('probe_ledger_failure'); return super.writeLedgerOnce(op,kind); }
+  async writeEntitlementOnce(op:InternalPaymentOperation,kind:'grant'|'refund'|'partial_refund'|'reversal'|'chargeback'){ if(this.failEntitlement) throw new Error('probe_entitlement_failure'); return super.writeEntitlementOnce(op,kind); }
+  async appendAudit(operationId:string|null,message:string,data:Record<string,unknown>){ if(this.failAudit) throw new Error('probe_audit_failure'); return super.appendAudit(operationId,message,data); }
+}
+
+async function runSqlTransactionIntegrityTests(): Promise<void> {
+  const probe = new TransactionProbeRepository();
+  const runtime = new InternalPaymentRuntime('local_fake_provider', probe);
+  const op = await runtime.checkout({ subjectUserId:'tx_user', targetPlan:'focus_plan', amount:2000, currency:'USD', businessIdempotencyKey:'tx_webhook', outcome:'accepted' });
+  probe.failEntitlement = true;
+  await assert.rejects(() => runtime.webhook({ eventId:'tx_evt_fail_entitlement', kind:'success', operationId:op.operation.internalPaymentOperationId, providerPaymentReference:op.operation.providerPaymentReference }), /probe_entitlement_failure/);
+  assert.equal((await probe.counts()).inbox, 0, 'webhook inbox rolled back when entitlement insert fails');
+  assert.equal((await probe.counts()).ledger, 0, 'webhook ledger rolled back when entitlement insert fails');
+  assert.equal((await probe.getOperation(op.operation.internalPaymentOperationId))?.state, 'processing', 'webhook state rolled back when entitlement insert fails');
+  probe.failEntitlement = false;
+  await runtime.webhook({ eventId:'tx_evt_ok', kind:'success', operationId:op.operation.internalPaymentOperationId, providerPaymentReference:op.operation.providerPaymentReference });
+  const afterSuccess = await probe.counts();
+  await runtime.webhook({ eventId:'tx_evt_ok', kind:'success', operationId:op.operation.internalPaymentOperationId, providerPaymentReference:op.operation.providerPaymentReference });
+  assert.equal((await probe.counts()).ledger, afterSuccess.ledger, 'duplicate event does not partially write ledger');
+  assert.equal((await probe.counts()).entitlements, afterSuccess.entitlements, 'duplicate event does not partially write entitlement');
+
+  const reconcileProbe = new TransactionProbeRepository();
+  const reconcileRuntime = new InternalPaymentRuntime('local_fake_provider', reconcileProbe);
+  const unknown = await reconcileRuntime.checkout({ subjectUserId:'tx_user', targetPlan:'focus_plan', amount:2000, currency:'USD', businessIdempotencyKey:'tx_reconcile', outcome:'accepted_response_lost' });
+  await reconcileProbe.rememberProviderCharge(unknown.operation.providerIdempotencyKey,'pay_tx_reconcile');
+  reconcileProbe.failAudit = true;
+  await assert.rejects(() => reconcileRuntime.reconcile({ operationId:unknown.operation.internalPaymentOperationId }), /probe_audit_failure/);
+  assert.equal((await reconcileProbe.counts()).ledger, 0, 'reconciliation ledger rolled back when audit fails');
+  assert.equal((await reconcileProbe.counts()).entitlements, 0, 'reconciliation entitlement rolled back when audit fails');
+  assert.equal((await reconcileProbe.getOperation(unknown.operation.internalPaymentOperationId))?.state, 'reconciliation_required', 'reconciliation state rolled back when audit fails');
+
+  const calls:string[] = [];
+  const txClient = { query: async (sql:string) => { calls.push(`tx:${sql}`); return { rows: [{ c: '0' }] }; }, release: () => { calls.push('release'); } };
+  const pool = { query: async (sql:string) => { calls.push(`global:${sql}`); return { rows: [{ c: '0' }] }; }, connect: async () => txClient };
+  __setDbPoolFactoryForTests(() => pool);
+  await new SQLInternalPaymentRepository().transaction(async (repo) => { await repo.counts(); return null; });
+  __setDbPoolFactoryForTests(null);
+  await closeDbPool();
+  assert.equal(calls.some((c) => c.startsWith('global:')), false, 'SQL repository transaction did not call global pool query');
+  assert.ok(calls.some((c) => c.startsWith('tx:BEGIN')), 'SQL repository opened transaction on transaction client');
+  assert.ok(calls.some((c) => c.includes('payment_operations')), 'SQL repository methods used transaction client');
+}
 
 export async function runPaymentCorrectnessCoreTests(): Promise<void> {
   const repo = new MemoryInternalPaymentRepository(createMemoryPaymentStore());
@@ -75,6 +140,8 @@ export async function runPaymentCorrectnessCoreTests(): Promise<void> {
   const d1=await dupRt.checkout({...base,businessIdempotencyKey:'intent_dup_ref_1',outcome:'accepted'});
   const d2=await dupRt.checkout({...base,businessIdempotencyKey:'intent_dup_ref_2',outcome:'timeout_before_response'});
   await assert.rejects(() => dupRepo.recordProviderAccepted(d2.operation.internalPaymentOperationId,d1.operation.providerPaymentReference!,'session_other'),/duplicate_provider_payment_reference/);
+
+  await runSqlTransactionIntegrityTests();
 
   for (const kind of ['refund','partial_refund','reversal','chargeback'] as FakeProviderOutcome[]) {
     const x=await rt.checkout({...base,businessIdempotencyKey:`intent_${kind}`,outcome:'accepted'});

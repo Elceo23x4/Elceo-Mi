@@ -9,8 +9,11 @@ const allowed = new Set(['success','accepted','refund','partial_refund','reversa
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
   try {
+    if (process.env.ELCEO_PAYMENT_LOCAL_WEBHOOK_REPLAY !== '1') throw new Error('local_webhook_replay_disabled_not_live_provider_verification');
+    const configuredSignature = process.env.ELCEO_PAYMENT_LOCAL_WEBHOOK_SECRET;
+    if (!configuredSignature) throw new Error('local_webhook_signature_config_required_not_live_provider_verification');
     const signature = request.headers.get('x-elceo-local-webhook-signature');
-    if (signature !== 'rc-i1-local-correctness-boundary') throw new Error('local_webhook_signature_required_not_live_provider_verification');
+    if (signature !== configuredSignature) throw new Error('local_webhook_signature_invalid_not_live_provider_verification');
     const body = (await request.json()) as { eventId: string; kind: 'success' | FakeProviderOutcome; providerPaymentReference?: string; providerCheckoutSessionReference?: string; operationId?: string; payload?: Record<string, unknown> };
     if (!body.eventId || !allowed.has(body.kind)) throw new Error('invalid_local_payment_event');
     const result = await internalPaymentRuntime.webhook(body);

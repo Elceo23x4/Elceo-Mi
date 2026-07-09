@@ -389,3 +389,9 @@ RC-H replay smoke validates captured payload metadata, pagination cursor fields,
 - Unknown and reconciliation_required are safe states that preserve the original provider idempotency key and do not create a second provider charge.
 - Duplicate charge prevention is enforced locally by business-idempotency and provider-idempotency uniqueness.
 - Exactly-once entitlement and immutable ledger effects are enforced locally by operation/effect keys.
+
+### RC-I1 surgical durability correction
+- SQL-backed durable local payment correctness is used only when `APP_STATE_REPOSITORY=sql` and `DATABASE_URL` are configured.
+- Memory payment correctness storage is local/test fallback only and is not production durability.
+- Local fake/replay provider outcomes remain test-safe boundaries; production-live payment activation remains blocked.
+- Real provider sandbox validation remains RC-I2, notification delivery remains RC-I3, and referral/affiliate work remains later.

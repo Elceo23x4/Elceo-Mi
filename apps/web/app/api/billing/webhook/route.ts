@@ -4,7 +4,7 @@ import { captureError } from '../../../../lib/monitoring';
 import { getRequestId, logRequest } from '../../../../lib/request-context';
 
 function resolveStatus(error: unknown): number { if (error instanceof Error && error.message === 'UNAUTHORIZED') return 401; return 400; }
-const allowed = new Set(['success','accepted','refund','partial_refund','reversal','chargeback','provider_500_before_accepting']);
+const allowed = new Set(['success','accepted','refund','partial_refund','reversal','chargeback','provider_500_before_accepting','unknown_result']);
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);

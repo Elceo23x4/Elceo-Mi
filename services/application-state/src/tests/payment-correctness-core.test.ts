@@ -98,7 +98,12 @@ export async function runPaymentCorrectnessCoreTests(): Promise<void> {
   const unpaidRt = new InternalPaymentRuntime('replay_provider_event', unpaidRepo);
   const unpaidOp = await unpaidRt.checkout({ subjectUserId:'unpaid_user', targetPlan:'focus_plan', amount:2000, currency:'USD', businessIdempotencyKey:'unpaid_intent', outcome:'accepted_response_lost' });
   await unpaidRt.webhook({ eventId:'evt_unpaid_safe', kind:'unknown_result', operationId:unpaidOp.operation.internalPaymentOperationId, providerPaymentReference:'pi_unpaid' });
-  assert.equal((await unpaidRt.counts()).entitlements, 0, 'checkout.session.completed unpaid does not grant entitlement');
+  const unpaidCounts = await unpaidRt.counts();
+  assert.equal(unpaidCounts.entitlements, 0, 'checkout.session.completed unpaid does not grant entitlement');
+  assert.equal(unpaidCounts.ledger, 0, 'checkout.session.completed unpaid does not write success ledger');
+  await unpaidRt.webhook({ eventId:'evt_unpaid_safe', kind:'unknown_result', operationId:unpaidOp.operation.internalPaymentOperationId, providerPaymentReference:'pi_unpaid' });
+  assert.equal((await unpaidRt.counts()).inbox, unpaidCounts.inbox, 'duplicate unpaid/processing provider event is deduped');
+  assert.notEqual((await unpaidRepo.getOperation(unpaidOp.operation.internalPaymentOperationId))?.state, 'succeeded', 'signed unknown/processing event does not become success');
 
   const originalFetch = globalThis.fetch;
   const observedIdempotencyKeys:string[] = [];

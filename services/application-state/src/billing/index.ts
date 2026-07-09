@@ -7,3 +7,5 @@ export * from './entitlement-sync';
 export * from './query-service';
 export * from './serialization';
 export * from './replay';
+
+export * from './internal-payment';

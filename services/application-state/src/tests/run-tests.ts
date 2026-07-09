@@ -35,6 +35,7 @@ async function main(): Promise<void> {
   const { runProviderActivationReadinessCoreTests } = await import('./provider-activation-readiness-core.test.js');
   const { runSeoProgrammaticFeedsTests } = await import('./seo-programmatic-feeds.test.js');
   const { runObservabilityAuditCoreTests } = await import('./observability-audit-core.test.js');
+  const { runPaymentCorrectnessCoreTests } = await import('./payment-correctness-core.test.js');
 
   await runApplicationStateTests();
   await runUserStateAccessTests();
@@ -68,6 +69,7 @@ async function main(): Promise<void> {
   runProviderActivationReadinessCoreTests();
   runSeoProgrammaticFeedsTests();
   runObservabilityAuditCoreTests();
+  await runPaymentCorrectnessCoreTests();
   console.log('application-state tests passed');
 }
 

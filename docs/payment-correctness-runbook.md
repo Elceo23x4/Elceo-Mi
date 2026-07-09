@@ -1,0 +1,25 @@
+# RC-I1 Payment Correctness Runbook
+
+RC-I1 implements local payment correctness only. Production-live payment activation remains blocked and no real provider credentials are used by default.
+
+## Durable local correctness
+When `APP_STATE_REPOSITORY=sql` and `DATABASE_URL` are configured, RC-I1 uses SQL-backed local correctness tables for payment operations, provider event inbox rows, immutable ledger effects, entitlement effects, and reconciliation audit records. Durable uniqueness is enforced by primary keys, unique constraints, and partial unique indexes for nullable provider references.
+
+The memory repository is an explicit local/test fallback only. It is useful for deterministic unit tests and local development, but it is not production durability and must not be described as production local correctness.
+
+## Invariant
+One genuine customer payment intention may create at most one provider charge and exactly one local billing, ledger, and entitlement effect.
+
+## Safe local states
+Payment operations are explicit and monotonic: created, pending_provider, processing, succeeded, failed, expired, cancelled, unknown, reconciliation_required, refunded, partially_refunded, reversed, and chargeback. Unknown and reconciliation_required are safe states: operators reconcile with the original provider idempotency key and must not create a replacement charge.
+
+## Local provider boundary
+Allowed RC-I1 modes are disabled, local_fake_provider, sandbox_stub_for_tests, and replay_provider_event. Production/live modes remain blocked. The fake/replay boundary models accepted references, response loss, timeout, provider 500 before/after acceptance, redirect disconnects, unknown results, duplicate references/events, refund, partial refund, reversal, and chargeback.
+
+Client-directed fake checkout outcomes are disabled unless `ELCEO_PAYMENT_FAKE_OUTCOMES_ENABLED=1` is set for tests. Local webhook replay is disabled unless `ELCEO_PAYMENT_LOCAL_WEBHOOK_REPLAY=1` and `ELCEO_PAYMENT_LOCAL_WEBHOOK_SECRET` are configured. The local replay signature is not live provider verification.
+
+## Idempotency and effects
+Business idempotency keys, provider idempotency keys, provider payment/session references, provider event IDs, ledger operation/effect keys, and entitlement transition effect keys are unique in the durable SQL repository and in the local/test memory fallback. Duplicate checkout returns the same operation. Duplicate webhook is inbox-deduped. Success writes one immutable ledger effect and one entitlement grant. Refund, reversal, and chargeback append separate reversal effects.
+
+## RC-I2 / RC-I3 dependencies
+Real provider sandbox validation remains RC-I2. Notification delivery remains RC-I3. Referral/affiliate implementation remains later.

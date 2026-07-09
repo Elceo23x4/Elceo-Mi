@@ -1,0 +1,139 @@
+{
+  "schema": "elceo_provider_captured_payload_contract_v1",
+  "fixtureNotice": "sanitized replay fixtures, not live captures",
+  "samples": [
+    {
+      "sourceId": "tiingo_market_data",
+      "capabilityId": "market_price_history",
+      "adapterId": "tiingo_market_data_market_price_history_adapter",
+      "capturedAt": "2026-01-01T00:00:00.000Z",
+      "requestId": "rc-h-replay-tiingo-1",
+      "requestParameters": {
+        "asset": "eur_usd",
+        "mode": "replay_fixture"
+      },
+      "providerStatus": "success",
+      "httpStatus": 200,
+      "rateLimit": {
+        "remaining": 99,
+        "resetAt": null
+      },
+      "pagination": {
+        "cursor": null,
+        "nextCursor": "page-2",
+        "hasNextPage": true
+      },
+      "rawPayload": {
+        "fixtureKind": "sanitized_replay_fixture",
+        "request": {
+          "ticker": "EURUSD",
+          "asset": "eur_usd"
+        },
+        "bars": [
+          {
+            "date": "2026-01-01T00:00:00.000Z",
+            "open": 1.1,
+            "high": 1.2,
+            "low": 1,
+            "close": 1.15,
+            "volume": null
+          },
+          {
+            "date": "2026-01-02T00:00:00.000Z",
+            "open": 1.15,
+            "high": 1.22,
+            "low": 1.12,
+            "close": 1.18,
+            "volume": null
+          }
+        ]
+      },
+      "normalizedPayload": {
+        "fixtureKind": "sanitized_replay_fixture",
+        "records": [
+          {
+            "providerId": "tiingo_market_data",
+            "asset": "eur_usd",
+            "observedAt": "2026-01-01T00:00:00.000Z",
+            "close": 1.15
+          },
+          {
+            "providerId": "tiingo_market_data",
+            "asset": "eur_usd",
+            "observedAt": "2026-01-02T00:00:00.000Z",
+            "close": 1.18
+          }
+        ]
+      },
+      "recordCount": 2,
+      "nullableFieldsObserved": [
+        "volume"
+      ],
+      "unknownFieldsObserved": [],
+      "duplicateProviderIdsObserved": [],
+      "revisionBackfillMarker": "replay_fixture",
+      "errorBody": null,
+      "redactionProof": {
+        "checked": true,
+        "secretLikeValuesFound": 0,
+        "redacted": true
+      },
+      "rawPayloadChecksum": "e49612cb925df8050134852dbe54c0e687f63b50bbfc0025fbe0fb63a8525b52",
+      "normalizedPayloadChecksum": "0ea2c139db64328f1fb82791264537ac48ab2358a495a0c1689101a61f9d2a37"
+    },
+    {
+      "sourceId": "cftc_cot",
+      "capabilityId": "cot_report",
+      "adapterId": "cftc_cot_cot_report_adapter",
+      "capturedAt": "2026-01-02T00:00:00.000Z",
+      "requestId": "rc-h-replay-cftc-1",
+      "requestParameters": {
+        "asset": "xau_usd",
+        "mode": "replay_fixture"
+      },
+      "providerStatus": "rate_limited",
+      "httpStatus": 429,
+      "rateLimit": {
+        "remaining": 0,
+        "resetAt": "2026-01-02T01:00:00.000Z"
+      },
+      "pagination": {
+        "cursor": "page-1",
+        "nextCursor": null,
+        "hasNextPage": false
+      },
+      "rawPayload": {
+        "fixtureKind": "sanitized_replay_fixture",
+        "error": {
+          "status": 429,
+          "message": "rate limit exceeded"
+        },
+        "rows": []
+      },
+      "normalizedPayload": {
+        "fixtureKind": "sanitized_replay_fixture",
+        "records": [],
+        "error": {
+          "category": "rate_limited",
+          "message": "redacted provider 429"
+        }
+      },
+      "recordCount": 0,
+      "nullableFieldsObserved": [],
+      "unknownFieldsObserved": [],
+      "duplicateProviderIdsObserved": [],
+      "revisionBackfillMarker": null,
+      "errorBody": {
+        "category": "rate_limited",
+        "message": "redacted provider 429"
+      },
+      "redactionProof": {
+        "checked": true,
+        "secretLikeValuesFound": 0,
+        "redacted": true
+      },
+      "rawPayloadChecksum": "0313237e48711be1b79d8c5e2bfed93d0707aa013b779a84183fab76c1efff1d",
+      "normalizedPayloadChecksum": "fc325195f62dcc52ef1873a0bbb7532ba991b5eab1b3ed015b50df8d7fa16e98"
+    }
+  ]
+}

@@ -404,3 +404,19 @@ RC-E adds a generated live inventory over `apps/web/app/api/**/route.ts` (145 ro
 - Production migration window approval still requires verified backup creation, backup restore rehearsal evidence, staging rehearsal evidence, checksum drift review, and a rollback decision tree before applying production migrations.
 - Rollback strategy is restore-first for destructive or unknown migration risk; potentially destructive migrations require explicit mitigation/rehearsal notes before use.
 - This document does not claim production DB migration readiness until staging/prod rehearsal with actual managed environment migration state has been performed.
+
+## RC-H provider live-payload and schema validation
+
+RC-H adds a staging-safe provider payload validation layer without enabling production provider activation by default. Provider execution remains constrained to the Provider API Gate; dry-run uses no external call, fixture mode uses adapter fixtures, replay mode validates captured payload metadata, and staging-live mode is opt-in only. Production-live activation remains blocked/not approved.
+
+Validation states are distinguished as follows:
+- **fixture validation**: local adapter fixture path only; no credentials and no third-party call.
+- **replay validation**: captured-payload contract and schema checks against committed safe fixtures; CI-safe without credentials.
+- **staging-live validation**: opt-in operator smoke only with `ELCEO_PROVIDER_STAGING_SMOKE=1`, credentials from environment only, Provider API Gate only, and redacted capture metadata.
+- **production-live activation**: not approved by RC-H and still blocked.
+- **credentials unavailable**: provider has an official/live-style adapter contract but cannot be claimed live validated without environment credentials.
+- **provider manually reviewed**: manual/download provider requires human source review before live claims.
+- **provider live validated**: reserved for future batches after real staging credentials and official payload contracts pass.
+- **provider blocked**: descriptor-only, placeholder, or later-batch execution.
+
+RC-H replay smoke validates captured payload metadata, pagination cursor fields, nullable/unknown-field policy, duplicate/revision/backfill markers, provider error bodies, rate-limit bodies, and secret redaction proof. Staging smoke refuses to run unless explicitly enabled and never prints secrets. No public production claims, entitlement policy, payment activation, notification sends, formulas, golden scenarios, migrations, or C6 phase numbering are changed by this batch.

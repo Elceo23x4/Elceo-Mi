@@ -24,7 +24,7 @@ export async function runProviderApiGateTests(){
   assert.equal(resolveProviderRuntimeRequest(base({ paginationCursor:'bad cursor !' })).reason,'invalid_pagination_cursor');
   assert.equal(resolveProviderRuntimeRequest(({ ...base(), provenance: undefined } as unknown as ProviderRuntimeRequest)).reason,'missing_provenance');
   assert.equal(resolveProviderRuntimeRequest(base({ activationMode:'live' as never })).reason,'unknown_activation_mode');
-  assert.equal(resolveProviderRuntimeRequest(base({ activationMode:'production_live_allowed' })).reason,'production_live_requires_explicit_allow');
+  assert.equal(resolveProviderRuntimeRequest(base({ activationMode:'production_live_allowed' })).reason,'production_live_not_approved');
   assert.equal(resolveProviderRuntimeRequest(base({ metadata:{ providerCredential:'token sentinel should_not_emit' } })).reason,'secret_like_request_metadata');
   assert.equal(resolveProviderRuntimeRequest(base({ policy:{ quotaLimit:1, quotaUsed:1 } })).quotaStatus,'exceeded');
   assert.equal(resolveProviderRuntimeRequest(base({ policy:{ rateLimitRemaining:0 } })).rateLimitStatus,'exceeded');
@@ -41,7 +41,7 @@ export async function runProviderApiGateTests(){
   const replay=await executeProviderApiGateRequest(base({ activationMode:'replay', idempotencyKey:'idem-1', replayPayload: response({ responseId:'replay-1' }) })); assert.equal(replay.response?.responseId,'replay-1');
   let adapterCalls=0; const countingAdapter={ descriptor:new TiingoMarketDataAdapter({mode:'fixture'}).descriptor, fetch:async (request: never)=>{ adapterCalls+=1; return new TiingoMarketDataAdapter({mode:'fixture'}).fetch(request); }, normalize:async()=>[] };
   const cache=await executeProviderApiGateRequest(base({ policy:{ cacheHitPayload: response({ responseId:'cache-1' }) } }), countingAdapter); assert.equal(cache.decision.cacheStatus,'hit'); assert.equal(cache.response?.responseId,'cache-1'); assert.equal(adapterCalls,0);
-  const live=await executeProviderApiGateRequest(base({ activationMode:'staging_live_allowed', policy:{ explicitStagingLiveAllow:true } })); assert.equal(live.response?.error?.category,'live_execution_not_implemented_until_rc_h');
+  const live=await executeProviderApiGateRequest(base({ activationMode:'staging_live_allowed', policy:{ explicitStagingLiveAllow:true } })); assert.equal(live.decision.reason,'staging_live_missing_required_secret');
   const stale=await executeProviderApiGateRequest(base({ policy:{ circuitState:'open', fallbackMode:'stale_if_error', stalePayload:response({responseId:'stale-1'}) } })); assert.equal(stale.response?.responseId,'stale-1');
   const noStale=await executeProviderApiGateRequest(base({ policy:{ circuitState:'open', stalePayload:response({responseId:'stale-2'}) } })); assert.equal(noStale.response,null);
 

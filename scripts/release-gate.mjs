@@ -13,6 +13,8 @@ const steps = [
   { label: 'npm run -w @elceo/notifications lint', command: 'npm', args: ['run', '-w', '@elceo/notifications', 'lint'] },
   { label: 'npm run -w apps/web lint', command: 'npm', args: ['run', '-w', 'apps/web', 'lint'] },
   { label: 'npm run check:migrations', command: 'npm', args: ['run', 'check:migrations'] },
+  { label: 'npm run test:migrations', command: 'npm', args: ['run', 'test:migrations'] },
+  { label: 'npm run rehearse:migrations:dry-run', command: 'npm', args: ['run', 'rehearse:migrations:dry-run'] },
   { label: 'npm run security:gate', command: 'npm', args: ['run', 'security:gate'] },
 ];
 
@@ -57,5 +59,5 @@ function runStep(step, index, total) {
   console.log('Next steps:');
   console.log(' - Run smoke:production against staging with ELCEO_SMOKE_BASE_URL.');
   console.log(' - Set production environment variables before launch.');
-  console.log(' - Apply DB migrations in lexicographic order.');
+  console.log(' - Apply DB migrations in full-filename lexicographic order after staging rehearsal, backup verification, and restore rehearsal.');
 })();

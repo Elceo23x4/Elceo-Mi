@@ -71,7 +71,7 @@ export async function runScheduledIngestionTests(){
   }
   assert.equal(blockedCalls, 0);
   const liveBlockedSvc = new ScheduledIngestionService(blockingIngestion, new MemoryScheduledIngestionRunRepository());
-  assert.equal((await liveBlockedSvc.runScheduledIngestionJob(tiJob,'production_live','2026-02-02T00:00:00.000Z')).run.errorCode,'production_live_requires_explicit_allow');
+  assert.equal((await liveBlockedSvc.runScheduledIngestionJob(tiJob,'production_live','2026-02-02T00:00:00.000Z')).run.errorCode,'production_live_not_approved');
   assert.equal((await liveBlockedSvc.runScheduledIngestionJob(tiJob,'staging_live','2026-02-03T00:00:00.000Z')).run.errorCode,'staging_live_requires_explicit_allow');
   assert.equal(blockedCalls, 0);
 

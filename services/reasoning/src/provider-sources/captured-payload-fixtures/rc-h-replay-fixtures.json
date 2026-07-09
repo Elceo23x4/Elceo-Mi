@@ -1,0 +1,11 @@
+{
+  "schema": "elceo_provider_captured_payload_contract_v1",
+  "samples": [
+    {
+      "sourceId": "tiingo_market_data", "capabilityId": "market_price_history", "adapterId": "tiingo_market_data_market_price_history_adapter", "capturedAt": "2026-01-01T00:00:00.000Z", "requestId": "rc-h-replay-tiingo-1", "requestParameters": { "asset": "eur_usd", "mode": "replay" }, "providerStatus": "success", "httpStatus": 200, "rateLimit": { "remaining": 99, "resetAt": null }, "pagination": { "cursor": null, "nextCursor": "page-2", "hasNextPage": true }, "rawPayloadChecksum": "fixture-sha256-tiingo-raw", "normalizedPayloadChecksum": "fixture-sha256-tiingo-normalized", "recordCount": 2, "nullableFieldsObserved": ["volume"], "unknownFieldsObserved": [], "duplicateProviderIdsObserved": [], "revisionBackfillMarker": "replay_fixture", "errorBody": null, "redactionProof": { "checked": true, "secretLikeValuesFound": 0, "redacted": true }
+    },
+    {
+      "sourceId": "cftc_cot", "capabilityId": "cot_report", "adapterId": "cftc_cot_cot_report_adapter", "capturedAt": "2026-01-02T00:00:00.000Z", "requestId": "rc-h-replay-cftc-1", "requestParameters": { "asset": "xau_usd", "mode": "replay" }, "providerStatus": "rate_limited", "httpStatus": 429, "rateLimit": { "remaining": 0, "resetAt": "2026-01-02T01:00:00.000Z" }, "pagination": { "cursor": "page-1", "nextCursor": null, "hasNextPage": false }, "rawPayloadChecksum": "fixture-sha256-cftc-raw", "normalizedPayloadChecksum": "fixture-sha256-cftc-normalized", "recordCount": 0, "nullableFieldsObserved": [], "unknownFieldsObserved": [], "duplicateProviderIdsObserved": [], "revisionBackfillMarker": null, "errorBody": { "category": "rate_limited", "message": "redacted provider 429" }, "redactionProof": { "checked": true, "secretLikeValuesFound": 0, "redacted": true }
+    }
+  ]
+}

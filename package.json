@@ -26,7 +26,9 @@
     "check:landing-assets": "node scripts/check-elceo-landing-assets.mjs",
     "qa:landing:screenshot": "node scripts/capture-elceo-landing.mjs",
     "rehearse:migrations:dry-run": "ELCEO_MIGRATION_DRY_RUN=1 node scripts/rehearse-db-migrations.mjs",
-    "test:migrations": "node --test test/migrations.test.mjs && node scripts/verify-db-references.mjs"
+    "test:migrations": "node --test test/migrations.test.mjs && node scripts/verify-db-references.mjs",
+    "provider:replay-smoke": "node scripts/provider-replay-smoke.mjs",
+    "provider:staging-smoke": "node scripts/provider-staging-smoke.mjs"
   },
   "engines": {
     "node": ">=20.0.0"

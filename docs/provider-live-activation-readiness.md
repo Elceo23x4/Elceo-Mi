@@ -44,3 +44,19 @@ C5-A21 introduces staging-only live provider activation planning gates.
 - Unmanaged provider-call inventory is executable and fails on runtime direct provider adapter execution outside the gate; direct adapters remain allowed only as fixture/provider-source implementations or tests.
 - Live execution remains explicitly not implemented until RC-H (`live_execution_not_implemented_until_rc_h`) even when resolver policy can classify a theoretically live-allowed request.
 - RC-G database rehearsal is still required before durable provider orchestration state can be treated as production-rehearsed.
+
+## RC-H provider live-payload and schema validation
+
+RC-H adds a staging-safe provider payload validation layer without enabling production provider activation by default. Provider execution remains constrained to the Provider API Gate; dry-run uses no external call, fixture mode uses adapter fixtures, replay mode validates captured payload metadata, and staging-live mode is opt-in only. Production-live activation remains blocked/not approved.
+
+Validation states are distinguished as follows:
+- **fixture validation**: local adapter fixture path only; no credentials and no third-party call.
+- **replay validation**: captured-payload contract and schema checks against committed safe fixtures; CI-safe without credentials.
+- **staging-live validation**: opt-in operator smoke only with `ELCEO_PROVIDER_STAGING_SMOKE=1`, credentials from environment only, Provider API Gate only, and redacted capture metadata.
+- **production-live activation**: not approved by RC-H and still blocked.
+- **credentials unavailable**: provider has an official/live-style adapter contract but cannot be claimed live validated without environment credentials.
+- **provider manually reviewed**: manual/download provider requires human source review before live claims.
+- **provider live validated**: reserved for future batches after real staging credentials and official payload contracts pass.
+- **provider blocked**: descriptor-only, placeholder, or later-batch execution.
+
+RC-H replay smoke validates captured payload metadata, pagination cursor fields, nullable/unknown-field policy, duplicate/revision/backfill markers, provider error bodies, rate-limit bodies, and secret redaction proof. Staging smoke refuses to run unless explicitly enabled and never prints secrets. No public production claims, entitlement policy, payment activation, notification sends, formulas, golden scenarios, migrations, or C6 phase numbering are changed by this batch.

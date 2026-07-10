@@ -22,4 +22,15 @@ Client-directed fake checkout outcomes are disabled unless `ELCEO_PAYMENT_FAKE_O
 Business idempotency keys, provider idempotency keys, provider payment/session references, provider event IDs, ledger operation/effect keys, and entitlement transition effect keys are unique in the durable SQL repository and in the local/test memory fallback. Duplicate checkout returns the same operation. Duplicate webhook is inbox-deduped. Success writes one immutable ledger effect and one entitlement grant. Refund, reversal, and chargeback append separate reversal effects.
 
 ## RC-I2 / RC-I3 dependencies
-Real provider sandbox validation remains RC-I2. Notification delivery remains RC-I3. Referral/affiliate implementation remains later.
+Real provider sandbox validation remains RC-I2. Notification delivery remains RC-I3. Referral/affiliate implementation remains a mandatory subsequent launch batch.
+
+## RC-I2 payment provider sandbox validation
+- RC-I1 local correctness is sealed: one genuine customer payment intention may create at most one provider charge and exactly one local billing, ledger, and entitlement effect.
+- RC-I2 foundation validates Stripe-compatible provider normalization/replay behavior, and RC-I2 remains incomplete until real Stripe sandbox smoke has run with credentials; production-live payment activation remains blocked.
+- Real sandbox end-to-end completion requires `ELCEO_PAYMENT_SANDBOX_SMOKE=1`, `PAYMENT_PROVIDER_KIND=stripe`, Stripe test public/secret credentials, a Stripe test webhook secret, `APP_STATE_REPOSITORY=sql`, and `DATABASE_URL`; replay smoke is not equivalent to sandbox provider validation.
+- Provider modes are explicit: disabled, local_fake_provider, replay_provider_event, sandbox_provider, and production_provider_blocked.
+- Webhook sandbox processing verifies the raw Stripe signature before trusting the body; local fixed replay literals are not accepted in sandbox_provider mode.
+- Sandbox smoke must confirm provider-paid Stripe sandbox state before any success webhook may create ledger or entitlement effects; locally constructed success payloads without provider-paid truth are replay/simulated only and cannot complete RC-I2.
+- Reconciliation inspects unknown/reconciliation_required operations with the existing provider idempotency key/reference and never creates a new provider charge.
+- Notification delivery remains mandatory RC-I3; RC-J, the Intelligence Feature Program, and RC-K remain mandatory pre-launch dependency work and not in this RC-I2 scope.
+- No launch workflow item is labeled outside the approved language; remaining launch work is a mandatory subsequent launch batch or mandatory pre-launch dependency.

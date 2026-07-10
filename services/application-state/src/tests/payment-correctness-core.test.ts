@@ -1,5 +1,11 @@
 import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { InternalPaymentRuntime, MemoryInternalPaymentRepository, SQLInternalPaymentRepository, createMemoryPaymentStore, type FakeProviderOutcome, type InternalPaymentRepository, type InternalPaymentOperation } from '../billing/internal-payment';
+import { StripeSandboxPaymentProviderAdapter, parseStripeWebhookEvent, verifyStripeWebhookSignature, normalizeStripeProviderPayload, redactProviderPayload, secretLikeValuesFound, resolvePaymentProviderMode } from '../payment-providers/sandbox-adapter';
 import { __setDbPoolFactoryForTests, closeDbPool } from '../db/client';
 
 
@@ -67,6 +73,59 @@ async function runSqlTransactionIntegrityTests(): Promise<void> {
 }
 
 export async function runPaymentCorrectnessCoreTests(): Promise<void> {
+  const rawBody = JSON.stringify({ id:'evt_rc_i2_valid', type:'checkout.session.completed', created:1700000000, data:{ object:{ id:'cs_rc_i2', payment_intent:'pi_rc_i2', amount_total:2000, currency:'usd', payment_status:'paid', metadata:{ operationId:'ipo_rc_i2' } } } });
+  const signature = `t=1700000000,v1=${createHmac('sha256','whsec_rc_i2_fixture_secret').update(`1700000000.${rawBody}`).digest('hex')}`;
+  assert.throws(() => verifyStripeWebhookSignature(rawBody, null, 'whsec_rc_i2_fixture_secret'), /missing_provider_webhook_signature/, 'missing sandbox provider signature rejected');
+  assert.throws(() => verifyStripeWebhookSignature(rawBody, 't=1700000000,v1=00', 'whsec_rc_i2_fixture_secret'), /invalid_provider_webhook_signature/, 'wrong sandbox provider signature rejected');
+  assert.equal(verifyStripeWebhookSignature(rawBody, signature, 'whsec_rc_i2_fixture_secret'), true, 'valid sandbox provider signature accepted');
+  const normalizedFixture = parseStripeWebhookEvent(rawBody, signature, 'whsec_rc_i2_fixture_secret');
+  assert.equal(normalizedFixture.providerKind, 'stripe', 'canonical payment provider discovered as stripe-compatible');
+  assert.equal(normalizedFixture.providerSessionReference, 'cs_rc_i2', 'webhook event normalization carries session reference');
+  assert.equal(normalizedFixture.providerPaymentReference, 'pi_rc_i2', 'webhook event normalization carries payment reference');
+  assert.equal(normalizedFixture.status, 'succeeded', 'webhook event normalization maps success');
+  assert.equal(resolvePaymentProviderMode({ PAYMENT_PROVIDER_MODE:'production_provider' }), 'production_provider_blocked', 'production provider mode blocked');
+  const redacted = redactProviderPayload({ tokenHeader:'Bearer example_redacted_value', nested:{ hookValue:'example_redacted_hook_value' } });
+  assert.equal(secretLikeValuesFound(redacted), false, 'redacted provider payload contains no secret-like values');
+  const refund = normalizeStripeProviderPayload({ id:'evt_refund', type:'charge.refunded', data:{ object:{ id:'ch_refund', payment_intent:'pi_refund', amount:2000, currency:'usd', status:'succeeded' } } }, 'req_refund');
+  assert.equal(refund.refundOrReversalOrChargeback, 'refund', 'refund represented in normalized event');
+  assert.equal(normalizeStripeProviderPayload({ id:'evt_paid', type:'checkout.session.completed', data:{ object:{ id:'cs_paid', payment_intent:'pi_paid', amount_total:2000, currency:'usd', payment_status:'paid', metadata:{ operationId:'ipo_paid', providerIdempotencyKey:'pik_paid', subjectUserId:'user_paid' } } } }, 'req_paid').status, 'succeeded', 'checkout.session.completed paid maps to success');
+  assert.notEqual(normalizeStripeProviderPayload({ id:'evt_unpaid', type:'checkout.session.completed', data:{ object:{ id:'cs_unpaid', payment_intent:'pi_unpaid', amount_total:2000, currency:'usd', payment_status:'unpaid', metadata:{ operationId:'ipo_unpaid', providerIdempotencyKey:'pik_unpaid', subjectUserId:'user_unpaid' } } } }, 'req_unpaid').status, 'succeeded', 'checkout.session.completed unpaid does not map to success');
+  assert.equal(normalizeStripeProviderPayload({ id:'evt_async_ok', type:'checkout.session.async_payment_succeeded', data:{ object:{ id:'cs_async_ok', payment_intent:'pi_async_ok', payment_status:'paid' } } }, 'req_async_ok').status, 'succeeded', 'async payment succeeded maps to success');
+  assert.equal(normalizeStripeProviderPayload({ id:'evt_async_fail', type:'checkout.session.async_payment_failed', data:{ object:{ id:'cs_async_fail', payment_intent:'pi_async_fail', payment_status:'unpaid' } } }, 'req_async_fail').status, 'failed', 'async payment failed maps to failure');
+  assert.equal(normalizeStripeProviderPayload({ id:'evt_pi_ok', type:'payment_intent.succeeded', data:{ object:{ id:'pi_ok', status:'succeeded' } } }, 'req_pi_ok').status, 'succeeded', 'payment_intent.succeeded maps to success');
+  assert.equal(normalizeStripeProviderPayload({ id:'evt_pi_fail', type:'payment_intent.payment_failed', data:{ object:{ id:'pi_fail', status:'failed' } } }, 'req_pi_fail').status, 'failed', 'payment_intent.payment_failed maps to failure');
+  const unpaidRepo = new MemoryInternalPaymentRepository(createMemoryPaymentStore());
+  const unpaidRt = new InternalPaymentRuntime('replay_provider_event', unpaidRepo);
+  const unpaidOp = await unpaidRt.checkout({ subjectUserId:'unpaid_user', targetPlan:'focus_plan', amount:2000, currency:'USD', businessIdempotencyKey:'unpaid_intent', outcome:'accepted_response_lost' });
+  await unpaidRt.webhook({ eventId:'evt_unpaid_safe', kind:'unknown_result', operationId:unpaidOp.operation.internalPaymentOperationId, providerPaymentReference:'pi_unpaid' });
+  const unpaidCounts = await unpaidRt.counts();
+  assert.equal(unpaidCounts.entitlements, 0, 'checkout.session.completed unpaid does not grant entitlement');
+  assert.equal(unpaidCounts.ledger, 0, 'checkout.session.completed unpaid does not write success ledger');
+  await unpaidRt.webhook({ eventId:'evt_unpaid_safe', kind:'unknown_result', operationId:unpaidOp.operation.internalPaymentOperationId, providerPaymentReference:'pi_unpaid' });
+  assert.equal((await unpaidRt.counts()).inbox, unpaidCounts.inbox, 'duplicate unpaid/processing provider event is deduped');
+  assert.notEqual((await unpaidRepo.getOperation(unpaidOp.operation.internalPaymentOperationId))?.state, 'succeeded', 'signed unknown/processing event does not become success');
+
+  const originalFetch = globalThis.fetch;
+  const observedIdempotencyKeys:string[] = [];
+  globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+    observedIdempotencyKeys.push(String((init?.headers as Record<string,string>)['Idempotency-Key']));
+    return new Response(JSON.stringify({ id:'cs_sandbox_test', object:'checkout.session', payment_intent:'pi_sandbox_test', amount_total:2000, currency:'usd', payment_status:'unpaid', metadata:{ operationId:'ipo_sandbox_test', providerIdempotencyKey:'pik_sandbox_test', subjectUserId:'sandbox_user' }, url:'https://checkout.stripe.test/session' }), { status:200, headers:{ 'request-id':'req_sandbox_test', 'content-type':'application/json' } });
+  }) as typeof fetch;
+  try {
+    const adapter = new StripeSandboxPaymentProviderAdapter({ providerKind:'stripe', secretKey:'sk_test_unit_safe', publicKey:'pk_test_unit_safe', webhookSecret:'whsec_unit_safe', priceId:'price_unit_safe' });
+    const session = await adapter.createCheckoutOrPaymentSession({ subjectUserId:'sandbox_user', targetPlan:'focus_plan', amount:2000, currency:'USD', providerIdempotencyKey:'pik_sandbox_test', operationId:'ipo_sandbox_test' });
+    assert.equal(observedIdempotencyKeys[0], 'pik_sandbox_test', 'sandbox checkout uses provider idempotency key as Stripe Idempotency-Key');
+    assert.equal(session.providerSessionReference, 'cs_sandbox_test', 'sandbox checkout adapter returns session reference');
+    assert.notEqual(session.status, 'succeeded', 'unpaid sandbox checkout session is not success');
+  } finally { globalThis.fetch = originalFetch; }
+
+  const sandboxRepo = new MemoryInternalPaymentRepository(createMemoryPaymentStore());
+  const sandboxCreated = await sandboxRepo.createOrReuseOperation({ subjectUserId:'sandbox_user', targetPlan:'focus_plan', amount:2000, currency:'USD', businessIdempotencyKey:'sandbox_intent', provider:'stripe' });
+  const sandboxAttached = await sandboxRepo.recordProviderAccepted(sandboxCreated.operation.internalPaymentOperationId, 'pi_sandbox_test', 'cs_sandbox_test');
+  assert.equal(sandboxAttached.providerCheckoutSessionReference, 'cs_sandbox_test', 'sandbox checkout persists provider session reference');
+  const sandboxRetry = await sandboxRepo.createOrReuseOperation({ subjectUserId:'sandbox_user', targetPlan:'focus_plan', amount:2000, currency:'USD', businessIdempotencyKey:'sandbox_intent', provider:'stripe' });
+  assert.equal(sandboxRetry.operation.providerIdempotencyKey, sandboxCreated.operation.providerIdempotencyKey, 'sandbox checkout retry reuses same provider idempotency key');
+
   const repo = new MemoryInternalPaymentRepository(createMemoryPaymentStore());
   const rt = new InternalPaymentRuntime('local_fake_provider', repo);
   const base={subjectUserId:'user_1',targetPlan:'focus_plan',amount:2000,currency:'USD',businessIdempotencyKey:'intent_1'};
@@ -148,5 +207,12 @@ export async function runPaymentCorrectnessCoreTests(): Promise<void> {
     await rt.webhook({eventId:`evt_success_${kind}`,kind:'success',operationId:x.operation.internalPaymentOperationId,providerPaymentReference:x.operation.providerPaymentReference});
     await rt.webhook({eventId:`evt_${kind}`,kind,operationId:x.operation.internalPaymentOperationId,providerPaymentReference:x.operation.providerPaymentReference});
     assert.equal((await repo.getOperation(x.operation.internalPaymentOperationId))?.state,kind==='refund'?'refunded':kind==='partial_refund'?'partially_refunded':kind==='reversal'?'reversed':kind,'refund/reversal/chargeback represented');
+  }
+
+  if (process.env.ELCEO_PAYMENT_REPLAY_SKIP_CHECKSUM_PROBE !== '1') {
+  const badFixtureDir = mkdtempSync(join(tmpdir(), 'elceo-rc-i2-replay-'));
+  const badFixturePath = join(badFixtureDir, 'bad-replay.json');
+  writeFileSync(badFixturePath, JSON.stringify({ suite:'bad', samples:[{ providerKind:'stripe', sampleKind:'replay_fixture', capturedAt:'2026-07-09T00:00:00.000Z', requestId:'req_bad', providerPaymentReference:'pi_bad', providerSessionReference:'cs_bad', providerEventId:'evt_bad', eventType:'checkout.session.completed', amount:2000, currency:'USD', status:'succeeded', rawPayload:{ id:'evt_bad', type:'checkout.session.completed', data:{ object:{ id:'cs_bad', payment_intent:'pi_bad', amount_total:2000, currency:'usd', payment_status:'paid', metadata:{ operationId:'ipo_bad', providerIdempotencyKey:'pik_bad', subjectUserId:'user_bad' } } } }, expectedNormalized:{ providerKind:'stripe', providerPaymentReference:'pi_bad', providerSessionReference:'cs_bad', providerEventId:'evt_bad', providerEventType:'checkout.session.completed', amount:2000, currency:'USD', status:'succeeded', refundOrReversalOrChargeback:'none', metadataOperationId:'ipo_bad', metadataProviderIdempotencyKey:'pik_bad', metadataSubjectUserId:'user_bad' }, rawPayloadChecksum:'bad_checksum', normalizedPayloadChecksum:'bad_checksum', redactionProof:'sanitized_redacted_payload_only', secretLikeValuesFound:false }] }));
+  assert.throws(() => execFileSync('node', ['scripts/payment-provider-replay-smoke.mjs'], { env:{ ...process.env, ELCEO_PAYMENT_REPLAY_FIXTURE_PATH: badFixturePath }, stdio:'pipe' }), /Command failed/, 'replay smoke fails checksum mismatch');
   }
 }

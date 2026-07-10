@@ -30,7 +30,9 @@
     "provider:replay-smoke": "node scripts/provider-replay-smoke.mjs",
     "provider:staging-smoke": "node scripts/provider-staging-smoke.mjs",
     "payment:replay-smoke": "node scripts/payment-provider-replay-smoke.mjs",
-    "payment:sandbox-smoke": "node scripts/payment-provider-sandbox-smoke.mjs"
+    "payment:sandbox-smoke": "node scripts/payment-provider-sandbox-smoke.mjs",
+    "notification:replay-smoke": "node scripts/notification-replay-smoke.mjs",
+    "notification:sandbox-smoke": "node scripts/notification-sandbox-smoke.mjs"
   },
   "engines": {
     "node": ">=20.0.0"

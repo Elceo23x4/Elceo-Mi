@@ -5,11 +5,28 @@ import type { NotificationDeliveryEnvelope } from './channel-contracts';
 import type { NotificationOutboxRecord } from './outbox-contracts';
 import { getNotificationProviderCapabilities } from '../providers/capabilities';
 import { getNotificationDeliveryProviderConfig } from '../providers/config';
+import { assertNotificationProviderModeAllowed, getNotificationProviderMode } from '../providers/modes';
+
+export type NotificationDeliveryOutcome =
+  | 'accepted'
+  | 'delivered_receipt'
+  | 'temporary_failure'
+  | 'permanent_failure'
+  | 'rate_limited'
+  | 'provider_timeout'
+  | 'provider_ambiguous'
+  | 'provider_unavailable'
+  | 'invalid_target'
+  | 'unsubscribed_or_disabled';
 
 export type NotificationDeliveryErrorCode =
   | 'payload_deserialization_failed'
   | 'target_channel_mismatch'
   | 'target_not_active'
+  | 'unsubscribed_or_disabled'
+  | 'rate_limited'
+  | 'provider_ambiguous'
+  | 'invalid_target'
   | 'provider_not_configured'
   | 'provider_unsupported'
   | 'provider_auth_failed'
@@ -18,7 +35,7 @@ export type NotificationDeliveryErrorCode =
   | 'provider_timeout'
   | 'unknown_delivery_error';
 
-export type NotificationTransportResult = { success: boolean; providerMessageId: string | null; errorCode: NotificationDeliveryErrorCode | null; errorMessage: string | null; responseMeta: Record<string, unknown> | null };
+export type NotificationTransportResult = { success: boolean; outcome?: NotificationDeliveryOutcome; retryable?: boolean; providerMessageId: string | null; errorCode: NotificationDeliveryErrorCode | null; errorMessage: string | null; responseMeta: Record<string, unknown> | null };
 export type ChannelDeliveryTransport = { send(outbox: NotificationOutboxRecord, envelope: NotificationDeliveryEnvelope, deliveredAt: string): Promise<NotificationTransportResult> };
 export type NotificationDeliveryTransport = { send(outbox: NotificationOutboxRecord, envelope: NotificationDeliveryEnvelope, deliveredAt: string): Promise<NotificationTransportResult> };
 
@@ -26,7 +43,7 @@ export class InAppInboxDeliveryTransport implements ChannelDeliveryTransport {
   constructor(private readonly repositories: { inboxRepository: NotificationInboxRepository }) {}
   async send(outbox: NotificationOutboxRecord, envelope: NotificationDeliveryEnvelope, deliveredAt: string): Promise<NotificationTransportResult> {
     const inbox = await deliverInAppToInbox(outbox, envelope, this.repositories, deliveredAt);
-    return { success: true, providerMessageId: inbox.inboxId, errorCode: null, errorMessage: null, responseMeta: { inboxId: inbox.inboxId, providerKind: 'in_app' } };
+    return { success: true, outcome: 'delivered_receipt', retryable: false, providerMessageId: inbox.inboxId, errorCode: null, errorMessage: null, responseMeta: { inboxId: inbox.inboxId, providerKind: 'in_app' } };
   }
 }
 
@@ -34,15 +51,15 @@ export class MemoryEmailDeliveryTransport implements ChannelDeliveryTransport {
   readonly sent: NotificationDeliveryEnvelope[] = [];
   constructor(private readonly failure?: { errorCode: NotificationDeliveryErrorCode; errorMessage: string }) {}
   async send(_outbox: NotificationOutboxRecord, envelope: NotificationDeliveryEnvelope): Promise<NotificationTransportResult> {
-    if (this.failure) return { success: false, providerMessageId: null, errorCode: this.failure.errorCode, errorMessage: this.failure.errorMessage, responseMeta: null };
+    if (this.failure) return { success: false, outcome: this.failure.errorCode === 'rate_limited' ? 'rate_limited' : 'temporary_failure', retryable: true, providerMessageId: null, errorCode: this.failure.errorCode, errorMessage: this.failure.errorMessage, responseMeta: null };
     this.sent.push(envelope);
-    return { success: true, providerMessageId: `memory|email|${this.sent.length}`, errorCode: null, errorMessage: null, responseMeta: { channel: 'email', providerKind: 'memory' } };
+    return { success: true, outcome: 'accepted', retryable: false, providerMessageId: `memory|email|${this.sent.length}`, errorCode: null, errorMessage: null, responseMeta: { channel: 'email', providerKind: 'memory' } };
   }
 }
 
 class UnsupportedTransport implements ChannelDeliveryTransport {
   constructor(private readonly code: NotificationDeliveryErrorCode, private readonly message: string) {}
-  async send(): Promise<NotificationTransportResult> { return { success: false, providerMessageId: null, errorCode: this.code, errorMessage: this.message, responseMeta: null }; }
+  async send(): Promise<NotificationTransportResult> { return { success: false, outcome: 'provider_unavailable', retryable: true, providerMessageId: null, errorCode: this.code, errorMessage: this.message, responseMeta: null }; }
 }
 
 class HttpEmailDeliveryTransport implements ChannelDeliveryTransport {
@@ -51,7 +68,7 @@ class HttpEmailDeliveryTransport implements ChannelDeliveryTransport {
   async send(_outbox: NotificationOutboxRecord, envelope: NotificationDeliveryEnvelope): Promise<NotificationTransportResult> {
     try {
       const address = JSON.parse(envelope.addressJson) as { email?: string };
-      if (!address.email) return { success: false, providerMessageId: null, errorCode: 'provider_rejected', errorMessage: 'missing_recipient_email', responseMeta: null };
+      if (!address.email) return { success: false, outcome: 'invalid_target', retryable: false, providerMessageId: null, errorCode: 'invalid_target', errorMessage: 'missing_recipient_email', responseMeta: null };
       const payload = {
         from: { email: this.fromAddress, name: this.fromName },
         to: [{ email: address.email }],
@@ -64,7 +81,7 @@ class HttpEmailDeliveryTransport implements ChannelDeliveryTransport {
       if (response.status === 401 || response.status === 403) return { success: false, providerMessageId: null, errorCode: 'provider_auth_failed', errorMessage: `http_${response.status}`, responseMeta: { body: bodyText } };
       if (!response.ok) return { success: false, providerMessageId: null, errorCode: 'provider_rejected', errorMessage: `http_${response.status}`, responseMeta: { body: bodyText } };
       const messageId = response.headers.get('x-message-id') ?? response.headers.get('x-request-id');
-      return { success: true, providerMessageId: messageId, errorCode: null, errorMessage: null, responseMeta: { status: response.status, providerKind: 'http_email' } };
+      return { success: true, outcome: 'accepted', retryable: false, providerMessageId: messageId, errorCode: null, errorMessage: null, responseMeta: { status: response.status, providerKind: 'http_email' } };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown_error';
       return { success: false, providerMessageId: null, errorCode: 'provider_network_error', errorMessage: message, responseMeta: null };
@@ -84,7 +101,13 @@ export function createNotificationDeliveryTransport(
   env: Record<string, string | undefined>,
   deps: { inboxRepository: NotificationInboxRepository; memoryFailureByChannel?: Partial<Record<NotificationChannel, { errorCode: NotificationDeliveryErrorCode; errorMessage: string }>> }
 ): NotificationDeliveryTransport {
+  assertNotificationProviderModeAllowed(env);
+  const mode = getNotificationProviderMode(env);
   const config = getNotificationDeliveryProviderConfig(env);
+  if (mode === 'disabled') {
+    const disabled = new UnsupportedTransport('provider_not_configured', 'notification_provider_disabled');
+    return new RoutedNotificationDeliveryTransport({ in_app: disabled, email: disabled, push: disabled });
+  }
   const capabilities = getNotificationProviderCapabilities(config);
 
   const emailTransport: ChannelDeliveryTransport = capabilities.email.enabled

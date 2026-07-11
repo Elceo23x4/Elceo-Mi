@@ -112,11 +112,11 @@ Track API errors, security audit events, billing/notification runtime metrics, a
 - Dry-run POST is internal+admin.ops gated with mutation security decision, idempotency, rate-limit, audit, and response-envelope completion.
 - Route input rejects production_live override and provider API key fields; fixture dry-run only.
 - No public routes, no cron deployment, and no live provider calls in this batch.
-\n\n## C5-A24 backend consolidation linkage\n- See  for consolidated C5 backend readiness truth source.\n- Live ingestion remains blocked-by-default; cron deployment and public SEO route launch remain deferred.\n- Production go/no-go still requires security verification track, staging smoke, and production smoke.\n- DB migrations must be applied in strict lexicographic order (including , , ).\n- Known non-blocking warnings remain tracked; do not treat them as launch-complete signals.
+\n\n## C5-A24 backend consolidation linkage\n- See  for consolidated C5 backend readiness truth source.\n- Live ingestion remains blocked-by-default; cron deployment and public SEO route launch remain not in this RC-J scope.\n- Production go/no-go still requires security verification track, staging smoke, and production smoke.\n- DB migrations must be applied in strict lexicographic order (including , , ).\n- Known non-blocking warnings remain tracked; do not treat them as launch-complete signals.
 
 ## C5-A24 backend consolidation linkage
 - See `docs/c5-market-evidence-backend-readiness-report.md` for consolidated C5 backend readiness truth source.
-- Live ingestion remains blocked-by-default; cron deployment and public SEO route launch remain deferred.
+- Live ingestion remains blocked-by-default; cron deployment and public SEO route launch remain not in this RC-J scope.
 - Production go/no-go still requires security verification track, staging smoke, and production smoke.
 - DB migrations must be applied in strict lexicographic order (including `0032`, `0033`, `0034`).
 - Known non-blocking warnings remain tracked; do not treat them as launch-complete signals.
@@ -159,3 +159,12 @@ Track API errors, security audit events, billing/notification runtime metrics, a
 - Production migration window approval still requires verified backup creation, backup restore rehearsal evidence, staging rehearsal evidence, checksum drift review, and a rollback decision tree before applying production migrations.
 - Rollback strategy is restore-first for destructive or unknown migration risk; potentially destructive migrations require explicit mitigation/rehearsal notes before use.
 - This document does not claim production DB migration readiness until staging/prod rehearsal with actual managed environment migration state has been performed.
+
+## RC-J infrastructure, security, and disaster-recovery validation
+RC-J verifies operational readiness gates only. RC-J does not activate production providers, does not complete RC-I2-CERT, does not implement the Intelligence Feature Program, and does not complete RC-K. Production launch remains blocked until RC-I2-CERT, IFP, and RC-K are complete.
+
+Promotion requires explicit target environment selection, release-gate evidence, security-gate evidence, migration-check evidence, staging-smoke evidence, RC-I2-CERT evidence before final launch, provider-live activation remaining blocked unless separately approved, and no remaining launch workflow item labeled with prohibited not-in-scope language. Operators must run `npm run verify:staging-isolation`, `npm run attack-drill:staging`, `npm run monitoring:alert-smoke`, `npm run backup:restore-rehearsal`, `npm run rollback:rehearsal`, and `npm run verify:deployment-gates` before any production promotion decision.
+
+Rollback target must be explicit and must not require hand-editing production. After rollback, run the configured smoke check and record evidence. Migration rollback policy is roll-forward by default; irreversible migrations require a documented compensating plan, backup confirmation, and operator sign-off before promotion.
+
+Backup/restore proof is mandatory. RPO target is the most recent verified backup artifact for the environment under review; RTO target is the documented restore runbook execution window for that environment. Restore rehearsal must use staging or disposable databases by default and must refuse production without explicit approval.

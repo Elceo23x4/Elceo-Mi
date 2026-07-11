@@ -20,11 +20,11 @@ C5-A21 introduces staging-only live provider activation planning gates.
 - Dry-run POST is internal+admin.ops gated with mutation security decision, idempotency, rate-limit, audit, and response-envelope completion.
 - Route input rejects production_live override and provider API key fields; fixture dry-run only.
 - No public routes, no cron deployment, and no live provider calls in this batch.
-\n\n## C5-A24 backend consolidation linkage\n- See  for consolidated C5 backend readiness truth source.\n- Live ingestion remains blocked-by-default; cron deployment and public SEO route launch remain deferred.\n- Production go/no-go still requires security verification track, staging smoke, and production smoke.\n- DB migrations must be applied in strict lexicographic order (including , , ).\n- Known non-blocking warnings remain tracked; do not treat them as launch-complete signals.
+\n\n## C5-A24 backend consolidation linkage\n- See  for consolidated C5 backend readiness truth source.\n- Live ingestion remains blocked-by-default; cron deployment and public SEO route launch remain not in this RC-J scope.\n- Production go/no-go still requires security verification track, staging smoke, and production smoke.\n- DB migrations must be applied in strict lexicographic order (including , , ).\n- Known non-blocking warnings remain tracked; do not treat them as launch-complete signals.
 
 ## C5-A24 backend consolidation linkage
 - See `docs/c5-market-evidence-backend-readiness-report.md` for consolidated C5 backend readiness truth source.
-- Live ingestion remains blocked-by-default; cron deployment and public SEO route launch remain deferred.
+- Live ingestion remains blocked-by-default; cron deployment and public SEO route launch remain not in this RC-J scope.
 - Production go/no-go still requires security verification track, staging smoke, and production smoke.
 - DB migrations must be applied in strict lexicographic order (including `0032`, `0033`, `0034`).
 - Known non-blocking warnings remain tracked; do not treat them as launch-complete signals.
@@ -60,3 +60,6 @@ Validation states are distinguished as follows:
 - **provider blocked**: descriptor-only, placeholder, or later-batch execution.
 
 RC-H replay smoke validates captured payload metadata, pagination cursor fields, nullable/unknown-field policy, duplicate/revision/backfill markers, provider error bodies, rate-limit bodies, and secret redaction proof. Staging smoke refuses to run unless explicitly enabled and never prints secrets. No public production claims, entitlement policy, payment activation, notification sends, formulas, golden scenarios, migrations, or C6 phase numbering are changed by this batch.
+
+## RC-J provider-live activation block
+RC-J does not activate production providers. Provider-live activation remains blocked unless separately approved and evidenced after the required gates. Staging payment/provider modes and staging notification provider modes must not be production-live. Production-live provider, payment, notification, and market-data activation must not be enabled by default in RC-J.

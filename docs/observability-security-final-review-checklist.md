@@ -46,11 +46,11 @@
 
 ## Final production status linkage (C4-M8D)
 - Cross-check final launch blockers, caveats, and go/no-go criteria in `docs/final-production-status-report.md` before production sign-off.
-\n\n## C5-A24 backend consolidation linkage\n- See  for consolidated C5 backend readiness truth source.\n- Live ingestion remains blocked-by-default; cron deployment and public SEO route launch remain deferred.\n- Production go/no-go still requires security verification track, staging smoke, and production smoke.\n- DB migrations must be applied in strict lexicographic order (including , , ).\n- Known non-blocking warnings remain tracked; do not treat them as launch-complete signals.
+\n\n## C5-A24 backend consolidation linkage\n- See  for consolidated C5 backend readiness truth source.\n- Live ingestion remains blocked-by-default; cron deployment and public SEO route launch remain not in this RC-J scope.\n- Production go/no-go still requires security verification track, staging smoke, and production smoke.\n- DB migrations must be applied in strict lexicographic order (including , , ).\n- Known non-blocking warnings remain tracked; do not treat them as launch-complete signals.
 
 ## C5-A24 backend consolidation linkage
 - See `docs/c5-market-evidence-backend-readiness-report.md` for consolidated C5 backend readiness truth source.
-- Live ingestion remains blocked-by-default; cron deployment and public SEO route launch remain deferred.
+- Live ingestion remains blocked-by-default; cron deployment and public SEO route launch remain not in this RC-J scope.
 - Production go/no-go still requires security verification track, staging smoke, and production smoke.
 - DB migrations must be applied in strict lexicographic order (including `0032`, `0033`, `0034`).
 - Known non-blocking warnings remain tracked; do not treat them as launch-complete signals.
@@ -94,3 +94,11 @@
 - Required sequence before production deploy: staging smoke + staging attack drill.
 - Required sequence after production deploy: production smoke.
 - Public/frontend launch remains blocked until security sign-off is complete.
+
+## RC-J operational validation checklist
+- Staging/prod isolation is mandatory and must prove distinct URLs, distinct database URLs, non-live staging provider modes, no committed staging secrets, non-mutating staging smoke, and explicit deployment target selection.
+- Attack drill proof is mandatory and must show protected route denial, rate-limit or simulated policy gate status, anonymous/admin denial, malformed payload safety, oversized payload rejection, unsafe production-live flag refusal, and redacted summaries.
+- Monitoring/alerting proof is mandatory and must identify the alert receiver, expected operator action, safe synthetic trigger path, health/smoke endpoint status, alert sink status, and redacted payload evidence.
+- Backup/restore proof is mandatory and must record a secret-free artifact/checksum plus schema/table validation evidence.
+- Rollback proof is mandatory and must include explicit target, no manual production editing, post-rollback smoke, migration rollback policy, and irreversible migration policy.
+- RC-I2-CERT remains a mandatory unresolved pre-launch blocker. IFP remains a mandatory pre-launch dependency. RC-K remains final full-repository closure.

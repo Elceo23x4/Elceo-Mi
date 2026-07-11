@@ -450,4 +450,14 @@ RC-H replay smoke validates captured payload metadata, pagination cursor fields,
 
 ## RC-I3 notification reliability layer
 
-RC-I3 implements the notification reliability and local/sandbox validation foundation: durable outbox staging, dispatch through the outbox state machine, deterministic retry/backoff, attempt audit history, dead-letter/operator visibility, replay smoke, sandbox smoke gating, unsubscribe/disable enforcement, and provider-mode blocking for production-live notification activation. Production-live notification activation remains blocked unless separately approved. Notification provider sandbox credentials are required for real sandbox smoke, and replay smoke is not equivalent to real provider sandbox validation. Dead-letter/operator visibility and unsubscribe/disable enforcement are required launch controls. RC-I2-CERT remains a mandatory unresolved pre-launch blocker. RC-J remains a mandatory subsequent launch batch. Intelligence Feature Program remains a mandatory pre-launch dependency. RC-K remains final full-repository closure. No remaining launch workflow item is deferred or postponed.
+RC-I3 implements the notification reliability and local/sandbox validation foundation: durable outbox staging, dispatch through the outbox state machine, deterministic retry/backoff, attempt audit history, dead-letter/operator visibility, replay smoke, sandbox smoke gating, unsubscribe/disable enforcement, and provider-mode blocking for production-live notification activation. Production-live notification activation remains blocked unless separately approved. Notification provider sandbox credentials are required for real sandbox smoke, and replay smoke is not equivalent to real provider sandbox validation. Dead-letter/operator visibility and unsubscribe/disable enforcement are required launch controls. RC-I2-CERT remains a mandatory unresolved pre-launch blocker. RC-J remains a mandatory subsequent launch batch. Intelligence Feature Program remains a mandatory pre-launch dependency. RC-K remains final full-repository closure. No remaining launch workflow item is labeled with prohibited launch deferral language.
+
+## RC-J mandatory evidence checklist
+- `npm run verify:staging-isolation` must pass with real environment separation evidence.
+- `npm run attack-drill:staging` must pass against staging, or a local run must be labeled only as `attack_drill_simulation_passed`.
+- `npm run monitoring:alert-smoke` must pass with staging URL and alert sink, or report the explicit unavailable environment blocker.
+- `npm run backup:restore-rehearsal` must pass with database URL and backup target, or report the explicit unavailable environment blocker.
+- `npm run rollback:rehearsal` must pass with explicit rollback target and smoke validation configuration.
+- `npm run verify:deployment-gates` must require release gate, security gate, migration check, staging smoke evidence, and RC-I2-CERT evidence before final launch.
+
+RC-I2-CERT remains a mandatory unresolved pre-launch blocker. IFP remains a mandatory pre-launch dependency. RC-K remains final full-repository closure.

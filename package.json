@@ -13,7 +13,7 @@
     "dev": "npm run dev -w apps/web",
     "lint": "npm run --workspaces --if-present lint",
     "typecheck": "npm run --workspaces --if-present typecheck",
-    "test": "npm run --workspaces --if-present test",
+    "test": "npm run --workspaces --if-present test && node scripts/security-rc-j-self-test.mjs",
     "format": "npm run --workspaces --if-present format",
     "quality-gate": "npm run typecheck && npm run test",
     "smoke:production": "node scripts/production-smoke-test.mjs",
@@ -22,7 +22,7 @@
     "check:c5-readiness": "node scripts/check-c5-readiness.mjs",
     "security:gate": "node scripts/security-gate.mjs",
     "check:infra-security": "node scripts/check-infra-security-policy.mjs",
-    "attack-drill:staging": "node scripts/staging-attack-drill.mjs",
+    "attack-drill:staging": "node scripts/attack-drill-staging.mjs",
     "check:landing-assets": "node scripts/check-elceo-landing-assets.mjs",
     "qa:landing:screenshot": "node scripts/capture-elceo-landing.mjs",
     "rehearse:migrations:dry-run": "ELCEO_MIGRATION_DRY_RUN=1 node scripts/rehearse-db-migrations.mjs",
@@ -32,7 +32,12 @@
     "payment:replay-smoke": "node scripts/payment-provider-replay-smoke.mjs",
     "payment:sandbox-smoke": "node scripts/payment-provider-sandbox-smoke.mjs",
     "notification:replay-smoke": "node scripts/notification-replay-smoke.mjs",
-    "notification:sandbox-smoke": "node scripts/notification-sandbox-smoke.mjs"
+    "notification:sandbox-smoke": "node scripts/notification-sandbox-smoke.mjs",
+    "verify:staging-isolation": "node scripts/verify-staging-isolation.mjs",
+    "monitoring:alert-smoke": "node scripts/monitoring-alert-smoke.mjs",
+    "backup:restore-rehearsal": "node scripts/rehearse-backup-restore.mjs",
+    "rollback:rehearsal": "node scripts/rehearse-rollback.mjs",
+    "verify:deployment-gates": "node scripts/verify-deployment-promotion-gates.mjs"
   },
   "engines": {
     "node": ">=20.0.0"

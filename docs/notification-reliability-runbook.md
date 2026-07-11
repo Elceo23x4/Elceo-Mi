@@ -26,4 +26,7 @@ Operators must inspect pending/staged, dispatching, failed retryable, dead/exhau
 
 ## Launch dependencies
 
-RC-I2-CERT remains a mandatory unresolved pre-launch blocker. RC-J remains a mandatory subsequent launch batch. Intelligence Feature Program remains a mandatory pre-launch dependency. RC-K remains final full-repository closure. No remaining launch workflow item is deferred or postponed.
+RC-I2-CERT remains a mandatory unresolved pre-launch blocker. RC-J remains a mandatory subsequent launch batch. Intelligence Feature Program remains a mandatory pre-launch dependency. RC-K remains final full-repository closure. No remaining launch workflow item is labeled with prohibited launch deferral language.
+
+## RC-J monitoring alignment
+Notification production-live activation remains blocked unless separately approved. RC-J monitoring/alert smoke validates alert routing and redaction status only; it does not complete notification sandbox/live certification and does not enable production-live notification delivery.

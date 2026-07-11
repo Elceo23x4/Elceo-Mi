@@ -21,24 +21,26 @@ export async function dispatchDueNotificationOutbox(asOfIso: string, limit: numb
   const reports: NotificationOutboxDispatchItemReport[] = [];
 
   for (const item of due) {
-    await repositories.outboxRepository.markDispatching(item.outboxId, asOfIso);
+    const claimedItem = await repositories.outboxRepository.claimDueOutboxItem(item.outboxId, asOfIso);
+    if (!claimedItem) continue;
+    const itemForDispatch = claimedItem;
     let sendResult: NotificationTransportResult;
     try {
-      const envelope = deserializeTargetAwareNotificationPayload(item.payloadJson);
-      if (envelope.channel !== item.channel || envelope.targetId !== item.targetId) {
+      const envelope = deserializeTargetAwareNotificationPayload(itemForDispatch.payloadJson);
+      if (envelope.channel !== itemForDispatch.channel || envelope.targetId !== itemForDispatch.targetId) {
         sendResult = { success: false, outcome: 'permanent_failure', retryable: false, providerMessageId: null, errorCode: 'target_channel_mismatch', errorMessage: 'target_channel_mismatch', responseMeta: null };
       } else {
-        const target = await repositories.targetRepository.getTargetById(item.targetId);
+        const target = await repositories.targetRepository.getTargetById(itemForDispatch.targetId);
         if (!target || target.status !== 'active') {
-          sendResult = { success: false, outcome: 'unsubscribed_or_disabled', retryable: false, providerMessageId: null, errorCode: 'target_not_active', errorMessage: 'target_not_active', responseMeta: { targetHash: safeNotificationChecksum(item.targetKey) } };
+          sendResult = { success: false, outcome: 'unsubscribed_or_disabled', retryable: false, providerMessageId: null, errorCode: 'target_not_active', errorMessage: 'target_not_active', responseMeta: { targetHash: safeNotificationChecksum(itemForDispatch.targetKey) } };
         } else {
-          const subscriptions = repositories.subscriptionRepository ? await repositories.subscriptionRepository.listSubscriptionsForSubject(item.subjectKind, item.subjectId) : [];
-          const channelBlocked = subscriptions.some((sub) => sub.channel === item.channel && !sub.enabled);
+          const subscriptions = repositories.subscriptionRepository ? await repositories.subscriptionRepository.listSubscriptionsForSubject(itemForDispatch.subjectKind, itemForDispatch.subjectId) : [];
+          const channelBlocked = subscriptions.some((sub) => sub.channel === itemForDispatch.channel && !sub.enabled);
           const globalBlocked = subscriptions.some((sub) => sub.channel === 'in_app' && sub.ruleKey === 'global_disable' && !sub.enabled);
           if (channelBlocked || globalBlocked) {
-            sendResult = { success: false, outcome: 'unsubscribed_or_disabled', retryable: false, providerMessageId: null, errorCode: 'unsubscribed_or_disabled', errorMessage: globalBlocked ? 'global_notification_disable' : 'channel_preference_disabled', responseMeta: { targetHash: safeNotificationChecksum(item.targetKey), policy: item.subjectKind === 'ops' ? 'operator_notification_policy' : 'user_notification_policy' } };
+            sendResult = { success: false, outcome: 'unsubscribed_or_disabled', retryable: false, providerMessageId: null, errorCode: 'unsubscribed_or_disabled', errorMessage: globalBlocked ? 'global_notification_disable' : 'channel_preference_disabled', responseMeta: { targetHash: safeNotificationChecksum(itemForDispatch.targetKey), policy: itemForDispatch.subjectKind === 'ops' ? 'operator_notification_policy' : 'user_notification_policy' } };
           } else {
-            sendResult = await transport.send(item, envelope, asOfIso);
+            sendResult = await transport.send(itemForDispatch, envelope, asOfIso);
           }
         }
       }
@@ -47,9 +49,9 @@ export async function dispatchDueNotificationOutbox(asOfIso: string, limit: numb
     }
 
     const attemptRecord: NotificationOutboxAttemptRecord = {
-      attemptId: `attempt|${item.outboxId}|${item.attemptCount + 1}|${asOfIso}`,
-      outboxId: item.outboxId,
-      channel: item.channel,
+      attemptId: `attempt|${itemForDispatch.outboxId}|${itemForDispatch.attemptCount + 1}|${asOfIso}`,
+      outboxId: itemForDispatch.outboxId,
+      channel: itemForDispatch.channel,
       attemptedAt: asOfIso,
       status: sendResult.success ? 'success' : 'failure',
       errorCode: sendResult.errorCode,
@@ -62,17 +64,17 @@ export async function dispatchDueNotificationOutbox(asOfIso: string, limit: numb
     await repositories.outboxAttemptRepository.saveAttempt(attemptRecord);
 
     if (sendResult.success) {
-      await repositories.outboxRepository.markDelivered(item.outboxId, asOfIso);
-      reports.push({ outboxId: item.outboxId, channel: item.channel, status: 'delivered', attemptCount: item.attemptCount + 1, errorCode: null, errorMessage: null });
+      await repositories.outboxRepository.markDelivered(itemForDispatch.outboxId, asOfIso);
+      reports.push({ outboxId: itemForDispatch.outboxId, channel: itemForDispatch.channel, status: 'delivered', attemptCount: itemForDispatch.attemptCount + 1, errorCode: null, errorMessage: null });
       continue;
     }
-    const attemptCountAfterFailure = item.attemptCount + 1;
+    const attemptCountAfterFailure = itemForDispatch.attemptCount + 1;
     if (isTerminalFailure(sendResult) || attemptCountAfterFailure >= 5) {
-      await repositories.outboxRepository.markDead(item.outboxId, asOfIso, sendResult.errorCode, sendResult.errorMessage);
-      reports.push({ outboxId: item.outboxId, channel: item.channel, status: 'dead', attemptCount: attemptCountAfterFailure, errorCode: sendResult.errorCode, errorMessage: sendResult.errorMessage });
+      await repositories.outboxRepository.markDead(itemForDispatch.outboxId, asOfIso, sendResult.errorCode, sendResult.errorMessage);
+      reports.push({ outboxId: itemForDispatch.outboxId, channel: itemForDispatch.channel, status: 'dead', attemptCount: attemptCountAfterFailure, errorCode: sendResult.errorCode, errorMessage: sendResult.errorMessage });
     } else {
-      await repositories.outboxRepository.markFailed(item.outboxId, asOfIso, buildNotificationRetryAvailableAt(asOfIso, attemptCountAfterFailure, sendResult.errorCode), sendResult.errorCode, sendResult.errorMessage);
-      reports.push({ outboxId: item.outboxId, channel: item.channel, status: 'failed', attemptCount: attemptCountAfterFailure, errorCode: sendResult.errorCode, errorMessage: sendResult.errorMessage });
+      await repositories.outboxRepository.markFailed(itemForDispatch.outboxId, asOfIso, buildNotificationRetryAvailableAt(asOfIso, attemptCountAfterFailure, sendResult.errorCode), sendResult.errorCode, sendResult.errorMessage);
+      reports.push({ outboxId: itemForDispatch.outboxId, channel: itemForDispatch.channel, status: 'failed', attemptCount: attemptCountAfterFailure, errorCode: sendResult.errorCode, errorMessage: sendResult.errorMessage });
     }
   }
 

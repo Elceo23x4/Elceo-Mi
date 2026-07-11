@@ -6,6 +6,7 @@ import type { NotificationOutboxRecord } from './outbox-contracts';
 import { getNotificationProviderCapabilities } from '../providers/capabilities';
 import { getNotificationDeliveryProviderConfig } from '../providers/config';
 import { assertNotificationProviderModeAllowed, getNotificationProviderMode } from '../providers/modes';
+import { safeNotificationChecksum } from '../management/redaction';
 
 export type NotificationDeliveryOutcome =
   | 'accepted'
@@ -78,13 +79,17 @@ class HttpEmailDeliveryTransport implements ChannelDeliveryTransport {
       };
       const response = await fetch(this.endpoint, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${this.apiKey}` }, body: JSON.stringify(payload) });
       const bodyText = await response.text();
-      if (response.status === 401 || response.status === 403) return { success: false, providerMessageId: null, errorCode: 'provider_auth_failed', errorMessage: `http_${response.status}`, responseMeta: { body: bodyText } };
-      if (!response.ok) return { success: false, providerMessageId: null, errorCode: 'provider_rejected', errorMessage: `http_${response.status}`, responseMeta: { body: bodyText } };
+      const redactedMeta = { status: response.status, providerKind: 'http_email', redactedResponseChecksum: safeNotificationChecksum(bodyText) };
+      if (response.status === 401 || response.status === 403) return { success: false, outcome: 'permanent_failure', retryable: false, providerMessageId: null, errorCode: 'provider_auth_failed', errorMessage: `http_${response.status}`, responseMeta: redactedMeta };
+      if (response.status === 429) return { success: false, outcome: 'rate_limited', retryable: true, providerMessageId: null, errorCode: 'rate_limited', errorMessage: 'http_429', responseMeta: redactedMeta };
+      if (response.status >= 500) return { success: false, outcome: 'provider_unavailable', retryable: true, providerMessageId: null, errorCode: 'provider_network_error', errorMessage: `http_${response.status}`, responseMeta: redactedMeta };
+      if (response.status >= 400) return { success: false, outcome: 'permanent_failure', retryable: false, providerMessageId: null, errorCode: 'provider_rejected', errorMessage: `http_${response.status}`, responseMeta: redactedMeta };
       const messageId = response.headers.get('x-message-id') ?? response.headers.get('x-request-id');
-      return { success: true, outcome: 'accepted', retryable: false, providerMessageId: messageId, errorCode: null, errorMessage: null, responseMeta: { status: response.status, providerKind: 'http_email' } };
+      return { success: Boolean(messageId), outcome: messageId ? 'accepted' : 'provider_ambiguous', retryable: !messageId, providerMessageId: messageId, errorCode: messageId ? null : 'provider_ambiguous', errorMessage: messageId ? null : 'provider_ambiguous', responseMeta: { status: response.status, providerKind: 'http_email', redactedResponseChecksum: safeNotificationChecksum(bodyText) } };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown_error';
-      return { success: false, providerMessageId: null, errorCode: 'provider_network_error', errorMessage: message, responseMeta: null };
+      const isTimeout = /timeout|aborted|timed out/i.test(message);
+      return { success: false, outcome: isTimeout ? 'provider_timeout' : 'provider_unavailable', retryable: true, providerMessageId: null, errorCode: isTimeout ? 'provider_timeout' : 'provider_network_error', errorMessage: isTimeout ? 'provider_timeout' : 'provider_network_error', responseMeta: { providerKind: 'http_email', safeErrorMessage: isTimeout ? 'provider_timeout' : 'provider_network_error' } };
     }
   }
 }

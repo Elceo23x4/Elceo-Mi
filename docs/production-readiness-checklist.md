@@ -461,3 +461,12 @@ RC-I3 implements the notification reliability and local/sandbox validation found
 - `npm run verify:deployment-gates` must require release gate, security gate, migration check, staging smoke evidence, and RC-I2-CERT evidence before final launch.
 
 RC-I2-CERT remains a mandatory unresolved pre-launch blocker. IFP remains a mandatory pre-launch dependency. RC-K remains final full-repository closure.
+
+## IFP-0 canonical scope lock alignment
+
+- `docs/intelligence-feature-program.md` is the canonical Intelligence Feature Program truth source.
+- IFP-0 defines the program but implements no intelligence feature.
+- IFP is not complete merely because the scope document exists.
+- RC-I2-CERT remains mandatory.
+- RC-J-ENV remains mandatory.
+- RC-K begins only after all eight IFP phases are closed.

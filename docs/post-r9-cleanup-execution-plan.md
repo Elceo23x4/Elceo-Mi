@@ -316,3 +316,12 @@ RC-H replay smoke validates captured payload metadata, pagination cursor fields,
 ## RC-I3 notification reliability layer
 
 RC-I3 implements the notification reliability and local/sandbox validation foundation: durable outbox staging, dispatch through the outbox state machine, deterministic retry/backoff, attempt audit history, dead-letter/operator visibility, replay smoke, sandbox smoke gating, unsubscribe/disable enforcement, and provider-mode blocking for production-live notification activation. Production-live notification activation remains blocked unless separately approved. Notification provider sandbox credentials are required for real sandbox smoke, and replay smoke is not equivalent to real provider sandbox validation. Dead-letter/operator visibility and unsubscribe/disable enforcement are required launch controls. RC-I2-CERT remains a mandatory unresolved pre-launch blocker. RC-J remains a mandatory subsequent launch batch. Intelligence Feature Program remains a mandatory pre-launch dependency. RC-K remains final full-repository closure. No remaining launch workflow item is deferred or postponed.
+
+## IFP-0 canonical scope lock alignment
+
+- `docs/intelligence-feature-program.md` is the canonical Intelligence Feature Program truth source.
+- IFP-0 defines the program but implements no intelligence feature.
+- IFP is not complete merely because the scope document exists.
+- RC-I2-CERT remains mandatory.
+- RC-J-ENV remains mandatory.
+- RC-K begins only after all eight IFP phases are closed.

@@ -415,3 +415,12 @@ RC-I3 implements the notification reliability and local/sandbox validation found
 RC-J adds validation for infrastructure, security, staging isolation, monitoring, alerting, backup/restore, rollback, deployment promotion, and attack-drill evidence. RC-J does not activate production providers. RC-J does not complete RC-I2-CERT. RC-J does not implement IFP. RC-J does not complete RC-K.
 
 Mandatory unresolved pre-launch blocker: RC-I2-CERT credentialed payment provider sandbox certification. Mandatory pre-launch dependency: Intelligence Feature Program. Mandatory subsequent launch batch: RC-K final full-repository closure. No remaining launch workflow item is labeled as not in this RC-J scope in a way that changes its mandatory status.
+
+## IFP-0 canonical scope lock alignment
+
+- `docs/intelligence-feature-program.md` is the canonical Intelligence Feature Program truth source.
+- IFP-0 defines the program but implements no intelligence feature.
+- IFP is not complete merely because the scope document exists.
+- RC-I2-CERT remains mandatory.
+- RC-J-ENV remains mandatory.
+- RC-K begins only after all eight IFP phases are closed.

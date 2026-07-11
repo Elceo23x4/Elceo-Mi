@@ -340,3 +340,12 @@ RC-I3 implements the notification reliability and local/sandbox validation found
 ELCEO cannot be marked production-ready unless staging isolation, WAF/rate-limit posture, monitoring/alerting, backup/restore rehearsal, rollback rehearsal, deployment promotion gates, and attack-drill validation all have evidence. RC-J verifies operational readiness gates; it does not claim production readiness and does not enable production-live provider, payment, notification, or market-data activation by default.
 
 Production launch remains blocked until RC-I2-CERT, IFP, and RC-K are complete.
+
+## IFP-0 canonical scope lock alignment
+
+- `docs/intelligence-feature-program.md` is the canonical Intelligence Feature Program truth source.
+- IFP-0 defines the program but implements no intelligence feature.
+- IFP is not complete merely because the scope document exists.
+- RC-I2-CERT remains mandatory.
+- RC-J-ENV remains mandatory.
+- RC-K begins only after all eight IFP phases are closed.

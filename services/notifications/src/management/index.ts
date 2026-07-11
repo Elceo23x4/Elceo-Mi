@@ -6,3 +6,5 @@ export * from './normalization';
 export * from './subscription-service';
 export * from './summary-service';
 export * from './target-service';
+export * from './operator-inspection-service';
+export * from './redaction';

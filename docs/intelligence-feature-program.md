@@ -81,19 +81,19 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 
 - Phase ID: IFP-2
 - Canonical phase name: Historical Calibration and Reaction Evidence Set
-- Exact objective: define and ingest separated historical calibration and evaluation datasets with event-time-safe fields for asset/event reaction studies.
+- Exact objective: define and ingest separated historical calibration and evaluation datasets with event-time-safe fields for asset/event reaction studies, and establish the predeclared evidence-sufficiency policy before evaluation begins.
 - Problem being closed: fixtures and golden scenarios are deterministic coverage, not empirical evidence.
-- Source requirements: historical calibration and reaction-study evidence; training/evaluation dataset separation; no historical outcome leakage.
+- Source requirements: historical calibration and reaction-study evidence; calibration/evaluation separation; training/evaluation dataset separation; no historical outcome leakage; predeclared evidence coverage for mandatory launch assets or approved asset groups, required event classes, required horizons, sparse or structurally unavailable slices, and minimum sample or evidence-sufficiency policy.
 - Existing modules reused: macro surprise normalization, price reaction, asset direction resolution, provider payload/replay contracts.
 - Likely permitted files: dataset manifests, evidence schemas, replay fixtures, tests, docs.
 - Prohibited scope: live provider activation, provider credentials, golden expectation changes, confidence recalibration.
-- Dependencies: IFP-1; certified/captured data may depend on provider readiness but no activation is performed here.
-- Implementation outputs: calibration/evaluation manifests, event-time availability rules, sample metadata by period/asset/event class/horizon.
-- Tests and evaluation evidence: leakage tests, manifest validation, sample-size reports, event-time field assertions.
-- Merge blockers: training/evaluation mixing; outcome fields available as inputs; sample reports without limitations.
+- Dependencies: IFP-1 closed; certified/captured data may depend on provider readiness but no activation is performed here.
+- Implementation outputs: calibration/evaluation manifests, event-time availability rules, versioned predeclared evidence-sufficiency policy, mandatory launch coverage matrix, sparse-slice handling rules, sample metadata by period/asset/event class/horizon.
+- Tests and evaluation evidence: leakage tests, manifest validation, predeclared coverage-policy validation, mandatory launch coverage matrix validation, sample-size reports, event-time field assertions.
+- Merge blockers: training/evaluation mixing; outcome fields available as inputs; evaluation starting before the versioned predeclared evidence-sufficiency policy exists; sample reports without limitations.
 - External data/environment requirements: historical datasets or certified replay exports; credentials only through approved provider gates if used.
 - Truthful completion language: IFP-2 complete means evidence sets are valid and separated; it does not mean model performance is acceptable.
-- Stop condition: every dataset has period, asset, event class, horizon, sample size, source, input-availability cutoff, and train/eval assignment.
+- Stop condition: every dataset has period, asset, event class, horizon, sample size, source, input-availability cutoff, train/eval assignment, and a versioned evidence-sufficiency classification before IFP-4 evaluation begins.
 
 ### IFP-3 — Confidence Floor Saturation and Calibration Diagnosis
 
@@ -105,7 +105,7 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 - Existing modules reused: confidence calibration, contradiction matrix, provider reliability weighting, golden-scenario reports.
 - Likely permitted files: diagnostic reports, calibration evaluation harnesses, tests, docs.
 - Prohibited scope: raising confidence values, weakening penalties, confidence tier changes, adaptive self-modifying confidence engine, golden expectation edits.
-- Dependencies: IFP-1 and IFP-2.
+- Dependencies: IFP-2 closed.
 - Implementation outputs: saturation taxonomy, empirical factor attribution, false-zero/true-zero analysis, recommended future config changes if evidence supports them.
 - Tests and evaluation evidence: reproducible diagnostic runs, factor ablation reports as evidence only, separated evaluation confirmation.
 - Merge blockers: arithmetic changes in same phase; fixture-only proof; missing explanation of contradiction/provider/price-confirmation contributors.
@@ -123,7 +123,7 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 - Existing modules reused: asset causality, FX relative-strength, macro surprise normalization, price reaction, economic context.
 - Likely permitted files: backtest harnesses, reports, tests, methodology docs.
 - Prohibited scope: inferring direction from scenario titles/IDs/categories/expected outputs; asset taxonomy changes; direct financial-advice outputs.
-- Dependencies: IFP-1, IFP-2, IFP-3.
+- Dependencies: IFP-3 closed.
 - Implementation outputs: per-asset/per-event/horizon evaluation reports, confusion tables, limitations, invalidation cases.
 - Tests and evaluation evidence: backtest reproducibility, period split validation, asset/event/horizon sample reporting, leakage checks.
 - Merge blockers: universal aggregate score as proof; missing sample size/period/asset/event class/horizon; direction inferred from labels.
@@ -141,7 +141,7 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 - Existing modules reused: provider reliability, evidence quality, scheduled ingestion staleness, contradiction matrix, freshness composer.
 - Likely permitted files: governance docs, drift reports, stress fixtures/replays, tests.
 - Prohibited scope: provider credentials, provider activation, unmanaged direct third-party calls, weakening contradiction penalties.
-- Dependencies: IFP-1, IFP-2; RC-H/Provider API Gate evidence if live-provider data is used.
+- Dependencies: IFP-4 closed; RC-H/Provider API Gate evidence may be an additional evidence dependency if live-provider data is used, but it does not change the canonical execution order.
 - Implementation outputs: reliability version registry, drift review cadence, regime stress suite, contradiction/freshness outcome reports.
 - Tests and evaluation evidence: source drift tests, duplicate-burst tests, stale-evidence tests, contradiction stress scenarios.
 - Merge blockers: unversioned provider weights; fixture-only production claim; direct live calls outside Provider API Gate.
@@ -159,7 +159,7 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 - Existing modules reused: notification policy/cooldown/material-change/dedupe, analytics coaching, journal influence, reasoning link summaries.
 - Likely permitted files: validation reports, alert policy tests, coaching interpretation tests, docs.
 - Prohibited scope: notification provider activation, payment runtime, entitlement behavior, affiliate behavior, financial advice commands.
-- Dependencies: IFP-4 and IFP-5.
+- Dependencies: IFP-5 closed.
 - Implementation outputs: alert threshold evidence, cooldown/dedupe acceptance, trader safety language review, coaching-market-boundary tests.
 - Tests and evaluation evidence: alert replay tests, over-trigger/under-trigger reports, coaching boundary tests, user-safety review evidence.
 - Merge blockers: coaching invents market direction; alerts bypass cooldown/dedupe; fixture-only trade-readiness claim.
@@ -177,7 +177,7 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 - Existing modules reused: explanation builder, chart projection builder, reasoning runtime reports, analytics/coaching boundaries, API market-evidence routes.
 - Likely permitted files: persistence contracts, audit reports, interpretation review fixtures/tests, docs.
 - Prohibited scope: frontend redesign, API behavior changes outside necessary audit persistence, runtime market formula changes.
-- Dependencies: IFP-4, IFP-5, IFP-6.
+- Dependencies: IFP-6 closed.
 - Implementation outputs: decision-path persistence model, explanation trace IDs, readability review rubric, audited sample outputs.
 - Tests and evaluation evidence: trace persistence tests, no-advice/readability tests, chart-to-evidence audit path tests.
 - Merge blockers: output lacking deterministic path; unreadable trader interpretation accepted without review; chart intelligence detached from evidence.
@@ -189,19 +189,19 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 
 - Phase ID: IFP-8
 - Canonical phase name: Production-Data Calibration and Intelligence Acceptance Evidence Gate
-- Exact objective: close IFP with versioned, reversible production-data calibration evidence and an acceptance gate across all previous IFP outputs.
+- Exact objective: close IFP with versioned, reversible production-data calibration evidence, apply any approved evidence-supported configuration calibration through the IFP-1 configuration registry, and run an acceptance gate across all previous IFP outputs.
 - Problem being closed: the repository needs a final intelligence acceptance record before RC-K can reconcile full launch closure.
 - Source requirements: production-data calibration; intelligence acceptance evidence; production calibration must remain versioned and reversible.
 - Existing modules reused: all IFP-1 through IFP-7 outputs, release gates, readiness contracts, provider readiness documents.
-- Likely permitted files: acceptance evidence docs, calibration reports, release-gate docs/scripts, tests.
+- Likely permitted files: acceptance evidence docs, calibration reports, release-gate docs/scripts, tests, the IFP-1 configuration registry, and versioned configuration artifacts only when an evidence-backed configuration change is explicitly approved.
 - Prohibited scope: RC-K, RC-I2-CERT completion, RC-J-ENV completion, live provider activation, affiliate/referral/coupon work.
-- Dependencies: IFP-1 through IFP-7 closed; certified data/environment evidence available as appropriate.
-- Implementation outputs: IFP acceptance report, production-calibration version, rollback plan, residual risk register, RC-K handoff checklist.
-- Tests and evaluation evidence: full IFP evidence audit, release-gate integration, production-like data calibration reports with limitations.
-- Merge blockers: fixture-only validation claim; missing rollback; missing residual limitations; RC-K started or marked complete.
+- Dependencies: IFP-7 closed and all preceding IFP evidence closed; certified data/environment evidence available as appropriate.
+- Implementation outputs: IFP acceptance report, production-calibration version, evidence-supported configuration application record, held-out evaluation result, previous-configuration recovery proof, rollback plan, residual risk register, mandatory coverage acceptance decision, RC-K handoff checklist.
+- Tests and evaluation evidence: full IFP evidence audit, release-gate integration, production-like data calibration reports with limitations, held-out evaluation not used to select the calibration change, recovery/rollback tests for previous configuration versions, and verification that fixture pass-rate improvement alone was not used as justification.
+- Merge blockers: fixture-only validation claim; production acceptance based only on fixture/golden-scenario results; missing rollback; missing residual limitations; unresolved insufficient-data status for mandatory launch intelligence coverage; missing predeclared evidence-sufficiency policy; calibration selected and evaluated on the same data; formula or algorithm change treated silently as calibration; RC-K started or marked complete.
 - External data/environment requirements: production-like certified data; IFP does not itself complete external provider/payment/infrastructure certifications.
-- Truthful completion language: IFP-8 complete means IFP evidence is accepted for RC-K review; RC-K still remains after IFP.
-- Stop condition: acceptance gate references all eight phase outputs, records evidence versions, known limitations, rollback, and RC-K handoff without claiming RC-K closure.
+- Truthful completion language: IFP-8 complete means IFP evidence is accepted for RC-K review and any approved configuration calibration is versioned, reversible, supported by IFP-2 through IFP-5 empirical evidence, and evaluated on held-out data; it does not permit silent formula/algorithm changes and RC-K still remains after IFP.
+- Stop condition: acceptance gate references all eight phase outputs, records evidence versions, known limitations, held-out evaluation, previous-version recovery, rollback, mandatory coverage resolution, and RC-K handoff without claiming RC-K closure.
 
 ## Dependency graph
 
@@ -232,9 +232,11 @@ RC-J-ENV — External Infrastructure and Disaster-Recovery Certification
 - No single aggregate accuracy score may be used as universal proof.
 - Intelligence outputs must preserve deterministic explanation and audit paths.
 - Behavioral coaching may alter execution guidance but must not fabricate market direction.
-- Production data calibration must remain versioned and reversible.
+- Production data calibration must remain versioned and reversible, and any evidence-supported configuration change must use the IFP-1 registry.
 - Live provider activation remains behind the Provider API Gate.
 - No IFP phase may claim production validation from fixtures alone.
+- Formula or algorithm defects require a separate explicitly approved reasoning-correction dependency rather than being changed inside IFP-8.
+- IFP-8 must block unresolved insufficient-data status for mandatory launch intelligence coverage unless the affected slice is explicitly classified as non-required by an approved product/intelligence coverage contract or a documented risk decision removes that slice from the launch intelligence claim without silently changing asset taxonomy.
 - Affiliate-1 through Affiliate-9 are not IFP phases.
 - Referral commission, coupons, affiliate wallets and withdrawals are not intelligence calibration.
 - Affiliate work must not be introduced in an IFP branch.

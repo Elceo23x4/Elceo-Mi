@@ -92,3 +92,10 @@ export type CognitionDriftRepository = {
     severity?: PersistedCognitionDriftRecord['severity'];
   }): Promise<PersistedCognitionDriftRecord[]>;
 };
+
+import type { ExpectationRealityRepository, ExpectationRepository } from '../expectation-reality/repository';
+
+export type ExpectationRealityPersistence = {
+  expectationRepository: ExpectationRepository;
+  expectationRealityRepository: ExpectationRealityRepository;
+};

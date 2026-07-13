@@ -12,6 +12,7 @@ import {
 import { DeterministicReasoningEngine } from '../engine/deterministic-reasoning-engine';
 import { buildCognitionDriftReport } from '../delta/cognition-drift';
 import type { CognitionDriftReport } from '../delta/contracts';
+import { createExpectationFromCognition } from '../expectation-reality/service';
 
 export type CanonicalReasoningBoundaryExecuteParams = {
   asset: CanonicalAssetSymbol;
@@ -43,7 +44,7 @@ export class CanonicalReasoningBoundaryService {
     private readonly persistence: ReasoningPersistenceRepository
   ) {}
 
-  async executeAssetWindow(params: CanonicalReasoningBoundaryExecuteParams): Promise<{ cognition: CanonicalCognitionState | null; report: ReasoningRunReport; assembly: ReasoningInputAssemblyResult | null; drift: CognitionDriftReport | null }> {
+  async executeAssetWindow(params: CanonicalReasoningBoundaryExecuteParams): Promise<{ cognition: CanonicalCognitionState | null; report: ReasoningRunReport; assembly: ReasoningInputAssemblyResult | null; drift: CognitionDriftReport | null; expectationId?: string | null }> {
     const startedAt = new Date().toISOString();
     const reasoningRunId = createReasoningRunId();
 
@@ -55,6 +56,7 @@ export class CanonicalReasoningBoundaryService {
     let failureReason: string | null = null;
     let warnings: string[] = [];
     let drift: CognitionDriftReport | null = null;
+    let expectationId: string | null = null;
 
     try {
       assembly = await this.assembler.assembleReasoningInput(params);
@@ -124,6 +126,17 @@ export class CanonicalReasoningBoundaryService {
           createdAt: new Date().toISOString()
         };
         await this.persistence.snapshotRepository.saveCognitionSnapshot(snapshotRecord);
+        const maybePersistence = this.persistence as typeof this.persistence & { expectationRepository?: { saveExpectation: (record: ReturnType<typeof createExpectationFromCognition>) => Promise<void> } };
+        if (maybePersistence.expectationRepository) {
+          try {
+            const expectation = createExpectationFromCognition({ cognition, input: assembly.input, reasoningRunId, cognitionSnapshotId: snapshotId, createdAt: snapshotRecord.createdAt });
+            await maybePersistence.expectationRepository.saveExpectation(expectation);
+            expectationId = expectation.expectationId;
+          } catch (error) {
+            status = 'partial_success';
+            warnings.push(`expectation_persistence_failure:${error instanceof Error ? error.message : 'unknown'}`);
+          }
+        }
       } catch (error) {
         status = 'partial_success';
         failureReason = `snapshot_persistence_failure:${error instanceof Error ? error.message : 'unknown'}`;
@@ -237,14 +250,16 @@ export class CanonicalReasoningBoundaryService {
       engineName: this.metadata.engineName,
       reasoningVersion: this.metadata.reasoningVersion,
       scoringVersion: this.metadata.scoringVersion,
-      drift
+      drift,
+      expectationId
     };
 
     return {
       cognition,
       report,
       assembly,
-      drift
+      drift,
+      expectationId
     };
   }
 
@@ -260,7 +275,7 @@ export class CanonicalReasoningBoundaryService {
     cognition: CanonicalCognitionState | null;
     snapshotId: string | null;
     drift: CognitionDriftReport | null;
-  }): Promise<{ cognition: CanonicalCognitionState | null; report: ReasoningRunReport; assembly: ReasoningInputAssemblyResult | null; drift: CognitionDriftReport | null }> {
+  }): Promise<{ cognition: CanonicalCognitionState | null; report: ReasoningRunReport; assembly: ReasoningInputAssemblyResult | null; drift: CognitionDriftReport | null; expectationId?: string | null }> {
     const durationMs = Math.max(0, Date.parse(input.endedAt) - Date.parse(input.startedAt));
 
     const runRecord: PersistedReasoningRun = {
@@ -308,14 +323,16 @@ export class CanonicalReasoningBoundaryService {
       engineName: this.metadata.engineName,
       reasoningVersion: this.metadata.reasoningVersion,
       scoringVersion: this.metadata.scoringVersion,
-      drift: input.drift
+      drift: input.drift,
+      expectationId: null
     };
 
     return {
       cognition: input.cognition,
       report,
       assembly: input.assembly,
-      drift: input.drift
+      drift: input.drift,
+      expectationId: null
     };
   }
 }

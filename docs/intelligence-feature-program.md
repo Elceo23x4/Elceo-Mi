@@ -1,6 +1,6 @@
 # Intelligence Feature Program
 
-Status: **IFP-0 canonical scope lock only**. This document defines the controlled Intelligence Feature Program before any IFP runtime development begins. IFP-0 implements no intelligence feature and does not complete IFP.
+Status: **IFP-1 active approved intelligence capability**. This document defines the controlled Intelligence Feature Program before any IFP runtime development begins. IFP-0 implements no intelligence feature and does not complete IFP.
 
 ## Program purpose
 
@@ -53,16 +53,16 @@ IFP is not another C6-R phase, C6-R9H, C6-R10, live provider activation, payment
 
 ## Confidence-floor issue
 
-Existing observation: **25 of 33 deterministic golden scenarios currently produce confidence 0**. This is classified as **mandatory empirical diagnosis** owned by **IFP-3 — Confidence Floor Saturation and Calibration Diagnosis**.
+Existing observation: **25 of 33 deterministic golden scenarios currently produce confidence 0**. This is classified as **mandatory empirical diagnosis** owned by **IFP-3 — Contradiction-to-Action Protocol**.
 
 IFP-0 does not raise confidence values, change confidence bands, weaken readiness penalties, remove contradiction penalties, change golden-scenario expectations, or create an adaptive self-modifying confidence engine.
 
 ## Canonical IFP-1 through IFP-8 map
 
-### IFP-1 — Versioned Intelligence Configuration Registry
+### IFP-1 — Expectation-Reality Delta Engine
 
 - Phase ID: IFP-1
-- Canonical phase name: Versioned Intelligence Configuration Registry
+- Canonical phase name: Expectation-Reality Delta Engine
 - Exact objective: establish versioned, reversible parameter/model configuration records for deterministic intelligence inputs, evidence windows, horizons, and calibration metadata without changing formulas for fixture pass rates.
 - Problem being closed: deterministic foundations expose behavior but do not yet have an IFP-wide configuration evidence ledger suitable for calibration comparisons and rollback.
 - Source requirements: versioned parameter and model configuration; production-data calibration; readiness contracts.
@@ -77,10 +77,10 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 - Truthful completion language: IFP-1 complete means configuration is versioned and auditable; it does not mean calibration is empirically validated.
 - Stop condition: every IFP-relevant parameter family has an owner, version, rationale, rollback path, and no runtime formula change.
 
-### IFP-2 — Historical Calibration and Reaction Evidence Set
+### IFP-2 — Historical Market Memory / Analog Engine
 
 - Phase ID: IFP-2
-- Canonical phase name: Historical Calibration and Reaction Evidence Set
+- Canonical phase name: Historical Market Memory / Analog Engine
 - Exact objective: define and ingest separated historical calibration and evaluation datasets with event-time-safe fields for asset/event reaction studies, and establish the predeclared evidence-sufficiency policy before evaluation begins.
 - Problem being closed: fixtures and golden scenarios are deterministic coverage, not empirical evidence.
 - Source requirements: historical calibration and reaction-study evidence; calibration/evaluation separation; training/evaluation dataset separation; no historical outcome leakage; predeclared evidence coverage for mandatory launch assets or approved asset groups, required event classes, required horizons, sparse or structurally unavailable slices, and minimum sample or evidence-sufficiency policy.
@@ -95,10 +95,10 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 - Truthful completion language: IFP-2 complete means evidence sets are valid and separated; it does not mean model performance is acceptable.
 - Stop condition: every dataset has period, asset, event class, horizon, sample size, source, input-availability cutoff, train/eval assignment, and a versioned evidence-sufficiency classification before IFP-4 evaluation begins.
 
-### IFP-3 — Confidence Floor Saturation and Calibration Diagnosis
+### IFP-3 — Contradiction-to-Action Protocol
 
 - Phase ID: IFP-3
-- Canonical phase name: Confidence Floor Saturation and Calibration Diagnosis
+- Canonical phase name: Contradiction-to-Action Protocol
 - Exact objective: diagnose confidence-floor saturation empirically, including the current 25/33 zero-confidence golden-scenario observation, without hiding it through anchor or penalty changes.
 - Problem being closed: production calibration cannot be claimed while floor saturation causes many deterministic scenarios to emit confidence 0 without empirical diagnosis.
 - Source requirements: confidence-floor saturation diagnosis; no confidence formula changes merely to improve fixtures; no IFP phase may claim production validation from fixtures alone.
@@ -113,10 +113,10 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 - Truthful completion language: IFP-3 complete means saturation is diagnosed and evidence-backed; it does not mean formulas were changed.
 - Stop condition: each zero-confidence class has empirical attribution, sample support, limitations, and a documented decision to keep or propose later versioned changes.
 
-### IFP-4 — Asset/Event Direction and Backtesting Evaluation
+### IFP-4 — Market Cleanliness Ranking
 
 - Phase ID: IFP-4
-- Canonical phase name: Asset/Event Direction and Backtesting Evaluation
+- Canonical phase name: Market Cleanliness Ranking
 - Exact objective: evaluate asset-specific direction, event-class reaction, and horizon behavior using separated empirical datasets.
 - Problem being closed: deterministic direction logic needs evidence-backed direction validation across assets and event families.
 - Source requirements: empirical backtesting and evaluation methodology; asset/event direction validation; no single aggregate accuracy score as universal proof.
@@ -131,10 +131,10 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 - Truthful completion language: IFP-4 complete means evaluated evidence exists by slice; it does not mean production-live validation is complete.
 - Stop condition: every launch reasoning asset/event class under evaluation has a documented pass/fail/insufficient-data decision with limitations.
 
-### IFP-5 — Source Reliability, Freshness, Contradiction, and Regime Stress Governance
+### IFP-5 — News Half-Life / Narrative Decay
 
 - Phase ID: IFP-5
-- Canonical phase name: Source Reliability, Freshness, Contradiction, and Regime Stress Governance
+- Canonical phase name: News Half-Life / Narrative Decay
 - Exact objective: validate provider/source reliability weighting, freshness decay, contradiction handling, and regime stress behavior under documented evidence versions.
 - Problem being closed: reliability, freshness, contradiction, and stress controls exist but require drift review and regime-specific validation.
 - Source requirements: provider/source reliability governance and drift review; freshness, contradiction and regime stress testing; evidence-backed versioned reliability.
@@ -149,10 +149,10 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 - Truthful completion language: IFP-5 complete means governance and stress evidence exist; it does not activate providers.
 - Stop condition: every source/reliability class has version, evidence basis, drift owner, freshness rules, and stress-test result.
 
-### IFP-6 — Trade-Readiness, Alert-Throttling, and Behavioral Safety Validation
+### IFP-6 — Crowd Pain / Positioning Stress Map
 
 - Phase ID: IFP-6
-- Canonical phase name: Trade-Readiness, Alert-Throttling, and Behavioral Safety Validation
+- Canonical phase name: Crowd Pain / Positioning Stress Map
 - Exact objective: validate whether intelligence is safe to surface as trade-readiness context and alert/coaching guidance without fabricating direction or over-alerting.
 - Problem being closed: alert, notification, journal, and coaching foundations exist but require intelligence acceptance evidence and throttling validation.
 - Source requirements: trade-readiness and alert-throttling validation; behavioral coaching must not fabricate market direction.
@@ -167,10 +167,10 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 - Truthful completion language: IFP-6 complete means trade-readiness and alert behavior is validated for product consumption; notification delivery certification remains separate.
 - Stop condition: each alert/coaching surface has threshold evidence, suppression proof, safe language, and known limitations.
 
-### IFP-7 — Explanation Auditability, Decision-Path Persistence, and Trader Interpretation Review
+### IFP-7 — Fragility Score
 
 - Phase ID: IFP-7
-- Canonical phase name: Explanation Auditability, Decision-Path Persistence, and Trader Interpretation Review
+- Canonical phase name: Fragility Score
 - Exact objective: persist and review deterministic explanation paths so trader-facing interpretation remains readable, attributable, and auditable.
 - Problem being closed: deterministic explanation objects exist but must be product-consumable and traceable across reasoning, chart, analytics, coaching, and journal surfaces.
 - Source requirements: explanation auditability and decision-path persistence; human readability and trader interpretation review; deterministic explanation preservation.
@@ -241,3 +241,8 @@ RC-J-ENV — External Infrastructure and Disaster-Recovery Certification
 - Referral commission, coupons, affiliate wallets and withdrawals are not intelligence calibration.
 - Affiliate work must not be introduced in an IFP branch.
 - Remaining launch work must not use prohibited delay labels.
+
+
+## IFP-1 active status
+
+IFP-1 is the active approved intelligence capability. IFP-2 follows only after IFP-1 is closed. The full IFP is not complete.

@@ -8,6 +8,7 @@ import type {
   ReasoningPersistenceRepository,
   ReasoningRunRepository
 } from './contracts';
+import { MemoryExpectationRealityRepository, MemoryExpectationRepository } from '../expectation-reality/repository';
 
 export class MemoryReasoningRunRepository implements ReasoningRunRepository {
   private readonly rows = new Map<string, PersistedReasoningRun>();
@@ -92,14 +93,20 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
   readonly runRepository: ReasoningRunRepository;
   readonly snapshotRepository: CognitionSnapshotRepository;
   readonly driftRepository: CognitionDriftRepository;
+  readonly expectationRepository: MemoryExpectationRepository;
+  readonly expectationRealityRepository: MemoryExpectationRealityRepository;
 
   constructor(
     runRepository: ReasoningRunRepository = new MemoryReasoningRunRepository(),
     snapshotRepository: CognitionSnapshotRepository = new MemoryCognitionSnapshotRepository(),
-    driftRepository: CognitionDriftRepository = new MemoryCognitionDriftRepository()
+    driftRepository: CognitionDriftRepository = new MemoryCognitionDriftRepository(),
+    expectationRepository: MemoryExpectationRepository = new MemoryExpectationRepository(),
+    expectationRealityRepository: MemoryExpectationRealityRepository = new MemoryExpectationRealityRepository()
   ) {
     this.runRepository = runRepository;
     this.snapshotRepository = snapshotRepository;
     this.driftRepository = driftRepository;
+    this.expectationRepository = expectationRepository;
+    this.expectationRealityRepository = expectationRealityRepository;
   }
 }

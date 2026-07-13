@@ -36,11 +36,23 @@ if (packageJson.scripts?.['check:ifp'] !== 'node scripts/check-intelligence-feat
 if (!/name:\s*Check Intelligence Feature Program contract[\s\S]*?run:\s*npm run check:ifp/.test(ci)) fail('GitHub CI does not run check:ifp with the expected step name');
 if (!/label:\s*['"]npm run check:ifp['"][\s\S]*?args:\s*\[[^\]]*['"]run['"][^\]]*['"]check:ifp['"][^\]]*\]/.test(releaseGate)) fail('release gate does not include npm run check:ifp');
 
+
+const canonicalPhaseNames = [
+  'Expectation-Reality Delta Engine',
+  'Historical Market Memory / Analog Engine',
+  'Contradiction-to-Action Protocol',
+  'Market Cleanliness Ranking',
+  'News Half-Life / Narrative Decay',
+  'Crowd Pain / Positioning Stress Map',
+  'Fragility Score',
+  'Production-Data Calibration and Intelligence Acceptance Evidence Gate'
+];
 const phases = [...doc.matchAll(/^### (IFP-(\d+)) — (.+)$/gm)].map((match) => ({ id: match[1], n: Number(match[2]), name: match[3], index: match.index }));
 if (phases.length !== 8) fail(`expected exactly 8 canonical phases, found ${phases.length}`);
 phases.forEach((phase, index) => {
   if (phase.n !== index + 1) fail(`phase order mismatch at ${phase.id}`);
   if (phase.id !== `IFP-${index + 1}`) fail(`phase id mismatch: ${phase.id}`);
+  if (phase.name !== canonicalPhaseNames[index]) fail(`phase name mismatch for ${phase.id}: ${phase.name}`);
 });
 if (new Set(phases.map((phase) => phase.id)).size !== phases.length) fail('phase IDs are not unique');
 
@@ -92,9 +104,8 @@ const requiredDocPhrases = [
 ];
 for (const phrase of requiredDocPhrases) if (!doc.includes(phrase)) fail(`missing required IFP phrase: ${phrase}`);
 
-const ifp3 = bodies.get('IFP-3') ?? '';
-if (!ifp3.includes('diagnose confidence-floor saturation empirically') || !ifp3.includes('it does not mean formulas were changed')) fail('IFP-3 is not clearly diagnosis-only');
-if (!ifp3.includes('Prohibited scope: raising confidence values, weakening penalties, confidence tier changes, adaptive self-modifying confidence engine, golden expectation edits')) fail('IFP-3 prohibited scope is incomplete');
+if (!doc.includes('diagnose confidence-floor saturation empirically') || !doc.includes('it does not mean formulas were changed')) fail('confidence-floor diagnosis boundary is missing');
+if (!doc.includes('Prohibited scope: raising confidence values, weakening penalties, confidence tier changes, adaptive self-modifying confidence engine, golden expectation edits')) fail('confidence prohibited scope is incomplete');
 
 const ifp8 = bodies.get('IFP-8') ?? '';
 const ifp8Required = [

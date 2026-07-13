@@ -1,0 +1,24 @@
+import type { CanonicalCognitionState, ReasoningInputFrame } from '@elceo/types';
+import type { PersistedCognitionSnapshot, PersistedReasoningRun } from '../persistence/contracts';
+import { deserializeCanonicalCognitionState } from '../persistence/serialization';
+import type { ExpectationHorizon, ExpectationRecord, ObservationSet } from './contracts';
+import { evaluateExpectationReality } from './engine';
+import { EXPECTATION_REALITY_POLICY_V1 } from './policy';
+import type { ExpectationRealityRepository, ExpectationRepository } from './repository';
+
+function id(runId: string, snapshotId: string) { return `expectation-${runId}-${snapshotId}`; }
+export function createExpectationFromCognition(params: { cognition: CanonicalCognitionState; input: ReasoningInputFrame; reasoningRunId: string; cognitionSnapshotId: string; createdAt?: string }): ExpectationRecord {
+  const { cognition, input } = params; const issuedAt = cognition.evaluatedAt; const dataCutoffAt = cognition.audit.dataCutoffAt;
+  if (Date.parse(dataCutoffAt) > Date.parse(issuedAt)) throw new Error('expectation_future_data_cutoff_rejected');
+  const range = input.recentPriceRange.high > input.recentPriceRange.low && input.latestPrice > 0 ? ((input.recentPriceRange.high - input.recentPriceRange.low) / input.latestPrice) * 100 : null;
+  return { expectationId: id(params.reasoningRunId, params.cognitionSnapshotId), asset: cognition.asset, timeframe: cognition.timeframe, issuedAt, dataCutoffAt, reasoningRunId: params.reasoningRunId, cognitionSnapshotId: params.cognitionSnapshotId, reasoningVersion: cognition.audit.reasoningVersion, scoringVersion: cognition.audit.scoringVersion, basePrice: input.latestPrice, recentRangePct: range, expectedBias: cognition.bias, confidenceScore: cognition.confidence.score, confidenceAnatomy: cognition.confidence.anatomy, contradictionScore: cognition.contradiction.score, contradictionRegime: cognition.contradiction.regime, invalidationState: cognition.invalidation, topEvidenceIds: [...cognition.evidence.topEvidenceIds], linkedEventIds: [...cognition.supportEvents.linkedEventIds], thesis: cognition.thesis, whatWouldChangeState: [...cognition.explanation.whatWouldChangeState], horizonPolicyVersion: EXPECTATION_REALITY_POLICY_V1.version, createdAt: params.createdAt ?? new Date().toISOString() };
+}
+export class ExpectationRealityService {
+  constructor(private expectations: ExpectationRepository, private evaluations: ExpectationRealityRepository) {}
+  async createExpectationFromReasoningRun(params: { run: PersistedReasoningRun; snapshot: PersistedCognitionSnapshot; input: ReasoningInputFrame }): Promise<ExpectationRecord> { const cognition = deserializeCanonicalCognitionState(params.snapshot.cognitionJson); const rec = createExpectationFromCognition({ cognition, input: params.input, reasoningRunId: params.run.reasoningRunId, cognitionSnapshotId: params.snapshot.snapshotId, createdAt: params.run.createdAt }); await this.expectations.saveExpectation(rec); return rec; }
+  async evaluateExpectationReality(params: { expectationId: string; horizon: ExpectationHorizon; observations: ObservationSet; evaluatedAt: string }) { const exp = await this.expectations.getExpectationById(params.expectationId); if (!exp) throw new Error('expectation_not_found'); const existing = await this.evaluations.getEvaluation(exp.expectationId, params.horizon, params.observations.observationVersion); if (existing) return existing; const evaln = evaluateExpectationReality({ expectation: exp, horizon: params.horizon, observations: params.observations, evaluatedAt: params.evaluatedAt }); await this.evaluations.saveEvaluation(evaln); return evaln; }
+  async evaluatePendingExpectations(loader: (e: ExpectationRecord) => Promise<ObservationSet>, params: { horizon: ExpectationHorizon; evaluatedAt: string; asset?: string; timeframe?: string; limit?: number }) { const pendingParams: { asset?: string; timeframe?: never; limit?: number } = {}; if (params.asset) pendingParams.asset = params.asset; if (params.timeframe) pendingParams.timeframe = params.timeframe as never; if (params.limit !== undefined) pendingParams.limit = params.limit; const rows = await this.expectations.listPendingExpectations(pendingParams); const out = []; for (const exp of rows) out.push(await this.evaluateExpectationReality({ expectationId: exp.expectationId, horizon: params.horizon, observations: await loader(exp), evaluatedAt: params.evaluatedAt })); return out; }
+  getExpectationById(id: string) { return this.expectations.getExpectationById(id); }
+  getLatestExpectationRealityForAssetTimeframe(asset: string, timeframe: string) { return this.evaluations.getLatestExpectationRealityForAssetTimeframe(asset, timeframe as never); }
+  listExpectationRealityHistory(params: { asset?: string; timeframe?: string; expectationId?: string; limit: number }) { return this.evaluations.listExpectationRealityHistory(params as never); }
+}

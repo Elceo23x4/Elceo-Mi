@@ -1,7 +1,7 @@
 import type { MarketPriceReactionInput } from '@elceo/types';
 import { deserializeCanonicalCognitionState } from '../persistence/serialization';
 import type { CognitionSnapshotRepository } from '../persistence/contracts';
-import type { EventExpectationRecord, EventRealityEvaluation, NumericReleaseFields } from './contracts';
+import type { EventExpectationDraft, EventExpectationRecord, EventRealityEvaluation, NumericReleaseFields } from './contracts';
 import { buildEventReality, createEventExpectation, interpretEventReality } from './event-engine';
 import type { EventExpectationRepository, EventRealityRepository } from './repository';
 
@@ -24,7 +24,7 @@ export class EventExpectationRealityService {
     return { snapshotId: snapshot.snapshotId, confidence: cognition.confidence.score, contradiction: cognition.contradiction.score, bias: cognition.bias };
   }
 
-  async saveFrozenEventExpectation(input: EventExpectationRecord): Promise<EventExpectationRecord> {
+  async saveFrozenEventExpectation(input: EventExpectationDraft): Promise<EventExpectationRecord> {
     const pre = await this.loadVerifiedCognition(input.preEventCognitionSnapshotId, input, 'pre');
     const verified = createEventExpectation({ ...input, preEventConfidence: pre.confidence, preEventContradiction: pre.contradiction, expectedAssetDirection: pre.bias });
     return this.expectations.saveEventExpectation(verified);

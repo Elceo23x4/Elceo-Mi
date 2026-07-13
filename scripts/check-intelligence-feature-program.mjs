@@ -127,9 +127,22 @@ for (const stale of ['configuration is versioned and auditable', 'parameter fami
   if (ifp1Body.includes(stale)) fail(`IFP-1 contains stale configuration-program language: ${stale}`);
 }
 
+
+const staleByPhase = {
+  'IFP-2': ['dataset manifests', 'training/evaluation dataset separation'],
+  'IFP-4': ['backtest harnesses', 'universal aggregate score as proof'],
+  'IFP-6': ['alert threshold evidence', 'cooldown/dedupe acceptance'],
+  'IFP-7': ['readability review rubric', 'frontend redesign'],
+  'IFP-8': ['IFP-1 configuration registry']
+};
+for (const [phaseId, phrases] of Object.entries(staleByPhase)) {
+  const body = bodies.get(phaseId) ?? '';
+  for (const phrase of phrases) if (body.includes(phrase)) fail(`${phaseId} contains stale non-engine language: ${phrase}`);
+}
+
 const ifp8 = bodies.get('IFP-8') ?? '';
 const ifp8Required = [
-  'IFP-1 configuration registry',
+  'cross-cutting configuration/version records',
   'versioned configuration artifacts only when an evidence-backed configuration change is explicitly approved',
   'supported by IFP-2 through IFP-5 empirical evidence',
   'held-out data',

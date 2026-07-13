@@ -15,6 +15,7 @@ const steps = [
   { label: 'npm run check:migrations', command: 'npm', args: ['run', 'check:migrations'] },
   { label: 'npm run test:migrations', command: 'npm', args: ['run', 'test:migrations'] },
   { label: 'npm run rehearse:migrations:dry-run', command: 'npm', args: ['run', 'rehearse:migrations:dry-run'] },
+  { label: 'npm run check:ifp', command: 'npm', args: ['run', 'check:ifp'] },
   { label: 'npm run security:gate', command: 'npm', args: ['run', 'security:gate'] },
 ];
 

@@ -38,8 +38,22 @@ run('backup passes with local disposable manifest/schema proof','scripts/rehears
 run('rollback refuses missing target','scripts/rehearse-rollback.mjs',{},1,'rollback execution not completed: deployment target unavailable');
 run('rollback does not pass from env presence alone','scripts/rehearse-rollback.mjs',{ROLLBACK_DEPLOYMENT_TARGET:'staging'},1,'post-rollback smoke unavailable');
 run('rollback executes command before passing','scripts/rehearse-rollback.mjs',{ROLLBACK_DEPLOYMENT_TARGET:'staging',ROLLBACK_SMOKE_COMMAND:JSON.stringify([node,'-e','process.exit(0)'])},0,'rollback_rehearsal_passed');
-run('deployment gate requires release/security/staging/RC-I2 evidence','scripts/verify-deployment-promotion-gates.mjs',{},1,'mandatory gate evidence missing');
-run('deployment gate blocks provider live activation','scripts/verify-deployment-promotion-gates.mjs',{RELEASE_GATE_PASSED:'1',SECURITY_GATE_PASSED:'1',MIGRATION_CHECK_PASSED:'1',STAGING_SMOKE_EVIDENCE:'1',RC_I2_CERT_EVIDENCE:'1',PROVIDER_LIVE_ACTIVATION_ENABLED:'live'},1,'provider-live activation still blocked');
+const validDeploymentGateEvidence = {
+  RELEASE_GATE_PASSED: '1',
+  SECURITY_GATE_PASSED: '1',
+  MIGRATION_CHECK_PASSED: '1',
+  STAGING_SMOKE_EVIDENCE: 'staging-smoke-report-2026-07-13',
+  RC_I2_CERT_EVIDENCE: 'rc-i2-cert-sandbox-report-2026-07-13',
+  RC_J_ENV_EVIDENCE: 'rc-j-env-dr-report-2026-07-13',
+};
+run('deployment gate requires release/security/staging/RC-I2/RC-J-ENV evidence','scripts/verify-deployment-promotion-gates.mjs',{},1,'mandatory gate evidence missing or invalid');
+run('deployment gate requires RC-J-ENV evidence','scripts/verify-deployment-promotion-gates.mjs',{...validDeploymentGateEvidence, RC_J_ENV_EVIDENCE: ''},1,'RC_J_ENV_EVIDENCE');
+run('deployment gate rejects false RC-J-ENV evidence','scripts/verify-deployment-promotion-gates.mjs',{...validDeploymentGateEvidence, RC_J_ENV_EVIDENCE: 'false'},1,'RC_J_ENV_EVIDENCE');
+run('deployment gate rejects false release gate flag','scripts/verify-deployment-promotion-gates.mjs',{...validDeploymentGateEvidence, RELEASE_GATE_PASSED: 'false'},1,'RELEASE_GATE_PASSED');
+run('deployment gate rejects zero security gate flag','scripts/verify-deployment-promotion-gates.mjs',{...validDeploymentGateEvidence, SECURITY_GATE_PASSED: '0'},1,'SECURITY_GATE_PASSED');
+run('deployment gate rejects incomplete RC-I2 evidence','scripts/verify-deployment-promotion-gates.mjs',{...validDeploymentGateEvidence, RC_I2_CERT_EVIDENCE: 'incomplete'},1,'RC_I2_CERT_EVIDENCE');
+run('deployment gate passes with full valid evidence','scripts/verify-deployment-promotion-gates.mjs',validDeploymentGateEvidence,0,'deployment_promotion_gates_passed');
+run('deployment gate blocks provider live activation','scripts/verify-deployment-promotion-gates.mjs',{...validDeploymentGateEvidence, PROVIDER_LIVE_ACTIVATION_ENABLED:'live'},1,'provider-live activation still blocked');
 const redactionSample = `postgres://rcj-host/db token=abc sk_${'live'}_SAMPLE`;
 if (redact(redactionSample) !== 'postgres://[REDACTED] token=[REDACTED] sk_live_[REDACTED]') { console.error('FAIL scripts redact secrets in summaries'); process.exit(1); }
 console.log('PASS scripts redact secrets in summaries');

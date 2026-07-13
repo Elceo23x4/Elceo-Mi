@@ -37,7 +37,8 @@
     "monitoring:alert-smoke": "node scripts/monitoring-alert-smoke.mjs",
     "backup:restore-rehearsal": "node scripts/rehearse-backup-restore.mjs",
     "rollback:rehearsal": "node scripts/rehearse-rollback.mjs",
-    "verify:deployment-gates": "node scripts/verify-deployment-promotion-gates.mjs"
+    "verify:deployment-gates": "node scripts/verify-deployment-promotion-gates.mjs",
+    "check:ifp": "node scripts/check-intelligence-feature-program.mjs"
   },
   "engines": {
     "node": ">=20.0.0"

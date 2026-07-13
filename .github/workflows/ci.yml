@@ -54,6 +54,9 @@ jobs:
       - name: Check C5 readiness
         run: npm run check:c5-readiness
 
+      - name: Check Intelligence Feature Program contract
+        run: npm run check:ifp
+
       - name: Run security gate
         run: npm run security:gate
 

@@ -11,6 +11,21 @@ const alignmentDocs = [
   'docs/production-readiness-checklist.md',
   'docs/post-r9-cleanup-execution-plan.md',
 ];
+
+const statusDocs = [
+  'docs/backend-open-loop-register.md',
+  'docs/final-production-status-report.md',
+  'docs/production-readiness-checklist.md',
+  'docs/post-r9-cleanup-execution-plan.md',
+];
+
+const sectionBetween = (content, startHeading, endHeading) => {
+  const start = content.indexOf(startHeading);
+  if (start === -1) return '';
+  const afterStart = start + startHeading.length;
+  const end = content.indexOf(endHeading, afterStart);
+  return content.slice(start, end === -1 ? content.length : end);
+};
 const failures = [];
 const fail = (message) => failures.push(message);
 
@@ -101,6 +116,31 @@ for (const path of alignmentDocs) {
     if (!content.includes(phrase)) fail(`${path} missing alignment phrase: ${phrase}`);
   }
 }
+
+
+for (const path of statusDocs) {
+  const content = read(path);
+  const currentStatus = [
+    sectionBetween(content, '## RC-I3 notification reliability layer', '## IFP-0 canonical scope lock alignment'),
+    sectionBetween(content, '## RC-J validation framework', '## IFP-0 canonical scope lock alignment'),
+    sectionBetween(content, '## IFP-0 canonical scope lock alignment', '\n## '),
+  ].join('\n');
+  for (const phrase of [
+    'RC-J validation framework is merged',
+    'RC-J-ENV remains a mandatory unresolved pre-launch blocker',
+    'RC-I2-CERT remains a mandatory unresolved pre-launch blocker',
+    'IFP remains the active mandatory pre-launch program',
+    'RC-K begins only after all eight IFP phases close',
+  ]) {
+    if (!currentStatus.includes(phrase)) fail(`${path} missing current lifecycle phrase: ${phrase}`);
+  }
+  if (currentStatus.includes('RC-J remains a mandatory subsequent launch batch')) fail(`${path} contains stale current RC-J lifecycle phrase`);
+}
+
+const productionStatus = read('docs/final-production-status-report.md');
+const blockerSentence = 'Production launch remains blocked until RC-I2-CERT, RC-J-ENV, IFP, and RC-K are complete';
+if (!productionStatus.includes(blockerSentence)) fail('final production blocker list does not include RC-I2-CERT, RC-J-ENV, IFP, and RC-K');
+if (productionStatus.includes('RC-J remains a mandatory subsequent launch batch')) fail('final production status contains stale RC-J current lifecycle phrase');
 
 if (/^### .*C6-R9H|^### .*C6-R10|Phase ID: C6-R9H|Phase ID: C6-R10|^### C6-/m.test(doc)) fail('prohibited C6-R9H, C6-R10, or new C6 phase introduced');
 if (/^### Affiliate-\d+/m.test(doc) || /^### IFP-\d+.*Affiliate/im.test(doc)) fail('affiliate phase represented as IFP phase');

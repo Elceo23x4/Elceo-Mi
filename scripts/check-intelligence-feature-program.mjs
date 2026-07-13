@@ -122,6 +122,11 @@ for (const [phaseId, phrases] of Object.entries(capabilityRequirements)) {
   for (const phrase of phrases) if (!body.includes(phrase) && !doc.includes(phrase)) fail(`${phaseId} missing capability requirement: ${phrase}`);
 }
 
+const ifp1Body = bodies.get('IFP-1') ?? '';
+for (const stale of ['configuration is versioned and auditable', 'parameter family has an owner', 'rollback path', 'configuration evidence ledger suitable for calibration comparisons']) {
+  if (ifp1Body.includes(stale)) fail(`IFP-1 contains stale configuration-program language: ${stale}`);
+}
+
 const ifp8 = bodies.get('IFP-8') ?? '';
 const ifp8Required = [
   'IFP-1 configuration registry',

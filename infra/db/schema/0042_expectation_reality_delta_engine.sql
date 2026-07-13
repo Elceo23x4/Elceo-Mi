@@ -52,8 +52,10 @@ CREATE TABLE IF NOT EXISTS app_event_reality_evaluations (
   asset text NOT NULL,
   interpreted_at timestamptz NOT NULL,
   primary_event_outcome text NOT NULL,
+  pre_event_cognition_snapshot_id text REFERENCES app_cognition_snapshots(snapshot_id) ON DELETE RESTRICT,
   post_event_cognition_snapshot_id text REFERENCES app_cognition_snapshots(snapshot_id) ON DELETE RESTRICT,
   observation_content_hash text,
+  reaction_provenance_json jsonb NOT NULL DEFAULT '[]'::jsonb,
   audit_json jsonb NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (expectation_id, release_version)

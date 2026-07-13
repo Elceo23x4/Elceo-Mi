@@ -63,19 +63,19 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 
 - Phase ID: IFP-1
 - Canonical phase name: Expectation-Reality Delta Engine
-- Exact objective: freeze pre-event expectations with actual, forecast, previous, revised previous, normalized surprise, primary price reaction, follow-through, related-market response, volatility adjustment, confidence shift, and immutable audit trail.
-- Problem being closed: deterministic foundations expose behavior but do not yet have an IFP-wide configuration evidence ledger suitable for calibration comparisons and rollback.
-- Source requirements: versioned parameter and model configuration; production-data calibration; readiness contracts.
-- Existing modules reused: market readiness contracts, confidence calibration contracts, provider reliability contracts, runtime reasoning reports.
-- Likely permitted files: documentation, market configuration types/schemas if needed, deterministic tests for configuration serialization.
-- Prohibited scope: reasoning formulas, confidence arithmetic, confidence tier thresholds, asset taxonomy, provider activation, C6 phase numbering.
+- Exact objective: freeze pre-event expectation records, bind actual and forecast, previous and revised previous, normalized surprise, primary-asset price reaction, follow-through, related-market response, volatility adjustment, confidence shift, and immutable audit trail into an event interpretation record.
+- Problem being closed: ELCEO can form cognition and classify price reactions, but it needs a product-safe event engine proving what was expected before release versus what the release, revision, primary market, related markets, and post-event cognition actually showed.
+- Source requirements: pre-event cognition snapshot, scheduled release metadata, actual release payload, forecast, previous, revised previous, normalized macro-surprise output, provider/source provenance, primary and related observation identity, post-event cognition snapshot, and no future-data leakage.
+- Existing modules reused: macro surprise normalization, asset causality, asset direction resolution, price reaction, confidence and contradiction cognition snapshots, provider provenance contracts, reasoning persistence.
+- Likely permitted files: expectation-reality contracts, event/path engines, repositories, migration 0042, reasoning runtime wiring, IFP documentation/checks, and focused tests.
+- Prohibited scope: confidence formula changes, golden scenario changes, asset taxonomy changes, provider activation, frontend behavior, financial-advice language, caller-fabricated directions, unrelated related-market confirmation.
 - Dependencies: merged deterministic foundations.
-- Implementation outputs: canonical config version record, changelog/audit fields, rollback language, fixture/current-runtime config snapshots.
-- Tests and evaluation evidence: schema validation, serialization tests, diff/rollback tests, documentation consistency checks.
-- Merge blockers: unversioned calibration knobs; any fixture-pass-driven formula change.
-- External data/environment requirements: none.
-- Truthful completion language: IFP-1 complete means configuration is versioned and auditable; it does not mean calibration is empirically validated.
-- Stop condition: every IFP-relevant parameter family has an owner, version, rationale, rollback path, and no runtime formula change.
+- Implementation outputs: frozen event expectation, event reality, release-alignment delta, price-path assessment, related-market confirmation, confidence/contradiction shift, immutable SQL/memory persistence, idempotent observation hash enforcement, and audit rationale.
+- Tests and evaluation evidence: release ID mismatch, pre/post cognition persistence derivation, canonical asset direction differences, hotter inflation bearish equity and bullish USD implication, observation hash identity across horizons, mispricing gate non-fabricability, SQL/memory immutability parity, and unchanged existing reasoning/golden tests.
+- Merge blockers: configuration versioning or parameter-family rollback presented as IFP-1 completion; actual/forecast/revision missing; cognition-only OHLC path marketed as the event engine; related markets inheriting primary direction; pre/post confidence accepted from caller; observation identity not content-bound; direct provider calls; confidence/golden changes.
+- External data/environment requirements: certified replay or Provider API Gate data only; no live provider activation in this phase.
+- Truthful completion language: IFP-1 complete means event expectations are frozen, event reality is bound and interpreted, and immutable evidence is persisted; it does not mean the full IFP or production calibration is complete.
+- Stop condition: every IFP-1 evaluation can prove pre-release expectation state, release/revision reality, canonical direction resolution, primary and related reactions, confidence shift, observation identity, warnings/limitations, and idempotent audit persistence.
 
 ### IFP-2 — Historical Market Memory / Analog Engine
 

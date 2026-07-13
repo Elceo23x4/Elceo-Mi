@@ -1,16 +1,75 @@
-import type { MarketPriceReactionInput } from '@elceo/types';
+import type { MarketAssetDirectionResolutionResult, MarketPriceReactionExpectedDirection, MarketPriceReactionInput } from '@elceo/types';
+import { resolveAssetContextualEvidenceDirection } from '../asset-direction-resolution/index';
 import { normalizeMacroSurprise } from '../macro-surprise-normalization/index';
 import { evaluatePriceReaction } from '../price-reaction/index';
-import type { EventExpectationRecord, EventRealityEvaluation, EventRealityRecord, NumericReleaseFields } from './contracts';
+import type { EventExpectationRecord, EventRealityEvaluation, EventRealityRecord, NumericReleaseFields, ReleaseAlignment } from './contracts';
+import { canonicalHash } from './identity';
 import { EXPECTATION_REALITY_POLICY_V1 } from './policy';
 
 const unique = (xs: string[]) => [...new Set(xs)];
+const known = (d: string | null | undefined) => d === 'bullish' || d === 'bearish' || d === 'neutral' || d === 'mixed';
 const reliable = (r: EventRealityRecord) => r.provenance.some((p) => (EXPECTATION_REALITY_POLICY_V1.eventInterpretation.reliableProvenance as readonly string[]).includes(p.reliability));
 const material = (r: EventRealityRecord) => Math.abs(r.normalizedSurprise?.normalizedSurpriseScore ?? 0) >= EXPECTATION_REALITY_POLICY_V1.eventInterpretation.materialSurpriseScore;
 const relatedSupports = (r: EventRealityRecord) => r.relatedMarketReactions.some((x) => x.status === 'confirmed' || x.status === 'delayed');
-function canonicalRelatedDirection(expectation: EventExpectationRecord, asset: string) { if (!expectation.affectedAssets.includes(asset)) throw new Error(`unrelated_related_market_rejected:${asset}`); if (asset === expectation.asset) throw new Error('related_market_primary_asset_rejected'); return expectation.expectedAssetDirection === 'bullish' || expectation.expectedAssetDirection === 'bearish' ? expectation.expectedAssetDirection : expectation.expectedAssetDirection === 'mixed' || expectation.expectedAssetDirection === 'unsupported' ? 'unknown' : expectation.expectedAssetDirection; }
-function assertReaction(input: MarketPriceReactionInput, expectation: EventExpectationRecord, role: 'primary' | 'follow_through' | 'related') { if (role !== 'related' && input.asset !== expectation.asset) throw new Error(`${role}_reaction_asset_mismatch`); if (input.eventKind !== expectation.eventKind && !(expectation.eventKind === 'macro_release' && input.eventKind === 'macro_release')) throw new Error(`${role}_reaction_event_kind_mismatch`); if (input.eventTime !== expectation.scheduledReleaseTime) throw new Error(`${role}_reaction_event_time_mismatch`); const primaryExpected = expectation.expectedAssetDirection === 'unsupported' ? 'unknown' : expectation.expectedAssetDirection; const expected = role === 'related' ? canonicalRelatedDirection(expectation, input.asset) : primaryExpected; if (input.expectedDirection && input.expectedDirection !== expected) throw new Error(`${role}_reaction_direction_mismatch`); return { ...input, expectedDirection: (expected ?? 'unknown') as NonNullable<MarketPriceReactionInput['expectedDirection']> }; }
-function alignRelease(expectation: EventExpectationRecord, normalized: EventRealityRecord['normalizedSurprise']) { const reasonCodes: string[] = []; if (!normalized) return { status:'insufficient_data' as const, reasonCodes:['release_alignment_non_numeric_or_missing'], expectedEconomicMeaning: expectation.expectedEconomicMeaning, actualEconomicMeaning: null, expectedPolicyPressure: expectation.expectedPolicyPressure, actualPolicyPressure: null, expectedDirection: expectation.expectedAssetDirection, actualDirection: null }; const actualDirection = normalized.surpriseDirection === 'upside_surprise' ? expectation.expectedAssetDirection : normalized.surpriseDirection === 'downside_surprise' ? (expectation.expectedAssetDirection === 'bullish' ? 'bearish' : expectation.expectedAssetDirection === 'bearish' ? 'bullish' : 'neutral') : 'neutral'; const meaningAligned = String(normalized.economicMeaning) === String(expectation.expectedEconomicMeaning); const pressureAligned = String(normalized.policyPressure) === String(expectation.expectedPolicyPressure); if (meaningAligned) reasonCodes.push('economic_meaning_aligned'); else reasonCodes.push('economic_meaning_contradicted'); if (pressureAligned) reasonCodes.push('policy_pressure_aligned'); else reasonCodes.push('policy_pressure_contradicted'); const status = meaningAligned || pressureAligned ? 'aligned' as const : 'contradicted' as const; return { status, reasonCodes, expectedEconomicMeaning: expectation.expectedEconomicMeaning, actualEconomicMeaning: normalized.economicMeaning, expectedPolicyPressure: expectation.expectedPolicyPressure, actualPolicyPressure: normalized.policyPressure, expectedDirection: expectation.expectedAssetDirection, actualDirection }; }
+
+function releaseMetadata(expectation: EventExpectationRecord, normalized: EventRealityRecord['normalizedSurprise']) {
+  return JSON.stringify({
+    releaseId: expectation.eventReleaseId,
+    indicatorKind: expectation.indicatorKind,
+    indicatorName: expectation.indicatorKind,
+    category: expectation.indicatorCategory,
+    region: expectation.region,
+    currency: expectation.currency,
+    affectedCurrency: expectation.currency,
+    issuerCurrency: expectation.currency,
+    policyIssuerCurrency: expectation.currency,
+    policyIssuerRegion: expectation.region,
+    actual: normalized?.actual ?? null,
+    forecast: normalized?.forecast ?? null,
+    previous: normalized?.previous ?? null,
+    revisedPrevious: normalized?.revisedPrevious ?? null,
+    economicMeaning: normalized?.economicMeaning ?? 'unknown',
+    policyPressure: normalized?.policyPressure ?? 'unknown',
+    policyTone: normalized?.policyPressure ?? 'unknown',
+    riskRegime: normalized?.riskPressure === 'risk_negative' ? 'risk_off' : normalized?.riskPressure === 'risk_supportive' ? 'risk_on' : 'unknown',
+    driverKind: normalized?.category === 'inflation' || normalized?.category === 'central_bank_policy' ? 'central_bank_policy' : 'unknown'
+  });
+}
+
+function resolveReleaseDirection(expectation: EventExpectationRecord, asset: string, normalized: EventRealityRecord['normalizedSurprise']): MarketAssetDirectionResolutionResult {
+  if (!expectation.affectedAssets.includes(asset as never)) throw new Error(`unrelated_related_market_rejected:${asset}`);
+  const resolved = resolveAssetContextualEvidenceDirection({ asset: asset as never, evidenceClass: 'macro_release', metadataJson: releaseMetadata(expectation, normalized), policyTone: normalized?.policyPressure ?? 'unknown', policyIssuerRegion: String(expectation.region), affectedCurrency: String(expectation.currency), observedAt: normalized ? expectation.scheduledReleaseTime : null });
+  if (!known(resolved.resolvedDirection)) throw new Error(`canonical_direction_unavailable:${asset}`);
+  if ((asset === 'sp500' || asset === 'nasdaq_100') && resolved.resolvedDirection === 'mixed' && normalized?.policyPressure === 'hawkish' && normalized.economicMeaning === 'hotter_inflation') return { ...resolved, resolvedDirection: 'bearish', reasonCodes: [...new Set([...resolved.reasonCodes, 'macro_inflation_pressure_context' as const])] as typeof resolved.reasonCodes, rationale: `${resolved.rationale} IFP-1 event interpretation applies resolved hot-inflation/hawkish pressure as bearish equity release implication.` };
+  return resolved;
+}
+
+function assertReaction(input: MarketPriceReactionInput, expectation: EventExpectationRecord, role: 'primary' | 'follow_through' | 'related', releaseObservedAt: string, direction: MarketPriceReactionExpectedDirection) {
+  if (role !== 'related' && input.asset !== expectation.asset) throw new Error(`${role}_reaction_asset_mismatch`);
+  if (role === 'related' && input.asset === expectation.asset) throw new Error('related_market_primary_asset_rejected');
+  if (input.eventKind !== expectation.eventKind && !(expectation.eventKind === 'macro_release' && input.eventKind === 'macro_release')) throw new Error(`${role}_reaction_event_kind_mismatch`);
+  if (input.eventTime !== releaseObservedAt) throw new Error(`${role}_reaction_release_time_mismatch`);
+  if (input.expectedDirection && input.expectedDirection !== direction) throw new Error(`${role}_reaction_direction_mismatch`);
+  return { ...input, eventTime: releaseObservedAt, expectedDirection: direction };
+}
+
+function alignRelease(expectation: EventExpectationRecord, normalized: EventRealityRecord['normalizedSurprise'], directions: EventRealityRecord['actualAssetDirections']): ReleaseAlignment {
+  const reasonCodes: string[] = [];
+  if (!normalized) return { status:'insufficient_data', reasonCodes:['release_alignment_non_numeric_or_missing'], economicMeaningAlignment:'insufficient_data', policyPressureAlignment:'insufficient_data', actualVsForecastAlignment:'insufficient_data', revisionEffect:'insufficient_data', primaryAssetDirectionAlignment:'insufficient_data', relatedMarketDirectionAlignment:'insufficient_data', expectedEconomicMeaning: expectation.expectedEconomicMeaning, actualEconomicMeaning: null, expectedPolicyPressure: expectation.expectedPolicyPressure, actualPolicyPressure: null, expectedDirection: expectation.expectedAssetDirection, actualDirection: null };
+  const meaning = String(normalized.economicMeaning) === String(expectation.expectedEconomicMeaning) ? 'aligned' : 'contradicted';
+  const pressure = String(normalized.policyPressure) === String(expectation.expectedPolicyPressure) ? 'aligned' : 'contradicted';
+  const actualVsForecast = normalized.surpriseDirection === 'inline' ? 'inline' : normalized.surpriseDirection === 'mixed' || normalized.surpriseDirection === 'unknown' ? 'mixed' : 'aligned';
+  const revisionEffect = normalized.revisedPrevious === null || normalized.previous === null ? 'insufficient_data' : normalized.revisedPrevious === normalized.previous ? 'inline' : 'mixed';
+  const primaryDirection = directions.find((d) => d.asset === expectation.asset)?.resolvedDirection ?? 'unknown';
+  const primaryDir = primaryDirection === expectation.expectedAssetDirection ? 'aligned' : primaryDirection === 'unknown' ? 'insufficient_data' : 'contradicted';
+  const relatedKnown = directions.filter((d) => d.asset !== expectation.asset);
+  const relatedAlignment = relatedKnown.length === 0 ? 'insufficient_data' : relatedKnown.every((d) => d.resolvedDirection !== 'unknown') ? 'aligned' : 'mixed';
+  for (const [prefix, state] of [['economic_meaning', meaning], ['policy_pressure', pressure], ['actual_vs_forecast', actualVsForecast], ['revision_effect', revisionEffect], ['primary_asset_direction', primaryDir], ['related_market_direction', relatedAlignment]] as const) reasonCodes.push(`${prefix}_${state}`);
+  const core = [meaning, pressure, primaryDir].filter((x) => x !== 'insufficient_data');
+  const components = [meaning, pressure, actualVsForecast, primaryDir].filter((x) => x !== 'insufficient_data');
+  const status = components.length === 0 ? 'insufficient_data' : core.length > 0 && core.every((x) => x === 'contradicted') ? 'contradicted' : components.every((x) => x === 'aligned' || x === 'inline') ? 'aligned' : components.some((x) => x === 'contradicted') ? 'mixed' : 'inline';
+  return { status, reasonCodes, economicMeaningAlignment: meaning, policyPressureAlignment: pressure, actualVsForecastAlignment: actualVsForecast, revisionEffect, primaryAssetDirectionAlignment: primaryDir, relatedMarketDirectionAlignment: relatedAlignment, expectedEconomicMeaning: expectation.expectedEconomicMeaning, actualEconomicMeaning: normalized.economicMeaning, expectedPolicyPressure: expectation.expectedPolicyPressure, actualPolicyPressure: normalized.policyPressure, expectedDirection: expectation.expectedAssetDirection, actualDirection: primaryDirection as never };
+}
 
 export function createEventExpectation(input: EventExpectationRecord): EventExpectationRecord {
   if (Date.parse(input.dataCutoffAt) > Date.parse(input.issuedAt)) throw new Error('event_expectation_future_cutoff_rejected');
@@ -24,29 +83,39 @@ export function buildEventReality(params: { expectation: EventExpectationRecord;
   if (release.releaseId !== expectation.eventReleaseId) throw new Error('release_id_mismatch');
   if (Date.parse(release.observedAt) < Date.parse(expectation.scheduledReleaseTime)) throw new Error('event_reality_before_release_rejected');
   const normalizedSurprise = numeric && expectation.expectationBasis.kind === 'numeric' ? normalizeMacroSurprise({ releaseId: expectation.eventReleaseId, indicatorKind: expectation.indicatorKind, category: expectation.indicatorCategory, region: expectation.region, currency: expectation.currency, importance: expectation.importance, actual: release.actual, forecast: expectation.expectationBasis.forecast, previous: expectation.expectationBasis.previous, revisedPrevious: release.revisedPrevious, unit: expectation.expectationBasis.unit, observedAt: release.observedAt }) : null;
-  const primaryPriceReaction = evaluatePriceReaction(assertReaction(params.primaryPriceReactionInput, expectation, 'primary'));
-  const followThroughReaction = evaluatePriceReaction(assertReaction(params.followThroughReactionInput, expectation, 'follow_through'));
-  const relatedMarketReactions = params.relatedMarketReactionInputs.map((input) => evaluatePriceReaction(assertReaction(input, expectation, 'related')));
+  const directionAssets = unique([expectation.asset, ...params.relatedMarketReactionInputs.map((r) => r.asset as string)]);
+  const actualAssetDirections = directionAssets.map((asset) => resolveReleaseDirection(expectation, asset, normalizedSurprise)).map((r) => ({ asset: r.asset, resolvedDirection: r.resolvedDirection, confidence: r.confidence, reasonCodes: r.reasonCodes, warnings: r.warnings }));
+  const dirFor = (asset: string) => actualAssetDirections.find((d) => d.asset === asset)?.resolvedDirection as MarketPriceReactionExpectedDirection | undefined;
+  const primaryDirection = dirFor(expectation.asset); if (!primaryDirection) throw new Error('primary_direction_unavailable');
+  const primaryPriceReaction = evaluatePriceReaction(assertReaction(params.primaryPriceReactionInput, expectation, 'primary', release.observedAt, primaryDirection));
+  const followThroughReaction = evaluatePriceReaction(assertReaction(params.followThroughReactionInput, expectation, 'follow_through', release.observedAt, primaryDirection));
+  const relatedMarketReactions = params.relatedMarketReactionInputs.map((input) => { const direction = dirFor(input.asset); if (!direction) throw new Error(`canonical_direction_unavailable:${input.asset}`); return evaluatePriceReaction(assertReaction(input, expectation, 'related', release.observedAt, direction)); });
   const post = params.postEventCognition ?? null;
-  const releaseAlignment = alignRelease(expectation, normalizedSurprise);
-  return { releaseAlignment, releaseId: expectation.eventReleaseId, releaseVersion: release.releaseVersion, observedAt: release.observedAt, actual: numeric ? release.actual : null, forecast: expectation.expectationBasis.kind === 'numeric' ? expectation.expectationBasis.forecast : null, previous: expectation.expectationBasis.kind === 'numeric' ? expectation.expectationBasis.previous : null, revisedPrevious: numeric ? release.revisedPrevious : null, normalizedSurprise, nonNumericOutcome: numeric ? null : release.nonNumericOutcome, provenance: release.provenance.map((p) => ({ ...p })), primaryPriceReaction, followThroughReaction, relatedMarketReactions, postEventCognitionSnapshotId: post?.snapshotId ?? null, postEventConfidence: post?.confidence ?? null, confidenceDelta: post ? post.confidence - expectation.preEventConfidence : null, postEventContradiction: post?.contradiction ?? null, contradictionDelta: post ? post.contradiction - expectation.preEventContradiction : null, biasChange: { before: expectation.expectedAssetDirection, after: post?.bias ?? null, changed: post ? post.bias !== expectation.expectedAssetDirection : false }, warnings: unique([...(normalizedSurprise?.warnings ?? []), ...primaryPriceReaction.warnings, ...followThroughReaction.warnings, ...(relatedMarketReactions.length === 0 ? ['missing_related_market_context'] : [])]), limitations: relatedMarketReactions.length === 0 ? ['related_market_confirmation_unavailable'] : [] };
+  const releaseAlignment = alignRelease(expectation, normalizedSurprise, actualAssetDirections);
+  const observationContentHash = canonicalHash({ releaseId: release.releaseId, releaseVersion: release.releaseVersion, observedAt: release.observedAt, primary: params.primaryPriceReactionInput, followThrough: params.followThroughReactionInput, related: params.relatedMarketReactionInputs });
+  const reactionProvenance = unique([params.primaryPriceReactionInput.reactionId ?? 'primary', params.followThroughReactionInput.reactionId ?? 'follow_through', ...params.relatedMarketReactionInputs.map((r) => r.reactionId ?? `related:${r.asset}`)]);
+  return { releaseAlignment, actualAssetDirections, observationContentHash, reactionProvenance, releaseId: expectation.eventReleaseId, releaseVersion: release.releaseVersion, observedAt: release.observedAt, actual: numeric ? release.actual : null, forecast: expectation.expectationBasis.kind === 'numeric' ? expectation.expectationBasis.forecast : null, previous: expectation.expectationBasis.kind === 'numeric' ? expectation.expectationBasis.previous : null, revisedPrevious: numeric ? release.revisedPrevious : null, normalizedSurprise, nonNumericOutcome: numeric ? null : release.nonNumericOutcome, provenance: release.provenance.map((p) => ({ ...p })), primaryPriceReaction, followThroughReaction, relatedMarketReactions, postEventCognitionSnapshotId: post?.snapshotId ?? null, postEventConfidence: post?.confidence ?? null, confidenceDelta: post ? post.confidence - expectation.preEventConfidence : null, postEventContradiction: post?.contradiction ?? null, contradictionDelta: post ? post.contradiction - expectation.preEventContradiction : null, biasChange: { before: expectation.expectedAssetDirection, after: post?.bias ?? null, changed: post ? post.bias !== expectation.expectedAssetDirection : false }, warnings: unique([...(normalizedSurprise?.warnings ?? []), ...actualAssetDirections.flatMap((d) => d.warnings), ...primaryPriceReaction.warnings, ...followThroughReaction.warnings, ...(relatedMarketReactions.length === 0 ? ['missing_related_market_context'] : [])]), limitations: relatedMarketReactions.length === 0 ? ['related_market_confirmation_unavailable'] : [] };
 }
 
 export function interpretEventReality(params: { expectation: EventExpectationRecord; reality: EventRealityRecord; interpretedAt: string }): EventRealityEvaluation {
   const { expectation, reality, interpretedAt } = params;
-  const reasonCodes: string[] = [];
+  const reasonCodes: string[] = [...reality.releaseAlignment.reasonCodes];
   const warnings = [...reality.warnings];
   let outcome: EventRealityEvaluation['outcome'] = 'ambiguous';
+  const actualKnown = known(reality.releaseAlignment.actualDirection);
+  const criticalAmbiguity = warnings.includes('volatility_context_unavailable') || warnings.includes('observation_content_hash_mismatch') || !actualKnown || reality.releaseAlignment.status === 'mixed';
   if (!reality.primaryPriceReaction || reality.primaryPriceReaction.status === 'insufficient_data') { outcome = 'insufficient_data'; reasonCodes.push('primary_price_reaction_insufficient'); }
   else if (!material(reality) && expectation.expectationBasis.kind === 'numeric') { outcome = 'ambiguous'; reasonCodes.push('event_surprise_not_material'); }
-  else if ((reality.primaryPriceReaction.status === 'rejected' || reality.primaryPriceReaction.status === 'absorbed') && (reality.followThroughReaction.status === 'confirmed' || reality.followThroughReaction.status === 'delayed') && relatedSupports(reality) && reliable(reality) && material(reality) && (reality.releaseAlignment.status === 'aligned' || reality.releaseAlignment.status === 'contradicted') && !warnings.includes('volatility_context_unavailable')) { outcome = 'mispriced_candidate'; reasonCodes.push('strict_mispricing_candidate_conditions_met'); }
+  else if ((reality.primaryPriceReaction.status === 'rejected' || reality.primaryPriceReaction.status === 'absorbed') && (reality.followThroughReaction.status === 'confirmed' || reality.followThroughReaction.status === 'delayed') && relatedSupports(reality) && reliable(reality) && material(reality) && reality.releaseAlignment.status === 'contradicted' && !criticalAmbiguity) { outcome = 'mispriced_candidate'; reasonCodes.push('strict_mispricing_candidate_conditions_met'); }
   else if (reality.releaseAlignment.status === 'contradicted') { outcome = 'rejected'; reasonCodes.push('release_expectation_semantic_contradiction'); }
-  else if (reality.primaryPriceReaction.status === 'confirmed' && (relatedSupports(reality) || reality.relatedMarketReactions.length === 0)) { outcome = reality.relatedMarketReactions.length === 0 ? 'ambiguous' : 'confirmed'; reasonCodes.push(outcome === 'confirmed' ? 'event_confirmed_by_primary_and_related' : 'missing_related_market_context'); }
+  else if (reality.releaseAlignment.status === 'mixed') { outcome = 'ambiguous'; reasonCodes.push('release_expectation_mixed_alignment'); }
+  else if (reality.primaryPriceReaction.status === 'confirmed' && relatedSupports(reality)) { outcome = 'confirmed'; reasonCodes.push('event_confirmed_by_primary_and_related'); }
+  else if (reality.primaryPriceReaction.status === 'confirmed' && reality.relatedMarketReactions.length === 0) { outcome = 'ambiguous'; reasonCodes.push('missing_related_market_context'); }
   else if (reality.primaryPriceReaction.status === 'rejected') { outcome = 'rejected'; reasonCodes.push('event_rejected_by_primary_price'); }
   else if (reality.primaryPriceReaction.status === 'absorbed') { outcome = 'absorbed'; reasonCodes.push('event_absorbed_by_primary_price'); }
   else if (reality.primaryPriceReaction.status === 'reversed') { outcome = 'reversed'; reasonCodes.push('event_reversed_after_initial_reaction'); }
   else if (reality.primaryPriceReaction.status === 'delayed' || reality.followThroughReaction.status === 'confirmed') { outcome = 'delayed'; reasonCodes.push('event_delayed_follow_through'); }
   else { reasonCodes.push('event_interpretation_ambiguous'); }
   if (outcome === 'mispriced_candidate') warnings.push('candidate_not_proven_mispricing');
-  return { eventEvaluationId: `event-reality-${expectation.expectationId}-${reality.releaseVersion}`, expectationId: expectation.expectationId, releaseId: reality.releaseId, releaseVersion: reality.releaseVersion, asset: expectation.asset, interpretedAt, outcome, reasonCodes: unique(reasonCodes), warnings: unique(warnings), rationale: `Event release ${reality.releaseId} interpreted as ${outcome}; classification is evidence-qualified and not financial advice.`, expectation, reality, createdAt: interpretedAt };
+  return { eventEvaluationId: `event-reality-${expectation.expectationId}-${reality.releaseVersion}`, expectationId: expectation.expectationId, releaseId: reality.releaseId, releaseVersion: reality.releaseVersion, asset: expectation.asset, preEventCognitionSnapshotId: expectation.preEventCognitionSnapshotId, postEventCognitionSnapshotId: reality.postEventCognitionSnapshotId, observationContentHash: reality.observationContentHash, reactionProvenance: reality.reactionProvenance, interpretedAt, outcome, reasonCodes: unique(reasonCodes), warnings: unique(warnings), rationale: `Event release ${reality.releaseId} interpreted as ${outcome}; classification is evidence-qualified and not financial advice.`, expectation, reality, createdAt: interpretedAt };
 }

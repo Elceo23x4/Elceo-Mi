@@ -17,15 +17,16 @@ export type EventExpectationRecord = {
   expectedAssetDirection: ExpectationBias; preEventCognitionSnapshotId: string; preEventConfidence: number; preEventContradiction: number; expectedConfirmationConditions: string[]; provenance: SourceProvenance[]; createdAt: string;
 };
 
-export type ReleaseAlignment = { status: 'aligned' | 'contradicted' | 'ambiguous' | 'insufficient_data'; reasonCodes: string[]; expectedEconomicMeaning: string; actualEconomicMeaning: string | null; expectedPolicyPressure: string; actualPolicyPressure: string | null; expectedDirection: ExpectationBias; actualDirection: ExpectationBias | null };
+export type ReleaseAlignmentState = 'aligned' | 'contradicted' | 'mixed' | 'inline' | 'insufficient_data';
+export type ReleaseAlignment = { status: ReleaseAlignmentState; reasonCodes: string[]; economicMeaningAlignment: ReleaseAlignmentState; policyPressureAlignment: ReleaseAlignmentState; actualVsForecastAlignment: ReleaseAlignmentState; revisionEffect: ReleaseAlignmentState; primaryAssetDirectionAlignment: ReleaseAlignmentState; relatedMarketDirectionAlignment: ReleaseAlignmentState; expectedEconomicMeaning: string; actualEconomicMeaning: string | null; expectedPolicyPressure: string; actualPolicyPressure: string | null; expectedDirection: ExpectationBias; actualDirection: ExpectationBias | null };
 
 export type EventRealityRecord = {
   releaseAlignment: ReleaseAlignment; releaseId: string; releaseVersion: string; observedAt: string; actual: number | null; forecast: number | null; previous: number | null; revisedPrevious: number | null; normalizedSurprise: MarketMacroSurpriseNormalizationResult | null; nonNumericOutcome?: string | null;
-  provenance: SourceProvenance[]; primaryPriceReaction: MarketPriceReactionResult; followThroughReaction: MarketPriceReactionResult; relatedMarketReactions: MarketPriceReactionResult[]; postEventCognitionSnapshotId: string | null;
+  provenance: SourceProvenance[]; primaryPriceReaction: MarketPriceReactionResult; followThroughReaction: MarketPriceReactionResult; relatedMarketReactions: MarketPriceReactionResult[]; actualAssetDirections: { asset: CanonicalAssetSymbol; resolvedDirection: string; confidence: number; reasonCodes: string[]; warnings: string[] }[]; observationContentHash: string; reactionProvenance: string[]; postEventCognitionSnapshotId: string | null;
   postEventConfidence: number | null; confidenceDelta: number | null; postEventContradiction: number | null; contradictionDelta: number | null; biasChange: { before: ExpectationBias; after: ExpectationBias | null; changed: boolean }; warnings: string[]; limitations: string[];
 };
 
-export type EventRealityEvaluation = { eventEvaluationId: string; expectationId: string; releaseId: string; releaseVersion: string; asset: CanonicalAssetSymbol; interpretedAt: string; outcome: EventInterpretationOutcome; reasonCodes: string[]; warnings: string[]; rationale: string; expectation: EventExpectationRecord; reality: EventRealityRecord; createdAt: string };
+export type EventRealityEvaluation = { eventEvaluationId: string; expectationId: string; releaseId: string; releaseVersion: string; asset: CanonicalAssetSymbol; preEventCognitionSnapshotId: string; postEventCognitionSnapshotId: string | null; observationContentHash: string; reactionProvenance: string[]; interpretedAt: string; outcome: EventInterpretationOutcome; reasonCodes: string[]; warnings: string[]; rationale: string; expectation: EventExpectationRecord; reality: EventRealityRecord; createdAt: string };
 
 export type ExpectationRecord = {
   expectationId: string; asset: CanonicalAssetSymbol; timeframe: Timeframe; issuedAt: string; dataCutoffAt: string;

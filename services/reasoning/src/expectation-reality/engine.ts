@@ -50,7 +50,7 @@ export function evaluateExpectationReality(params: { expectation: ExpectationRec
   const calculatedObservationHash = calculateObservationContentHash(observations);
   const normalizedObservations = { ...observations, contentHash: calculatedObservationHash, source: { ...observations.source, contentHash: observations.source.contentHash ?? calculatedObservationHash } };
   const candles = horizonCandles(expectation, normalizedObservations, requiredBars);
-  const validation = validateObservationCandles(expectation, { ...normalizedObservations, candles }, evaluatedAt);
+  const validation = validateObservationCandles(expectation, normalizedObservations, evaluatedAt);
   reasonCodes.push(...validation);
   const insufficient = validation.length > 0 || candles.length < requiredBars;
   if (candles.length < requiredBars) pushUnique(reasonCodes, 'observation_window_incomplete');
@@ -91,6 +91,7 @@ export function evaluateExpectationReality(params: { expectation: ExpectationRec
   else if (oppositeAt) { outcome = 'contradicted'; path = 'contradiction_first'; pushUnique(reasonCodes, 'expected_direction_contradicted'); }
   else if ((measures.favourableExcursionVolUnits ?? 0) >= EXPECTATION_REALITY_POLICY_V1.movementBoundaries.materialVolUnits) { outcome = 'partially_confirmed'; path = 'delayed_resolution'; pushUnique(reasonCodes, 'expected_direction_partially_confirmed'); }
   else { pushUnique(reasonCodes, 'terminal_move_unresolved'); }
+  if ((measures.favourableExcursionVolUnits ?? 0) >= EXPECTATION_REALITY_POLICY_V1.movementBoundaries.strongVolUnits || (measures.adverseExcursionVolUnits ?? 0) >= EXPECTATION_REALITY_POLICY_V1.movementBoundaries.strongVolUnits) pushUnique(reasonCodes, 'strong_movement_detected');
   if (outcome === 'confirmed' && expectation.confidenceScore < 45) pushUnique(reasonCodes, 'underconfident_confirmation');
   if ((outcome === 'contradicted' || outcome === 'invalidated') && expectation.confidenceScore >= 70) pushUnique(reasonCodes, 'confidence_outcome_mismatch');
   const directionDelta = outcome === 'confirmed' ? 0 : outcome === 'partially_confirmed' ? 20 : outcome === 'unresolved' ? 35 : outcome === 'insufficient_data' ? 10 : outcome === 'not_directionally_scorable' ? 5 : 80;

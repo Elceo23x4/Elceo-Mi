@@ -16,6 +16,7 @@ export function calculateObservationContentHash(observations: Omit<ObservationSe
   return canonicalHash({
     asset: observations.asset,
     timeframe: observations.timeframe,
+    source: { sourceId: observations.source.sourceId, provider: observations.source.provider, payloadRef: observations.source.payloadRef ?? null },
     observedWindow: observations.observedWindow,
     candles: observations.candles.map((c) => ({ openedAt: c.openedAt, closedAt: c.closedAt, open: c.open, high: c.high, low: c.low, close: c.close, complete: c.complete, verifiedPostEventSplit: c.verifiedPostEventSplit === true }))
   });

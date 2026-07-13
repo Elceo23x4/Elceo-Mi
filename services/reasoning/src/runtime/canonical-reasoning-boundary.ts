@@ -106,6 +106,30 @@ export class CanonicalReasoningBoundaryService {
     }
 
     if (cognition && assembly) {
+      const preSnapshotEndedAt = new Date().toISOString();
+      const preRunRecord: PersistedReasoningRun = {
+        reasoningRunId,
+        asset: params.asset,
+        timeframe: params.timeframe,
+        sourceIngestionRunId: assembly.sourceRunId ?? params.sourceIngestionRunId ?? null,
+        sourceIngestionRequestKey: assembly.sourceRequestKey ?? null,
+        engineName: this.metadata.engineName,
+        reasoningVersion: this.metadata.reasoningVersion,
+        scoringVersion: this.metadata.scoringVersion,
+        startedAt,
+        endedAt: preSnapshotEndedAt,
+        durationMs: Math.max(0, Date.parse(preSnapshotEndedAt) - Date.parse(startedAt)),
+        status,
+        inputEventCount: assembly.selectedEventCount,
+        inputZoneCount: assembly.zoneCount,
+        projectedEvidenceCount: assembly.projectedEvidenceCount,
+        priorSnapshotId: assembly.priorSnapshotId ?? null,
+        snapshotId: null,
+        failureReason,
+        warningsJson: JSON.stringify(warnings),
+        createdAt: preSnapshotEndedAt
+      };
+      await this.persistence.runRepository.saveReasoningRun(preRunRecord);
       try {
         snapshotId = createSnapshotId();
         snapshotRecord = {
@@ -126,16 +150,13 @@ export class CanonicalReasoningBoundaryService {
           createdAt: new Date().toISOString()
         };
         await this.persistence.snapshotRepository.saveCognitionSnapshot(snapshotRecord);
-        const maybePersistence = this.persistence as typeof this.persistence & { expectationRepository?: { saveExpectation: (record: ReturnType<typeof createExpectationFromCognition>) => Promise<void> } };
-        if (maybePersistence.expectationRepository) {
-          try {
-            const expectation = createExpectationFromCognition({ cognition, input: assembly.input, reasoningRunId, cognitionSnapshotId: snapshotId, createdAt: snapshotRecord.createdAt });
-            await maybePersistence.expectationRepository.saveExpectation(expectation);
-            expectationId = expectation.expectationId;
-          } catch (error) {
-            status = 'partial_success';
-            warnings.push(`expectation_persistence_failure:${error instanceof Error ? error.message : 'unknown'}`);
-          }
+        try {
+          const expectation = createExpectationFromCognition({ cognition, input: assembly.input, reasoningRunId, cognitionSnapshotId: snapshotId, createdAt: snapshotRecord.createdAt });
+          await this.persistence.expectationRepository.saveExpectation(expectation);
+          expectationId = expectation.expectationId;
+        } catch (error) {
+          status = 'partial_success';
+          warnings.push(`expectation_persistence_failure:${error instanceof Error ? error.message : 'unknown'}`);
         }
       } catch (error) {
         status = 'partial_success';

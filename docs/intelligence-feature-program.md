@@ -63,7 +63,7 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 
 - Phase ID: IFP-1
 - Canonical phase name: Expectation-Reality Delta Engine
-- Exact objective: establish versioned, reversible parameter/model configuration records for deterministic intelligence inputs, evidence windows, horizons, and calibration metadata without changing formulas for fixture pass rates.
+- Exact objective: freeze pre-event expectations with actual, forecast, previous, revised previous, normalized surprise, primary price reaction, follow-through, related-market response, volatility adjustment, confidence shift, and immutable audit trail.
 - Problem being closed: deterministic foundations expose behavior but do not yet have an IFP-wide configuration evidence ledger suitable for calibration comparisons and rollback.
 - Source requirements: versioned parameter and model configuration; production-data calibration; readiness contracts.
 - Existing modules reused: market readiness contracts, confidence calibration contracts, provider reliability contracts, runtime reasoning reports.
@@ -81,7 +81,7 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 
 - Phase ID: IFP-2
 - Canonical phase name: Historical Market Memory / Analog Engine
-- Exact objective: define and ingest separated historical calibration and evaluation datasets with event-time-safe fields for asset/event reaction studies, and establish the predeclared evidence-sufficiency policy before evaluation begins.
+- Exact objective: build Historical Market Memory / Analog Engine from closed IFP-1 event expectation-reality records, preserving event-time-safe inputs and separating analog evidence from calibration outcomes.
 - Problem being closed: fixtures and golden scenarios are deterministic coverage, not empirical evidence.
 - Source requirements: historical calibration and reaction-study evidence; calibration/evaluation separation; training/evaluation dataset separation; no historical outcome leakage; predeclared evidence coverage for mandatory launch assets or approved asset groups, required event classes, required horizons, sparse or structurally unavailable slices, and minimum sample or evidence-sufficiency policy.
 - Existing modules reused: macro surprise normalization, price reaction, asset direction resolution, provider payload/replay contracts.
@@ -99,7 +99,7 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 
 - Phase ID: IFP-3
 - Canonical phase name: Contradiction-to-Action Protocol
-- Exact objective: diagnose confidence-floor saturation empirically, including the current 25/33 zero-confidence golden-scenario observation, without hiding it through anchor or penalty changes.
+- Exact objective: implement Contradiction-to-Action Protocol that converts confirmed expectation-reality contradictions into auditable action-review prompts without changing confidence formulas or issuing direct financial advice.
 - Problem being closed: production calibration cannot be claimed while floor saturation causes many deterministic scenarios to emit confidence 0 without empirical diagnosis.
 - Source requirements: confidence-floor saturation diagnosis; no confidence formula changes merely to improve fixtures; no IFP phase may claim production validation from fixtures alone.
 - Existing modules reused: confidence calibration, contradiction matrix, provider reliability weighting, golden-scenario reports.
@@ -117,7 +117,7 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 
 - Phase ID: IFP-4
 - Canonical phase name: Market Cleanliness Ranking
-- Exact objective: evaluate asset-specific direction, event-class reaction, and horizon behavior using separated empirical datasets.
+- Exact objective: rank Market Cleanliness using event expectation quality, release provenance, price reaction clarity, related-market confirmation, liquidity/session context, and ambiguity/insufficient-data evidence.
 - Problem being closed: deterministic direction logic needs evidence-backed direction validation across assets and event families.
 - Source requirements: empirical backtesting and evaluation methodology; asset/event direction validation; no single aggregate accuracy score as universal proof.
 - Existing modules reused: asset causality, FX relative-strength, macro surprise normalization, price reaction, economic context.
@@ -135,7 +135,7 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 
 - Phase ID: IFP-5
 - Canonical phase name: News Half-Life / Narrative Decay
-- Exact objective: validate provider/source reliability weighting, freshness decay, contradiction handling, and regime stress behavior under documented evidence versions.
+- Exact objective: measure News Half-Life / Narrative Decay by comparing event release versions, revisions, source provenance, post-release reaction persistence, and cognition confidence shifts over declared horizons.
 - Problem being closed: reliability, freshness, contradiction, and stress controls exist but require drift review and regime-specific validation.
 - Source requirements: provider/source reliability governance and drift review; freshness, contradiction and regime stress testing; evidence-backed versioned reliability.
 - Existing modules reused: provider reliability, evidence quality, scheduled ingestion staleness, contradiction matrix, freshness composer.
@@ -153,7 +153,7 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 
 - Phase ID: IFP-6
 - Canonical phase name: Crowd Pain / Positioning Stress Map
-- Exact objective: validate whether intelligence is safe to surface as trade-readiness context and alert/coaching guidance without fabricating direction or over-alerting.
+- Exact objective: map Crowd Pain / Positioning Stress from expectation-reality deltas, related-market stress responses, positioning evidence and follow-through failures without provider activation shortcuts.
 - Problem being closed: alert, notification, journal, and coaching foundations exist but require intelligence acceptance evidence and throttling validation.
 - Source requirements: trade-readiness and alert-throttling validation; behavioral coaching must not fabricate market direction.
 - Existing modules reused: notification policy/cooldown/material-change/dedupe, analytics coaching, journal influence, reasoning link summaries.
@@ -171,7 +171,7 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 
 - Phase ID: IFP-7
 - Canonical phase name: Fragility Score
-- Exact objective: persist and review deterministic explanation paths so trader-facing interpretation remains readable, attributable, and auditable.
+- Exact objective: compute Fragility Score from accumulated contradiction, absorption, reversal, mispricing-candidate, volatility-context and related-market weakness evidence while preserving every component and limitation.
 - Problem being closed: deterministic explanation objects exist but must be product-consumable and traceable across reasoning, chart, analytics, coaching, and journal surfaces.
 - Source requirements: explanation auditability and decision-path persistence; human readability and trader interpretation review; deterministic explanation preservation.
 - Existing modules reused: explanation builder, chart projection builder, reasoning runtime reports, analytics/coaching boundaries, API market-evidence routes.
@@ -202,6 +202,12 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 - External data/environment requirements: production-like certified data; IFP does not itself complete external provider/payment/infrastructure certifications.
 - Truthful completion language: IFP-8 complete means IFP evidence is accepted for RC-K review and any approved configuration calibration is versioned, reversible, supported by IFP-2 through IFP-5 empirical evidence, and evaluated on held-out data; it does not permit silent formula/algorithm changes and RC-K still remains after IFP.
 - Stop condition: acceptance gate references all eight phase outputs, records evidence versions, known limitations, held-out evaluation, previous-version recovery, rollback, mandatory coverage resolution, and RC-K handoff without claiming RC-K closure.
+
+## IFP-1 product-contract requirements
+
+IFP-1 requires pre-event expectation; actual and forecast; previous and revised previous; normalized surprise; primary-asset price reaction; follow-through; related-market response; volatility adjustment; confidence shift; immutable audit trail. Cognition-path OHLC assessment may exist only as an internal component, not the complete event engine.
+
+IFP-2 follows only after IFP-1 is closed. The full IFP is not complete.
 
 ## Dependency graph
 
@@ -246,3 +252,5 @@ RC-J-ENV — External Infrastructure and Disaster-Recovery Certification
 ## IFP-1 active status
 
 IFP-1 is the active approved intelligence capability. IFP-2 follows only after IFP-1 is closed. The full IFP is not complete.
+
+Note: IFP retains a cross-cutting requirement to diagnose confidence-floor saturation empirically; it does not mean formulas were changed.

@@ -8,7 +8,7 @@ import type {
   ReasoningPersistenceRepository,
   ReasoningRunRepository
 } from './contracts';
-import { MemoryExpectationRealityRepository, MemoryExpectationRepository } from '../expectation-reality/repository';
+import { MemoryEventExpectationRepository, MemoryEventRealityRepository, MemoryExpectationRealityRepository, MemoryExpectationRepository } from '../expectation-reality/repository';
 
 export class MemoryReasoningRunRepository implements ReasoningRunRepository {
   private readonly rows = new Map<string, PersistedReasoningRun>();
@@ -95,18 +95,24 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
   readonly driftRepository: CognitionDriftRepository;
   readonly expectationRepository: MemoryExpectationRepository;
   readonly expectationRealityRepository: MemoryExpectationRealityRepository;
+  readonly eventExpectationRepository: MemoryEventExpectationRepository;
+  readonly eventRealityRepository: MemoryEventRealityRepository;
 
   constructor(
     runRepository: ReasoningRunRepository = new MemoryReasoningRunRepository(),
     snapshotRepository: CognitionSnapshotRepository = new MemoryCognitionSnapshotRepository(),
     driftRepository: CognitionDriftRepository = new MemoryCognitionDriftRepository(),
-    expectationRepository: MemoryExpectationRepository = new MemoryExpectationRepository(),
-    expectationRealityRepository: MemoryExpectationRealityRepository = new MemoryExpectationRealityRepository()
+    expectationRealityRepository: MemoryExpectationRealityRepository = new MemoryExpectationRealityRepository(),
+    expectationRepository: MemoryExpectationRepository = new MemoryExpectationRepository(expectationRealityRepository),
+    eventExpectationRepository: MemoryEventExpectationRepository = new MemoryEventExpectationRepository(),
+    eventRealityRepository: MemoryEventRealityRepository = new MemoryEventRealityRepository()
   ) {
     this.runRepository = runRepository;
     this.snapshotRepository = snapshotRepository;
     this.driftRepository = driftRepository;
     this.expectationRepository = expectationRepository;
     this.expectationRealityRepository = expectationRealityRepository;
+    this.eventExpectationRepository = eventExpectationRepository;
+    this.eventRealityRepository = eventRealityRepository;
   }
 }

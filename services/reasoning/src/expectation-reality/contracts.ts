@@ -17,8 +17,10 @@ export type EventExpectationRecord = {
   expectedAssetDirection: ExpectationBias; preEventCognitionSnapshotId: string; preEventConfidence: number; preEventContradiction: number; expectedConfirmationConditions: string[]; provenance: SourceProvenance[]; createdAt: string;
 };
 
+export type ReleaseAlignment = { status: 'aligned' | 'contradicted' | 'ambiguous' | 'insufficient_data'; reasonCodes: string[]; expectedEconomicMeaning: string; actualEconomicMeaning: string | null; expectedPolicyPressure: string; actualPolicyPressure: string | null; expectedDirection: ExpectationBias; actualDirection: ExpectationBias | null };
+
 export type EventRealityRecord = {
-  releaseId: string; releaseVersion: string; observedAt: string; actual: number | null; forecast: number | null; previous: number | null; revisedPrevious: number | null; normalizedSurprise: MarketMacroSurpriseNormalizationResult | null; nonNumericOutcome?: string | null;
+  releaseAlignment: ReleaseAlignment; releaseId: string; releaseVersion: string; observedAt: string; actual: number | null; forecast: number | null; previous: number | null; revisedPrevious: number | null; normalizedSurprise: MarketMacroSurpriseNormalizationResult | null; nonNumericOutcome?: string | null;
   provenance: SourceProvenance[]; primaryPriceReaction: MarketPriceReactionResult; followThroughReaction: MarketPriceReactionResult; relatedMarketReactions: MarketPriceReactionResult[]; postEventCognitionSnapshotId: string | null;
   postEventConfidence: number | null; confidenceDelta: number | null; postEventContradiction: number | null; contradictionDelta: number | null; biasChange: { before: ExpectationBias; after: ExpectationBias | null; changed: boolean }; warnings: string[]; limitations: string[];
 };
@@ -39,4 +41,4 @@ export type ObservationSet = { asset: CanonicalAssetSymbol; timeframe: Timeframe
 export type RealityMeasures = { terminalReturnPct: number | null; maximumFavourableExcursionPct: number | null; maximumAdverseExcursionPct: number | null; terminalReturnVolUnits: number | null; favourableExcursionVolUnits: number | null; adverseExcursionVolUnits: number | null; firstMaterialMoveDirection: FirstMaterialMoveDirection; firstMaterialMoveAt: string | null; confirmationReachedAt: string | null; contradictionReachedAt: string | null; invalidationBreachedAt: string | null };
 export type DeltaAnatomy = { directionDelta: number; pathDelta: number; magnitudeDelta: number; timingDelta: number; invalidationDelta: number; confidenceOutcomeConsistency: number; compositeDeltaScore: number; deltaSeverity: DeltaSeverity; reasonCodes: string[]; warnings: string[]; rationale: string };
 export type ExpectationRealityEvaluation = { evaluationId: string; expectationId: string; asset: CanonicalAssetSymbol; timeframe: Timeframe; horizon: ExpectationHorizon; observationVersion: string; observationContentHash: string; evaluatedAt: string; policyVersion: 'expectation-reality-v1'; outcome: ExpectationOutcome; pathClassification: PathClassification; measures: RealityMeasures; delta: DeltaAnatomy; createdAt: string };
-export type NumericReleaseFields = { actual: number | null; revisedPrevious: number | null; observedAt: string; releaseVersion: string; provenance: SourceProvenance[] };
+export type NumericReleaseFields = { releaseId: string; actual: number | null; revisedPrevious: number | null; observedAt: string; releaseVersion: string; provenance: SourceProvenance[] };

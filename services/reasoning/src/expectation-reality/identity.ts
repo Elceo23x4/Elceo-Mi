@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { ObservationSet } from './contracts';
+import type { ObservationSet, ReactionObservationEnvelope } from './contracts';
 
 export function canonicalJson(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
@@ -19,6 +19,20 @@ export function calculateObservationContentHash(observations: Omit<ObservationSe
     source: { sourceId: observations.source.sourceId, provider: observations.source.provider, payloadRef: observations.source.payloadRef ?? null },
     observedWindow: observations.observedWindow,
     candles: observations.candles.map((c) => ({ openedAt: c.openedAt, closedAt: c.closedAt, open: c.open, high: c.high, low: c.low, close: c.close, complete: c.complete, verifiedPostEventSplit: c.verifiedPostEventSplit === true }))
+  });
+}
+
+export function calculateReactionEnvelopeContentHash(envelope: ReactionObservationEnvelope): string {
+  return canonicalHash({
+    sourceId: envelope.sourceId,
+    provider: envelope.provider,
+    payloadRef: envelope.payloadRef ?? null,
+    observationVersion: envelope.observationVersion,
+    asset: envelope.reactionInput.asset,
+    eventTime: envelope.reactionInput.eventTime ?? null,
+    volatilityBasisPct: envelope.reactionInput.volatilityBasisPct ?? null,
+    volatilityBasis: envelope.reactionInput.volatilityBasis ?? null,
+    candles: [...envelope.reactionInput.candles].sort((a,b)=>Date.parse(a.timestamp)-Date.parse(b.timestamp)).map((c)=>({ timestamp:c.timestamp, open:c.open, high:c.high, low:c.low, close:c.close, volume:c.volume ?? null }))
   });
 }
 

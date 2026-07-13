@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS app_expectation_records (
   issued_at timestamptz NOT NULL,
   data_cutoff_at timestamptz NOT NULL CHECK (data_cutoff_at <= issued_at),
   reasoning_run_id text REFERENCES app_reasoning_runs(reasoning_run_id) ON DELETE RESTRICT,
-  cognition_snapshot_id text UNIQUE REFERENCES app_cognition_snapshots(snapshot_id) ON DELETE RESTRICT,
+  cognition_snapshot_id text REFERENCES app_cognition_snapshots(snapshot_id) ON DELETE RESTRICT,
   reasoning_version text,
   scoring_version text,
   base_price numeric,
@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS app_expectation_records (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS app_expectation_records_asset_timeframe_issued_idx ON app_expectation_records(asset, timeframe, issued_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS app_expectation_records_cognition_path_snapshot_uidx ON app_expectation_records(cognition_snapshot_id) WHERE expectation_kind = 'cognition_path' AND cognition_snapshot_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS app_expectation_records_event_release_idx ON app_expectation_records(event_release_id, scheduled_release_time DESC) WHERE expectation_kind = 'event';
 CREATE UNIQUE INDEX IF NOT EXISTS app_expectation_records_event_release_expectation_idx ON app_expectation_records(event_release_id, expectation_id) WHERE expectation_kind = 'event';
 

@@ -104,18 +104,14 @@ const requiredDocPhrases = [
 ];
 for (const phrase of requiredDocPhrases) if (!doc.includes(phrase)) fail(`missing required IFP phrase: ${phrase}`);
 
-if (!doc.includes('diagnose confidence-floor saturation empirically') || !doc.includes('it does not mean formulas were changed')) fail('confidence-floor diagnosis boundary is missing');
-if (!doc.includes('Prohibited scope: raising confidence values, weakening penalties, confidence tier changes, adaptive self-modifying confidence engine, golden expectation edits')) fail('confidence prohibited scope is incomplete');
-
-
 const capabilityRequirements = {
   'IFP-1': ['pre-event expectation', 'actual and forecast', 'previous and revised previous', 'normalized surprise', 'primary-asset price reaction', 'follow-through', 'related-market response', 'volatility adjustment', 'confidence shift', 'immutable audit trail'],
-  'IFP-2': ['Historical Market Memory / Analog Engine', 'IFP-1 event expectation-reality records'],
-  'IFP-3': ['Contradiction-to-Action Protocol', 'without changing confidence formulas'],
-  'IFP-4': ['Market Cleanliness', 'price reaction clarity', 'related-market confirmation'],
-  'IFP-5': ['News Half-Life / Narrative Decay', 'release versions', 'post-release reaction persistence'],
-  'IFP-6': ['Crowd Pain / Positioning Stress', 'positioning evidence', 'follow-through failures'],
-  'IFP-7': ['Fragility Score', 'absorption', 'reversal', 'mispricing-candidate']
+  'IFP-2': ['Historical Market Memory / Analog Engine', 'analog retrieval engine', 'nearest-analog explanations'],
+  'IFP-3': ['Contradiction-to-Action Protocol', 'protocol states', 'review, wait, invalidate, escalate, or archive'],
+  'IFP-4': ['Market Cleanliness', 'cleanliness score with visible components', 'session/liquidity context'],
+  'IFP-5': ['News Half-Life / Narrative Decay', 'narrative half-life', 'active/decaying/expired states'],
+  'IFP-6': ['Crowd Pain / Positioning Stress', 'stress-map states', 'positioning limitations'],
+  'IFP-7': ['Fragility Score', 'component ledger', 'severity thresholds']
 };
 for (const [phaseId, phrases] of Object.entries(capabilityRequirements)) {
   const body = bodies.get(phaseId) ?? '';
@@ -130,9 +126,11 @@ for (const stale of ['configuration is versioned and auditable', 'parameter fami
 
 const staleByPhase = {
   'IFP-2': ['dataset manifests', 'training/evaluation dataset separation'],
+  'IFP-3': ['confidence-floor saturation diagnosis', 'false-zero/true-zero analysis'],
   'IFP-4': ['backtest harnesses', 'universal aggregate score as proof'],
-  'IFP-6': ['alert threshold evidence', 'cooldown/dedupe acceptance'],
-  'IFP-7': ['readability review rubric', 'frontend redesign'],
+  'IFP-5': ['reliability version registry', 'drift review cadence'],
+  'IFP-6': ['alert threshold evidence', 'cooldown/dedupe acceptance', 'trade-readiness and alert-throttling validation'],
+  'IFP-7': ['readability review rubric', 'frontend redesign', 'decision-path persistence model'],
   'IFP-8': ['IFP-1 configuration registry']
 };
 for (const [phaseId, phrases] of Object.entries(staleByPhase)) {

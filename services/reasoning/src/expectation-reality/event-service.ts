@@ -1,7 +1,6 @@
-import type { MarketPriceReactionInput } from '@elceo/types';
 import { deserializeCanonicalCognitionState } from '../persistence/serialization';
 import type { CognitionSnapshotRepository } from '../persistence/contracts';
-import type { EventExpectationDraft, EventExpectationRecord, EventRealityEvaluation, NumericReleaseFields } from './contracts';
+import type { EventExpectationDraft, EventExpectationRecord, EventRealityEvaluation, NumericReleaseFields, ReactionObservationEnvelope } from './contracts';
 import { buildEventReality, createEventExpectation, interpretEventReality } from './event-engine';
 import type { EventExpectationRepository, EventRealityRepository } from './repository';
 
@@ -30,13 +29,13 @@ export class EventExpectationRealityService {
     return this.expectations.saveEventExpectation(verified);
   }
 
-  async evaluateEvent(params: { expectationId: string; release: NumericReleaseFields | { releaseId: string; nonNumericOutcome: string; observedAt: string; releaseVersion: string; provenance: EventExpectationRecord['provenance'] }; primaryPriceReactionInput: MarketPriceReactionInput; followThroughReactionInput: MarketPriceReactionInput; relatedMarketReactionInputs: MarketPriceReactionInput[]; postEventCognitionSnapshotId?: string | null; interpretedAt: string }): Promise<EventRealityEvaluation> {
+  async evaluateEvent(params: { expectationId: string; release: NumericReleaseFields | { releaseId: string; nonNumericOutcome: string; observedAt: string; releaseVersion: string; provenance: EventExpectationRecord['provenance'] }; primaryObservationInput: ReactionObservationEnvelope; relatedMarketObservationInputs: ReactionObservationEnvelope[]; postEventCognitionSnapshotId?: string | null; interpretedAt: string }): Promise<EventRealityEvaluation> {
     const expectation = await this.expectations.getEventExpectationById(params.expectationId);
     if (!expectation) throw new Error('event_expectation_not_found');
     if (params.release.releaseId !== expectation.eventReleaseId) throw new Error('release_id_mismatch');
     await this.loadVerifiedCognition(expectation.preEventCognitionSnapshotId, expectation, 'pre');
     const postEventCognition = params.postEventCognitionSnapshotId ? await this.loadVerifiedCognition(params.postEventCognitionSnapshotId, expectation, 'post', params.release.observedAt) : null;
-    const reality = buildEventReality({ expectation, release: params.release, primaryPriceReactionInput: params.primaryPriceReactionInput, followThroughReactionInput: params.followThroughReactionInput, relatedMarketReactionInputs: params.relatedMarketReactionInputs, postEventCognition });
+    const reality = buildEventReality({ expectation, release: params.release, primaryPriceReactionInput: params.primaryObservationInput, followThroughReactionInput: params.primaryObservationInput, relatedMarketReactionInputs: params.relatedMarketObservationInputs, postEventCognition });
     const evaluation = interpretEventReality({ expectation, reality, interpretedAt: params.interpretedAt });
     return this.evaluations.saveEventEvaluation(evaluation);
   }

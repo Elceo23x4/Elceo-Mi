@@ -81,109 +81,109 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 
 - Phase ID: IFP-2
 - Canonical phase name: Historical Market Memory / Analog Engine
-- Exact objective: build Historical Market Memory / Analog Engine from closed IFP-1 event expectation-reality records, preserving event-time-safe inputs and separating analog evidence from calibration outcomes.
-- Problem being closed: fixtures and golden scenarios are deterministic coverage, not empirical evidence.
-- Source requirements: historical calibration and reaction-study evidence; calibration/evaluation separation; analog evidence/calibration separation; no historical outcome leakage; predeclared evidence coverage for mandatory launch assets or approved asset groups, required event classes, required horizons, sparse or structurally unavailable slices, and minimum sample or evidence-sufficiency policy.
-- Existing modules reused: macro surprise normalization, price reaction, asset direction resolution, provider payload/replay contracts.
-- Likely permitted files: analog memory manifests, evidence schemas, replay fixtures, tests, docs.
-- Prohibited scope: live provider activation, provider credentials, golden expectation changes, confidence recalibration.
+- Exact objective: build an analog retrieval engine that compares new frozen IFP-1 event expectation-reality records with historical events using event kind, normalized surprise, revision effect, asset direction, price path, related-market response, volatility context, confidence shift, and provenance quality.
+- Problem being closed: ELCEO cannot call a new event historically familiar until similar prior expectation-reality paths are stored, retrievable, and leakage-safe.
+- Source requirements: closed IFP-1 records, certified replay or Provider API Gate data, mandatory launch assets or approved asset groups, required event classes, required horizons, minimum sample or evidence-sufficiency policy, sparse or structurally unavailable slices, calibration/evaluation separation, mandatory launch coverage matrix, event-time-safe historical inputs, analog evidence/calibration separation, source provenance, sample-size and sparse-slice limitations.
+- Existing modules reused: IFP-1 event records, macro surprise normalization, price reaction, asset direction resolution, provider provenance, observation hashing, cognition snapshots.
+- Likely permitted files: analog memory contracts, similarity scoring, historical retrieval repositories, evidence manifests, replay fixtures, tests, docs.
+- Prohibited scope: changing confidence formulas, changing golden scenarios, live provider activation, using post-event outcome fields as pre-event analog inputs, replacing analog retrieval with manifest lists alone.
 - Dependencies: IFP-1 closed; certified/captured data may depend on provider readiness but no activation is performed here.
-- Implementation outputs: calibration/evaluation manifests, event-time availability rules, versioned predeclared evidence-sufficiency policy, mandatory launch coverage matrix, sparse-slice handling rules, sample metadata by period/asset/event class/horizon.
-- Tests and evaluation evidence: leakage tests, manifest validation, predeclared coverage-policy validation, mandatory launch coverage matrix validation, sample-size reports, event-time field assertions.
-- Merge blockers: training/evaluation mixing; outcome fields available as inputs; evaluation starting before the versioned predeclared evidence-sufficiency policy exists; sample reports without limitations.
-- External data/environment requirements: historical datasets or certified replay exports; credentials only through approved provider gates if used.
-- Truthful completion language: IFP-2 complete means evidence sets are valid and separated; it does not mean model performance is acceptable.
-- Stop condition: every dataset has period, asset, event class, horizon, sample size, source, input-availability cutoff, train/eval assignment, and a versioned evidence-sufficiency classification before IFP-4 evaluation begins.
+- Implementation outputs: versioned analog-memory records, similarity features, retrieval API/service, nearest-analog explanations, evidence-sufficiency classifications, source limitations, and immutable analog audit payloads.
+- Tests and evaluation evidence: leakage tests, deterministic analog retrieval tests, sample-size and sparse-slice tests, replay provenance tests, cross-asset similarity tests, and unchanged IFP-1/golden tests.
+- Merge blockers: analogs selected using future outcome leakage; missing provenance; missing event-time cutoffs; fixture-only production claims; generic dataset indexing presented as historical memory.
+- External data/environment requirements: historical market/release data through replay or Provider API Gate boundaries.
+- Truthful completion language: IFP-2 complete means analog retrieval is deterministic, auditable, leakage-safe, and evidence-qualified; it does not mean predictive calibration is accepted.
+- Stop condition: every analog result exposes source events, similarity components, unavailable slices, event-time cutoff proof, and why the retrieved history is or is not comparable.
 
 ### IFP-3 — Contradiction-to-Action Protocol
 
 - Phase ID: IFP-3
 - Canonical phase name: Contradiction-to-Action Protocol
-- Exact objective: implement Contradiction-to-Action Protocol that converts confirmed expectation-reality contradictions into auditable action-review prompts without changing confidence formulas or issuing direct financial advice.
-- Problem being closed: production calibration cannot be claimed while floor saturation causes many deterministic scenarios to emit confidence 0 without empirical diagnosis.
-- Source requirements: confidence-floor saturation diagnosis; no confidence formula changes merely to improve fixtures; no IFP phase may claim production validation from fixtures alone.
-- Existing modules reused: confidence calibration, contradiction matrix, provider reliability weighting, golden-scenario reports.
-- Likely permitted files: diagnostic reports, calibration evaluation harnesses, tests, docs.
-- Prohibited scope: raising confidence values, weakening penalties, confidence tier changes, adaptive self-modifying confidence engine, golden expectation edits.
+- Exact objective: implement protocol states that convert confirmed expectation-reality contradictions into review, wait, invalidate, escalate, or archive decisions without issuing buy/sell/hold advice or modifying confidence formulas.
+- Problem being closed: contradictions currently remain explanatory artifacts instead of deterministic operational states with evidence thresholds and safe next-step language.
+- Source requirements: IFP-1 outcomes, IFP-2 analog context, frozen invalidation state, confidence/contradiction deltas, related-market conflict state, provenance limitations, and no-advice wording.
+- Existing modules reused: IFP-1 delta anatomy, contradiction matrix, invalidation state, cognition snapshots, notification safety language, audit persistence.
+- Likely permitted files: protocol contracts, state machine, policy thresholds, repositories if needed, no-advice rationale tests, docs.
+- Prohibited scope: direct trade instructions, confidence formula changes, golden scenario changes, provider activation, frontend alert behavior changes unless explicitly scoped later.
 - Dependencies: IFP-2 closed.
-- Implementation outputs: saturation taxonomy, empirical factor attribution, false-zero/true-zero analysis, recommended future config changes if evidence supports them.
-- Tests and evaluation evidence: reproducible diagnostic runs, factor ablation reports as evidence only, separated evaluation confirmation.
-- Merge blockers: arithmetic changes in same phase; fixture-only proof; missing explanation of contradiction/provider/price-confirmation contributors.
-- External data/environment requirements: historical evaluation data from IFP-2.
-- Truthful completion language: IFP-3 complete means saturation is diagnosed and evidence-backed; it does not mean formulas were changed.
-- Stop condition: each zero-confidence class has empirical attribution, sample support, limitations, and a documented decision to keep or propose later versioned changes.
+- Implementation outputs: versioned contradiction-action protocol states, deterministic transition reasons, review prompts, blocked-action limitations, and audit records linking back to IFP-1/IFP-2 evidence.
+- Tests and evaluation evidence: state-transition tests for confirmed/rejected/absorbed/reversed/mispricing-candidate evidence, no-advice language tests, invalidation precedence tests, related-market conflict tests.
+- Merge blockers: action protocol emits buy/sell/hold; protocol ignores evidence limitations; contradictions without source provenance produce hard actions; formula changes are smuggled into action states.
+- External data/environment requirements: none beyond persisted IFP-1/IFP-2 evidence and certified replay fixtures.
+- Truthful completion language: IFP-3 complete means contradictions map to auditable review states; it does not authorize trading decisions.
+- Stop condition: every protocol output is traceable to evidence, has a safe state label, records limitations, and can be reproduced deterministically from persisted inputs.
 
 ### IFP-4 — Market Cleanliness Ranking
 
 - Phase ID: IFP-4
 - Canonical phase name: Market Cleanliness Ranking
-- Exact objective: rank Market Cleanliness using event expectation quality, release provenance, price reaction clarity, related-market confirmation, liquidity/session context, and ambiguity/insufficient-data evidence.
-- Problem being closed: deterministic direction logic needs evidence-backed direction validation across assets and event families.
-- Source requirements: empirical backtesting and evaluation methodology; asset/event direction validation; no single aggregate accuracy score as universal proof.
-- Existing modules reused: asset causality, FX relative-strength, macro surprise normalization, price reaction, economic context.
-- Likely permitted files: cleanliness evaluation harnesses, reports, tests, methodology docs.
-- Prohibited scope: inferring direction from scenario titles/IDs/categories/expected outputs; asset taxonomy changes; direct financial-advice outputs.
+- Exact objective: rank market cleanliness by measuring how clearly releases, primary reactions, follow-through, related markets, liquidity/session context, and analog history agree or conflict.
+- Problem being closed: ELCEO needs to distinguish clean markets from noisy or conflicted markets before downstream fragility and action protocols rely on the signal.
+- Source requirements: IFP-1 event/path evaluations, IFP-2 analog distributions, session/liquidity context, volatility context, related-market state, source provenance, insufficient-data markers.
+- Existing modules reused: expectation-reality event evaluations, price reaction, observation identity, provider provenance, asset causality, analog memory.
+- Likely permitted files: cleanliness scoring policy, ranking service, persistence/reporting, tests, methodology docs.
+- Prohibited scope: single aggregate score without component evidence, direct advice, asset taxonomy changes, live provider activation, replacing cleanliness with generic backtest pass rates.
 - Dependencies: IFP-3 closed.
-- Implementation outputs: per-asset/per-event/horizon evaluation reports, confusion tables, limitations, invalidation cases.
-- Tests and evaluation evidence: backtest reproducibility, period split validation, asset/event/horizon sample reporting, leakage checks.
-- Merge blockers: single cleanliness score without component evidence; missing sample size/period/asset/event class/horizon; direction inferred from labels.
-- External data/environment requirements: historical market/event data.
-- Truthful completion language: IFP-4 complete means evaluated evidence exists by slice; it does not mean production-live validation is complete.
-- Stop condition: every launch reasoning asset/event class under evaluation has a documented pass/fail/insufficient-data decision with limitations.
+- Implementation outputs: versioned cleanliness score with visible components, conflict/ambiguity flags, insufficient-data classification, per-asset/event/horizon reports, and audit rationale.
+- Tests and evaluation evidence: component-weight tests, conflict blocking tests, insufficient-context tests, session/liquidity edge tests, replay reproducibility, no-advice tests.
+- Merge blockers: cleanliness hides conflicts; missing related-market or volatility evidence is treated as clean; score cannot be traced to components; fixture-only validation is claimed as production evidence.
+- External data/environment requirements: certified replay or Provider API Gate observations for market/session evidence.
+- Truthful completion language: IFP-4 complete means market cleanliness is ranked with auditable components and limitations; it does not mean markets are tradable.
+- Stop condition: every cleanliness output exposes release, primary, follow-through, related, volatility, session, analog, provenance, and insufficiency components.
 
 ### IFP-5 — News Half-Life / Narrative Decay
 
 - Phase ID: IFP-5
 - Canonical phase name: News Half-Life / Narrative Decay
-- Exact objective: measure News Half-Life / Narrative Decay by comparing event release versions, revisions, source provenance, post-release reaction persistence, and cognition confidence shifts over declared horizons.
-- Problem being closed: reliability, freshness, contradiction, and stress controls exist but require drift review and regime-specific validation.
-- Source requirements: provider/source reliability governance and drift review; freshness, contradiction and regime stress testing; evidence-backed versioned reliability.
-- Existing modules reused: provider reliability, evidence quality, scheduled ingestion staleness, contradiction matrix, freshness composer.
-- Likely permitted files: governance docs, drift reports, stress fixtures/replays, tests.
-- Prohibited scope: provider credentials, provider activation, unmanaged direct third-party calls, weakening contradiction penalties.
+- Exact objective: calculate how long a release narrative remains active by tracking reaction persistence, follow-through decay, revisions, source updates, related-market fade, analog decay, and cognition confidence shift.
+- Problem being closed: ELCEO needs a deterministic decay clock so stale narratives do not remain active merely because the original event was material.
+- Source requirements: IFP-1 release/evaluation records, revision versions, post-event observation windows, related-market reactions, IFP-2 analog half-life evidence, post-event cognition snapshots, source provenance.
+- Existing modules reused: macro release versioning, price reaction, expectation-reality horizons, cognition snapshots, provider provenance, analog memory.
+- Likely permitted files: narrative decay policy, half-life calculator, persistence/reporting, tests, docs.
+- Prohibited scope: provider activation, direct news scraping outside Provider API Gate, confidence formula changes, treating source freshness alone as narrative truth.
 - Dependencies: IFP-4 closed; RC-H/Provider API Gate evidence may be an additional evidence dependency if live-provider data is used, but it does not change the canonical execution order.
-- Implementation outputs: reliability version registry, drift review cadence, regime stress suite, contradiction/freshness outcome reports.
-- Tests and evaluation evidence: source drift tests, duplicate-burst tests, stale-evidence tests, contradiction stress scenarios.
-- Merge blockers: unversioned provider weights; fixture-only production claim; direct live calls outside Provider API Gate.
-- External data/environment requirements: certified provider/replay data for production-like drift; none for deterministic stress fixtures.
-- Truthful completion language: IFP-5 complete means governance and stress evidence exist; it does not activate providers.
-- Stop condition: every source/reliability class has version, evidence basis, drift owner, freshness rules, and stress-test result.
+- Implementation outputs: versioned narrative half-life, active/decaying/expired states, revision impact, decay rationale, source limitations, and audit links to event/analog evidence.
+- Tests and evaluation evidence: persistence-decay tests, revision-reset/offset tests, stale-source tests, related-market fade tests, insufficient-data tests.
+- Merge blockers: half-life inferred without observations; revisions ignored; missing related-market/context treated as persistence; stale source freshness substituted for narrative survival.
+- External data/environment requirements: certified replay/provider release updates and post-event observation windows.
+- Truthful completion language: IFP-5 complete means narrative decay is measurable and auditable; it does not activate live news providers.
+- Stop condition: every narrative state exposes age, event versions, reaction persistence, related-market decay, analog context, confidence shift, and limitation text.
 
 ### IFP-6 — Crowd Pain / Positioning Stress Map
 
 - Phase ID: IFP-6
 - Canonical phase name: Crowd Pain / Positioning Stress Map
-- Exact objective: map Crowd Pain / Positioning Stress from expectation-reality deltas, related-market stress responses, positioning evidence and follow-through failures without provider activation shortcuts.
-- Problem being closed: alert, notification, journal, and coaching foundations exist but require intelligence acceptance evidence and throttling validation.
-- Source requirements: trade-readiness and alert-throttling validation; behavioral coaching must not fabricate market direction.
-- Existing modules reused: notification policy/cooldown/material-change/dedupe, analytics coaching, journal influence, reasoning link summaries.
-- Likely permitted files: validation reports, alert policy tests, coaching interpretation tests, docs.
-- Prohibited scope: notification provider activation, payment runtime, entitlement behavior, affiliate behavior, financial advice commands.
+- Exact objective: map crowd pain and positioning stress from expectation-reality failures, whipsaws, absorption, reversal, crowded analog patterns, volatility expansion, and related-market stress.
+- Problem being closed: ELCEO needs a market-stress map that explains where participants are likely pressured without fabricating positions or issuing trade instructions.
+- Source requirements: IFP-1 deltas, IFP-2 analog crowd-pain patterns, IFP-4 cleanliness, IFP-5 narrative decay, positioning data where certified, volatility context, related-market conflicts, provenance limitations.
+- Existing modules reused: expectation-reality path classifications, analog memory, cleanliness score, narrative decay, provider provenance, analytics/coaching safety boundaries.
+- Likely permitted files: positioning stress contracts, stress-map service, evidence adapters, tests, docs.
+- Prohibited scope: direct advice, notification delivery changes, fabricated positioning when data is missing, live provider activation, payment or entitlement behavior.
 - Dependencies: IFP-5 closed.
-- Implementation outputs: positioning stress threshold evidence, stress-map acceptance, trader safety language review, coaching-market-boundary tests.
-- Tests and evaluation evidence: alert replay tests, over-trigger/under-trigger reports, coaching boundary tests, user-safety review evidence.
-- Merge blockers: coaching invents market direction; alerts bypass cooldown/dedupe; fixture-only trade-readiness claim.
-- External data/environment requirements: historical/replay alert streams; no live notification send required.
-- Truthful completion language: IFP-6 complete means trade-readiness and alert behavior is validated for product consumption; notification delivery certification remains separate.
-- Stop condition: each alert/coaching surface has threshold evidence, suppression proof, safe language, and known limitations.
+- Implementation outputs: versioned stress-map states, crowd-pain components, source sufficiency flags, positioning limitations, cross-market stress rationale, and immutable audit records.
+- Tests and evaluation evidence: whipsaw/reversal stress tests, missing-positioning insufficient-data tests, conflicting-market tests, no-advice tests, replay reproducibility.
+- Merge blockers: missing positioning data treated as known crowding; stress map bypasses cleanliness/decay limitations; outputs imply trade commands; fixture-only production readiness claim.
+- External data/environment requirements: certified replay/provider positioning inputs where available; explicit unavailable state otherwise.
+- Truthful completion language: IFP-6 complete means positioning stress is mapped with evidence and limitations; it does not prove crowd positioning where sources are absent.
+- Stop condition: every stress-map output exposes evidence source, stress component, unavailable data, related-market support/conflict, and safe interpretation language.
 
 ### IFP-7 — Fragility Score
 
 - Phase ID: IFP-7
 - Canonical phase name: Fragility Score
-- Exact objective: compute Fragility Score from accumulated contradiction, absorption, reversal, mispricing-candidate, volatility-context and related-market weakness evidence while preserving every component and limitation.
-- Problem being closed: deterministic explanation objects exist but must be product-consumable and traceable across reasoning, chart, analytics, coaching, and journal surfaces.
-- Source requirements: explanation auditability and decision-path persistence; human readability and trader interpretation review; deterministic explanation preservation.
-- Existing modules reused: explanation builder, chart projection builder, reasoning runtime reports, analytics/coaching boundaries, API market-evidence routes.
-- Likely permitted files: persistence contracts, audit reports, interpretation review fixtures/tests, docs.
-- Prohibited scope: fragility UI redesign, API behavior changes outside necessary audit persistence, runtime market formula changes.
+- Exact objective: compute a final Fragility Score from accumulated contradiction, absorption, reversal, mispricing-candidate, cleanliness, narrative decay, crowd-pain, volatility and provenance evidence while preserving component visibility.
+- Problem being closed: ELCEO needs a single evidence-qualified fragility assessment that remains explainable rather than hiding uncertainty inside an opaque score.
+- Source requirements: IFP-1 through IFP-6 outputs, immutable audit references, component limitations, confidence/contradiction shifts, volatility context, source provenance, no-advice rationale.
+- Existing modules reused: expectation-reality delta anatomy, analog memory, contradiction protocol, cleanliness ranking, narrative half-life, crowd-pain map, explanation builder.
+- Likely permitted files: fragility policy, scoring service, persistence/reporting, explanation tests, docs.
+- Prohibited scope: opaque aggregate score, unscoped UI redesign, direct advice, confidence formula changes, replacing missing components with generic defaults.
 - Dependencies: IFP-6 closed.
-- Implementation outputs: decision-path persistence model, explanation trace IDs, fragility explanation rubric, audited sample outputs.
-- Tests and evaluation evidence: trace persistence tests, no-advice/readability tests, chart-to-evidence audit path tests.
-- Merge blockers: output lacking deterministic path; unreadable trader interpretation accepted without review; chart intelligence detached from evidence.
-- External data/environment requirements: replay/evaluation runs; no live activation required.
-- Truthful completion language: IFP-7 complete means explanations are persistent, readable, and auditable; it does not claim live production calibration.
-- Stop condition: every product-consumable intelligence surface can trace to inputs, rules/config version, decision path, and limitation text.
+- Implementation outputs: versioned fragility score, component ledger, severity thresholds, limitations, explanation/audit payload, and downstream acceptance evidence for IFP-8.
+- Tests and evaluation evidence: component visibility tests, missing-data severity tests, no-advice tests, deterministic replay, trace-to-source tests, threshold boundary tests.
+- Merge blockers: score cannot be decomposed; missing components silently default; conflicting evidence hidden; direct trade language appears; score is marketed as predictive certainty.
+- External data/environment requirements: persisted IFP evidence and certified replay/provider data referenced by upstream phases.
+- Truthful completion language: IFP-7 complete means fragility is scored, decomposed, and auditable; it does not mean production calibration is accepted.
+- Stop condition: every fragility output can trace to all contributing phase outputs, component weights, severity boundary, missing-data treatment, and limitation rationale.
 
 ### IFP-8 — Production-Data Calibration and Intelligence Acceptance Evidence Gate
 

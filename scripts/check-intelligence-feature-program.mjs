@@ -4,6 +4,9 @@ const read = (path) => readFileSync(path, 'utf8');
 const doc = read('docs/intelligence-feature-program.md');
 const ci = read('.github/workflows/ci.yml');
 const releaseGate = read('scripts/release-gate.mjs');
+const deploymentGate = read('scripts/verify-deployment-promotion-gates.mjs');
+const rcjSelfTest = read('scripts/security-rc-j-self-test.mjs');
+const readinessChecklist = read('docs/production-readiness-checklist.md');
 const packageJson = JSON.parse(read('package.json'));
 const alignmentDocs = [
   'docs/backend-open-loop-register.md',
@@ -136,6 +139,36 @@ for (const path of statusDocs) {
   }
   if (currentStatus.includes('RC-J remains a mandatory subsequent launch batch')) fail(`${path} contains stale current RC-J lifecycle phrase`);
 }
+
+
+
+const deploymentGateRequirements = [
+  'RC_J_ENV_EVIDENCE',
+  "const explicitPassFlags = ['RELEASE_GATE_PASSED', 'SECURITY_GATE_PASSED', 'MIGRATION_CHECK_PASSED'];",
+  "const evidenceReferences = ['STAGING_SMOKE_EVIDENCE', 'RC_I2_CERT_EVIDENCE', 'RC_J_ENV_EVIDENCE'];",
+  "const falseLikeValues = new Set(['false', '0', 'no', 'failed', 'failure', 'missing', 'incomplete', 'unavailable', 'not_completed']);",
+  'isExplicitPass',
+  'isValidEvidenceReference',
+  'missing, invalid',
+];
+for (const phrase of deploymentGateRequirements) {
+  if (!deploymentGate.includes(phrase)) fail(`deployment promotion gate missing contract phrase: ${phrase}`);
+}
+
+for (const phrase of [
+  'deployment gate requires RC-J-ENV evidence',
+  'deployment gate rejects false RC-J-ENV evidence',
+  'deployment gate rejects false release gate flag',
+  'deployment gate rejects zero security gate flag',
+  'deployment gate rejects incomplete RC-I2 evidence',
+  'deployment gate passes with full valid evidence',
+  'deployment gate blocks provider live activation',
+]) {
+  if (!rcjSelfTest.includes(phrase)) fail(`RC-J self-test missing deployment gate coverage: ${phrase}`);
+}
+
+if (!readinessChecklist.includes('RC-J-ENV evidence before final launch')) fail('readiness checklist no longer requires RC-J-ENV evidence before final launch');
+if (!readinessChecklist.includes('RC-I2-CERT remains a mandatory unresolved pre-launch blocker') || !readinessChecklist.includes('RC-J-ENV remains a mandatory unresolved pre-launch blocker') || !readinessChecklist.includes('IFP remains the active mandatory pre-launch program') || !readinessChecklist.includes('RC-K begins only after all eight IFP phases close')) fail('readiness checklist no longer carries RC-I2-CERT, RC-J-ENV, IFP, and RC-K launch dependency language');
 
 const productionStatus = read('docs/final-production-status-report.md');
 const blockerSentence = 'Production launch remains blocked until RC-I2-CERT, RC-J-ENV, IFP, and RC-K are complete';

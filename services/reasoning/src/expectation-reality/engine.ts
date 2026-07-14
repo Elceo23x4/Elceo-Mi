@@ -48,9 +48,9 @@ export function evaluateExpectationReality(params: { expectation: ExpectationRec
   const warnings: string[] = [];
   const requiredBars: number = EXPECTATION_REALITY_POLICY_V1.horizons[horizon];
   const calculatedObservationHash = calculateObservationContentHash(observations);
-  const normalizedObservations = { ...observations, contentHash: calculatedObservationHash, source: { ...observations.source, contentHash: observations.source.contentHash ?? calculatedObservationHash } };
+  const validation = validateObservationCandles(expectation, observations, evaluatedAt);
+  const normalizedObservations = validation.includes('observation_content_hash_mismatch') || validation.includes('source_content_hash_mismatch') ? observations : { ...observations, contentHash: observations.contentHash || calculatedObservationHash, source: { ...observations.source, contentHash: observations.source.contentHash ?? calculatedObservationHash } };
   const candles = horizonCandles(expectation, normalizedObservations, requiredBars);
-  const validation = validateObservationCandles(expectation, normalizedObservations, evaluatedAt);
   reasonCodes.push(...validation);
   const insufficient = validation.length > 0 || candles.length < requiredBars;
   if (candles.length < requiredBars) pushUnique(reasonCodes, 'observation_window_incomplete');

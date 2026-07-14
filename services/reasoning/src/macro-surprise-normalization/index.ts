@@ -86,6 +86,13 @@ function severity(score: number): MarketMacroSurpriseSeverity { const a = Math.a
 function scoreDelta(delta: number, basis: number, std: number | null): number { const denom = std && std > 0 ? std : Math.max(Math.abs(basis) * 0.02, 0.1); return clamp((delta / denom) * 20, -100, 100); }
 function confidenceTier(confidence: number): MarketMacroSurpriseNormalizationResult['confidenceTier'] { return confidence >= 70 ? 'high' : confidence >= 40 ? 'medium' : 'low'; }
 
+export function resolveMacroPressuresFromSignedNormalizedScore(input: { indicatorKind: MarketMacroIndicatorKind | string; category?: MarketMacroIndicatorCategory | string; signedNormalizedScore: number }): Pressure & { boundedSignedNormalizedScore: number; surpriseDirection: 'economic_positive' | 'economic_negative' | 'inline'; severity: MarketMacroSurpriseSeverity } {
+  const kind = inferMacroIndicatorKind({ indicatorKind: String(input.indicatorKind), category: String(input.category ?? '') });
+  const boundedSignedNormalizedScore = clamp(input.signedNormalizedScore, -100, 100);
+  const resolved = pressure(kind, boundedSignedNormalizedScore);
+  return { ...resolved, boundedSignedNormalizedScore, surpriseDirection: Math.abs(boundedSignedNormalizedScore) < 8 ? 'inline' : boundedSignedNormalizedScore > 0 ? 'economic_positive' : 'economic_negative', severity: severity(boundedSignedNormalizedScore) };
+}
+
 export function normalizeMacroSurprise(input: MarketMacroReleaseInput): MarketMacroSurpriseNormalizationResult {
   const valid = validateMarketMacroReleaseInput(input); if ('errors' in valid) throw new Error(`macro_release_input_invalid:${valid.errors.join('|')}`);
   const kind = inferMacroIndicatorKind(input); const category = inferMacroIndicatorCategory(input); const cr = inferMacroCurrencyRegion(input);

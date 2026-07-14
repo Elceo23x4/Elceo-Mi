@@ -18,7 +18,7 @@ export type EventExpectationRecord = {
 };
 
 export type EventExpectationDraft = Omit<EventExpectationRecord, 'preEventConfidence' | 'preEventContradiction' | 'expectedAssetDirection'>;
-export type EventReactionCandle = MarketPriceReactionInput['candles'][number] & { openedAt: string; closedAt: string; complete: boolean };
+export type EventReactionCandle = MarketPriceReactionInput['candles'][number] & { openedAt: string; closedAt: string; complete: boolean; verifiedPostEventSplit?: boolean; splitProvenance?: string | null };
 export type ReactionObservationEnvelope = { reactionInput: Omit<MarketPriceReactionInput, 'candles'> & { candles: EventReactionCandle[] }; sourceId: string; provider: string; payloadRef?: string | null; observationVersion: string; suppliedContentHash?: string | null; calculatedContentHash?: string | null; reliability: 'verified' | 'replay' | 'fixture' | 'unverified'; effectiveReliability?: 'verified' | 'replay' | 'fixture' | 'unverified'; trustBasis?: string | null; verificationRef?: string | null; verifiedAt?: string | null; timeframe?: Timeframe | null; barDurationMinutes?: number | null };
 export type EventPriceTimelineState = 'confirmed' | 'rejected' | 'absorbed' | 'reversed' | 'delayed' | 'insufficient_data' | 'ambiguous' | 'unknown';
 export type PriceReactionTimelinePhase = { state: EventPriceTimelineState; startTimestamp: string | null; endTimestamp: string | null; requiredBarCount: number; availableBarCount: number; moveFromOriginPct: number | null; volatilityAdjustedMove: number | null; observedDirection: 'bullish' | 'bearish' | 'neutral' | 'unknown'; reasonCodes: string[]; warnings: string[] };
@@ -30,7 +30,7 @@ export type ReleaseAlignment = { status: ReleaseAlignmentState; reasonCodes: str
 
 export type EventRealityRecord = {
   releaseAlignment: ReleaseAlignment; revisionAdjustedMeasures: RevisionAdjustedMeasures; priceReactionTimeline: PriceReactionTimeline; releaseId: string; releaseVersion: string; observedAt: string; actual: number | null; forecast: number | null; previous: number | null; revisedPrevious: number | null; normalizedSurprise: MarketMacroSurpriseNormalizationResult | null; nonNumericOutcome?: string | null;
-  provenance: SourceProvenance[]; primaryPriceReaction: MarketPriceReactionResult; followThroughReaction: MarketPriceReactionResult; relatedMarketReactions: MarketPriceReactionResult[]; actualAssetDirections: { asset: CanonicalAssetSymbol; resolvedDirection: string; confidence: number; reasonCodes: string[]; warnings: string[] }[]; observationContentHash: string; reactionProvenance: ReactionObservationEnvelope[]; relatedMarketState: RelatedMarketState; postEventCognitionSnapshotId: string | null;
+  provenance: SourceProvenance[]; primaryPriceReaction: MarketPriceReactionResult; followThroughReaction: PriceReactionTimelinePhase; relatedMarketReactions: MarketPriceReactionResult[]; actualAssetDirections: { asset: CanonicalAssetSymbol; resolvedDirection: string; confidence: number; reasonCodes: string[]; warnings: string[] }[]; observationContentHash: string; reactionProvenance: ReactionObservationEnvelope[]; relatedMarketState: RelatedMarketState; postEventCognitionSnapshotId: string | null;
   postEventConfidence: number | null; confidenceDelta: number | null; postEventContradiction: number | null; contradictionDelta: number | null; biasChange: { before: ExpectationBias; after: ExpectationBias | null; changed: boolean }; warnings: string[]; limitations: string[];
 };
 

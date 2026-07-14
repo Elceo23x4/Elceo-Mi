@@ -29,10 +29,27 @@ export function calculateReactionEnvelopeContentHash(envelope: ReactionObservati
     payloadRef: envelope.payloadRef ?? null,
     observationVersion: envelope.observationVersion,
     asset: envelope.reactionInput.asset,
+    eventKind: envelope.reactionInput.eventKind ?? null,
     eventTime: envelope.reactionInput.eventTime ?? null,
+    timeframe: envelope.timeframe ?? null,
+    barDurationMinutes: envelope.barDurationMinutes ?? null,
     volatilityBasisPct: envelope.reactionInput.volatilityBasisPct ?? null,
     volatilityBasis: envelope.reactionInput.volatilityBasis ?? null,
-    candles: [...envelope.reactionInput.candles].sort((a,b)=>Date.parse(a.timestamp)-Date.parse(b.timestamp)).map((c)=>({ timestamp:c.timestamp, open:c.open, high:c.high, low:c.low, close:c.close, volume:c.volume ?? null }))
+    candles: [...envelope.reactionInput.candles].sort((a,b)=>Date.parse(a.openedAt)-Date.parse(b.openedAt)||Date.parse(a.closedAt)-Date.parse(b.closedAt)).map((c)=>({
+      openedAt: c.openedAt,
+      closedAt: c.closedAt,
+      timestamp: c.timestamp,
+      complete: c.complete,
+      open:c.open,
+      high:c.high,
+      low:c.low,
+      close:c.close,
+      volume:c.volume ?? null,
+      verifiedPostEventSplit: c.verifiedPostEventSplit === true,
+      parentCandleRef: c.parentCandleRef ?? null,
+      splitAt: c.splitAt ?? null,
+      splitProvenance: c.splitProvenance ?? null
+    }))
   });
 }
 

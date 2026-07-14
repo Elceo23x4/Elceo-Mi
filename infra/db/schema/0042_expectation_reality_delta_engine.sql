@@ -61,13 +61,16 @@ CREATE TABLE IF NOT EXISTS app_event_reality_evaluations (
   release_version text NOT NULL,
   asset text NOT NULL,
   interpreted_at timestamptz NOT NULL,
+  assessment_stage text NOT NULL DEFAULT 'follow_through',
+  finalization_status text NOT NULL DEFAULT 'final',
   primary_event_outcome text NOT NULL,
   pre_event_cognition_snapshot_id text REFERENCES app_cognition_snapshots(snapshot_id) ON DELETE RESTRICT,
   post_event_cognition_snapshot_id text REFERENCES app_cognition_snapshots(snapshot_id) ON DELETE RESTRICT,
   observation_content_hash text,
   reaction_provenance_json jsonb NOT NULL DEFAULT '[]'::jsonb,
   audit_json jsonb NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (expectation_id, release_version)
+  created_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE UNIQUE INDEX IF NOT EXISTS app_event_reality_assessment_uidx ON app_event_reality_evaluations(expectation_id, release_version, observation_content_hash, finalization_status);
+CREATE UNIQUE INDEX IF NOT EXISTS app_event_reality_final_uidx ON app_event_reality_evaluations(expectation_id, release_version) WHERE finalization_status = 'final';
 CREATE INDEX IF NOT EXISTS app_event_reality_release_outcome_idx ON app_event_reality_evaluations(release_id, release_version, primary_event_outcome, interpreted_at DESC);

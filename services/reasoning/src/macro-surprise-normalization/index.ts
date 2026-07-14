@@ -83,8 +83,23 @@ function pressure(kind: MarketMacroIndicatorKind, signed: number): Pressure {
   return { economicMeaning: 'unknown', policyPressure: 'unknown', growthPressure: 'unknown', inflationPressure: 'unknown', riskPressure: 'unknown' };
 }
 function severity(score: number): MarketMacroSurpriseSeverity { const a = Math.abs(score); if (a === 0) return 'inline'; if (a < 8) return 'inline'; if (a < 25) return 'mild'; if (a < 50) return 'moderate'; if (a < 80) return 'large'; return 'extreme'; }
-function scoreDelta(delta: number, basis: number, std: number | null): number { const denom = std && std > 0 ? std : Math.max(Math.abs(basis) * 0.02, 0.1); return clamp((delta / denom) * 20, -100, 100); }
+function rawScoreDelta(delta: number, basis: number, std: number | null): number { const denom = std && std > 0 ? std : Math.max(Math.abs(basis) * 0.02, 0.1); return (delta / denom) * 20; }
+function scoreDelta(delta: number, basis: number, std: number | null): number { return clamp(rawScoreDelta(delta, basis, std), -100, 100); }
 function confidenceTier(confidence: number): MarketMacroSurpriseNormalizationResult['confidenceTier'] { return confidence >= 70 ? 'high' : confidence >= 40 ? 'medium' : 'low'; }
+
+
+export function calculateMacroSignedNormalizedContribution(input: { indicatorKind: MarketMacroIndicatorKind | string; category?: MarketMacroIndicatorCategory | string; actual: number | null; forecast: number | null; previous?: number | null; historicalStandardDeviation?: number | null }): { signedContribution: number | null; boundedSignedContribution: number | null; indicatorKind: MarketMacroIndicatorKind; category: MarketMacroIndicatorCategory; inverted: boolean; comparisonBasis: 'actual_vs_forecast' | 'actual_vs_previous_fallback' | 'insufficient_data' } {
+  const kind = inferMacroIndicatorKind({ indicatorKind: String(input.indicatorKind), category: String(input.category ?? '') });
+  const category = inferMacroIndicatorCategory({ indicatorKind: kind, category: String(input.category ?? '') });
+  const actual = finite(input.actual); const forecast = finite(input.forecast); const previous = finite(input.previous); const std = finite(input.historicalStandardDeviation);
+  const basis = forecast ?? previous ?? actual ?? 1;
+  const comparisonBasis = actual !== null && forecast !== null ? 'actual_vs_forecast' : actual !== null && previous !== null ? 'actual_vs_previous_fallback' : 'insufficient_data';
+  if (comparisonBasis === 'insufficient_data') return { signedContribution: null, boundedSignedContribution: null, indicatorKind: kind, category, inverted: invertedKinds.has(kind), comparisonBasis };
+  const rawDelta = actual! - (forecast ?? previous!);
+  const interpretedDelta = invertedKinds.has(kind) ? -rawDelta : rawDelta;
+  const signedContribution = rawScoreDelta(interpretedDelta, basis, std);
+  return { signedContribution, boundedSignedContribution: clamp(signedContribution, -100, 100), indicatorKind: kind, category, inverted: invertedKinds.has(kind), comparisonBasis };
+}
 
 export function resolveMacroPressuresFromSignedNormalizedScore(input: { indicatorKind: MarketMacroIndicatorKind | string; category?: MarketMacroIndicatorCategory | string; signedNormalizedScore: number }): Pressure & { boundedSignedNormalizedScore: number; surpriseDirection: 'economic_positive' | 'economic_negative' | 'inline'; severity: MarketMacroSurpriseSeverity } {
   const kind = inferMacroIndicatorKind({ indicatorKind: String(input.indicatorKind), category: String(input.category ?? '') });

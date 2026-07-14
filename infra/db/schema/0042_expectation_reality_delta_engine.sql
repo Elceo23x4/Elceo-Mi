@@ -45,6 +45,15 @@ CREATE TABLE IF NOT EXISTS app_expectation_reality_evaluations (
 );
 CREATE INDEX IF NOT EXISTS app_expectation_reality_asset_timeframe_outcome_idx ON app_expectation_reality_evaluations(asset, timeframe, outcome, evaluated_at DESC);
 
+CREATE TABLE IF NOT EXISTS app_expectation_reality_observation_identities (
+  expectation_id text NOT NULL REFERENCES app_expectation_records(expectation_id) ON DELETE RESTRICT,
+  observation_version text NOT NULL,
+  observation_content_hash text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (expectation_id, observation_version)
+);
+CREATE INDEX IF NOT EXISTS app_expectation_reality_observation_identity_hash_idx ON app_expectation_reality_observation_identities(expectation_id, observation_content_hash);
+
 CREATE TABLE IF NOT EXISTS app_event_reality_evaluations (
   event_evaluation_id text PRIMARY KEY,
   expectation_id text NOT NULL REFERENCES app_expectation_records(expectation_id) ON DELETE RESTRICT,

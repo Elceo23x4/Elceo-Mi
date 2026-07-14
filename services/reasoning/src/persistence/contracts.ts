@@ -59,6 +59,10 @@ export type ReasoningPersistenceRepository = {
   runRepository: ReasoningRunRepository;
   snapshotRepository: CognitionSnapshotRepository;
   driftRepository: CognitionDriftRepository;
+  expectationRepository: ExpectationRepository;
+  expectationRealityRepository: ExpectationRealityRepository;
+  eventExpectationRepository: EventExpectationRepository;
+  eventRealityRepository: EventRealityRepository;
 };
 
 export type PersistedCognitionDriftRecord = {
@@ -91,4 +95,13 @@ export type CognitionDriftRepository = {
     timeframe?: Timeframe;
     severity?: PersistedCognitionDriftRecord['severity'];
   }): Promise<PersistedCognitionDriftRecord[]>;
+};
+
+import type { EventExpectationRepository, EventRealityRepository, ExpectationRealityRepository, ExpectationRepository } from '../expectation-reality/repository';
+
+export type ExpectationRealityPersistence = {
+  expectationRepository: ExpectationRepository;
+  expectationRealityRepository: ExpectationRealityRepository;
+  eventExpectationRepository: EventExpectationRepository;
+  eventRealityRepository: EventRealityRepository;
 };

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { ObservationSet, ReactionObservationEnvelope } from './contracts';
+import type { EventRealityRecord, ObservationSet, ReactionObservationEnvelope } from './contracts';
 
 export function canonicalJson(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
@@ -50,6 +50,28 @@ export function calculateReactionEnvelopeContentHash(envelope: ReactionObservati
       splitAt: c.splitAt ?? null,
       splitProvenance: c.splitProvenance ?? null
     }))
+  });
+}
+
+
+export function calculateEventAssessmentEvidenceHash(input: { reality: EventRealityRecord; interpretedAt: string }): string {
+  const post = {
+    snapshotId: input.reality.postEventCognitionSnapshotId,
+    confidence: input.reality.postEventConfidence,
+    contradiction: input.reality.postEventContradiction,
+    bias: input.reality.biasChange.after
+  };
+  return canonicalHash({
+    releaseId: input.reality.releaseId,
+    releaseVersion: input.reality.releaseVersion,
+    observedAt: input.reality.observedAt,
+    releaseProvenance: input.reality.provenance.map((p)=>({ sourceId:p.sourceId, provider:p.provider, payloadRef:p.payloadRef ?? null, effectiveReliability:p.effectiveReliability ?? p.reliability, verificationRef:p.verificationRef ?? null, verifiedAt:p.verifiedAt ?? null })),
+    rawObservationContentHash: input.reality.observationContentHash,
+    reactionHashes: input.reality.reactionProvenance.map((r)=>r.calculatedContentHash ?? calculateReactionEnvelopeContentHash(r)),
+    postEventCognition: post,
+    interpretedAt: input.interpretedAt,
+    relatedEvidenceDecision: input.reality.relatedEvidenceDecision,
+    policyVersions: { timeline: input.reality.priceReactionTimeline.policyVersion, revision: input.reality.revisionAdjustedMeasures.revisionPolicyVersion, related: input.reality.relatedEvidenceDecision.policyVersion }
   });
 }
 

@@ -63,6 +63,7 @@ import { runRcAFormulaRegressionTests } from './rc-a-formula-regression.test.js'
 import { runProviderApiGateTests } from './provider-api-gate.test.js';
 import { runProviderUnmanagedCallInventoryTests } from './provider-unmanaged-call-inventory.test.js';
 import { runProviderLivePayloadValidationTests } from './provider-live-payload-validation.test.js';
+import { runExpectationRealityTests } from './expectation-reality.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -128,6 +129,7 @@ async function run(): Promise<void> {
   await runProviderApiGateTests();
   runProviderUnmanagedCallInventoryTests();
   await runProviderLivePayloadValidationTests();
+  await runExpectationRealityTests();
   runRcAFormulaRegressionTests();
   console.log('reasoning runtime contract tests passed');
 }

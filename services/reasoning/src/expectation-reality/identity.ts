@@ -53,13 +53,30 @@ export function calculateReactionEnvelopeContentHash(envelope: ReactionObservati
   });
 }
 
+export function calculateSplitSegmentContentHash(candle: ReactionObservationEnvelope['reactionInput']['candles'][number]): string {
+  return canonicalHash({
+    parentCandleRef: candle.parentCandleRef ?? null,
+    splitAt: candle.splitAt ?? null,
+    splitProvenance: candle.splitProvenance ?? null,
+    openedAt: candle.openedAt,
+    closedAt: candle.closedAt,
+    timestamp: candle.timestamp,
+    complete: candle.complete,
+    open: candle.open,
+    high: candle.high,
+    low: candle.low,
+    close: candle.close,
+    volume: candle.volume ?? null
+  });
+}
 
 export function calculateEventAssessmentEvidenceHash(input: { reality: EventRealityRecord; interpretedAt: string }): string {
   const post = {
     snapshotId: input.reality.postEventCognitionSnapshotId,
     confidence: input.reality.postEventConfidence,
     contradiction: input.reality.postEventContradiction,
-    bias: input.reality.biasChange.after
+    bias: input.reality.biasChange.after,
+    evaluatedAt: input.reality.postEventCognitionEvaluatedAt
   };
   return canonicalHash({
     releaseId: input.reality.releaseId,

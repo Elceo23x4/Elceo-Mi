@@ -36,11 +36,23 @@ if (packageJson.scripts?.['check:ifp'] !== 'node scripts/check-intelligence-feat
 if (!/name:\s*Check Intelligence Feature Program contract[\s\S]*?run:\s*npm run check:ifp/.test(ci)) fail('GitHub CI does not run check:ifp with the expected step name');
 if (!/label:\s*['"]npm run check:ifp['"][\s\S]*?args:\s*\[[^\]]*['"]run['"][^\]]*['"]check:ifp['"][^\]]*\]/.test(releaseGate)) fail('release gate does not include npm run check:ifp');
 
+
+const canonicalPhaseNames = [
+  'Expectation-Reality Delta Engine',
+  'Historical Market Memory / Analog Engine',
+  'Contradiction-to-Action Protocol',
+  'Market Cleanliness Ranking',
+  'News Half-Life / Narrative Decay',
+  'Crowd Pain / Positioning Stress Map',
+  'Fragility Score',
+  'Production-Data Calibration and Intelligence Acceptance Evidence Gate'
+];
 const phases = [...doc.matchAll(/^### (IFP-(\d+)) — (.+)$/gm)].map((match) => ({ id: match[1], n: Number(match[2]), name: match[3], index: match.index }));
 if (phases.length !== 8) fail(`expected exactly 8 canonical phases, found ${phases.length}`);
 phases.forEach((phase, index) => {
   if (phase.n !== index + 1) fail(`phase order mismatch at ${phase.id}`);
   if (phase.id !== `IFP-${index + 1}`) fail(`phase id mismatch: ${phase.id}`);
+  if (phase.name !== canonicalPhaseNames[index]) fail(`phase name mismatch for ${phase.id}: ${phase.name}`);
 });
 if (new Set(phases.map((phase) => phase.id)).size !== phases.length) fail('phase IDs are not unique');
 
@@ -92,13 +104,43 @@ const requiredDocPhrases = [
 ];
 for (const phrase of requiredDocPhrases) if (!doc.includes(phrase)) fail(`missing required IFP phrase: ${phrase}`);
 
-const ifp3 = bodies.get('IFP-3') ?? '';
-if (!ifp3.includes('diagnose confidence-floor saturation empirically') || !ifp3.includes('it does not mean formulas were changed')) fail('IFP-3 is not clearly diagnosis-only');
-if (!ifp3.includes('Prohibited scope: raising confidence values, weakening penalties, confidence tier changes, adaptive self-modifying confidence engine, golden expectation edits')) fail('IFP-3 prohibited scope is incomplete');
+const capabilityRequirements = {
+  'IFP-1': ['pre-event expectation', 'actual and forecast', 'previous and revised previous', 'normalized surprise', 'primary-asset price reaction', 'follow-through', 'related-market response', 'volatility adjustment', 'confidence shift', 'immutable audit trail'],
+  'IFP-2': ['Historical Market Memory / Analog Engine', 'analog retrieval engine', 'nearest-analog explanations'],
+  'IFP-3': ['Contradiction-to-Action Protocol', 'protocol states', 'review, wait, invalidate, escalate, or archive'],
+  'IFP-4': ['Market Cleanliness', 'cleanliness score with visible components', 'session/liquidity context'],
+  'IFP-5': ['News Half-Life / Narrative Decay', 'narrative half-life', 'active/decaying/expired states'],
+  'IFP-6': ['Crowd Pain / Positioning Stress', 'stress-map states', 'positioning limitations'],
+  'IFP-7': ['Fragility Score', 'component ledger', 'severity thresholds']
+};
+for (const [phaseId, phrases] of Object.entries(capabilityRequirements)) {
+  const body = bodies.get(phaseId) ?? '';
+  for (const phrase of phrases) if (!body.includes(phrase) && !doc.includes(phrase)) fail(`${phaseId} missing capability requirement: ${phrase}`);
+}
+
+const ifp1Body = bodies.get('IFP-1') ?? '';
+for (const stale of ['configuration is versioned and auditable', 'parameter family has an owner', 'rollback path', 'configuration evidence ledger suitable for calibration comparisons']) {
+  if (ifp1Body.includes(stale)) fail(`IFP-1 contains stale configuration-program language: ${stale}`);
+}
+
+
+const staleByPhase = {
+  'IFP-2': ['dataset manifests', 'training/evaluation dataset separation'],
+  'IFP-3': ['confidence-floor saturation diagnosis', 'false-zero/true-zero analysis'],
+  'IFP-4': ['backtest harnesses', 'universal aggregate score as proof'],
+  'IFP-5': ['reliability version registry', 'drift review cadence'],
+  'IFP-6': ['alert threshold evidence', 'cooldown/dedupe acceptance', 'trade-readiness and alert-throttling validation'],
+  'IFP-7': ['readability review rubric', 'frontend redesign', 'decision-path persistence model'],
+  'IFP-8': ['IFP-1 configuration registry']
+};
+for (const [phaseId, phrases] of Object.entries(staleByPhase)) {
+  const body = bodies.get(phaseId) ?? '';
+  for (const phrase of phrases) if (body.includes(phrase)) fail(`${phaseId} contains stale non-engine language: ${phrase}`);
+}
 
 const ifp8 = bodies.get('IFP-8') ?? '';
 const ifp8Required = [
-  'IFP-1 configuration registry',
+  'cross-cutting configuration/version records',
   'versioned configuration artifacts only when an evidence-backed configuration change is explicitly approved',
   'supported by IFP-2 through IFP-5 empirical evidence',
   'held-out data',

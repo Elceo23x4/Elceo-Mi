@@ -22,4 +22,5 @@ export type ReasoningRunReport = {
   reasoningVersion: string;
   scoringVersion: string;
   drift: CognitionDriftReport | null;
+  expectationId?: string | null;
 };

@@ -28,6 +28,7 @@ async function getPool(): Promise<PoolLike> {
   return poolPromise;
 }
 
+export type SqlReasoningQueryExecutor = <T extends QueryRow = QueryRow>(sql: string, params?: unknown[]) => Promise<T[]>;
 async function queryDb<T extends QueryRow = QueryRow>(sql: string, params: unknown[] = []): Promise<T[]> {
   const pool = await getPool();
   const result = await pool.query(sql, params);
@@ -463,14 +464,51 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
   readonly runRepository: ReasoningRunRepository;
   readonly snapshotRepository: CognitionSnapshotRepository;
   readonly driftRepository: CognitionDriftRepository;
+  readonly expectationRepository: ExpectationRepository;
+  readonly expectationRealityRepository: ExpectationRealityRepository;
+  readonly eventExpectationRepository: EventExpectationRepository;
+  readonly eventRealityRepository: EventRealityRepository;
 
   constructor(
     runRepository: ReasoningRunRepository = new SqlReasoningRunRepository(),
     snapshotRepository: CognitionSnapshotRepository = new SqlCognitionSnapshotRepository(),
-    driftRepository: CognitionDriftRepository = new SqlCognitionDriftRepository()
+    driftRepository: CognitionDriftRepository = new SqlCognitionDriftRepository(),
+    expectationRepository: ExpectationRepository = new SqlExpectationRepository(),
+    expectationRealityRepository: ExpectationRealityRepository = new SqlExpectationRealityRepository(),
+    eventExpectationRepository: EventExpectationRepository = new SqlEventExpectationRepository(),
+    eventRealityRepository: EventRealityRepository = new SqlEventRealityRepository()
   ) {
     this.runRepository = runRepository;
     this.snapshotRepository = snapshotRepository;
     this.driftRepository = driftRepository;
+    this.expectationRepository = expectationRepository;
+    this.expectationRealityRepository = expectationRealityRepository;
+    this.eventExpectationRepository = eventExpectationRepository;
+    this.eventRealityRepository = eventRealityRepository;
   }
 }
+
+import type { EventRealityEvaluation, EventExpectationRecord, ExpectationRealityEvaluation, ExpectationHorizon, ExpectationRecord } from '../expectation-reality/contracts';
+import { canonicalJson } from '../expectation-reality/identity';
+import type { EventExpectationRepository, EventRealityRepository, ExpectationRealityRepository, ExpectationRepository } from '../expectation-reality/repository';
+
+export class SqlExpectationRepository implements ExpectationRepository {
+  async saveExpectation(record: ExpectationRecord): Promise<ExpectationRecord> {
+    await queryDb(`INSERT INTO app_expectation_records (expectation_id, expectation_kind, asset, timeframe, issued_at, data_cutoff_at, reasoning_run_id, cognition_snapshot_id, reasoning_version, scoring_version, base_price, recent_range_pct, expected_bias, confidence_score, contradiction_score, contradiction_regime, payload_json, created_at) VALUES ($1,'cognition_path',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) ON CONFLICT (expectation_id) DO NOTHING`, [record.expectationId, record.asset, record.timeframe, record.issuedAt, record.dataCutoffAt, record.reasoningRunId, record.cognitionSnapshotId, record.reasoningVersion, record.scoringVersion, record.basePrice, record.recentRangePct, record.expectedBias, record.confidenceScore, record.contradictionScore, record.contradictionRegime, JSON.stringify(record), record.createdAt]);
+    const existing = await this.getExpectationById(record.expectationId);
+    if (!existing || canonicalJson(existing) !== canonicalJson(record)) throw new Error('immutable_expectation_conflict');
+    return existing;
+  }
+  async getExpectationById(id: string): Promise<ExpectationRecord | null> { const rows = await queryDb<{ payload_json: ExpectationRecord }>('SELECT payload_json FROM app_expectation_records WHERE expectation_id=$1', [id]); return rows[0]?.payload_json ?? null; }
+  async getExpectationByCognitionSnapshotId(id: string): Promise<ExpectationRecord | null> { const rows = await queryDb<{ payload_json: ExpectationRecord }>("SELECT payload_json FROM app_expectation_records WHERE cognition_snapshot_id=$1 AND expectation_kind='cognition_path'", [id]); return rows[0]?.payload_json ?? null; }
+  async listPendingExpectations(params: { asset?: CanonicalAssetSymbol; timeframe?: Timeframe; horizon?: ExpectationHorizon; observationVersion?: string; limit?: number } = {}): Promise<ExpectationRecord[]> { const rows = await queryDb<{ payload_json: ExpectationRecord }>(`SELECT e.payload_json FROM app_expectation_records e WHERE e.expectation_kind='cognition_path' AND ($1::text IS NULL OR e.asset=$1) AND ($2::text IS NULL OR e.timeframe=$2) AND ($3::text IS NULL OR NOT EXISTS (SELECT 1 FROM app_expectation_reality_evaluations v WHERE v.expectation_id=e.expectation_id AND v.horizon=$3 AND ($4::text IS NULL OR v.observation_version=$4))) ORDER BY e.issued_at ASC LIMIT $5`, [params.asset ?? null, params.timeframe ?? null, params.horizon ?? null, params.observationVersion ?? null, params.limit ?? 100]); return rows.map((r) => r.payload_json); }
+}
+export class SqlExpectationRealityRepository implements ExpectationRealityRepository {
+  constructor(private readonly query: SqlReasoningQueryExecutor = queryDb) {}
+  async saveEvaluation(e: ExpectationRealityEvaluation): Promise<ExpectationRealityEvaluation> { await this.query('INSERT INTO app_expectation_reality_observation_identities (expectation_id, observation_version, observation_content_hash) VALUES ($1,$2,$3) ON CONFLICT (expectation_id, observation_version) DO NOTHING', [e.expectationId, e.observationVersion, e.observationContentHash]); const identity = await this.query<{ observation_content_hash: string }>('SELECT observation_content_hash FROM app_expectation_reality_observation_identities WHERE expectation_id=$1 AND observation_version=$2', [e.expectationId, e.observationVersion]); if (identity[0]?.observation_content_hash !== e.observationContentHash) throw new Error('observation_version_content_hash_conflict'); await this.query(`INSERT INTO app_expectation_reality_evaluations (evaluation_id,expectation_id,asset,timeframe,horizon,observation_version,observation_content_hash,evaluated_at,policy_version,outcome,path_classification,audit_json,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) ON CONFLICT (expectation_id,horizon,observation_version) DO NOTHING`, [e.evaluationId,e.expectationId,e.asset,e.timeframe,e.horizon,e.observationVersion,e.observationContentHash,e.evaluatedAt,e.policyVersion,e.outcome,e.pathClassification,JSON.stringify(e),e.createdAt]); const existing = await this.getEvaluation(e.expectationId, e.horizon, e.observationVersion); if (!existing || canonicalJson(existing) !== canonicalJson(e)) throw new Error('immutable_evaluation_conflict'); return existing; }
+  async getEvaluation(expectationId: string, horizon: ExpectationHorizon, observationVersion: string): Promise<ExpectationRealityEvaluation | null> { const rows=await this.query<{audit_json:ExpectationRealityEvaluation}>('SELECT audit_json FROM app_expectation_reality_evaluations WHERE expectation_id=$1 AND horizon=$2 AND observation_version=$3',[expectationId,horizon,observationVersion]); return rows[0]?.audit_json ?? null; }
+  async getLatestExpectationRealityForAssetTimeframe(asset: CanonicalAssetSymbol, timeframe: Timeframe): Promise<ExpectationRealityEvaluation | null> { return (await this.listExpectationRealityHistory({asset,timeframe,limit:1}))[0] ?? null; }
+  async listExpectationRealityHistory(params: { asset?: CanonicalAssetSymbol; timeframe?: Timeframe; expectationId?: string; limit: number }): Promise<ExpectationRealityEvaluation[]> { const rows=await this.query<{audit_json:ExpectationRealityEvaluation}>('SELECT audit_json FROM app_expectation_reality_evaluations WHERE ($1::text IS NULL OR asset=$1) AND ($2::text IS NULL OR timeframe=$2) AND ($3::text IS NULL OR expectation_id=$3) ORDER BY evaluated_at DESC LIMIT $4',[params.asset??null,params.timeframe??null,params.expectationId??null,params.limit]); return rows.map((r)=>r.audit_json); }
+}
+export class SqlEventExpectationRepository implements EventExpectationRepository { constructor(private readonly query: SqlReasoningQueryExecutor = queryDb) {} async saveEventExpectation(r: EventExpectationRecord): Promise<EventExpectationRecord> { await this.query(`INSERT INTO app_expectation_records (expectation_id, expectation_kind, event_release_id, event_kind, scheduled_release_time, asset, issued_at, data_cutoff_at, cognition_snapshot_id, payload_json, created_at) VALUES ($1,'event',$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT (expectation_id) DO NOTHING`, [r.expectationId,r.eventReleaseId,r.eventKind,r.scheduledReleaseTime,r.asset,r.issuedAt,r.dataCutoffAt,r.preEventCognitionSnapshotId,JSON.stringify(r),r.createdAt]); const existing=await this.getEventExpectationById(r.expectationId); if(!existing || canonicalJson(existing)!==canonicalJson(r)) throw new Error('immutable_event_expectation_conflict'); return existing; } async getEventExpectationById(id:string): Promise<EventExpectationRecord | null> { const rows=await this.query<{payload_json:EventExpectationRecord}>('SELECT payload_json FROM app_expectation_records WHERE expectation_id=$1 AND expectation_kind=\'event\'',[id]); return rows[0]?.payload_json ?? null; } }
+export class SqlEventRealityRepository implements EventRealityRepository { constructor(private readonly query: SqlReasoningQueryExecutor = queryDb) {} async saveEventEvaluation(e: EventRealityEvaluation): Promise<EventRealityEvaluation> { await this.query(`INSERT INTO app_event_reality_evaluations (event_evaluation_id, expectation_id, release_id, release_version, asset, interpreted_at, assessment_stage, finalization_status, primary_event_outcome, pre_event_cognition_snapshot_id, post_event_cognition_snapshot_id, observation_content_hash, assessment_evidence_hash, related_evidence_status, related_evidence_decision_at, related_evidence_policy_version, related_evidence_reason_codes, reaction_provenance_json, audit_json, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) ON CONFLICT (event_evaluation_id) DO NOTHING`, [e.eventEvaluationId,e.expectationId,e.releaseId,e.releaseVersion,e.asset,e.interpretedAt,e.assessmentStage,e.finalizationStatus,e.outcome,e.preEventCognitionSnapshotId,e.postEventCognitionSnapshotId,e.observationContentHash,e.assessmentEvidenceHash,e.relatedEvidenceStatus,e.relatedEvidenceDecisionAt,e.relatedEvidencePolicyVersion,JSON.stringify(e.relatedEvidenceReasonCodes),JSON.stringify(e.reactionProvenance),JSON.stringify(e),e.createdAt]); const rows=await this.query<{audit_json:EventRealityEvaluation}>('SELECT audit_json FROM app_event_reality_evaluations WHERE event_evaluation_id=$1',[e.eventEvaluationId]); const existing=rows[0]?.audit_json ?? await this.getEventEvaluation(e.expectationId,e.releaseVersion); if(!existing || canonicalJson(existing)!==canonicalJson(e)) throw new Error('immutable_event_evaluation_conflict'); return existing; } async getEventEvaluation(expectationId:string, releaseVersion:string): Promise<EventRealityEvaluation | null> { const rows=await this.query<{audit_json:EventRealityEvaluation}>(`SELECT audit_json FROM app_event_reality_evaluations WHERE expectation_id=$1 AND release_version=$2 ORDER BY CASE WHEN finalization_status='final' THEN 0 ELSE 1 END, interpreted_at DESC`,[expectationId,releaseVersion]); return rows[0]?.audit_json ?? null; } }

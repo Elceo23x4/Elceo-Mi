@@ -50,7 +50,7 @@ function unresolvedDirection(expectation: EventExpectationRecord, asset: string,
 function resolveReleaseDirection(expectation: EventExpectationRecord, asset: string, normalized: EventRealityRecord['normalizedSurprise'], revisionAdjusted?: ReturnType<typeof revisionMeasures>): MarketAssetDirectionResolutionResult {
   if (!expectation.affectedAssets.includes(asset as never)) throw new Error(`unrelated_related_market_rejected:${asset}`);
   if (revisionAdjusted && revisionAdjusted.revisionAdjustedMateriality !== 'unavailable' && revisionAdjusted.adjustedSurpriseScore !== null) {
-    const resolved = resolveAssetDirectionFromNormalizedMacroContext({ asset: asset as never, evidenceClass: 'macro_release', indicatorKind: String(expectation.indicatorKind), category: String(expectation.indicatorCategory), currency: String(expectation.currency), region: String(expectation.region), signedNormalizedScore: revisionAdjusted.adjustedSurpriseScore, economicMeaning: revisionAdjusted.adjustedEconomicMeaning, policyPressure: revisionAdjusted.adjustedPolicyPressure, growthPressure: revisionAdjusted.adjustedGrowthPressure, inflationPressure: revisionAdjusted.adjustedInflationPressure, riskPressure: revisionAdjusted.adjustedRiskPressure, observedAt: normalized ? expectation.scheduledReleaseTime : null });
+    const resolved = resolveAssetDirectionFromNormalizedMacroContext({ asset: asset as never, evidenceClass: 'macro_release', indicatorKind: String(expectation.indicatorKind), category: String(expectation.indicatorCategory), currency: String(expectation.currency), region: String(expectation.region), signedNormalizedScore: revisionAdjusted.adjustedSurpriseScore, economicMeaning: revisionAdjusted.adjustedEconomicMeaning, policyPressure: revisionAdjusted.adjustedPolicyPressure, growthPressure: revisionAdjusted.adjustedGrowthPressure, inflationPressure: revisionAdjusted.adjustedInflationPressure, riskPressure: revisionAdjusted.adjustedRiskPressure, evidenceConfidence: normalized?.confidence ?? null, observedAt: normalized ? expectation.scheduledReleaseTime : null });
     if (!known(resolved.resolvedDirection) && normalized) throw new Error(`canonical_direction_unavailable:${asset}`);
     return resolved;
   }
@@ -174,8 +174,9 @@ export function interpretEventReality(params: { expectation: EventExpectationRec
   const requiredRelatedProvenance = reality.reactionProvenance.slice(1).filter((e)=>expectation.requiredRelatedAssets.includes(e.reactionInput.asset as never));
   const optionalRelatedProvenance = reality.reactionProvenance.slice(1).filter((e)=>!expectation.requiredRelatedAssets.includes(e.reactionInput.asset as never));
   const requiredRelatedProvenanceReliable = requiredRelatedProvenance.every(isReliableObservation);
+  const requiredRelatedTrustRequired = reality.relatedEvidenceDecision.status === 'confirmed';
   const optionalRelatedUnverified = optionalRelatedProvenance.some((e)=>!isReliableObservation(e));
-  const priceProvenanceReliable = primaryProvenanceReliable && requiredRelatedProvenanceReliable;
+  const priceProvenanceReliable = primaryProvenanceReliable && (!requiredRelatedTrustRequired || requiredRelatedProvenanceReliable);
   const releaseReliable = reliable(reality);
   const limitedRelatedFinal = ['conflicting_final','insufficient_final','explicitly_unavailable'].includes(reality.relatedEvidenceDecision.status);
   const criticalAmbiguity = warnings.includes('volatility_context_unavailable') || warnings.includes('volatility_basis_missing') || warnings.includes('observation_content_hash_mismatch') || !actualKnown || reality.releaseAlignment.status === 'mixed' || reality.relatedEvidenceDecision.status === 'conflicting_final' || !priceProvenanceReliable || !releaseReliable;
@@ -196,7 +197,7 @@ export function interpretEventReality(params: { expectation: EventExpectationRec
   const finalOutcome = ['confirmed','rejected','absorbed','delayed','reversed','mispriced_candidate'].includes(outcome);
   if (finalOutcome && !releaseReliable) { outcome = 'insufficient_data'; reasonCodes.push('release_evidence_unverified','final_event_trust_gate_not_satisfied'); }
   if (finalOutcome && !primaryProvenanceReliable) { outcome = 'insufficient_data'; reasonCodes.push('primary_reaction_evidence_unverified','final_event_trust_gate_not_satisfied'); }
-  if (finalOutcome && primaryProvenanceReliable && !requiredRelatedProvenanceReliable) { outcome = 'insufficient_data'; reasonCodes.push('required_related_reaction_evidence_unverified','final_event_trust_gate_not_satisfied'); }
+  if (finalOutcome && primaryProvenanceReliable && requiredRelatedTrustRequired && !requiredRelatedProvenanceReliable) { outcome = 'insufficient_data'; reasonCodes.push('required_related_reaction_evidence_unverified','final_event_trust_gate_not_satisfied'); }
   if (!requiredRelatedProvenanceReliable) reasonCodes.push('required_related_reaction_evidence_unverified');
   if (optionalRelatedUnverified) { reasonCodes.push('optional_related_reaction_evidence_unverified'); warnings.push('optional_related_reaction_evidence_unverified'); }
   reasonCodes.push(...reality.relatedEvidenceDecision.reasonCodes);
@@ -205,7 +206,7 @@ export function interpretEventReality(params: { expectation: EventExpectationRec
   if (!reality.postEventCognitionSnapshotId) readyReasons.push('post_event_cognition_required');
   if (!releaseReliable) readyReasons.push('release_evidence_unverified');
   if (!primaryProvenanceReliable) readyReasons.push('primary_reaction_evidence_unverified');
-  if (!requiredRelatedProvenanceReliable) readyReasons.push('required_related_reaction_evidence_unverified');
+  if (requiredRelatedTrustRequired && !requiredRelatedProvenanceReliable) readyReasons.push('required_related_reaction_evidence_unverified');
   if (reality.relatedEvidenceDecision.status === 'pending') readyReasons.push('related_evidence_pending');
   if (warnings.includes('volatility_basis_missing') || warnings.includes('volatility_context_unavailable')) readyReasons.push('volatility_context_unavailable');
   const finalizationStatus = readyReasons.length === 0 ? 'final' as const : 'provisional' as const;

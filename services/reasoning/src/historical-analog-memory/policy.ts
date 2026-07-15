@@ -7,3 +7,8 @@ export const HISTORICAL_ANALOG_POLICY = Object.freeze({
   bounds: { normalizedSurpriseSpan: 200, normalizedRevisionSpan: 200, volatilityAdjustedMove: 3, pathMovePct: 2, confidenceDelta: 100, contradictionDelta: 100 }
 });
 export type HistoricalAnalogComponent = keyof typeof HISTORICAL_ANALOG_POLICY.weights;
+
+export const HISTORICAL_ANALOG_PAGE_LIMIT_POLICY = Object.freeze({ defaultLimit: 100, maxLimit: 1000 });
+export function normalizeHistoricalAnalogPageLimit(limit?: number): number { if (limit === undefined) return HISTORICAL_ANALOG_PAGE_LIMIT_POLICY.defaultLimit; if (!Number.isFinite(limit) || limit < 1) return HISTORICAL_ANALOG_PAGE_LIMIT_POLICY.defaultLimit; return Math.min(Math.trunc(limit), HISTORICAL_ANALOG_PAGE_LIMIT_POLICY.maxLimit); }
+export const HISTORICAL_ANALOG_COVERAGE_STRUCTURAL_POLICY_VERSION = 'historical-analog-coverage-structural-v1' as const;
+export function resolveHistoricalAnalogStructuralAvailability(_input: { asset: string; indicatorKind: string; indicatorCategory: string; queryStage: string }): { structurallyUnavailable: boolean; reason: string | null; policyVersion: typeof HISTORICAL_ANALOG_COVERAGE_STRUCTURAL_POLICY_VERSION } { return { structurallyUnavailable: false, reason: null, policyVersion: HISTORICAL_ANALOG_COVERAGE_STRUCTURAL_POLICY_VERSION }; }

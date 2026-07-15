@@ -160,6 +160,38 @@ for (const phrase of ['docs/historical-market-memory-analog-engine.md', '0043_hi
   if (!sources.includes(phrase)) fail(`IFP-2 implementation surface missing: ${phrase}`);
 }
 
+
+const ifp2TestSurface = read('services/reasoning/src/tests/historical-analog-memory.test.ts');
+const ifp2SourceSurface = [
+  read('services/reasoning/src/historical-analog-memory/feature-extraction.ts'),
+  read('services/reasoning/src/historical-analog-memory/similarity.ts'),
+  read('services/reasoning/src/historical-analog-memory/service.ts'),
+  read('services/reasoning/src/historical-analog-memory/sql-repository.ts'),
+  read('services/reasoning/src/historical-analog-memory/repository.ts'),
+  read('services/reasoning/src/tests/run-tests.ts'),
+].join('\n');
+for (const phrase of [
+  'scoreAnalogFeatures(featuresA,featuresB)',
+  'same-family cross-asset orientation-normalized relation owns directional similarity',
+  'releaseTrustSatisfiedAt',
+  'immediate volatility is scoreable at T+1',
+  'coverage counts production verified/replay unique event instances only',
+  'memory repository rejects malformed retrieval invariants SQL also rejects',
+  'T+3 ignores divergent T+6 follow-through',
+  'same event and cross-asset same event excluded',
+]) if (!ifp2TestSurface.includes(phrase)) fail(`IFP-2 behavioural test surface missing: ${phrase}`);
+for (const phrase of [
+  'directionRelationToResolvedMacroPressure',
+  'pathDirectionRelation',
+  'signedMoveInResolvedDirectionPct',
+  'trustedReleaseWitnesses',
+  'secondary_untrusted_release_provenance',
+  'normalizeHistoricalAnalogPageLimit',
+  'resolveHistoricalAnalogStructuralAvailability',
+  'SqlHistoricalAnalogTransactionExecutor',
+  'runHistoricalAnalogMemoryTests',
+]) if (!ifp2SourceSurface.includes(phrase)) fail(`IFP-2 source/test-runner surface missing: ${phrase}`);
+
 for (const path of alignmentDocs) {
   const content = read(path);
   for (const phrase of ['docs/intelligence-feature-program.md', 'IFP-0 defines the program but implements no intelligence feature', 'IFP is not complete merely because the scope document exists', 'RC-I2-CERT remains mandatory', 'RC-J-ENV remains mandatory', 'RC-K begins only after all eight IFP phases are closed']) {

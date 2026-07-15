@@ -19,8 +19,8 @@ export type EventExpectationRecord = {
 
 export type EventExpectationDraft = Omit<EventExpectationRecord, 'preEventConfidence' | 'preEventContradiction' | 'expectedAssetDirection'>;
 export type EventReactionCandle = MarketPriceReactionInput['candles'][number] & { openedAt: string; closedAt: string; complete: boolean; verifiedPostEventSplit?: boolean; parentCandleRef?: string | null; splitAt?: string | null; splitProvenance?: string | null };
-export type RelatedEvidenceStatus = 'confirmed' | 'conflicting_final' | 'insufficient_final' | 'explicitly_unavailable' | 'pending';
-export type RelatedEvidenceDecision = { status: RelatedEvidenceStatus; decidedAt: string | null; policyVersion: 'related-evidence-closure-v1'; reasonCodes: string[] };
+export type RelatedEvidenceStatus = 'confirmed' | 'conflicting_final' | 'insufficient_final' | 'explicitly_unavailable' | 'not_required' | 'pending';
+export type RelatedEvidenceDecision = { status: RelatedEvidenceStatus; decidedAt: string | null; policyVersion: 'related-evidence-closure-v1'; reasonCodes: string[]; evidenceRefs?: string[]; policyParameters?: { deadlineMinutes: number } };
 export type SplitVerificationResult = { parentCandleRef: string; splitAt: string; splitProvenance: string; segmentContentHash: string; splitVerificationRef: string; verifiedAt: string };
 export type ReactionObservationEnvelope = { reactionInput: Omit<MarketPriceReactionInput, 'candles'> & { candles: EventReactionCandle[] }; sourceId: string; provider: string; payloadRef?: string | null; observationVersion: string; suppliedContentHash?: string | null; calculatedContentHash?: string | null; reliability: 'verified' | 'replay' | 'fixture' | 'unverified'; effectiveReliability?: 'verified' | 'replay' | 'fixture' | 'unverified'; trustBasis?: string | null; verificationRef?: string | null; verifiedAt?: string | null; splitVerifications?: SplitVerificationResult[]; timeframe?: Timeframe | null; barDurationMinutes?: number | null };
 export type EventPriceTimelineState = 'confirmed' | 'rejected' | 'absorbed' | 'reversed' | 'delayed' | 'insufficient_data' | 'ambiguous' | 'unknown';

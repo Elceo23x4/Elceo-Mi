@@ -1,5 +1,5 @@
 import type { MarketAssetDirectionResolutionResult, MarketPriceReactionExpectedDirection, MarketPriceReactionInput } from '@elceo/types';
-import { resolveAssetContextualEvidenceDirection } from '../asset-direction-resolution/index';
+import { resolveAssetContextualEvidenceDirection, resolveAssetDirectionFromNormalizedMacroContext } from '../asset-direction-resolution/index';
 import { calculateMacroSignedNormalizedContribution, getMacroSurpriseRuleSetSnapshot, normalizeMacroSurprise, resolveMacroPressuresFromSignedNormalizedScore } from '../macro-surprise-normalization/index';
 import { evaluatePriceReaction } from '../price-reaction/index';
 import type { EventExpectationRecord, EventRealityEvaluation, EventRealityRecord, NumericReleaseFields, ReactionObservationEnvelope, RelatedEvidenceDecision, ReleaseAlignment } from './contracts';
@@ -10,7 +10,8 @@ const unique = (xs: string[]) => [...new Set(xs)];
 const known = (d: string | null | undefined) => d === 'bullish' || d === 'bearish' || d === 'neutral' || d === 'mixed';
 const reliable = (r: EventRealityRecord) => r.provenance.some((p) => (EXPECTATION_REALITY_POLICY_V1.eventInterpretation.reliableProvenance as readonly string[]).includes(p.effectiveReliability ?? p.reliability ?? 'unverified'));
 const adjustedMaterial = (r: EventRealityRecord) => r.revisionAdjustedMeasures.revisionAdjustedMateriality === 'material' && Math.abs(r.revisionAdjustedMeasures.adjustedSurpriseScore ?? 0) >= EXPECTATION_REALITY_POLICY_V1.eventInterpretation.materialSurpriseScore;
-const relatedSupports = (r: EventRealityRecord) => r.relatedEvidenceDecision.status === 'confirmed' || r.relatedEvidenceDecision.status === 'not_required';
+const relatedAllowsNormalFinalInterpretation = (r: EventRealityRecord) => r.relatedEvidenceDecision.status === 'confirmed' || r.relatedEvidenceDecision.status === 'not_required';
+const relatedConfirmsStrictMispricing = (r: EventRealityRecord) => r.relatedEvidenceDecision.status === 'confirmed';
 const isReliableObservation = (e: ReactionObservationEnvelope) => (EXPECTATION_REALITY_POLICY_V1.eventInterpretation.reliableProvenance as readonly string[]).includes(e.effectiveReliability ?? 'unverified');
 function asEnvelope(input: MarketPriceReactionInput | ReactionObservationEnvelope, role: string): ReactionObservationEnvelope { const envelope = 'reactionInput' in input ? input : { reactionInput: input, sourceId: role, provider: 'caller_unspecified', observationVersion: 'unspecified', reliability: 'unverified', effectiveReliability: 'unverified', trustBasis: 'internal_unverified' } as ReactionObservationEnvelope; const calculatedContentHash = calculateReactionEnvelopeContentHash(envelope); if (envelope.suppliedContentHash && envelope.suppliedContentHash !== calculatedContentHash) throw new Error(`${role}_reaction_content_hash_mismatch`); return { ...envelope, effectiveReliability: envelope.effectiveReliability ?? 'unverified', calculatedContentHash }; }
 function relatedState(reactions: EventRealityRecord['relatedMarketReactions']): EventRealityRecord['relatedMarketState'] { if (reactions.length === 0) return 'unavailable'; if (reactions.some((r) => r.status === 'rejected' || r.status === 'reversed')) return 'conflicting'; if (reactions.some((r) => r.status === 'insufficient_data' || r.status === 'unknown' || r.status === 'ambiguous')) return 'insufficient'; return reactions.some((r) => r.status === 'confirmed' || r.status === 'delayed') ? 'confirmed' : 'unavailable'; }
@@ -48,6 +49,11 @@ function unresolvedDirection(expectation: EventExpectationRecord, asset: string,
 }
 function resolveReleaseDirection(expectation: EventExpectationRecord, asset: string, normalized: EventRealityRecord['normalizedSurprise'], revisionAdjusted?: ReturnType<typeof revisionMeasures>): MarketAssetDirectionResolutionResult {
   if (!expectation.affectedAssets.includes(asset as never)) throw new Error(`unrelated_related_market_rejected:${asset}`);
+  if (revisionAdjusted && revisionAdjusted.revisionAdjustedMateriality !== 'unavailable' && revisionAdjusted.adjustedSurpriseScore !== null) {
+    const resolved = resolveAssetDirectionFromNormalizedMacroContext({ asset: asset as never, evidenceClass: 'macro_release', indicatorKind: String(expectation.indicatorKind), category: String(expectation.indicatorCategory), currency: String(expectation.currency), region: String(expectation.region), signedNormalizedScore: revisionAdjusted.adjustedSurpriseScore, economicMeaning: revisionAdjusted.adjustedEconomicMeaning, policyPressure: revisionAdjusted.adjustedPolicyPressure, growthPressure: revisionAdjusted.adjustedGrowthPressure, inflationPressure: revisionAdjusted.adjustedInflationPressure, riskPressure: revisionAdjusted.adjustedRiskPressure, observedAt: normalized ? expectation.scheduledReleaseTime : null });
+    if (!known(resolved.resolvedDirection) && normalized) throw new Error(`canonical_direction_unavailable:${asset}`);
+    return resolved;
+  }
   const metadataJson = releaseMetadata(expectation, normalized, revisionAdjusted);
   if (!metadataJson) return unresolvedDirection(expectation, asset, 'revision_context_insufficient_for_direction');
   const resolved = resolveAssetContextualEvidenceDirection({ asset: asset as never, evidenceClass: 'macro_release', metadataJson, policyTone: (revisionAdjusted?.adjustedPolicyPressure ?? normalized?.policyPressure) as never, policyIssuerRegion: String(expectation.region), affectedCurrency: String(expectation.currency), observedAt: normalized ? expectation.scheduledReleaseTime : null });
@@ -164,17 +170,22 @@ export function interpretEventReality(params: { expectation: EventExpectationRec
   let outcome: EventRealityEvaluation['outcome'] = 'ambiguous';
   const actualKnown = known(reality.releaseAlignment.actualDirection);
   const effectiveRelatedState = reality.relatedEvidenceDecision.status === 'conflicting_final' ? 'conflicting' : reality.relatedEvidenceDecision.status === 'confirmed' ? 'confirmed' : reality.relatedEvidenceDecision.status === 'not_required' ? 'confirmed' : relatedState(reality.relatedMarketReactions);
-  const priceProvenanceReliable = reality.reactionProvenance.every(isReliableObservation);
+  const primaryProvenanceReliable = isReliableObservation(reality.reactionProvenance[0]!);
+  const requiredRelatedProvenance = reality.reactionProvenance.slice(1).filter((e)=>expectation.requiredRelatedAssets.includes(e.reactionInput.asset as never));
+  const optionalRelatedProvenance = reality.reactionProvenance.slice(1).filter((e)=>!expectation.requiredRelatedAssets.includes(e.reactionInput.asset as never));
+  const requiredRelatedProvenanceReliable = requiredRelatedProvenance.every(isReliableObservation);
+  const optionalRelatedUnverified = optionalRelatedProvenance.some((e)=>!isReliableObservation(e));
+  const priceProvenanceReliable = primaryProvenanceReliable && requiredRelatedProvenanceReliable;
   const releaseReliable = reliable(reality);
   const limitedRelatedFinal = ['conflicting_final','insufficient_final','explicitly_unavailable'].includes(reality.relatedEvidenceDecision.status);
   const criticalAmbiguity = warnings.includes('volatility_context_unavailable') || warnings.includes('volatility_basis_missing') || warnings.includes('observation_content_hash_mismatch') || !actualKnown || reality.releaseAlignment.status === 'mixed' || reality.relatedEvidenceDecision.status === 'conflicting_final' || !priceProvenanceReliable || !releaseReliable;
   if (!reality.primaryPriceReaction || reality.primaryPriceReaction.status === 'insufficient_data') { outcome = 'insufficient_data'; reasonCodes.push('primary_price_reaction_insufficient'); }
   else if (!adjustedMaterial(reality) && expectation.expectationBasis.kind === 'numeric') { outcome = 'ambiguous'; reasonCodes.push('event_surprise_not_material'); }
-  else if (reality.priceReactionTimeline.initialRejectionThenAcceptance && relatedSupports(reality) && releaseReliable && adjustedMaterial(reality) && reality.revisionAdjustedMeasures.revisionAdjustedMateriality === 'material' && Math.abs(reality.revisionAdjustedMeasures.adjustedSurpriseScore ?? 0) >= EXPECTATION_REALITY_POLICY_V1.eventInterpretation.materialSurpriseScore && (reality.releaseAlignment.status === 'contradicted' || reality.releaseAlignment.status === 'aligned') && !criticalAmbiguity) { outcome = 'mispriced_candidate'; reasonCodes.push(reality.releaseAlignment.status === 'aligned' ? 'expectation_aligned_market_initially_rejected' : 'expectation_contradicted_market_initially_rejected_actual_reality'); }
+  else if (reality.priceReactionTimeline.initialRejectionThenAcceptance && relatedConfirmsStrictMispricing(reality) && releaseReliable && adjustedMaterial(reality) && reality.revisionAdjustedMeasures.revisionAdjustedMateriality === 'material' && Math.abs(reality.revisionAdjustedMeasures.adjustedSurpriseScore ?? 0) >= EXPECTATION_REALITY_POLICY_V1.eventInterpretation.materialSurpriseScore && (reality.releaseAlignment.status === 'contradicted' || reality.releaseAlignment.status === 'aligned') && !criticalAmbiguity) { outcome = 'mispriced_candidate'; reasonCodes.push(reality.releaseAlignment.status === 'aligned' ? 'expectation_aligned_market_initially_rejected' : 'expectation_contradicted_market_initially_rejected_actual_reality'); }
   else if (reality.releaseAlignment.status === 'contradicted') { outcome = 'rejected'; reasonCodes.push('release_expectation_semantic_contradiction'); }
   else if (effectiveRelatedState === 'conflicting') { outcome = 'ambiguous'; reasonCodes.push('related_market_conflict_blocks_mispricing'); }
   else if (reality.releaseAlignment.status === 'mixed') { outcome = 'ambiguous'; reasonCodes.push('release_expectation_mixed_alignment'); }
-  else if (reality.primaryPriceReaction.status === 'confirmed' && relatedSupports(reality)) { outcome = 'confirmed'; reasonCodes.push('event_confirmed_by_primary_and_related'); }
+  else if (reality.primaryPriceReaction.status === 'confirmed' && relatedAllowsNormalFinalInterpretation(reality)) { outcome = 'confirmed'; reasonCodes.push('event_confirmed_by_primary_and_related'); }
   else if (reality.primaryPriceReaction.status === 'confirmed' && reality.relatedMarketReactions.length === 0) { outcome = 'ambiguous'; reasonCodes.push('missing_related_market_context'); }
   else if (reality.primaryPriceReaction.status === 'rejected') { outcome = 'rejected'; reasonCodes.push('event_rejected_by_primary_price'); }
   else if (reality.primaryPriceReaction.status === 'absorbed') { outcome = 'absorbed'; reasonCodes.push('event_absorbed_by_primary_price'); }
@@ -184,15 +195,17 @@ export function interpretEventReality(params: { expectation: EventExpectationRec
   if (!reality.postEventCognitionSnapshotId && ['confirmed','rejected','absorbed','delayed','reversed','mispriced_candidate'].includes(outcome)) { outcome = 'insufficient_data'; reasonCodes.push('post_event_cognition_required'); warnings.push('missing_confidence_shift_context'); }
   const finalOutcome = ['confirmed','rejected','absorbed','delayed','reversed','mispriced_candidate'].includes(outcome);
   if (finalOutcome && !releaseReliable) { outcome = 'insufficient_data'; reasonCodes.push('release_evidence_unverified','final_event_trust_gate_not_satisfied'); }
-  if (finalOutcome && !priceProvenanceReliable) { outcome = 'insufficient_data'; reasonCodes.push('primary_reaction_evidence_unverified','final_event_trust_gate_not_satisfied'); }
-  if (reality.reactionProvenance.slice(1).some((e)=>!isReliableObservation(e))) reasonCodes.push('related_reaction_evidence_unverified');
+  if (finalOutcome && !primaryProvenanceReliable) { outcome = 'insufficient_data'; reasonCodes.push('primary_reaction_evidence_unverified','final_event_trust_gate_not_satisfied'); }
+  if (finalOutcome && primaryProvenanceReliable && !requiredRelatedProvenanceReliable) { outcome = 'insufficient_data'; reasonCodes.push('required_related_reaction_evidence_unverified','final_event_trust_gate_not_satisfied'); }
+  if (!requiredRelatedProvenanceReliable) reasonCodes.push('required_related_reaction_evidence_unverified');
+  if (optionalRelatedUnverified) { reasonCodes.push('optional_related_reaction_evidence_unverified'); warnings.push('optional_related_reaction_evidence_unverified'); }
   reasonCodes.push(...reality.relatedEvidenceDecision.reasonCodes);
   const readyReasons: string[] = [];
   if (reality.priceReactionTimeline.followThrough.availableBarCount < reality.priceReactionTimeline.followThrough.requiredBarCount) readyReasons.push('follow_through_window_incomplete');
   if (!reality.postEventCognitionSnapshotId) readyReasons.push('post_event_cognition_required');
   if (!releaseReliable) readyReasons.push('release_evidence_unverified');
-  if (!priceProvenanceReliable) readyReasons.push('primary_reaction_evidence_unverified');
-  if (reality.reactionProvenance.slice(1).some((e)=>!isReliableObservation(e))) readyReasons.push('related_reaction_evidence_unverified');
+  if (!primaryProvenanceReliable) readyReasons.push('primary_reaction_evidence_unverified');
+  if (!requiredRelatedProvenanceReliable) readyReasons.push('required_related_reaction_evidence_unverified');
   if (reality.relatedEvidenceDecision.status === 'pending') readyReasons.push('related_evidence_pending');
   if (warnings.includes('volatility_basis_missing') || warnings.includes('volatility_context_unavailable')) readyReasons.push('volatility_context_unavailable');
   const finalizationStatus = readyReasons.length === 0 ? 'final' as const : 'provisional' as const;

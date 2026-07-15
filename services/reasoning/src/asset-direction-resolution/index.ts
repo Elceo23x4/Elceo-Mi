@@ -4,7 +4,7 @@ import { MARKET_ASSET_CAUSALITY_ASSETS, MARKET_ASSET_DRIVER_KINDS, MARKET_ASSET_
 import { validateMarketAssetDirectionResolutionCoverageReport, validateMarketAssetDirectionResolutionResult, validateMarketAssetDirectionResolutionRuleSetSnapshot } from '@elceo/schemas';
 import { getMarketAssetCausalityDescriptor } from '../asset-causality-map/index';
 import { resolveFxRelativeStrength } from '../fx-relative-strength/index';
-import { normalizeMacroSurprise, parseMacroReleaseInputFromMetadata } from '../macro-surprise-normalization/index';
+import { normalizeMacroSurprise, parseMacroReleaseInputFromMetadata, resolveMacroPressuresFromSignedNormalizedScore } from '../macro-surprise-normalization/index';
 import { resolveMarketEconomicContext } from '../economic-context/index';
 
 type Metadata = Record<string, unknown>;
@@ -124,26 +124,32 @@ export function resolveRiskRegimeImpact(input: MarketAssetDirectionResolutionInp
 }
 
 
-function macroDirection(input: MarketAssetDirectionResolutionInput, m: Metadata, raw: MarketAssetRawDirectionHint, asset: MarketAssetCausalityAsset): MarketAssetDirectionResolutionResult | null {
+export function resolveAssetDirectionFromNormalizedMacroContext(input: MarketAssetDirectionResolutionInput & { indicatorKind: string; category?: string; currency?: string; region?: string; signedNormalizedScore: number; economicMeaning?: string | null; policyPressure?: string | null; growthPressure?: string | null; inflationPressure?: string | null; riskPressure?: string | null; macroNormalizationComplete?: boolean }): MarketAssetDirectionResolutionResult {
+  const m = parseMetadata(input.metadataJson); const raw = input.rawHint ?? parseRawDirectionHintFromMetadata(input.metadataJson); const asset = isAsset(input.asset) ? input.asset : 'xau_usd';
+  const context = resolveMacroPressuresFromSignedNormalizedScore({ indicatorKind: input.indicatorKind, category: input.category ?? 'unknown', signedNormalizedScore: input.signedNormalizedScore });
+  const economicMeaning = input.economicMeaning ?? context.economicMeaning; const policyPressure = input.policyPressure ?? context.policyPressure; const growthPressure = input.growthPressure ?? context.growthPressure;
+  const incomplete = input.macroNormalizationComplete === false || input.indicatorKind === 'unknown' || !Number.isFinite(input.signedNormalizedScore);
+  const warnings: MarketAssetDirectionResolutionWarning[] = ['requires_price_confirmation','provider_activation_gap', ...(incomplete ? ['pending_macro_surprise_normalization' as const] : []), ...(FX.includes(asset) ? ['pending_fx_relative_strength' as const] : [])];
+  const codes: MarketAssetDirectionResolutionReasonCode[] = ['normalized_macro_surprise_applied','causality_map_requirement'];
+  const category = String(input.category ?? context.economicMeaning);
+  if (category === 'inflation') codes.push('macro_inflation_pressure_context');
+  if (category === 'labor_market') codes.push('macro_labor_pressure_context');
+  if (['growth_activity','business_activity','consumption'].includes(category)) codes.push('macro_growth_pressure_context');
+  let direction: WeightedEvidenceDirection = incomplete ? 'unknown' : 'mixed'; let target: MarketAssetResolvedPressureTarget = 'risk_complex';
+  if (!incomplete && asset === 'dxy') { direction = policyPressure === 'hawkish' ? 'bullish' : policyPressure === 'dovish' ? 'bearish' : 'mixed'; target = 'usd_side'; } else if (asset === 'dxy') { target = 'usd_side'; }
+  else if (!incomplete && FX.includes(asset)) { const normalizedCurrency = input.currency && !['global','unknown'].includes(input.currency) ? input.currency : null; if (normalizedCurrency === 'USD' && (policyPressure === 'hawkish' || policyPressure === 'dovish' || economicMeaning === 'weaker_labor' || economicMeaning === 'tighter_labor')) { const orientation = resolveFxPairOrientation(asset); const usdStrong = policyPressure === 'hawkish' || economicMeaning === 'tighter_labor'; direction = orientation?.base === 'USD' ? (usdStrong ? 'bullish' : 'bearish') : orientation?.quote === 'USD' ? (usdStrong ? 'bearish' : 'bullish') : 'mixed'; target = fxTargetFromCurrency(asset, 'USD'); } else { const fxInput: Parameters<typeof resolveFxRelativeStrength>[0] = { pairAsset: asset as Parameters<typeof resolveFxRelativeStrength>[0]['pairAsset'] }; if (input.metadataJson !== undefined) fxInput.metadataJson = input.metadataJson; const fx = resolveFxRelativeStrength(fxInput); direction = fxDirectionFromPairDirection(fx.pairDirection); target = fxTargetFromCurrency(asset, normalizedCurrency); } }
+  else if (!incomplete && asset === 'xau_usd') { direction = policyPressure === 'hawkish' ? 'bearish' : policyPressure === 'dovish' ? 'bullish' : 'mixed'; target = 'rates_complex'; }
+  else if (!incomplete && (US_EQUITIES.includes(asset) || asset === 'btc_usd')) { direction = growthPressure === 'weaker' || economicMeaning === 'weaker_labor' ? 'bearish' : growthPressure === 'stronger' || economicMeaning === 'stronger_growth' || economicMeaning === 'tighter_labor' ? 'bullish' : policyPressure === 'hawkish' ? 'mixed' : policyPressure === 'dovish' ? 'bullish' : 'mixed'; target = asset === 'btc_usd' ? 'liquidity_complex' : 'risk_complex'; }
+  return result(input, m, raw, direction, target, incomplete ? 35 : 68, codes, warnings, ['c6-r4-macro-surprise-normalized'], `C6-R4 normalized ${input.indicatorKind} as ${context.surpriseDirection}/${economicMeaning}; downstream asset direction remains context-aware and price confirmation is pending.`);
+}
+
+function macroDirection(input: MarketAssetDirectionResolutionInput, m: Metadata, _raw: MarketAssetRawDirectionHint, _asset: MarketAssetCausalityAsset): MarketAssetDirectionResolutionResult | null {
   const hasMacroFields = ['actual','forecast','consensus','expected','previous','prior','revisedPrevious','indicatorKind','indicatorName'].some((k) => Object.prototype.hasOwnProperty.call(m, k));
   if (!hasMacroFields) return null;
   const fallback = { releaseId: `${String(input.evidenceClass)}|${input.observedAt ?? 'unobserved'}`, indicatorName: String(input.evidenceClass) };
   const normalized = normalizeMacroSurprise(parseMacroReleaseInputFromMetadata(input.metadataJson, input.policyIssuerRegion || input.affectedCurrency ? { ...fallback, ...(input.policyIssuerRegion ? { region: input.policyIssuerRegion } : {}), ...(input.affectedCurrency ? { currency: input.affectedCurrency } : {}) } : fallback));
   const incomplete = normalized.warnings.includes('missing_actual') || normalized.warnings.includes('missing_forecast') || normalized.indicatorKind === 'unknown';
-  const warnings: MarketAssetDirectionResolutionWarning[] = ['requires_price_confirmation','provider_activation_gap', ...(incomplete ? ['pending_macro_surprise_normalization' as const] : []), ...(FX.includes(asset) ? ['pending_fx_relative_strength' as const] : [])];
-  const codes: MarketAssetDirectionResolutionReasonCode[] = ['normalized_macro_surprise_applied','causality_map_requirement'];
-  if (incomplete) codes.push('macro_surprise_incomplete');
-  if (normalized.category === 'inflation') codes.push('macro_inflation_pressure_context');
-  if (normalized.category === 'labor_market') codes.push('macro_labor_pressure_context');
-  if (['growth_activity','business_activity','consumption'].includes(normalized.category)) codes.push('macro_growth_pressure_context');
-  let direction: WeightedEvidenceDirection = incomplete ? 'unknown' : 'mixed';
-  let target: MarketAssetResolvedPressureTarget = 'risk_complex';
-  if (!incomplete && asset === 'dxy') { direction = normalized.policyPressure === 'hawkish' ? 'bullish' : normalized.policyPressure === 'dovish' ? 'bearish' : 'mixed'; target = 'usd_side'; } else if (asset === 'dxy') { target = 'usd_side'; }
-  else if (!incomplete && FX.includes(asset)) { const normalizedCurrency = normalized.currency === 'global' || normalized.currency === 'unknown' ? null : normalized.currency; if (normalizedCurrency === 'USD' && (normalized.policyPressure === 'dovish' || normalized.economicMeaning === 'weaker_labor')) { const orientation = resolveFxPairOrientation(asset); direction = orientation?.base === 'USD' ? 'bearish' : orientation?.quote === 'USD' ? 'bullish' : 'mixed'; target = fxTargetFromCurrency(asset, 'USD'); } else { const fxInput: Parameters<typeof resolveFxRelativeStrength>[0] = { pairAsset: asset as Parameters<typeof resolveFxRelativeStrength>[0]['pairAsset'] }; if (input.metadataJson !== undefined) fxInput.metadataJson = input.metadataJson; const fx = resolveFxRelativeStrength(fxInput); direction = fxDirectionFromPairDirection(fx.pairDirection); target = fxTargetFromCurrency(asset, normalizedCurrency); } }
-  else if (!incomplete && asset === 'xau_usd') { direction = normalized.policyPressure === 'hawkish' ? 'bearish' : normalized.policyPressure === 'dovish' ? 'bullish' : 'mixed'; target = 'rates_complex'; }
-  else if (!incomplete && (US_EQUITIES.includes(asset) || asset === 'btc_usd')) { direction = normalized.growthPressure === 'weaker' || normalized.economicMeaning === 'weaker_labor' ? 'bearish' : normalized.policyPressure === 'hawkish' ? 'mixed' : normalized.policyPressure === 'dovish' ? 'bullish' : 'mixed'; target = asset === 'btc_usd' ? 'liquidity_complex' : 'risk_complex'; }
-  const confidence = incomplete ? Math.min(35, normalized.confidence) : Math.min(68, normalized.confidence);
-  return result(input, m, raw, direction, target, confidence, codes, warnings, ['c6-r4-macro-surprise-normalized'], `C6-R4 normalized ${normalized.indicatorKind} as ${normalized.surpriseDirection}/${normalized.economicMeaning}; downstream asset direction remains context-aware and price confirmation is pending.`);
+  return resolveAssetDirectionFromNormalizedMacroContext({ ...input, indicatorKind: normalized.indicatorKind, category: normalized.category, currency: normalized.currency, region: normalized.region, signedNormalizedScore: normalized.normalizedSurpriseScore, economicMeaning: normalized.economicMeaning, policyPressure: normalized.policyPressure, growthPressure: normalized.growthPressure, inflationPressure: normalized.inflationPressure, riskPressure: normalized.riskPressure, macroNormalizationComplete: !incomplete });
 }
 
 function commodityOrDemand(input: MarketAssetDirectionResolutionInput, driver: string): MarketAssetDirectionResolutionResult | null {

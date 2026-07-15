@@ -52,3 +52,5 @@ export * from './golden-scenarios/index';
 export * from './readiness/index';
 
 export * from './expectation-reality/index';
+
+export * from './historical-analog-memory';

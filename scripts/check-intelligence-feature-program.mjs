@@ -155,6 +155,11 @@ for (const phrase of ['mandatory launch assets or approved asset groups', 'requi
   if (!ifp2.includes(phrase)) fail(`IFP-2 missing evidence-sufficiency ownership phrase: ${phrase}`);
 }
 
+for (const phrase of ['docs/historical-market-memory-analog-engine.md', '0043_historical_market_memory_analog_engine.sql', 'HistoricalAnalogMemoryRecord', 'AnalogMatchFeatures', 'HistoricalOutcomeContext', 'historical-analog-retrieval-v1']) {
+  const sources = doc + read('docs/historical-market-memory-analog-engine.md') + read('services/reasoning/src/historical-analog-memory/contracts.ts') + read('services/reasoning/src/historical-analog-memory/policy.ts') + read('infra/db/schema/0043_historical_market_memory_analog_engine.sql');
+  if (!sources.includes(phrase)) fail(`IFP-2 implementation surface missing: ${phrase}`);
+}
+
 for (const path of alignmentDocs) {
   const content = read(path);
   for (const phrase of ['docs/intelligence-feature-program.md', 'IFP-0 defines the program but implements no intelligence feature', 'IFP is not complete merely because the scope document exists', 'RC-I2-CERT remains mandatory', 'RC-J-ENV remains mandatory', 'RC-K begins only after all eight IFP phases are closed']) {

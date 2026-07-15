@@ -1,6 +1,6 @@
 # Intelligence Feature Program
 
-Status: **IFP-1 active approved intelligence capability**. This document defines the controlled Intelligence Feature Program before any IFP runtime development begins. IFP-0 implements no intelligence feature and does not complete IFP.
+Status: **IFP-1 closed; IFP-2 active approved intelligence capability**. This document defines the controlled Intelligence Feature Program before any IFP runtime development begins. IFP-0 implements no intelligence feature and does not complete IFP.
 
 ## Program purpose
 

@@ -168,6 +168,7 @@ const ifp2SourceSurface = [
   read('services/reasoning/src/historical-analog-memory/service.ts'),
   read('services/reasoning/src/historical-analog-memory/sql-repository.ts'),
   read('services/reasoning/src/historical-analog-memory/repository.ts'),
+  read('services/reasoning/src/historical-analog-memory/policy.ts'),
   read('services/reasoning/src/tests/run-tests.ts'),
 ].join('\n');
 for (const phrase of [
@@ -179,9 +180,12 @@ for (const phrase of [
   'memory repository rejects malformed retrieval invariants SQL also rejects',
   'T+3 ignores divergent T+6 follow-through',
   'same event and cross-asset same event excluded',
+  'SqlHistoricalAnalogRepository requires transaction executor',
+  'cross-asset orientation derives from source EventRealityEvaluation objects',
+  'complete historical trust validator',
 ]) if (!ifp2TestSurface.includes(phrase)) fail(`IFP-2 behavioural test surface missing: ${phrase}`);
 for (const phrase of [
-  'directionRelationToResolvedMacroPressure',
+  'expectationToResolvedDirectionRelation',
   'pathDirectionRelation',
   'signedMoveInResolvedDirectionPct',
   'trustedReleaseWitnesses',
@@ -190,6 +194,8 @@ for (const phrase of [
   'resolveHistoricalAnalogStructuralAvailability',
   'SqlHistoricalAnalogTransactionExecutor',
   'runHistoricalAnalogMemoryTests',
+  'validateHistoricalIndexingEvidence',
+  'HistoricalAnalogStructuralAvailabilityRule',
 ]) if (!ifp2SourceSurface.includes(phrase)) fail(`IFP-2 source/test-runner surface missing: ${phrase}`);
 
 for (const path of alignmentDocs) {

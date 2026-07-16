@@ -8,12 +8,13 @@ export type HistoricalAnalogEvidenceSufficiency = 'sufficient' | 'sparse' | 'ins
 export type HistoricalAnalogExclusionReason = 'after_query_cutoff' | 'same_event_instance' | 'same_event_evaluation' | 'event_kind_mismatch' | 'indicator_category_mismatch' | 'asset_family_mismatch' | 'provenance_excluded' | 'below_similarity' | 'below_feature_coverage';
 export type HistoricalAnalogQueryStage = 'immediate' | 'confirmation' | 'follow_through';
 export type DirectionRelationToResolvedMacroPressure = 'with_resolved_direction' | 'against_resolved_direction' | 'neutral' | 'unknown';
+export type ExpectationToResolvedDirectionRelation = 'aligned' | 'opposed' | 'neutral' | 'unknown';
 
 export type AnalogFeatureGroup<T extends Record<string, unknown>> = { state: FeatureAvailabilityState; availableAt: string | null; sourcePaths: string[]; values: T; limitations: string[] };
 export type AnalogMatchFeatures = {
   eventContext: AnalogFeatureGroup<{ eventKind: string; indicatorKind: string; indicatorCategory: string; importance: string; region: string; currency: string; asset: string; canonicalAssetFamily: string }>;
   releaseRevisionContext: AnalogFeatureGroup<{ adjustedSurpriseScore: number | null; normalizedRevisionContribution: number | null; revisionEffect: string; revisionAdjustedDirection: string }>;
-  assetDirectionContext: AnalogFeatureGroup<{ expectedAssetDirection: string; actualDirection: string | null; releaseAlignment: string; directionRelationToResolvedMacroPressure: DirectionRelationToResolvedMacroPressure }>;
+  assetDirectionContext: AnalogFeatureGroup<{ expectedAssetDirection: string; actualDirection: string | null; releaseAlignment: string; expectationToResolvedDirectionRelation: ExpectationToResolvedDirectionRelation }>;
   immediatePathContext: AnalogFeatureGroup<{ state: EventPriceTimelineState; observedDirection: string; pathDirectionRelation: DirectionRelationToResolvedMacroPressure; moveFromOriginPct: number | null; signedMoveInResolvedDirectionPct: number | null }>;
   confirmationPathContext: AnalogFeatureGroup<{ state: EventPriceTimelineState; observedDirection: string; pathDirectionRelation: DirectionRelationToResolvedMacroPressure; moveFromOriginPct: number | null; signedMoveInResolvedDirectionPct: number | null }>;
   followThroughPathContext: AnalogFeatureGroup<{ state: EventPriceTimelineState; observedDirection: string; pathDirectionRelation: DirectionRelationToResolvedMacroPressure; moveFromOriginPct: number | null; signedMoveInResolvedDirectionPct: number | null }>;

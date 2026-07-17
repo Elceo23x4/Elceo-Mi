@@ -61,19 +61,20 @@ export class EventExpectationRealityService {
     const requiredIndexes = related.map((r,i)=>required.includes(r.reactionInput.asset as EventExpectationRecord['asset']) ? i : -1).filter((i)=>i>=0);
     const supplied = new Set(requiredIndexes.map((i)=>related[i]!.reactionInput.asset as EventExpectationRecord['asset']));
     const missing = required.filter((a)=>!supplied.has(a));
-    const requiredReactions = requiredIndexes.map((i)=>reality.relatedMarketReactions[i]).filter(Boolean);
-    const requiredTrusted = requiredIndexes.every((i)=>isTrusted(related[i]!));
-    if (missing.length === 0 && requiredTrusted && requiredReactions.some((r)=>r!.status === 'rejected' || r!.status === 'reversed')) return withPolicy({ status:'conflicting_final', decidedAt:decided(), reasonCodes:['required_related_evidence_conflicting'] });
-    if (missing.length === 0 && requiredTrusted && requiredReactions.length === required.length && requiredReactions.every((r)=>r!.status === 'confirmed' || r!.status === 'delayed')) return withPolicy({ status:'confirmed', decidedAt:decided(), reasonCodes:['required_related_evidence_confirmed'] });
-    const unresolvedRequired = [...missing, ...requiredIndexes.filter((i)=>!isTrusted(related[i]!)).map((i)=>related[i]!.reactionInput.asset as EventExpectationRecord['asset'])];
-    if (unresolvedRequired.length > 0) {
-      const requested = [...new Set(unresolvedRequired)];
+    const trustedRequiredIndexes = requiredIndexes.filter((i)=>isTrusted(related[i]!));
+    const untrustedRequiredAssets = [...new Set(requiredIndexes.filter((i)=>!isTrusted(related[i]!)).map((i)=>related[i]!.reactionInput.asset as EventExpectationRecord['asset']))];
+    const requiredReactions = trustedRequiredIndexes.map((i)=>reality.relatedMarketReactions[i]).filter(Boolean);
+    const allRequiredTrusted = missing.length === 0 && untrustedRequiredAssets.length === 0 && trustedRequiredIndexes.length === required.length;
+    if (allRequiredTrusted && requiredReactions.some((r)=>r!.status === 'rejected' || r!.status === 'reversed')) return withPolicy({ status:'conflicting_final', decidedAt:decided(), reasonCodes:['required_related_evidence_conflicting'] });
+    if (allRequiredTrusted && requiredReactions.length === required.length && requiredReactions.every((r)=>r!.status === 'confirmed' || r!.status === 'delayed')) return withPolicy({ status:'confirmed', decidedAt:decided(), reasonCodes:['required_related_evidence_confirmed'] });
+    if (missing.length > 0) {
+      const requested = missing;
       const availability = await Promise.all(requested.map(async (asset)=>({ requestedAsset: asset, result: await this.availabilityVerifier({ asset, expectation, releaseObservedAt, interpretedAt }) })));
       const returnedAssets = availability.map((entry)=>entry.result.asset);
       if (new Set(returnedAssets).size !== returnedAssets.length) throw new Error('related_availability_duplicate_asset_proof');
       for (const { requestedAsset, result } of availability) { if (result.asset !== requestedAsset) throw new Error('related_availability_asset_mismatch'); if (!result.verificationRef.trim()) throw new Error('related_availability_verification_ref_missing'); if (!result.trustBasis.trim()) throw new Error('related_availability_trust_basis_missing'); const t=parseIso(result.verifiedAt, 'related_availability_verified_at'); if (t < release || t > interpreted) throw new Error('related_availability_verification_time_invalid'); }
       const unavailable = availability.filter((entry)=>entry.result.availability === 'unavailable');
-      if (unavailable.length === requested.length) return withPolicy({ status:'explicitly_unavailable', decidedAt:decided(), reasonCodes:['required_related_evidence_structurally_unavailable'], evidenceRefs: unavailable.map((entry)=>`${entry.requestedAsset}:${entry.result.verificationRef}`), availabilityEvidence: unavailable.map((entry)=>({asset:entry.requestedAsset, availability:entry.result.availability, verificationRef:entry.result.verificationRef, verifiedAt:entry.result.verifiedAt, trustBasis:entry.result.trustBasis})) });
+      if (untrustedRequiredAssets.length === 0 && unavailable.length === requested.length) return withPolicy({ status:'explicitly_unavailable', decidedAt:decided(), reasonCodes:['required_related_evidence_structurally_unavailable'], evidenceRefs: unavailable.map((entry)=>`${entry.requestedAsset}:${entry.result.verificationRef}`), availabilityEvidence: unavailable.map((entry)=>({asset:entry.requestedAsset, availability:entry.result.availability, verificationRef:entry.result.verificationRef, verifiedAt:entry.result.verifiedAt, trustBasis:entry.result.trustBasis})) });
     }
     const deadlineElapsed = interpreted >= release + policy.deadlineMinutes * 60_000;
     if (deadlineElapsed) return withPolicy({ status:'insufficient_final', decidedAt:decided(), reasonCodes:['required_related_evidence_insufficient_final'] });

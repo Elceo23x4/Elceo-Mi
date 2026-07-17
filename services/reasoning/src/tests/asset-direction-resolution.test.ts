@@ -1,7 +1,7 @@
 import { validateMarketAssetDirectionResolutionCoverageReport, validateMarketAssetDirectionResolutionResult, validateMarketAssetDirectionResolutionRuleSetSnapshot } from '@elceo/schemas';
 import type { MarketAssetCausalityAsset, ReasoningEvidenceInputItem } from '@elceo/types';
 import { buildWeightedEvidenceItem } from '../evidence-weighting/index.js';
-import { assertAssetDirectionResolutionRuleSetValid, getAssetDirectionResolutionCoverageReport, getAssetDirectionResolutionRuleSetSnapshot, resolveAssetContextualEvidenceDirection } from '../asset-direction-resolution/index.js';
+import { assertAssetDirectionResolutionRuleSetValid, getAssetDirectionResolutionCoverageReport, getAssetDirectionResolutionRuleSetSnapshot, resolveAssetContextualEvidenceDirection, resolveAssetDirectionFromNormalizedMacroContext } from '../asset-direction-resolution/index.js';
 import { CanonicalMarketIntelligenceBoundaryService } from '../runtime/canonical-market-intelligence-boundary.js';
 import { MemoryMarketEvidenceRegistrySnapshotRepository, MemorySeoContentArchitectureSnapshotRepository } from '../persistence/registry-snapshot-repository.js';
 
@@ -71,6 +71,19 @@ export function runAssetDirectionResolutionTests(): void {
   assert((weightedAmbiguousDxy.direction === 'unknown' || weightedAmbiguousDxy.direction === 'mixed') && weightedAmbiguousDxy.contributionScore === 0 && weightedAmbiguousDxy.reasons.some((x) => x.includes('direction_warning:ambiguous_policy_issuer')), 'ambiguous hawkish policy does not create false strong DXY contribution');
   const unknown = buildWeightedEvidenceItem(item({ direction: 'positive' }, 'market_news'), 'sp500', 'intraday');
   assert(unknown.direction === 'unknown' && unknown.contributionScore === 0, 'unknown resolver does not create false contribution');
+
+  const cpiRaw = res('dxy', { releaseId: 'raw-cpi', indicatorKind: 'cpi_headline', category: 'inflation', actual: 3.5, forecast: 3.0, previous: 3.0, unit: 'pct', issuerCurrency: 'USD' }, 'macro_release');
+  assert(cpiRaw.resolvedDirection === 'bullish' && cpiRaw.rationale.includes('upside_surprise/') && !cpiRaw.rationale.includes('economic_positive'), 'raw CPI macro direction preserves upside_surprise audit rationale');
+  const payrollRaw = res('dxy', { releaseId: 'raw-nfp', indicatorKind: 'nonfarm_payrolls', category: 'labor_market', actual: 220, forecast: 180, previous: 175, unit: 'k', issuerCurrency: 'USD' }, 'macro_release');
+  assert(payrollRaw.reasonCodes.includes('normalized_macro_surprise_applied') && payrollRaw.rationale.includes('upside_surprise/') && !payrollRaw.rationale.includes('economic_positive'), 'raw nonfarm payroll macro audit keeps raw upside_surprise label');
+  const unemploymentRaw = res('dxy', { releaseId: 'raw-unemployment', indicatorKind: 'unemployment_rate', category: 'labor_market', actual: 4.2, forecast: 4.0, previous: 4.0, unit: 'pct', issuerCurrency: 'USD' }, 'macro_release');
+  assert(unemploymentRaw.rationale.includes('upside_surprise/weaker_labor') && !unemploymentRaw.rationale.includes('economic_negative'), 'raw unemployment rationale keeps upside_surprise while shared core interprets weaker labor');
+  const inlineRaw = res('dxy', { releaseId: 'raw-inline', indicatorKind: 'cpi_headline', category: 'inflation', actual: 3.0, forecast: 3.0, previous: 3.0, unit: 'pct', issuerCurrency: 'USD' }, 'macro_release');
+  assert(inlineRaw.rationale.includes('inline/'), 'raw inline macro rationale keeps inline surprise label');
+  const incompleteRaw = res('dxy', { releaseId: 'raw-incomplete', indicatorKind: 'cpi_headline', category: 'inflation', forecast: 3.0, previous: 3.0, unit: 'pct', issuerCurrency: 'USD' }, 'macro_release');
+  assert(incompleteRaw.resolvedDirection === 'unknown' && incompleteRaw.reasonCodes.includes('macro_surprise_incomplete') && incompleteRaw.rationale.includes('unknown/'), 'incomplete raw macro release preserves unresolved audit semantics');
+  const adjustedContext = resolveAssetDirectionFromNormalizedMacroContext({ asset: 'dxy', evidenceClass: 'macro_release', metadataJson: JSON.stringify({ indicatorKind: 'unemployment_rate', category: 'labor_market' }), policyIssuerRegion: 'united_states', indicatorKind: 'unemployment_rate', category: 'labor_market', currency: 'USD', signedNormalizedScore: -45 });
+  assert(adjustedContext.rationale.includes('economic_positive/') || adjustedContext.rationale.includes('economic_negative/'), 'revision-adjusted normalized contexts may use economic semantic labels');
 
   const valid = res('dxy', hawkish); assert(validateMarketAssetDirectionResolutionResult(valid).ok, 'valid result schema passes');
   const bad = { ...valid, resolvedDirection: 'up', rationale: 'buy now' }; assert(!validateMarketAssetDirectionResolutionResult(bad).ok, 'invalid direction and advice language rejected');

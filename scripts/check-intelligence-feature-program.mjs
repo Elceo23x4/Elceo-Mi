@@ -182,10 +182,13 @@ for (const phrase of [
   'same event and cross-asset same event excluded',
   'SqlHistoricalAnalogRepository requires transaction executor',
   'cross-asset orientation derives from source EventRealityEvaluation objects',
+  'SqlHistoricalAnalogRepository',
+  'rollback after conflict at rank 3 leaves no partial retrieval rows',
+  'structural unavailable explicit decision has reason and policy version',
   'complete historical trust validator',
 ]) if (!ifp2TestSurface.includes(phrase)) fail(`IFP-2 behavioural test surface missing: ${phrase}`);
 for (const phrase of [
-  'expectationToResolvedDirectionRelation',
+  'revisionAdjustedDirection',
   'pathDirectionRelation',
   'signedMoveInResolvedDirectionPct',
   'trustedReleaseWitnesses',

@@ -173,7 +173,9 @@ const ifp2SourceSurface = [
 ].join('\n');
 for (const phrase of [
   'scoreAnalogFeatures(featuresA,featuresB)',
-  'same-family cross-asset orientation-normalized relation owns directional similarity',
+  'outcome-only changes do not affect scoreAnalogFeatures results',
+  'actual retrieval/ranking is invariant to outcome-only candidate changes',
+  'same-family cross-asset non-tautological direction relation strictly owns asset-direction similarity',
   'releaseTrustSatisfiedAt',
   'immediate volatility is scoreable at T+1',
   'coverage counts production verified/replay unique event instances only',
@@ -181,6 +183,10 @@ for (const phrase of [
   'T+3 ignores divergent T+6 follow-through',
   'same event and cross-asset same event excluded',
   'SqlHistoricalAnalogRepository requires transaction executor',
+  'retrieval finds relevant analog beyond 500 and 1000 paged memory records',
+  'complete tuple pagination beyond 1000 has no gaps or duplicates',
+  'no_comparable_history state is exact',
+  'sufficient state is exact',
   'cross-asset orientation derives from source EventRealityEvaluation objects',
   'SqlHistoricalAnalogRepository',
   'rollback after conflict at rank 3 leaves no partial retrieval rows',
@@ -188,7 +194,7 @@ for (const phrase of [
   'complete historical trust validator',
 ]) if (!ifp2TestSurface.includes(phrase)) fail(`IFP-2 behavioural test surface missing: ${phrase}`);
 for (const phrase of [
-  'revisionAdjustedDirection',
+  'resolvedDirectionRelationToFrozenExpectation',
   'pathDirectionRelation',
   'signedMoveInResolvedDirectionPct',
   'trustedReleaseWitnesses',

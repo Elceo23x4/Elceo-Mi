@@ -199,6 +199,11 @@ for (const phrase of [
   'unknown relation versus unknown is non-comparable, reduces coverage, and cannot create high similarity',
   'stage-aware historical feature timeline persists T+1 T+3 and final snapshots from immutable assessments',
   'assessment timeline lists provisional and final evaluations in interpretedAt tuple order',
+  'featureCoverageRatio <= 1 for every persisted match',
+  'stage timeline identity binds T+1/T+3 snapshots into stage hash feature hash and analogMemoryId',
+  'final-only T+6 memory cannot answer T+1/T+3 but can answer T+6-or-later without retrospective fallback',
+  'verificationRef alone cannot become trustBasis for release trust',
+  'early-stage retrieval persists successfully through SQL schema contract with bounded coverage',
 ]) if (!ifp2TestSurface.includes(phrase)) fail(`IFP-2 behavioural test surface missing: ${phrase}`);
 for (const phrase of [
   'resolvedDirectionRelationToFrozenExpectation',
@@ -220,6 +225,9 @@ for (const phrase of [
   'queryEvidenceMaturityRatio',
   'HistoricalReleaseVerificationArtifact',
   'HistoricalAnalogStageFeatureSnapshot',
+  'stageFeatureTimelineHash',
+  'no_comparable_stage_snapshot',
+  'trustedReleaseVerificationRefs',
 ]) if (!ifp2SourceSurface.includes(phrase)) fail(`IFP-2 source/test-runner surface missing: ${phrase}`);
 
 for (const path of alignmentDocs) {

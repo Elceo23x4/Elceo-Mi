@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS app_historical_analog_memory (
   available_at timestamptz NOT NULL,
   feature_policy_version text NOT NULL,
   feature_content_hash text NOT NULL,
+  stage_feature_timeline_hash text NOT NULL,
   assessment_evidence_hash text NOT NULL,
   outcome_context_hash text NOT NULL,
   audit_json jsonb NOT NULL,

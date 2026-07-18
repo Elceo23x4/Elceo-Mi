@@ -8,7 +8,7 @@ export type HistoricalAnalogEvidenceSufficiency = 'sufficient' | 'sparse' | 'ins
 export type HistoricalAnalogExclusionReason = 'after_query_cutoff' | 'same_event_instance' | 'same_event_evaluation' | 'event_kind_mismatch' | 'indicator_category_mismatch' | 'asset_family_mismatch' | 'provenance_excluded' | 'below_similarity' | 'below_feature_coverage';
 export type HistoricalAnalogQueryStage = 'immediate' | 'confirmation' | 'follow_through';
 export type DirectionRelationToResolvedMacroPressure = 'with_resolved_direction' | 'against_resolved_direction' | 'neutral' | 'unknown';
-export type ResolvedDirectionRelationToFrozenExpectation = 'aligned' | 'opposed' | 'neutral' | 'unknown';
+export type ResolvedDirectionRelationToFrozenExpectation = 'aligned_with_resolved_direction' | 'opposed_to_resolved_direction' | 'neutral' | 'unknown';
 
 export type AnalogFeatureGroup<T extends Record<string, unknown>> = { state: FeatureAvailabilityState; availableAt: string | null; sourcePaths: string[]; values: T; limitations: string[] };
 export type AnalogMatchFeatures = {

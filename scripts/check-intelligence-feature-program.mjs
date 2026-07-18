@@ -185,16 +185,19 @@ for (const phrase of [
   'SqlHistoricalAnalogRepository requires transaction executor',
   'retrieval finds relevant analog beyond 500 and 1000 paged memory records',
   'complete tuple pagination beyond 1000 has no gaps or duplicates',
+  'unrelated wrong-family memory does not change memorySnapshotHash retrievalId or returned ranking',
   'no_comparable_history state is exact',
   'sufficient state is exact',
   'cross-asset orientation derives from source EventRealityEvaluation objects',
   'SqlHistoricalAnalogRepository',
   'rollback after conflict at rank 3 leaves no partial retrieval rows',
-  'structural unavailable explicit decision has reason and policy version',
+  'structural unavailable explicit policy decision has reason/version, while non-matching empty cells remain missing',
   'complete historical trust validator',
 ]) if (!ifp2TestSurface.includes(phrase)) fail(`IFP-2 behavioural test surface missing: ${phrase}`);
 for (const phrase of [
   'resolvedDirectionRelationToFrozenExpectation',
+  'aligned_with_resolved_direction',
+  'opposed_to_resolved_direction',
   'pathDirectionRelation',
   'signedMoveInResolvedDirectionPct',
   'trustedReleaseWitnesses',
@@ -205,6 +208,8 @@ for (const phrase of [
   'runHistoricalAnalogMemoryTests',
   'validateHistoricalIndexingEvidence',
   'HistoricalAnalogStructuralAvailabilityRule',
+  'HistoricalAnalogStructuralAvailabilityPolicy',
+  'HISTORICAL_ANALOG_COVERAGE_STRUCTURAL_POLICY',
 ]) if (!ifp2SourceSurface.includes(phrase)) fail(`IFP-2 source/test-runner surface missing: ${phrase}`);
 
 for (const path of alignmentDocs) {

@@ -193,6 +193,12 @@ for (const phrase of [
   'rollback after conflict at rank 3 leaves no partial retrieval rows',
   'structural unavailable explicit policy decision has reason/version, while non-matching empty cells remain missing',
   'complete historical trust validator',
+  'query maturity is reported separately from candidate overlap and grows with horizon',
+  'normalized retrieval limits handle negative and positive bounded values deterministically',
+  'canonical release verification artifact deduplicates copied verifier evidence while preserving covered source IDs',
+  'unknown relation versus unknown is non-comparable, reduces coverage, and cannot create high similarity',
+  'stage-aware historical feature timeline persists T+1 T+3 and final snapshots from immutable assessments',
+  'assessment timeline lists provisional and final evaluations in interpretedAt tuple order',
 ]) if (!ifp2TestSurface.includes(phrase)) fail(`IFP-2 behavioural test surface missing: ${phrase}`);
 for (const phrase of [
   'resolvedDirectionRelationToFrozenExpectation',
@@ -210,6 +216,10 @@ for (const phrase of [
   'HistoricalAnalogStructuralAvailabilityRule',
   'HistoricalAnalogStructuralAvailabilityPolicy',
   'HISTORICAL_ANALOG_COVERAGE_STRUCTURAL_POLICY',
+  'normalizeHistoricalAnalogResultLimit',
+  'queryEvidenceMaturityRatio',
+  'HistoricalReleaseVerificationArtifact',
+  'HistoricalAnalogStageFeatureSnapshot',
 ]) if (!ifp2SourceSurface.includes(phrase)) fail(`IFP-2 source/test-runner surface missing: ${phrase}`);
 
 for (const path of alignmentDocs) {

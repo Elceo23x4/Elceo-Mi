@@ -10,6 +10,7 @@ export type HistoricalAnalogComponent = keyof typeof HISTORICAL_ANALOG_POLICY.we
 
 export const HISTORICAL_ANALOG_PAGE_LIMIT_POLICY = Object.freeze({ defaultLimit: 100, maxLimit: 1000 });
 export function normalizeHistoricalAnalogPageLimit(limit?: number): number { if (limit === undefined) return HISTORICAL_ANALOG_PAGE_LIMIT_POLICY.defaultLimit; if (!Number.isFinite(limit) || limit < 1) return HISTORICAL_ANALOG_PAGE_LIMIT_POLICY.defaultLimit; return Math.min(Math.trunc(limit), HISTORICAL_ANALOG_PAGE_LIMIT_POLICY.maxLimit); }
+export function normalizeHistoricalAnalogResultLimit(limit?: number): number { if (limit === undefined || !Number.isFinite(limit) || limit < 1) return HISTORICAL_ANALOG_POLICY.thresholds.maxResults; return Math.min(Math.trunc(limit), HISTORICAL_ANALOG_POLICY.thresholds.maxResults); }
 export const HISTORICAL_ANALOG_COVERAGE_STRUCTURAL_POLICY_VERSION = 'historical-analog-coverage-structural-v1' as const;
 export type HistoricalAnalogStructuralAvailabilityDecision = { asset: string; canonicalAssetFamily?: string; indicatorKind: string; indicatorCategory: string; queryStage: string; state: 'required' | 'structurally_unavailable'; policyVersion: string; reasonCode: string | null; structurallyUnavailable: boolean; reason: string | null };
 export type HistoricalAnalogStructuralAvailabilityRule = { asset?: string; canonicalAssetFamily?: string; indicatorKind?: string; indicatorCategory?: string; queryStage?: string; structurallyUnavailable: true; reasonCode: string };

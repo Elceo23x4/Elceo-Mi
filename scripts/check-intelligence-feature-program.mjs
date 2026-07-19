@@ -200,10 +200,15 @@ for (const phrase of [
   'stage-aware historical feature timeline persists T+1 T+3 and final snapshots from immutable assessments',
   'assessment timeline lists provisional and final evaluations in interpretedAt tuple order',
   'featureCoverageRatio <= 1 for every persisted match',
-  'stage timeline identity binds T+1/T+3 snapshots into stage hash feature hash and analogMemoryId',
+  'stage timeline identity binds T+1/T+3 snapshots into stage and feature hash while analogMemoryId remains source-stable',
   'final-only T+6 memory cannot answer T+1/T+3 but can answer T+6-or-later without retrospective fallback',
   'verificationRef alone cannot become trustBasis for release trust',
   'early-stage retrieval persists successfully through SQL schema contract with bounded coverage',
+  'T+6-only mutation leaves T+3 retrieval identity score components coverage rank and ordering unchanged',
+  'post-final assessments cannot enter memory or change stage hash feature hash or analogMemoryId',
+  'coverage uses actual stage snapshots so final-only records count follow-through but not immediate or confirmation',
+  'raw fixture plus effective verified preserves raw fixture reliability separately',
+  'memory/SQL numeric invariant parity rejects',
 ]) if (!ifp2TestSurface.includes(phrase)) fail(`IFP-2 behavioural test surface missing: ${phrase}`);
 for (const phrase of [
   'resolvedDirectionRelationToFrozenExpectation',

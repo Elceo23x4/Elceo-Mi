@@ -207,8 +207,16 @@ for (const phrase of [
   'T+6-only mutation leaves T+3 retrieval identity score components coverage rank and ordering unchanged',
   'post-final assessments cannot enter memory or change stage hash feature hash or analogMemoryId',
   'coverage uses actual stage snapshots so final-only records count follow-through but not immediate or confirmation',
-  'raw fixture plus effective verified preserves raw fixture reliability separately',
+  'raw fixture plus effective verified release is terminally rejected from runtime history',
   'memory/SQL numeric invariant parity rejects',
+    'limit 1 and limit 10 share one canonical maximum persisted retrieval without immutable conflict',
+    'operational memory availability is clock-owned and cannot be backdated to source interpretation',
+    'retrieval identity binds feature policy and query feature hash even for an empty candidate snapshot',
+    'delayed indexing changes operational availability without changing source-event evidence identity',
+    'raw fixture effective verified ${label} is terminally rejected from runtime history',
+    'equal-time stage selection prefers final semantically and is insertion-order independent',
+    'same repository commits outcome-only changes through separate immutable attachment identity without changing ranking',
+
 ]) if (!ifp2TestSurface.includes(phrase)) fail(`IFP-2 behavioural test surface missing: ${phrase}`);
 for (const phrase of [
   'resolvedDirectionRelationToFrozenExpectation',

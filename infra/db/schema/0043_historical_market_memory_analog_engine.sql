@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS app_historical_analog_memory (
   event_kind text NOT NULL,
   indicator_kind text NOT NULL,
   indicator_category text NOT NULL,
+  memory_indexed_at timestamptz NOT NULL,
   available_at timestamptz NOT NULL,
   feature_policy_version text NOT NULL,
   feature_content_hash text NOT NULL,
@@ -27,10 +28,12 @@ CREATE TABLE IF NOT EXISTS app_historical_analog_retrievals (
   feature_policy_version text NOT NULL,
   query_feature_hash text NOT NULL,
   memory_snapshot_hash text NOT NULL,
+  ranking_memory_snapshot_hash text NOT NULL,
+  outcome_attachment_snapshot_hash text NOT NULL,
   evidence_sufficiency text NOT NULL CHECK (evidence_sufficiency IN ('sufficient','sparse','insufficient_feature_overlap','provenance_limited','no_comparable_history')),
   audit_json jsonb NOT NULL,
   created_at timestamptz NOT NULL,
-  UNIQUE (query_event_evaluation_id, query_cutoff_at, retrieval_policy_version, memory_snapshot_hash)
+  UNIQUE (query_event_evaluation_id, query_cutoff_at, retrieval_policy_version, feature_policy_version, query_feature_hash, ranking_memory_snapshot_hash, outcome_attachment_snapshot_hash)
 );
 CREATE TABLE IF NOT EXISTS app_historical_analog_retrieval_matches (
   retrieval_id text NOT NULL REFERENCES app_historical_analog_retrievals(retrieval_id),

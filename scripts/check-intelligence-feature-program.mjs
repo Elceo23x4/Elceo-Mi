@@ -223,6 +223,13 @@ for (const phrase of [
     'simultaneous conflicting SQL retrieval content cannot silently succeed or append rows',
     'SqlEventRealityRepository timeline retains provisional and final rows with memory-parity tuple paging',
     'SqlHistoricalAnalogRepository tuple pages match memory ordering with no gaps or duplicates and later pages reachable',
+    'identical indexing retry preserves first memory availability and does not call the clock again',
+    'changed stageFeatureTimelineHash fails immutable analog-memory replay',
+    'invalid ${label} verifiedAt is rejected and cannot produce verified runtime memory',
+    'clean official witness plus secondary fixture indexes while secondary fixture remains an audit limitation',
+    "selectedStageProvenanceEligibility==='provenance_limited'",
+    'trusted release plus trusted primary produces eligible immediate-stage coverage',
+    'trusted primary with untrusted release does not count as production immediate coverage',
 
 ]) if (!ifp2TestSurface.includes(phrase)) fail(`IFP-2 behavioural test surface missing: ${phrase}`);
 for (const phrase of [

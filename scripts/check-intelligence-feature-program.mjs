@@ -216,6 +216,13 @@ for (const phrase of [
     'raw fixture effective verified ${label} is terminally rejected from runtime history',
     'equal-time stage selection prefers final semantically and is insertion-order independent',
     'same repository commits outcome-only changes through separate immutable attachment identity without changing ranking',
+    'untrusted T+1 stage remains auditable while release direction path volatility and provenance groups are unavailable',
+    'T+1 retrieval cannot score untrusted stage features while T+6 retrieval uses trusted final stage',
+    'coverage does not count an untrusted immediate stage',
+    'simultaneous identical SQL retrieval saves are race-idempotent with one parent and one ranked set',
+    'simultaneous conflicting SQL retrieval content cannot silently succeed or append rows',
+    'SqlEventRealityRepository timeline retains provisional and final rows with memory-parity tuple paging',
+    'SqlHistoricalAnalogRepository tuple pages match memory ordering with no gaps or duplicates and later pages reachable',
 
 ]) if (!ifp2TestSurface.includes(phrase)) fail(`IFP-2 behavioural test surface missing: ${phrase}`);
 for (const phrase of [

@@ -201,7 +201,7 @@ for (const phrase of [
   'assessment timeline lists provisional and final evaluations in interpretedAt tuple order',
   'featureCoverageRatio <= 1 for every persisted match',
   'stage timeline identity binds T+1/T+3 snapshots into stage and feature hash while analogMemoryId remains source-stable',
-  'final-only T+6 memory cannot answer T+1/T+3 but can answer T+6-or-later without retrospective fallback',
+  'final-only T+6 memory yields insufficient_feature_overlap at T+1/T+3 and remains usable at T+6',
   'verificationRef alone cannot become trustBasis for release trust',
   'early-stage retrieval persists successfully through SQL schema contract with bounded coverage',
   'T+6-only mutation leaves T+3 retrieval identity score components coverage rank and ordering unchanged',
@@ -230,6 +230,12 @@ for (const phrase of [
     "selectedStageProvenanceEligibility==='provenance_limited'",
     'trusted release plus trusted primary produces eligible immediate-stage coverage',
     'trusted primary with untrusted release does not count as production immediate coverage',
+    'canonical reaction trust witness rejects ${label}',
+    'valid T+3 verification for T+3 reaction data remains accepted',
+    'memory clock ${label} is rejected and cannot create backdated retrievable memory',
+    'memory clock before an included later stage-createdAt is rejected',
+    'final-only T+6 memory yields insufficient_feature_overlap at T+1/T+3 and remains usable at T+6',
+    'one trustworthy coverage-eligible T+1 stage is sparse rather than stage-limited',
 
 ]) if (!ifp2TestSurface.includes(phrase)) fail(`IFP-2 behavioural test surface missing: ${phrase}`);
 for (const phrase of [

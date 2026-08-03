@@ -84,8 +84,8 @@ function collectWorkspacePackageJsonPaths(rootPackageJson) {
   return paths.sort((a, b) => a.localeCompare(b));
 }
 
-registerCheck('Dependency audit (high/critical)', async () => {
-  const result = await runCommand('npm', ['audit', '--audit-level=high']);
+registerCheck('Dependency audit (all severities)', async () => {
+  const result = await runCommand('npm', ['audit', '--audit-level=info']);
   const output = [result.stdout, result.stderr].filter(Boolean).join('\n');
   const auditUnavailable = /403\s+Forbidden|401|EAI_AGAIN|ECONNREFUSED|ECONNRESET|ENOTFOUND|ETIMEDOUT|audit endpoint returned an error|network|unable to authenticate|unauthorized/i.test(output);
 
@@ -102,10 +102,31 @@ registerCheck('Dependency audit (high/critical)', async () => {
         details: 'npm audit unavailable due to registry/auth/network. Blocking by default. Override is local emergency-only and forbidden in CI/final sign-off.',
       };
     }
-    return { ok: false, details: output || 'npm audit reported high/critical vulnerabilities.' };
+    return { ok: false, details: output || 'npm audit reported one or more vulnerabilities.' };
   }
 
-  return { ok: true, details: 'npm audit passed with no high/critical vulnerabilities.' };
+  return { ok: true, details: 'npm audit passed with zero vulnerabilities at every severity.' };
+});
+
+registerCheck('Runtime and dependency evidence', async () => {
+  const commands = [
+    ['npm', ['run', 'check:runtime']],
+    ['npm', ['ls', '--all', '--json']],
+  ];
+  for (const [command, args] of commands) {
+    const result = await runCommand(command, args);
+    if (result.code !== 0) return { ok: false, details: `${command} ${args.join(' ')} failed\n${result.stdout}\n${result.stderr}`.trim() };
+  }
+
+  const root = readJsonAt('package.json');
+  if (Object.hasOwn(root.overrides || {}, 'minimatch') || Object.hasOwn(root.overrides || {}, 'brace-expansion')) {
+    return { ok: false, details: 'Global minimatch/brace-expansion overrides are forbidden because consumers require different majors.' };
+  }
+  const requiredScripts = ['check:runtime', 'test:sharp', 'test:svg', 'test:next-image'];
+  const missing = requiredScripts.filter((name) => typeof root.scripts?.[name] !== 'string');
+  if (missing.length) return { ok: false, details: `Missing mandatory evidence scripts: ${missing.join(', ')}` };
+  if (!existsSync(resolve(rootDir, 'docs/dependency-security-runtime.md'))) return { ok: false, details: 'Dependency override and runtime evidence documentation is missing.' };
+  return { ok: true, details: 'Runtime contract, complete npm tree, safe override structure, and mandatory runtime evidence are present.' };
 });
 
 registerCheck('Supply-chain dependency source policy', async () => {
@@ -352,7 +373,10 @@ registerCheck('GitHub workflow hardening', async () => {
     { pass: /\npermissions:\s*\n\s*contents:\s*read\s*(?:\n|$)/.test(content), fail: 'Workflow must declare top-level permissions: contents: read.' },
     { pass: !/permissions:\s*write-all/.test(content) && !/contents:\s*write/.test(content), fail: 'Workflow contains disallowed write permissions.' },
     { pass: !/pull_request_target\s*:/.test(content), fail: 'Workflow must not use pull_request_target for this repository policy.' },
-    { pass: /node-version:\s*['"]?20['"]?/.test(content), fail: 'Workflow must pin setup-node to Node 20.' },
+    { pass: /node-version:\s*['"]24\.19\.0['"]/.test(content), fail: 'Workflow must pin setup-node to exact Node 24.19.0.' },
+    { pass: /npm install --global npm@10\.8\.2/.test(content), fail: 'Workflow must explicitly activate npm 10.8.2.' },
+    { pass: /npm run test:sharp/.test(content) && /npm run test:svg/.test(content) && /npm run test:next-image/.test(content), fail: 'Workflow is missing runtime transformation evidence.' },
+    { pass: !/continue-on-error:\s*true/.test(content), fail: 'Mandatory workflow evidence cannot use continue-on-error.' },
     { pass: !/echo\s+.*\$(?:\{|\()?[A-Za-z_][A-Za-z0-9_]*(?:\}|\))?/i.test(content), fail: 'Workflow appears to echo environment variables directly.' },
     { pass: !/smoke:production/.test(content), fail: 'Workflow must not run smoke:production in CI.' },
   ];

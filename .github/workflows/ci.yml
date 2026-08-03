@@ -2,8 +2,7 @@ name: CI Validation
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
 
 permissions:
@@ -15,52 +14,64 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
+        with:
+          fetch-depth: 0
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm install
-
+          node-version: '24.19.0'
+          cache: npm
+      - name: Activate npm 10.8.2
+        run: npm install --global npm@10.8.2
+      - name: Runtime version evidence
+        run: |
+          node --version
+          npm --version
+          npm run check:runtime
+      - name: Deterministic dependency installation
+        run: npm ci
+      - name: Dependency security and tree evidence
+        run: |
+          npm audit --json
+          npm ls --all --json
+          npm ls minimatch brace-expansion sharp --all
+          npm explain minimatch
+          npm explain brace-expansion
+          npm explain sharp
       - name: Typecheck
         run: npm run typecheck
-
-      - name: Test
+      - name: Repository tests
         run: npm run test
-
-      - name: Build
+      - name: Production build
         run: npm run build
-
-      - name: Lint application-state
-        run: npm run -w @elceo/application-state lint
-
-      - name: Lint analytics
-        run: npm run -w @elceo/analytics lint
-
-      - name: Lint reasoning
-        run: npm run -w @elceo/reasoning lint
-
-      - name: Lint notifications
-        run: npm run -w @elceo/notifications lint
-
-      - name: Lint web app
-        run: npm run -w apps/web lint
-
-      - name: Check DB migration ordering
+      - name: Native sharp runtime
+        run: npm run test:sharp
+      - name: SVG transformation pipeline
+        run: npm run test:svg
+      - name: Next.js production image optimizer
+        run: npm run test:next-image
+      - name: Release-scoped workspace lint
+        run: |
+          npm run -w @elceo/application-state lint
+          npm run -w @elceo/analytics lint
+          npm run -w @elceo/reasoning lint
+          npm run -w @elceo/notifications lint
+          npm run -w apps/web lint
+      - name: Migration validation
         run: npm run check:migrations
-
-      - name: Check C5 readiness
+      - name: C5 readiness
         run: npm run check:c5-readiness
-
+      - name: Infrastructure security validation
+        run: npm run check:infra-security
       - name: Check Intelligence Feature Program contract
         run: npm run check:ifp
-
-      - name: Run security gate
+      - name: Strengthened security gate
         run: npm run security:gate
-
-      - name: Security posture note
+      - name: Complete release gate
+        run: npm run release:gate
+      - name: Diff integrity validation
         run: |
-          echo "CI runs without production credentials and without provider live calls."
-          echo "Production smoke testing stays manual/post-deploy via ELCEO_SMOKE_BASE_URL after staging deploy."
+          git diff --check "${{ github.event.pull_request.base.sha || github.event.before }}" HEAD
+          test -z "$(git diff --numstat "${{ github.event.pull_request.base.sha || github.event.before }}" HEAD | awk '$1 == "-" || $2 == "-"')"
+          ! git diff --binary "${{ github.event.pull_request.base.sha || github.event.before }}" HEAD | grep -q 'GIT binary'' patch'
+          test -z "$(git status --short)"

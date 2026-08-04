@@ -111,6 +111,9 @@ registerCheck('Dependency audit (all severities)', async () => {
 registerCheck('Runtime and dependency evidence', async () => {
   const commands = [
     ['npm', ['run', 'check:runtime']],
+    ['npm', ['run', 'check:dependency-compatibility']],
+    ['npm', ['run', 'check:sharp-exception-upstream']],
+    ['npm', ['run', 'audit:image-ingress']],
     ['npm', ['ls', '--all', '--json']],
   ];
   for (const [command, args] of commands) {
@@ -122,10 +125,11 @@ registerCheck('Runtime and dependency evidence', async () => {
   if (Object.hasOwn(root.overrides || {}, 'minimatch') || Object.hasOwn(root.overrides || {}, 'brace-expansion')) {
     return { ok: false, details: 'Global minimatch/brace-expansion overrides are forbidden because consumers require different majors.' };
   }
-  const requiredScripts = ['check:runtime', 'test:sharp', 'test:svg', 'test:next-image'];
+  const requiredScripts = ['check:runtime', 'check:dependency-compatibility', 'check:sharp-exception-upstream', 'audit:image-ingress', 'test:sharp', 'test:svg', 'test:next-image', 'test:next-image-concurrency'];
   const missing = requiredScripts.filter((name) => typeof root.scripts?.[name] !== 'string');
   if (missing.length) return { ok: false, details: `Missing mandatory evidence scripts: ${missing.join(', ')}` };
   if (!existsSync(resolve(rootDir, 'docs/dependency-security-runtime.md'))) return { ok: false, details: 'Dependency override and runtime evidence documentation is missing.' };
+  for (const path of ['docs/security-ci-gates.md', 'docs/image-optimizer-ingress-audit.md', 'docs/next-sharp-compatibility-exception.md', 'scripts/dependency-compatibility-exceptions.json']) if (!existsSync(resolve(rootDir, path))) return { ok: false, details: `Required compatibility evidence missing: ${path}` };
   return { ok: true, details: 'Runtime contract, complete npm tree, safe override structure, and mandatory runtime evidence are present.' };
 });
 

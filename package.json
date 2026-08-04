@@ -15,9 +15,13 @@
     "typecheck": "npm run --workspaces --if-present typecheck",
     "test": "npm run --workspaces --if-present test && node scripts/security-rc-j-self-test.mjs",
     "check:runtime": "node scripts/check-runtime-contract.mjs",
+    "check:dependency-compatibility": "node scripts/check-dependency-compatibility.mjs",
+    "check:sharp-exception-upstream": "node scripts/check-sharp-exception-upstream.mjs",
+    "audit:image-ingress": "node scripts/audit-image-ingress.mjs",
     "test:sharp": "node scripts/test-sharp-runtime.mjs",
     "test:svg": "node scripts/test-svg-pipeline.mjs",
     "test:next-image": "node scripts/test-next-image-runtime.mjs",
+    "test:next-image-concurrency": "node scripts/test-next-image-concurrency.mjs",
     "format": "npm run --workspaces --if-present format",
     "quality-gate": "npm run typecheck && npm run test",
     "smoke:production": "node scripts/production-smoke-test.mjs",
@@ -77,6 +81,7 @@
     "@svgr/plugin-jsx": "8.1.0",
     "@svgr/plugin-svgo": "8.1.0",
     "@svgr/webpack": "^8.1.0",
+    "next": "16.3.0",
     "playwright": "^1.59.1",
     "sharp": "0.35.3",
     "svgo": "4.0.2"
@@ -89,8 +94,7 @@
       "svgo": "3.3.4"
     },
     "next": {
-      "postcss": "8.5.25",
-      "sharp": "0.35.3"
+      "postcss": "8.5.25"
     }
   }
 }

@@ -5,6 +5,7 @@ node_modules
 coverage
 dist
 *.log
+*.tsbuildinfo
 
 dist-test
 dist-test-cjs

@@ -38,6 +38,11 @@ jobs:
           npm explain minimatch
           npm explain brace-expansion
           npm explain sharp
+          npm explain next
+          npm explain next-auth
+          npm run check:dependency-compatibility
+          npm run check:sharp-exception-upstream
+          npm run audit:image-ingress
       - name: Typecheck
         run: npm run typecheck
       - name: Repository tests
@@ -50,6 +55,8 @@ jobs:
         run: npm run test:svg
       - name: Next.js production image optimizer
         run: npm run test:next-image
+      - name: Next.js image optimizer concurrency
+        run: npm run test:next-image-concurrency
       - name: Release-scoped workspace lint
         run: |
           npm run -w @elceo/application-state lint
@@ -69,6 +76,10 @@ jobs:
         run: npm run security:gate
       - name: Complete release gate
         run: npm run release:gate
+      - name: Verify clean working tree
+        run: |
+          git diff --exit-code
+          node scripts/verify-clean-working-tree.mjs
       - name: Diff integrity validation
         run: |
           git diff --check "${{ github.event.pull_request.base.sha || github.event.before }}" HEAD

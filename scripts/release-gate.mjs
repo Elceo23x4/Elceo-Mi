@@ -1,19 +1,27 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+
+const lockHash = () => createHash('sha256').update(readFileSync('package-lock.json')).digest('hex');
 
 const steps = [
   { label: 'npm run check:runtime', command: 'npm', args: ['run', 'check:runtime'] },
-  { label: 'npm install', command: 'npm', args: ['install'] },
+  { label: 'npm ci', command: 'npm', args: ['ci'] },
   { label: 'npm audit --json', command: 'npm', args: ['audit', '--json'] },
   { label: 'npm ls --all --json', command: 'npm', args: ['ls', '--all', '--json'] },
   { label: 'npm ls dependency paths', command: 'npm', args: ['ls', 'minimatch', 'brace-expansion', 'sharp', '--all'] },
+  { label: 'npm run check:dependency-compatibility', command: 'npm', args: ['run', 'check:dependency-compatibility'] },
+  { label: 'npm run check:sharp-exception-upstream', command: 'npm', args: ['run', 'check:sharp-exception-upstream'] },
+  { label: 'npm run audit:image-ingress', command: 'npm', args: ['run', 'audit:image-ingress'] },
   { label: 'npm run typecheck', command: 'npm', args: ['run', 'typecheck'] },
   { label: 'npm run test', command: 'npm', args: ['run', 'test'] },
   { label: 'npm run build', command: 'npm', args: ['run', 'build'] },
   { label: 'npm run test:sharp', command: 'npm', args: ['run', 'test:sharp'] },
   { label: 'npm run test:svg', command: 'npm', args: ['run', 'test:svg'] },
   { label: 'npm run test:next-image', command: 'npm', args: ['run', 'test:next-image'] },
+  { label: 'npm run test:next-image-concurrency', command: 'npm', args: ['run', 'test:next-image-concurrency'] },
   { label: 'npm run -w @elceo/application-state lint', command: 'npm', args: ['run', '-w', '@elceo/application-state', 'lint'] },
   { label: 'npm run -w @elceo/analytics lint', command: 'npm', args: ['run', '-w', '@elceo/analytics', 'lint'] },
   { label: 'npm run -w @elceo/reasoning lint', command: 'npm', args: ['run', '-w', '@elceo/reasoning', 'lint'] },
@@ -55,6 +63,12 @@ function runStep(step, index, total) {
 }
 
 (async function main() {
+  const initialHash = lockHash();
+  const preflight = [
+    { label: 'initial git diff --exit-code', command: 'git', args: ['diff', '--exit-code'] },
+    { label: 'initial git status --porcelain', command: 'node', args: ['scripts/verify-clean-working-tree.mjs'] },
+  ];
+  for (let i = 0; i < preflight.length; i += 1) await runStep(preflight[i], i, preflight.length + steps.length + 2);
   for (let i = 0; i < steps.length; i += 1) {
     try {
       await runStep(steps[i], i, steps.length);
@@ -64,6 +78,9 @@ function runStep(step, index, total) {
       process.exit(1);
     }
   }
+  if (lockHash() !== initialHash) throw new Error('package-lock.json hash changed during release validation');
+  await runStep({ label: 'final git diff --exit-code', command: 'git', args: ['diff', '--exit-code'] }, steps.length + 2, steps.length + 4);
+  await runStep({ label: 'final git status --porcelain', command: 'node', args: ['scripts/verify-clean-working-tree.mjs'] }, steps.length + 3, steps.length + 4);
 
   console.log('\nRelease gate completed successfully.');
   console.log('Next steps:');

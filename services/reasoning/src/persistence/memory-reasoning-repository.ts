@@ -8,6 +8,7 @@ import type {
   ReasoningPersistenceRepository,
   ReasoningRunRepository
 } from './contracts';
+import { MemoryHistoricalAnalogRepository } from '../historical-analog-memory/repository';
 import { MemoryEventExpectationRepository, MemoryEventRealityRepository, MemoryExpectationRealityRepository, MemoryExpectationRepository } from '../expectation-reality/repository';
 
 export class MemoryReasoningRunRepository implements ReasoningRunRepository {
@@ -97,6 +98,7 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
   readonly expectationRealityRepository: MemoryExpectationRealityRepository;
   readonly eventExpectationRepository: MemoryEventExpectationRepository;
   readonly eventRealityRepository: MemoryEventRealityRepository;
+  readonly historicalAnalogRepository: MemoryHistoricalAnalogRepository;
 
   constructor(
     runRepository: ReasoningRunRepository = new MemoryReasoningRunRepository(),
@@ -105,7 +107,8 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
     expectationRealityRepository: MemoryExpectationRealityRepository = new MemoryExpectationRealityRepository(),
     expectationRepository: MemoryExpectationRepository = new MemoryExpectationRepository(expectationRealityRepository),
     eventExpectationRepository: MemoryEventExpectationRepository = new MemoryEventExpectationRepository(),
-    eventRealityRepository: MemoryEventRealityRepository = new MemoryEventRealityRepository()
+    eventRealityRepository: MemoryEventRealityRepository = new MemoryEventRealityRepository(),
+    historicalAnalogRepository: MemoryHistoricalAnalogRepository = new MemoryHistoricalAnalogRepository()
   ) {
     this.runRepository = runRepository;
     this.snapshotRepository = snapshotRepository;
@@ -114,5 +117,6 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
     this.expectationRealityRepository = expectationRealityRepository;
     this.eventExpectationRepository = eventExpectationRepository;
     this.eventRealityRepository = eventRealityRepository;
+    this.historicalAnalogRepository = historicalAnalogRepository;
   }
 }

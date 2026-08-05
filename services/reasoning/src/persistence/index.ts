@@ -23,3 +23,6 @@ export * from './registry-snapshot-repository';
 export * from "./market-evidence-ingestion-repository";
 
 export * from './scheduled-ingestion-repository';
+
+export * from '../historical-analog-memory/repository';
+export * from '../historical-analog-memory/sql-repository';

@@ -1,4 +1,8 @@
 import type { CanonicalAssetSymbol, Timeframe } from '@elceo/types';
+import { decodeTupleCursor } from '../historical-analog-memory/identity';
+import { normalizeHistoricalAnalogPageLimit } from '../historical-analog-memory/policy';
+import { SqlHistoricalAnalogRepository } from '../historical-analog-memory/sql-repository';
+import type { HistoricalAnalogRepository } from '../historical-analog-memory/contracts';
 import type {
   CognitionDriftRepository,
   CognitionSnapshotRepository,
@@ -14,7 +18,8 @@ function runtimeEnv(): Record<string, string | undefined> {
 }
 
 type QueryRow = Record<string, unknown>;
-type PoolLike = { query: (sql: string, params?: unknown[]) => Promise<{ rows: QueryRow[] }> };
+type SqlClientLike = { query: (sql: string, params?: unknown[]) => Promise<{ rows: QueryRow[] }>; release: () => void };
+type PoolLike = { query: (sql: string, params?: unknown[]) => Promise<{ rows: QueryRow[] }>; connect?: () => Promise<SqlClientLike> };
 
 let poolPromise: Promise<PoolLike> | null = null;
 
@@ -33,6 +38,23 @@ async function queryDb<T extends QueryRow = QueryRow>(sql: string, params: unkno
   const pool = await getPool();
   const result = await pool.query(sql, params);
   return result.rows as T[];
+}
+async function transactionDb<T>(fn: (query: SqlReasoningQueryExecutor) => Promise<T>): Promise<T> {
+  const pool = await getPool();
+  if (!pool.connect) throw new Error('sql_transaction_connection_unavailable');
+  const client = await pool.connect();
+  const query: SqlReasoningQueryExecutor = async <R extends QueryRow = QueryRow>(sql: string, params: unknown[] = []) => (await client.query(sql, params)).rows as R[];
+  try {
+    await client.query('BEGIN');
+    const result = await fn(query);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 type RunRow = {
@@ -468,6 +490,7 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
   readonly expectationRealityRepository: ExpectationRealityRepository;
   readonly eventExpectationRepository: EventExpectationRepository;
   readonly eventRealityRepository: EventRealityRepository;
+  readonly historicalAnalogRepository: HistoricalAnalogRepository;
 
   constructor(
     runRepository: ReasoningRunRepository = new SqlReasoningRunRepository(),
@@ -476,7 +499,8 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
     expectationRepository: ExpectationRepository = new SqlExpectationRepository(),
     expectationRealityRepository: ExpectationRealityRepository = new SqlExpectationRealityRepository(),
     eventExpectationRepository: EventExpectationRepository = new SqlEventExpectationRepository(),
-    eventRealityRepository: EventRealityRepository = new SqlEventRealityRepository()
+    eventRealityRepository: EventRealityRepository = new SqlEventRealityRepository(),
+    historicalAnalogRepository: HistoricalAnalogRepository = new SqlHistoricalAnalogRepository(queryDb, transactionDb)
   ) {
     this.runRepository = runRepository;
     this.snapshotRepository = snapshotRepository;
@@ -485,6 +509,7 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
     this.expectationRealityRepository = expectationRealityRepository;
     this.eventExpectationRepository = eventExpectationRepository;
     this.eventRealityRepository = eventRealityRepository;
+    this.historicalAnalogRepository = historicalAnalogRepository;
   }
 }
 
@@ -511,4 +536,4 @@ export class SqlExpectationRealityRepository implements ExpectationRealityReposi
   async listExpectationRealityHistory(params: { asset?: CanonicalAssetSymbol; timeframe?: Timeframe; expectationId?: string; limit: number }): Promise<ExpectationRealityEvaluation[]> { const rows=await this.query<{audit_json:ExpectationRealityEvaluation}>('SELECT audit_json FROM app_expectation_reality_evaluations WHERE ($1::text IS NULL OR asset=$1) AND ($2::text IS NULL OR timeframe=$2) AND ($3::text IS NULL OR expectation_id=$3) ORDER BY evaluated_at DESC LIMIT $4',[params.asset??null,params.timeframe??null,params.expectationId??null,params.limit]); return rows.map((r)=>r.audit_json); }
 }
 export class SqlEventExpectationRepository implements EventExpectationRepository { constructor(private readonly query: SqlReasoningQueryExecutor = queryDb) {} async saveEventExpectation(r: EventExpectationRecord): Promise<EventExpectationRecord> { await this.query(`INSERT INTO app_expectation_records (expectation_id, expectation_kind, event_release_id, event_kind, scheduled_release_time, asset, issued_at, data_cutoff_at, cognition_snapshot_id, payload_json, created_at) VALUES ($1,'event',$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT (expectation_id) DO NOTHING`, [r.expectationId,r.eventReleaseId,r.eventKind,r.scheduledReleaseTime,r.asset,r.issuedAt,r.dataCutoffAt,r.preEventCognitionSnapshotId,JSON.stringify(r),r.createdAt]); const existing=await this.getEventExpectationById(r.expectationId); if(!existing || canonicalJson(existing)!==canonicalJson(r)) throw new Error('immutable_event_expectation_conflict'); return existing; } async getEventExpectationById(id:string): Promise<EventExpectationRecord | null> { const rows=await this.query<{payload_json:EventExpectationRecord}>('SELECT payload_json FROM app_expectation_records WHERE expectation_id=$1 AND expectation_kind=\'event\'',[id]); return rows[0]?.payload_json ?? null; } }
-export class SqlEventRealityRepository implements EventRealityRepository { constructor(private readonly query: SqlReasoningQueryExecutor = queryDb) {} async saveEventEvaluation(e: EventRealityEvaluation): Promise<EventRealityEvaluation> { await this.query(`INSERT INTO app_event_reality_evaluations (event_evaluation_id, expectation_id, release_id, release_version, asset, interpreted_at, assessment_stage, finalization_status, primary_event_outcome, pre_event_cognition_snapshot_id, post_event_cognition_snapshot_id, observation_content_hash, assessment_evidence_hash, related_evidence_status, related_evidence_decision_at, related_evidence_policy_version, related_evidence_reason_codes, reaction_provenance_json, audit_json, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) ON CONFLICT (event_evaluation_id) DO NOTHING`, [e.eventEvaluationId,e.expectationId,e.releaseId,e.releaseVersion,e.asset,e.interpretedAt,e.assessmentStage,e.finalizationStatus,e.outcome,e.preEventCognitionSnapshotId,e.postEventCognitionSnapshotId,e.observationContentHash,e.assessmentEvidenceHash,e.relatedEvidenceStatus,e.relatedEvidenceDecisionAt,e.relatedEvidencePolicyVersion,JSON.stringify(e.relatedEvidenceReasonCodes),JSON.stringify(e.reactionProvenance),JSON.stringify(e),e.createdAt]); const rows=await this.query<{audit_json:EventRealityEvaluation}>('SELECT audit_json FROM app_event_reality_evaluations WHERE event_evaluation_id=$1',[e.eventEvaluationId]); const existing=rows[0]?.audit_json ?? await this.getEventEvaluation(e.expectationId,e.releaseVersion); if(!existing || canonicalJson(existing)!==canonicalJson(e)) throw new Error('immutable_event_evaluation_conflict'); return existing; } async getEventEvaluation(expectationId:string, releaseVersion:string): Promise<EventRealityEvaluation | null> { const rows=await this.query<{audit_json:EventRealityEvaluation}>(`SELECT audit_json FROM app_event_reality_evaluations WHERE expectation_id=$1 AND release_version=$2 ORDER BY CASE WHEN finalization_status='final' THEN 0 ELSE 1 END, interpreted_at DESC`,[expectationId,releaseVersion]); return rows[0]?.audit_json ?? null; } }
+export class SqlEventRealityRepository implements EventRealityRepository { constructor(private readonly query: SqlReasoningQueryExecutor = queryDb) {} async saveEventEvaluation(e: EventRealityEvaluation): Promise<EventRealityEvaluation> { await this.query(`INSERT INTO app_event_reality_evaluations (event_evaluation_id, expectation_id, release_id, release_version, asset, interpreted_at, assessment_stage, finalization_status, primary_event_outcome, pre_event_cognition_snapshot_id, post_event_cognition_snapshot_id, observation_content_hash, assessment_evidence_hash, related_evidence_status, related_evidence_decision_at, related_evidence_policy_version, related_evidence_reason_codes, reaction_provenance_json, audit_json, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) ON CONFLICT (event_evaluation_id) DO NOTHING`, [e.eventEvaluationId,e.expectationId,e.releaseId,e.releaseVersion,e.asset,e.interpretedAt,e.assessmentStage,e.finalizationStatus,e.outcome,e.preEventCognitionSnapshotId,e.postEventCognitionSnapshotId,e.observationContentHash,e.assessmentEvidenceHash,e.relatedEvidenceStatus,e.relatedEvidenceDecisionAt,e.relatedEvidencePolicyVersion,JSON.stringify(e.relatedEvidenceReasonCodes),JSON.stringify(e.reactionProvenance),JSON.stringify(e),e.createdAt]); const rows=await this.query<{audit_json:EventRealityEvaluation}>('SELECT audit_json FROM app_event_reality_evaluations WHERE event_evaluation_id=$1',[e.eventEvaluationId]); const existing=rows[0]?.audit_json ?? await this.getEventEvaluation(e.expectationId,e.releaseVersion); if(!existing || canonicalJson(existing)!==canonicalJson(e)) throw new Error('immutable_event_evaluation_conflict'); return existing; } async getEventEvaluation(expectationId:string, releaseVersion:string): Promise<EventRealityEvaluation | null> { const rows=await this.query<{audit_json:EventRealityEvaluation}>(`SELECT audit_json FROM app_event_reality_evaluations WHERE expectation_id=$1 AND release_version=$2 ORDER BY CASE WHEN finalization_status='final' THEN 0 ELSE 1 END, interpreted_at DESC`,[expectationId,releaseVersion]); return rows[0]?.audit_json ?? null; } async getEventEvaluationById(eventEvaluationId:string): Promise<EventRealityEvaluation | null> { const rows=await this.query<{audit_json:EventRealityEvaluation}>('SELECT audit_json FROM app_event_reality_evaluations WHERE event_evaluation_id=$1',[eventEvaluationId]); return rows[0]?.audit_json ?? null; } async listFinalEventEvaluations(params:{ before:string; asset?:any; limit:number; cursor?:string }): Promise<EventRealityEvaluation[]> { const cursor=decodeTupleCursor(params.cursor); const p:unknown[]=[params.before]; let where="finalization_status='final' AND interpreted_at < $1"; if(params.asset){ p.push(params.asset); where+=` AND asset=$${p.length}`; } if(cursor){ p.push(cursor.at,cursor.id); where+=` AND (interpreted_at > $${p.length-1} OR (interpreted_at = $${p.length-1} AND event_evaluation_id > $${p.length}))`; } const sql=`SELECT audit_json FROM app_event_reality_evaluations WHERE ${where} ORDER BY interpreted_at ASC, event_evaluation_id ASC LIMIT ${normalizeHistoricalAnalogPageLimit(params.limit)}`; const rows=await this.query<{audit_json:EventRealityEvaluation}>(sql, p); return rows.map((r)=>r.audit_json); } async listEventEvaluationTimeline(params:{ expectationId:string; releaseVersion:string; before?:string; limit:number; cursor?:string }): Promise<EventRealityEvaluation[]> { const cursor=decodeTupleCursor(params.cursor); const p:unknown[]=[params.expectationId,params.releaseVersion]; let where='expectation_id=$1 AND release_version=$2'; if(params.before){ p.push(params.before); where+=` AND interpreted_at < $${p.length}`; } if(cursor){ p.push(cursor.at,cursor.id); where+=` AND (interpreted_at > $${p.length-1} OR (interpreted_at = $${p.length-1} AND event_evaluation_id > $${p.length}))`; } const rows=await this.query<{audit_json:EventRealityEvaluation}>(`SELECT audit_json FROM app_event_reality_evaluations WHERE ${where} ORDER BY interpreted_at ASC, event_evaluation_id ASC LIMIT ${normalizeHistoricalAnalogPageLimit(params.limit)}`, p); return rows.map((r)=>r.audit_json); } }

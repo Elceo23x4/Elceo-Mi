@@ -1,53 +1,17 @@
-# Security CI Gates (S1)
+# Security CI gates
 
-## Local command
-Run:
+## Runtime and dependency policy
 
-```bash
-npm run security:gate
-```
+ELCEO certifies exact Node `24.19.0` LTS and npm `10.8.2`. Installation is deterministic via `npm ci`. `npm audit --json` blocks every severity and `npm ls --all --json` blocks invalid or peer-invalid nodes.
 
-## What it checks
-1. `npm audit --audit-level=high` (fails on high/critical vulnerabilities).
-2. `package-lock.json` integrity and root metadata/dependency consistency against `package.json`.
-3. Suspicious `package.json` script patterns (`curl|sh`, `wget|sh`, `rm -rf /`, `chmod 777`, `eval(`, `base64 -d | sh`, `nc -e`).
-4. Static secret scanning across tracked source-like files, including docs, with allowlist marker `security-scan-ignore` on the same line.
-5. `.github/workflows/ci.yml` hardening (`permissions: contents: read`, no `write-all`/`contents: write`, no obvious secret echoing).
+The approved `next@15.5.22 -> sharp@0.35.3` exception was retired before certification after stable Next 16.3.0 published `sharp@^0.35.3`. The manifest records zero active exceptions and one retired decision. No broad Sharp override, force flag, legacy peer mode, preview framework, vulnerable downgrade or audit waiver is allowed.
 
-## CI enforcement
-CI runs `npm run security:gate` after typecheck/test/build/lint/migration/c5-readiness checks, without `SECURITY_GATE_ALLOW_AUDIT_UNAVAILABLE`.
+## Mandatory evidence
 
-## Policy notes
-- Audit policy is high/critical only for this batch.
-- `npm audit` unavailability (registry/auth/network) is **blocking by default**.
-- Local emergency-only override: `SECURITY_GATE_ALLOW_AUDIT_UNAVAILABLE=true` downgrades audit-unavailable to warning; do not use in CI or release sign-off.
-- Secret scan prints only file path, line number, and pattern name (never the secret value).
-- Placeholder values like `<SECRET>` and `your_api_key_here` are ignored in docs/config examples.
+CI and `release:gate` run runtime, audit, complete tree, retired-exception manifest and supported-contract, stable-upstream-removal and image-ingress checks; typecheck/tests/build; native Sharp and SVG matrices; production Next optimizer and bounded concurrency matrices; scoped lint; migration/C5/infrastructure/IFP/security gates; then lockfile-hash, `git diff --exit-code` and strict porcelain checks. Registry unavailability is blocking. No mutation is cleaned or hidden.
 
-## Known limitations
-- Static regex scanning is not a replacement for professional secret scanning.
-- `npm audit` may include false positives/negatives.
-- Additional hardening batches S2/S3/S4/S5/S6 remain required before launch.
+Image ingress remains local/static only with no `remotePatterns`, domains, loaders, uploads or arbitrary URL fetch. See `docs/image-optimizer-ingress-audit.md` and `docs/next-sharp-compatibility-exception.md`.
 
-## S4 supply-chain extensions
-- `security:gate` now enforces npm package-manager pinning (`npm@10.x`), lockfile version policy, dependency source restrictions, lifecycle install-script restrictions, lockfile resolved-source restrictions, and dependency-confusion checks.
-- CI workflow hardening checks now also assert: no `pull_request_target`, Node 20 pinning, no `smoke:production` in CI, and no secret echo patterns.
-- Root sensitive config files (`.env`, `.env.local`, `.npmrc`, `.yarnrc`) are treated as failures if present in repository root.
-- See `docs/supply-chain-cicd-hardening.md` for policy details and branch-protection checklist.
+## Removal procedure
 
-
-## S5 infrastructure/WAF/deployment policy update
-- Added and adopted `docs/infrastructure-security-policy.md` as required pre-launch policy source.
-- Confirms app-level headers baseline and deployment-level enforcement for HTTPS/HSTS/CSP/CORS/WAF.
-- Confirms backup/restore, DB/network isolation, IAM least-privilege, and secret rotation are launch blockers.
-- Staging verification is required before launch; S6 attack drill remains mandatory.
-- This update is policy hardening only and is not security certification.
-
-
-## S6 staging attack drill and final sign-off update
-- S6 status: framework defined in `docs/staging-attack-drill-and-security-signoff.md`; staging execution evidence remains required before production promotion.
-- Final sign-off report: `docs/final-security-signoff-report.md`.
-- Security and release gates must pass **without** audit-unavailable override for CI/final sign-off.
-- Required sequence before production deploy: staging smoke + staging attack drill.
-- Required sequence after production deploy: production smoke.
-- Public/frontend launch remains blocked until security sign-off is complete.
+`npm run check:sharp-exception-upstream` queries authoritative npm metadata with a timeout and fails when a stable Next release admits safe Sharp and satisfies Auth.js. At that point remove the manifest entry and override, upgrade the stable graph, regenerate the lockfile once using npm 10.8.2, and pass the entire release chain before deployment.

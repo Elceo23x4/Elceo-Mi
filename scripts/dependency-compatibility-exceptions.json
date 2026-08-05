@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "exceptions": [],
+  "retiredExceptions": [
+    {
+      "id": "ELCEO-NEXT-SHARP-2026-08-04",
+      "parentPackage": "next",
+      "parentVersion": "15.5.22",
+      "childPackage": "sharp",
+      "declaredParentRange": "^0.34.3",
+      "approvedInstalledChildVersion": "0.35.3",
+      "affectedAdvisory": "GHSA-f88m-g3jw-g9cj",
+      "approvalDate": "2026-08-04",
+      "approvalStatus": "retired-before-certification",
+      "retirementReason": "Stable next@16.3.0 was published with sharp@^0.35.3, satisfies Auth.js, and resolves cleanly with npm 10.8.2 and zero audit findings.",
+      "evidenceDocument": "docs/next-sharp-compatibility-exception.md"
+    }
+  ]
+}

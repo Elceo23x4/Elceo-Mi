@@ -325,6 +325,45 @@ const blockerSentence = 'Production launch remains blocked until RC-I2-CERT, RC-
 if (!productionStatus.includes(blockerSentence)) fail('final production blocker list does not include RC-I2-CERT, RC-J-ENV, IFP, and RC-K');
 if (productionStatus.includes('RC-J remains a mandatory subsequent launch batch')) fail('final production status contains stale RC-J current lifecycle phrase');
 
+
+const ifp3Sources = [
+  'services/reasoning/src/contradiction-action-protocol/contracts.ts',
+  'services/reasoning/src/contradiction-action-protocol/state-machine.ts',
+  'services/reasoning/src/contradiction-action-protocol/identity.ts',
+  'services/reasoning/src/contradiction-action-protocol/repository.ts',
+  'services/reasoning/src/contradiction-action-protocol/sql-repository.ts',
+  'services/reasoning/src/contradiction-action-protocol/service.ts',
+  'services/reasoning/src/contradiction-action-protocol/policy.ts',
+  'services/reasoning/src/tests/contradiction-action-protocol.test.ts',
+  'infra/db/schema/0044_contradiction_action_protocol.sql',
+  'docs/contradiction-to-action-protocol.md',
+  'docs/ifp-3-confidence-zero-impact-diagnosis.md',
+];
+for (const path of ifp3Sources) {
+  try { read(path); } catch { fail(`IFP-3 implementation surface missing file: ${path}`); }
+}
+const ifp3Surface = ifp3Sources.map((path) => { try { return read(path); } catch { return ''; } }).join('\n');
+for (const phrase of [
+  'contradiction-action-protocol-v1',
+  'wait_for_confirmation',
+  'review_required',
+  'invalidate_thesis',
+  'escalate_review',
+  'archive_resolved',
+  'ProtocolAuditRecord',
+  'decideProtocolState',
+  'protocolDecisionId',
+  'protocolEvidenceSnapshotId',
+  'MemoryContradictionActionProtocolRepository',
+  'SqlContradictionActionProtocolRepository',
+  'validateNoAdviceRecord',
+  '0044_contradiction_action_protocol',
+  'confidence zero alone cannot produce invalidation or escalation',
+  'analog outcome alone cannot cause a hard state',
+  'concurrent identical save behavior',
+]) if (!ifp3Surface.includes(phrase)) fail(`IFP-3 implementation surface missing: ${phrase}`);
+for (const phrase of ['IFP-1 closed', 'IFP-2 closed', 'IFP-3 active', 'IFP-4 not started', 'RC-K not started', 'RC-I2-CERT and RC-J-ENV remain external blockers']) if (!doc.includes(phrase)) fail(`IFP-3 status missing: ${phrase}`);
+
 if (/^### .*C6-R9H|^### .*C6-R10|Phase ID: C6-R9H|Phase ID: C6-R10|^### C6-/m.test(doc)) fail('prohibited C6-R9H, C6-R10, or new C6 phase introduced');
 if (/^### Affiliate-\d+/m.test(doc) || /^### IFP-\d+.*Affiliate/im.test(doc)) fail('affiliate phase represented as IFP phase');
 for (const [path, content] of [['docs/intelligence-feature-program.md', doc], ...alignmentDocs.map((path) => [path, read(path)])]) {

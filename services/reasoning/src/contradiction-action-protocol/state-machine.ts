@@ -1,0 +1,28 @@
+import type { EventRealityEvaluation } from '../expectation-reality/contracts';
+import type { ProtocolDecisionState, EvidenceSufficiency, TransitionReason, ProtocolEvidenceBundle } from './contracts';
+
+const stageOrder = { immediate: 1, confirmation: 2, follow_through: 3 } as const;
+const severityOrder: Record<string, number> = { none:0, low:1, moderate:2, high:3, critical:4 };
+export function assessmentStageOrder(stage: EventRealityEvaluation['assessmentStage']): number { return stageOrder[stage]; }
+export function directConfirmedInvalidation(bundle: ProtocolEvidenceBundle): string[] { const r:string[]=[]; if ((bundle.eventEvaluation.outcome as string) === 'invalidated') r.push('event_reality_invalidated'); const inv = bundle.invalidationState as any; if (inv && (inv.primaryInvalidationLevel?.state === 'broken' || inv.primaryInvalidationState === 'broken' || inv.status === 'invalidated' || inv.broken === true) && (inv.confirmed === true || inv.primaryInvalidationLevel?.confirmed === true || inv.evidenceStatus === 'confirmed')) r.push('confirmed_primary_invalidation_level_broken'); return r; }
+function provenanceLimited(bundle: ProtocolEvidenceBundle): boolean { return bundle.eventEvaluation.reality.provenance.some((p)=> (p.effectiveReliability ?? p.reliability) === 'unverified') || bundle.eventEvaluation.reactionProvenance.some((p)=> (p.effectiveReliability ?? p.reliability) === 'unverified'); }
+export function decideProtocolState(bundle: ProtocolEvidenceBundle): { state: ProtocolDecisionState; sufficiency: EvidenceSufficiency; reasons: TransitionReason[]; warnings: string[]; limitations: string[]; rationale: string } {
+  const e = bundle.eventEvaluation; const cm = bundle.contradictionMatrix; const reasons: TransitionReason[]=[]; const warnings=[...new Set([...(e.warnings ?? []), ...(cm.warnings ?? [])])]; const limitations=[...new Set([...((e as any).limitations ?? []), ...(bundle.analogRetrieval?.limitations ?? [])])];
+  const invalidation = directConfirmedInvalidation(bundle); if (invalidation.length) return { state:'invalidate_thesis', sufficiency:'sufficient', reasons:['confirmed_canonical_invalidation'], warnings, limitations, rationale:'Direct persisted canonical evidence confirms invalidation; analog context, confidence, and contradiction score are not used as independent invalidation causes.' };
+  if (e.finalizationStatus === 'provisional') reasons.push('provisional_assessment_stage');
+  if (['absorbed','delayed','ambiguous'].includes(e.outcome)) reasons.push(e.outcome === 'absorbed' ? 'absorbed_reaction_pending_later_window' : e.outcome === 'delayed' ? 'delayed_reaction_pending_later_window' : 'ambiguous_reaction_pending_later_window');
+  if (e.relatedEvidenceStatus === 'pending') reasons.push('pending_related_market_evidence');
+  if ((e.reality.primaryPriceReaction as any)?.status === 'pending_confirmation' || cm.status === 'pending_confirmation' || cm.warnings?.includes('pending_price_confirmation' as any)) reasons.push('pending_price_confirmation');
+  if (provenanceLimited(bundle)) reasons.push('provenance_limitation');
+  if (cm.warnings?.includes('source_independence_unverified' as any)) reasons.push('source_disagreement_unresolved');
+  if (reasons.length) return { state:'wait_for_confirmation', sufficiency: reasons.includes('provenance_limitation') ? 'provenance_limited' : e.finalizationStatus === 'provisional' ? 'provisional' : 'pending_confirmation', reasons:[...new Set(reasons)], warnings, limitations, rationale:'Evidence remains immature or provenance-limited, so the protocol waits for required confirmation evidence.' };
+  const sev = severityOrder[cm.highestSeverity ?? 'none'] ?? 0; const families = new Set(cm.signals?.map((s:any)=>s.family) ?? []);
+  if (e.outcome === 'reversed' && sev >= 4) reasons.push('critical_direct_contradiction');
+  if (e.relatedEvidenceStatus === 'conflicting_final' && sev >= 3) reasons.push('compound_direct_contradiction','related_market_conflict');
+  if (e.outcome === 'mispriced_candidate' && sev >= 3) reasons.push('mispriced_candidate_critical_conflict');
+  if (families.size >= 2 && sev >= 3) reasons.push('compound_direct_contradiction');
+  if (reasons.some((r)=>['critical_direct_contradiction','compound_direct_contradiction','mispriced_candidate_critical_conflict'].includes(r))) return { state:'escalate_review', sufficiency:'sufficient', reasons:[...new Set(reasons)], warnings, limitations, rationale:'Sufficient direct current evidence shows critical or compound contradiction requiring analyst or risk review; analog outcomes are context only.' };
+  if (e.outcome === 'rejected') reasons.push('rejected_expectation'); if (sev >= 2 || cm.status === 'contradiction') reasons.push('material_contradiction'); if (e.relatedEvidenceStatus === 'conflicting_final') reasons.push('related_market_conflict'); if (bundle.analogRetrieval && bundle.analogRetrieval.matches.some((m)=>m.historicalOutcomeContext.finalOutcome === 'rejected' || (m.historicalOutcomeContext.finalOutcome as string) === 'invalidated')) reasons.push('analog_context_conflict_non_terminal');
+  if (reasons.length) return { state:'review_required', sufficiency:'sufficient', reasons:[...new Set(reasons)], warnings, limitations, rationale:'Confirmed material contradiction requires interpretation but does not prove canonical invalidation or escalation.' };
+  return { state:'archive_resolved', sufficiency:'resolved', reasons:['final_resolved_non_actionable'], warnings, limitations, rationale:'Final evidence is resolved, absorbed, or non-actionable with no active invalidation or unresolved evidence requirement.' };
+}

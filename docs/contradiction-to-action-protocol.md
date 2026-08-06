@@ -42,3 +42,8 @@ The focused test suite covers finalization-aware states, canonical cognition inv
 
 ## Truthful completion boundary
 IFP-3 remains active until this PR is accepted and merged. IFP-4 has not started; the complete IFP is not finished.
+
+## Final acceptance boundaries
+Escalation and review reasons are independent: a trusted reversal escalates only at critical severity, while a trusted `mispriced_candidate` escalates at high or critical severity; lower severities review. Every contradiction evidence point must map to exactly one persisted provenance record, replay provenance requires verification artifacts, and orphan or duplicate provenance is rejected before matrix evaluation.
+
+Persisted input identity binds availability, normalized input, source IDs, provenance, provider/source-independence flags, warnings, and limitations. Reordering set-like fields is neutral; provenance or point-in-time eligibility changes identity. SQL input persistence permits identical normalized market content for distinct valid event lineages. Analog outcomes remain context only and are not state-machine inputs; protocol parent, evidence, and transition writes remain atomic.

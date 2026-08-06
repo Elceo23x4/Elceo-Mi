@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS contradiction_action_protocol_inputs (
   assessment_evidence_hash TEXT NOT NULL CHECK (length(assessment_evidence_hash) > 0),
   available_at TIMESTAMPTZ NOT NULL,
   evidence_cutoff_at TIMESTAMPTZ NOT NULL,
-  normalized_input_hash TEXT NOT NULL UNIQUE,
+  normalized_input_hash TEXT NOT NULL,
   provider_reliability_supplied BOOLEAN NOT NULL,
   source_independence_verified BOOLEAN NOT NULL,
   provenance_classes TEXT[] NOT NULL,

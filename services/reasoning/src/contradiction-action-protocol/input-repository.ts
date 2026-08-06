@@ -12,7 +12,7 @@ export function normalizePersistedContradictionInputRecord(record: PersistedCont
   const input = normalizeContradictionInput(record.input);
   const normalizedInputHash = canonicalHash(input);
   const base = { ...record, input, normalizedInputHash, sourceEvidenceIds:[...new Set(record.sourceEvidenceIds)].sort(), provenance:[...record.provenance].sort((a,b)=>canonicalHash(a).localeCompare(canonicalHash(b))), warnings:[...new Set(record.warnings)].sort(), limitations:[...new Set(record.limitations)].sort(), canonicalPayloadHash:'' };
-  const recordId = `contradiction-input:${canonicalHash({ eventEvaluationId:base.eventEvaluationId, expectationId:base.expectationId, asset:base.asset, assessmentStage:base.assessmentStage, assessmentEvidenceHash:base.assessmentEvidenceHash, evidenceCutoffAt:base.evidenceCutoffAt, normalizedInputHash })}`;
+  const recordId = `contradiction-input:${canonicalHash({ eventEvaluationId:base.eventEvaluationId, expectationId:base.expectationId, asset:base.asset, assessmentStage:base.assessmentStage, assessmentEvidenceHash:base.assessmentEvidenceHash, evidenceCutoffAt:base.evidenceCutoffAt, availableAt:base.availableAt, input, sourceEvidenceIds:base.sourceEvidenceIds, provenance:base.provenance, providerReliabilitySupplied:base.providerReliabilitySupplied, sourceIndependenceVerified:base.sourceIndependenceVerified, warnings:base.warnings, limitations:base.limitations })}`;
   const canonicalPayloadHash = canonicalHash({ ...base, recordId, canonicalPayloadHash:undefined });
   return { ...base, recordId, canonicalPayloadHash };
 }

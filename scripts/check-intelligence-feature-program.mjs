@@ -374,6 +374,12 @@ for (const phrase of [
   'normalizeContradictionInput',
   'createContradictionActionProtocolService',
   'ConcurrentRacePool',
+  "stateFor('reversed',severity)",
+  "stateFor('mispriced_candidate',severity)",
+  'SQL input canonical save parity',
+  'evidence points require exact provenance coverage',
+  'SQL input rollback leaves no partial row',
+  'analog outcomes are context only',
 ]) if (!ifp3Surface.includes(phrase)) fail(`IFP-3 implementation surface missing: ${phrase}`);
 for (const phrase of ['IFP-1 closed', 'IFP-2 closed', 'IFP-3 active', 'IFP-4 not started', 'RC-K not started', 'RC-I2-CERT and RC-J-ENV remain external blockers']) if (!doc.includes(phrase)) fail(`IFP-3 status missing: ${phrase}`);
 

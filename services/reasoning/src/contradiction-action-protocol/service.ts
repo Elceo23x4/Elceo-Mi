@@ -85,12 +85,21 @@ export class ContradictionActionProtocolService {
     if(parseIso(persistedContradictionInput.availableAt,'contradiction_input_available_at')>cutoff || parseIso(persistedContradictionInput.createdAt,'contradiction_input_created_at')>cutoff || parseIso(persistedContradictionInput.evidenceCutoffAt,'contradiction_input_evidence_cutoff')>cutoff) throw new Error('contradiction_input_after_protocol_cutoff');
     const contradictionInput = persistedContradictionInput.input;
     if(canonicalHash(normalizeContradictionInput(contradictionInput))!==persistedContradictionInput.normalizedInputHash) throw new Error('contradiction_input_hash_mismatch');
+    if(persistedContradictionInput.providerReliabilitySupplied!==contradictionInput.providerReliabilitySupplied || persistedContradictionInput.sourceIndependenceVerified!==contradictionInput.sourceIndependenceVerified) throw new Error('contradiction_input_trust_flag_mismatch');
     if (contradictionInput.asset !== evaluation.asset) throw new Error('contradiction_input_asset_mismatch');
     if (parseIso(contradictionInput.generatedAt, 'contradiction_generated_at') > cutoff) throw new Error('contradiction_input_after_protocol_cutoff');
     for (const point of contradictionInput.evidencePoints) {
       if (!point.evidencePointId || !point.sourceId) throw new Error('contradiction_evidence_identity_missing');
+      const provenance=persistedContradictionInput.provenance.filter((source)=>source.sourceId===point.sourceId);
+      if(provenance.length!==1) throw new Error('contradiction_evidence_provenance_missing');
       if (parseIso(point.observedAt, 'contradiction_evidence_observed_at') > cutoff) throw new Error('contradiction_evidence_after_protocol_cutoff');
     }
+    if(contradictionInput.evidencePoints.length && !persistedContradictionInput.provenance.length) throw new Error('contradiction_evidence_provenance_missing');
+    const provenanceIds=new Set(persistedContradictionInput.provenance.map((source)=>source.sourceId));
+    if(provenanceIds.size!==persistedContradictionInput.provenance.length) throw new Error('contradiction_evidence_duplicate_provenance');
+    const pointIds=new Set(contradictionInput.evidencePoints.map((point)=>point.sourceId));
+    if(persistedContradictionInput.sourceEvidenceIds.some((id)=>!pointIds.has(id)&&!provenanceIds.has(id))) throw new Error('contradiction_source_evidence_unresolved');
+    for(const source of persistedContradictionInput.provenance) if(source.reliability==='replay'&&(!source.verificationRef||!source.verifiedAt||parseIso(source.verifiedAt,'contradiction_replay_verified_at')>cutoff)) throw new Error('contradiction_replay_verification_invalid');
     const matrix = evaluateMarketContradictionMatrix(contradictionInput);
 
     const analog = request.analogRetrievalId && this.deps.analogRepository ? await this.deps.analogRepository.getRetrievalById(request.analogRetrievalId) : null;

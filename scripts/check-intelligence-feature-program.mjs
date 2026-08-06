@@ -380,6 +380,13 @@ for (const phrase of [
   'evidence points require exact provenance coverage',
   'SQL input rollback leaves no partial row',
   'analog outcomes are context only',
+  'assessment progression is monotonic 1-2-3',
+  'recursive cycle query executed',
+  'SQL transition insertion executed',
+  'transition rollback removes new parent',
+  'cross-event analog retrieval rejected',
+  'T+3/T+6 analog stage cannot leak',
+  'outcome-only analog changes preserve matrix hash',
 ]) if (!ifp3Surface.includes(phrase)) fail(`IFP-3 implementation surface missing: ${phrase}`);
 for (const phrase of ['IFP-1 closed', 'IFP-2 closed', 'IFP-3 active', 'IFP-4 not started', 'RC-K not started', 'RC-I2-CERT and RC-J-ENV remain external blockers']) if (!doc.includes(phrase)) fail(`IFP-3 status missing: ${phrase}`);
 

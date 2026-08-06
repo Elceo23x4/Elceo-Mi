@@ -54,3 +54,5 @@ export * from './readiness/index';
 export * from './expectation-reality/index';
 
 export * from './historical-analog-memory';
+
+export * from './contradiction-action-protocol/index';

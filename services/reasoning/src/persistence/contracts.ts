@@ -1,6 +1,7 @@
 import type { BiasState, CanonicalAssetSymbol, Timeframe } from '@elceo/types';
 import type { EventExpectationRepository, EventRealityRepository, ExpectationRealityRepository, ExpectationRepository } from '../expectation-reality/repository';
 import type { HistoricalAnalogRepository } from '../historical-analog-memory/contracts';
+import type { ContradictionActionProtocolRepository } from '../contradiction-action-protocol/repository';
 
 export type PersistedReasoningRun = {
   reasoningRunId: string;
@@ -66,6 +67,7 @@ export type ReasoningPersistenceRepository = {
   eventExpectationRepository: EventExpectationRepository;
   eventRealityRepository: EventRealityRepository;
   historicalAnalogRepository: HistoricalAnalogRepository;
+  contradictionActionProtocolRepository: ContradictionActionProtocolRepository;
 };
 
 export type PersistedCognitionDriftRecord = {

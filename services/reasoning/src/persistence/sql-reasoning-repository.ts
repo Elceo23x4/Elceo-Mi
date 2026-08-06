@@ -3,6 +3,8 @@ import { decodeTupleCursor } from '../historical-analog-memory/identity';
 import { normalizeHistoricalAnalogPageLimit } from '../historical-analog-memory/policy';
 import { SqlHistoricalAnalogRepository } from '../historical-analog-memory/sql-repository';
 import type { HistoricalAnalogRepository } from '../historical-analog-memory/contracts';
+import { SqlContradictionActionProtocolRepository } from '../contradiction-action-protocol/sql-repository';
+import type { ContradictionActionProtocolRepository } from '../contradiction-action-protocol/repository';
 import type {
   CognitionDriftRepository,
   CognitionSnapshotRepository,
@@ -491,6 +493,7 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
   readonly eventExpectationRepository: EventExpectationRepository;
   readonly eventRealityRepository: EventRealityRepository;
   readonly historicalAnalogRepository: HistoricalAnalogRepository;
+  readonly contradictionActionProtocolRepository: ContradictionActionProtocolRepository;
 
   constructor(
     runRepository: ReasoningRunRepository = new SqlReasoningRunRepository(),
@@ -500,7 +503,8 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
     expectationRealityRepository: ExpectationRealityRepository = new SqlExpectationRealityRepository(),
     eventExpectationRepository: EventExpectationRepository = new SqlEventExpectationRepository(),
     eventRealityRepository: EventRealityRepository = new SqlEventRealityRepository(),
-    historicalAnalogRepository: HistoricalAnalogRepository = new SqlHistoricalAnalogRepository(queryDb, transactionDb)
+    historicalAnalogRepository: HistoricalAnalogRepository = new SqlHistoricalAnalogRepository(queryDb, transactionDb),
+    contradictionActionProtocolRepository?: ContradictionActionProtocolRepository
   ) {
     this.runRepository = runRepository;
     this.snapshotRepository = snapshotRepository;
@@ -510,6 +514,18 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
     this.eventExpectationRepository = eventExpectationRepository;
     this.eventRealityRepository = eventRealityRepository;
     this.historicalAnalogRepository = historicalAnalogRepository;
+    this.contradictionActionProtocolRepository = contradictionActionProtocolRepository ?? new SqlContradictionActionProtocolRepository({
+      connect: async () => {
+        const pool = await getPool();
+        if (!pool.connect) throw new Error('sql_pool_transactions_unavailable');
+        return pool.connect();
+      },
+      query: async (sql, params) => {
+        const pool = await getPool();
+        const result = await pool.query(sql, params);
+        return { rows: result.rows, rowCount: result.rows.length };
+      },
+    });
   }
 }
 

@@ -83,6 +83,7 @@
     "@svgr/plugin-svgo": "8.1.0",
     "@svgr/webpack": "^8.1.0",
     "next": "16.3.0",
+    "pg": "^8.22.0",
     "playwright": "^1.59.1",
     "sharp": "0.35.3",
     "svgo": "4.0.2"

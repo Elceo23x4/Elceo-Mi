@@ -384,7 +384,6 @@ for (const phrase of [
   'SQL input rollback leaves no partial row',
   'analog outcomes are context only',
   'assessment progression is monotonic 1-2-3',
-  'recursive cycle query executed',
   'SQL transition insertion executed',
   'transition rollback removes new parent',
   'cross-event analog retrieval rejected',
@@ -395,6 +394,29 @@ for (const phrase of [
   'follow-through is the single final assessment',
   'full event-instance history query returns linear chain',
   'protocol_supersession_fork',
+  'three-record PostgreSQL protocol history',
+  'terminal SQL archive record',
+  'losing fork parent absent',
+  'losing fork evidence absent',
+  'duplicate event input normalized',
+  'missing event evaluation normalized',
+  'invalid stage normalized',
+  'structurally impossible',
+  'satisfies HistoricalAnalogRetrievalResult',
+  'full memory lineage matrix preserves three-record history',
+  'SQL same-stage successor rejection',
+  'SQL cross-expectation rejection',
+  'SQL cross-release rejection',
+  'SQL cross-version rejection',
+  'SQL cross-asset rejection',
+  'SQL missing previous rejection',
+  'contradiction_input_event_evaluation_missing',
+  'contradiction_input_expectation_missing',
+  'invalid_contradiction_input_stage',
+  'invalid_contradiction_input_asset',
+  'invalid_contradiction_input_assessment_hash',
+  'contradiction_input_available_after_cutoff',
+  'contradiction_input_created_after_cutoff',
   'finalizable rejected readiness false waits',
   'finalizable critical reversal readiness false waits',
   'finalizable rejected readiness true reviews',
@@ -412,6 +434,10 @@ if (/^### Affiliate-\d+/m.test(doc) || /^### IFP-\d+.*Affiliate/im.test(doc)) fa
 for (const [path, content] of [['docs/intelligence-feature-program.md', doc], ...alignmentDocs.map((path) => [path, read(path)])]) {
   if (/\b(deferred|postponed)\b/i.test(content)) fail(`prohibited launch-delay terminology appears in ${path}`);
 }
+
+const ifp3Tests = read('services/reasoning/src/tests/contradiction-action-protocol.test.ts');
+if (/historicalOutcome:\s*['"]invalidated['"]/.test(ifp3Tests)) fail('IFP-3 analog fixture uses non-canonical invalidated outcome');
+if (/const analog=\(overrides:any/.test(ifp3Tests)) fail('IFP-3 analog fixture remains untyped');
 
 if (failures.length) {
   console.error('IFP documentation consistency check failed:');

@@ -5,6 +5,7 @@ export type ContradictionActionProtocolRepository = {
   saveProtocolRecord(record: ProtocolAuditRecord): Promise<ProtocolAuditRecord>;
   getProtocolRecordById(id: string): Promise<ProtocolAuditRecord | null>;
   listProtocolRecordsForEvent(eventEvaluationId: string): Promise<ProtocolAuditRecord[]>;
+  listProtocolRecordsForEventInstance(eventInstanceKey:string):Promise<ProtocolAuditRecord[]>;
 };
 
 export function assertSupersession(previous: ProtocolAuditRecord, next: ProtocolAuditRecord): void {
@@ -12,7 +13,7 @@ export function assertSupersession(previous: ProtocolAuditRecord, next: Protocol
   if (previous.sourceReleaseId !== next.sourceReleaseId) throw new Error('cross_release_supersession_rejected');
   if (previous.sourceReleaseVersion !== next.sourceReleaseVersion) throw new Error('cross_release_version_supersession_rejected');
   if (previous.sourceAsset !== next.sourceAsset || previous.eventInstanceKey !== next.eventInstanceKey) throw new Error('cross_event_supersession_rejected');
-  if (next.sourceAssessmentStageOrder < previous.sourceAssessmentStageOrder) throw new Error('evidence_stage_regression');
+  if (next.sourceAssessmentStageOrder <= previous.sourceAssessmentStageOrder) throw new Error('evidence_stage_regression');
 }
 
 export class MemoryContradictionActionProtocolRepository implements ContradictionActionProtocolRepository {
@@ -28,6 +29,7 @@ export class MemoryContradictionActionProtocolRepository implements Contradictio
       const previous = this.rows.get(record.previousDecision.previousProtocolDecisionId);
       if (!previous) throw new Error('previous_protocol_decision_missing');
       assertSupersession(previous, record);
+      if([...this.rows.values()].some((row)=>row.previousDecision?.previousProtocolDecisionId===previous.protocolDecisionId)) throw new Error('protocol_supersession_fork');
       const seen = new Set([record.protocolDecisionId]);
       let cursor: ProtocolAuditRecord | undefined = previous;
       while (cursor) {
@@ -43,4 +45,5 @@ export class MemoryContradictionActionProtocolRepository implements Contradictio
 
   async getProtocolRecordById(id: string): Promise<ProtocolAuditRecord | null> { return this.rows.get(id) ?? null; }
   async listProtocolRecordsForEvent(eventEvaluationId: string): Promise<ProtocolAuditRecord[]> { return [...this.rows.values()].filter((record) => record.sourceEventEvaluationId === eventEvaluationId).sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.protocolDecisionId.localeCompare(b.protocolDecisionId)); }
+  async listProtocolRecordsForEventInstance(eventInstanceKey:string){return [...this.rows.values()].filter((record)=>record.eventInstanceKey===eventInstanceKey).sort((a,b)=>a.sourceAssessmentStageOrder-b.sourceAssessmentStageOrder||a.evidenceCutoffAt.localeCompare(b.evidenceCutoffAt)||a.protocolDecisionId.localeCompare(b.protocolDecisionId));}
 }

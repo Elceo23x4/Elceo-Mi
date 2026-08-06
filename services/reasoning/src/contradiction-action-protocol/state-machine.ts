@@ -28,7 +28,7 @@ export function decideProtocolState(bundle: ProtocolEvidenceBundle): { state: Pr
   }
 
   const waitReasons: TransitionReason[] = [];
-  if (evaluation.finalizationStatus !== 'final') waitReasons.push('non_final_assessment');
+  if (evaluation.finalizationStatus === 'provisional') waitReasons.push('non_final_assessment');
   if (evaluation.outcome === 'insufficient_data') waitReasons.push('insufficient_direct_evidence');
   if (evaluation.relatedEvidenceStatus === 'pending') waitReasons.push('pending_related_market_evidence');
   if (matrix.status === 'pending_confirmation' || matrix.warnings.includes('pending_price_confirmation') || matrix.warnings.includes('missing_price_reaction')) waitReasons.push('pending_price_confirmation');
@@ -60,5 +60,6 @@ export function decideProtocolState(bundle: ProtocolEvidenceBundle): { state: Pr
   if (evaluation.relatedEvidenceStatus === 'conflicting_final') reviewReasons.push('related_market_conflict');
   if (reviewReasons.length > 0) return { state: 'review_required', sufficiency: 'sufficient', reasons: [...new Set(reviewReasons)].sort(), warnings, limitations, rationale: 'Trusted direct current evidence contains a material contradiction that requires interpretation without proving canonical invalidation.' };
 
+  if(evaluation.finalizationStatus!=='final') return {state:'wait_for_confirmation',sufficiency:'provisional',reasons:['non_final_assessment'],warnings,limitations,rationale:'Finalizable evidence has no mature contradiction state and remains non-terminal; only a final resolved assessment may archive.'};
   return { state: 'archive_resolved', sufficiency: 'resolved', reasons: ['final_resolved_non_actionable'], warnings, limitations, rationale: 'Final direct evidence is resolved or non-actionable with no active invalidation or unresolved evidence requirement.' };
 }

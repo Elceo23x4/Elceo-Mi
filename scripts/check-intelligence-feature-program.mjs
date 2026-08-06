@@ -387,6 +387,11 @@ for (const phrase of [
   'cross-event analog retrieval rejected',
   'T+3/T+6 analog stage cannot leak',
   'outcome-only analog changes preserve matrix hash',
+  'one shared event repository returns full timeline',
+  'confirmation stage reviews',
+  'follow-through is the single final assessment',
+  'full event-instance history query returns linear chain',
+  'protocol_supersession_fork',
 ]) if (!ifp3Surface.includes(phrase)) fail(`IFP-3 implementation surface missing: ${phrase}`);
 for (const phrase of ['IFP-1 closed', 'IFP-2 closed', 'IFP-3 active', 'IFP-4 not started', 'RC-K not started', 'RC-I2-CERT and RC-J-ENV remain external blockers']) if (!doc.includes(phrase)) fail(`IFP-3 status missing: ${phrase}`);
 

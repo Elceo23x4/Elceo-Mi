@@ -26,6 +26,8 @@ export class SqlContradictionActionProtocolRepository implements ContradictionAc
         const previousResult = await client.query('SELECT canonical_payload FROM contradiction_action_protocol_records WHERE protocol_decision_id=$1 FOR UPDATE', [record.previousDecision.previousProtocolDecisionId]);
         if (!count(previousResult)) throw new Error('previous_protocol_decision_missing');
         assertSupersession(payload(previousResult.rows[0]), record);
+        const successor=await client.query('SELECT 1 FROM contradiction_action_protocol_transitions WHERE previous_protocol_decision_id=$1 LIMIT 1',[record.previousDecision.previousProtocolDecisionId]);
+        if(count(successor)) throw new Error('protocol_supersession_fork');
         const cycle = await client.query('WITH RECURSIVE chain AS (SELECT previous_protocol_decision_id,next_protocol_decision_id FROM contradiction_action_protocol_transitions WHERE next_protocol_decision_id=$1 UNION ALL SELECT t.previous_protocol_decision_id,t.next_protocol_decision_id FROM contradiction_action_protocol_transitions t JOIN chain c ON t.next_protocol_decision_id=c.previous_protocol_decision_id) SELECT 1 FROM chain WHERE previous_protocol_decision_id=$2 LIMIT 1', [record.previousDecision.previousProtocolDecisionId, record.protocolDecisionId]);
         if (count(cycle)) throw new Error('protocol_supersession_cycle');
       }
@@ -48,4 +50,5 @@ export class SqlContradictionActionProtocolRepository implements ContradictionAc
 
   async getProtocolRecordById(id: string): Promise<ProtocolAuditRecord | null> { const result = await this.pool.query('SELECT canonical_payload FROM contradiction_action_protocol_records WHERE protocol_decision_id=$1', [id]); return count(result) ? payload(result.rows[0]) : null; }
   async listProtocolRecordsForEvent(eventEvaluationId: string): Promise<ProtocolAuditRecord[]> { const result = await this.pool.query('SELECT canonical_payload FROM contradiction_action_protocol_records WHERE source_event_evaluation_id=$1 ORDER BY created_at,protocol_decision_id', [eventEvaluationId]); return result.rows.map(payload); }
+  async listProtocolRecordsForEventInstance(eventInstanceKey:string){const result=await this.pool.query('SELECT canonical_payload FROM contradiction_action_protocol_records WHERE event_instance_key=$1 ORDER BY source_assessment_stage_order,evidence_cutoff_at,protocol_decision_id',[eventInstanceKey]);return result.rows.map(payload);}
 }

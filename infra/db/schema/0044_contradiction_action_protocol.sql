@@ -64,7 +64,8 @@ CREATE TABLE IF NOT EXISTS contradiction_action_protocol_transitions (
   next_protocol_decision_id TEXT NOT NULL REFERENCES contradiction_action_protocol_records(protocol_decision_id) ON DELETE RESTRICT,
   supersedes BOOLEAN NOT NULL DEFAULT TRUE,
   CHECK (previous_protocol_decision_id <> next_protocol_decision_id),
-  UNIQUE (next_protocol_decision_id)
+  UNIQUE (next_protocol_decision_id),
+  UNIQUE (previous_protocol_decision_id)
 );
 CREATE INDEX IF NOT EXISTS contradiction_action_protocol_event_idx ON contradiction_action_protocol_records(source_event_evaluation_id, created_at);
 CREATE INDEX IF NOT EXISTS contradiction_action_protocol_input_lineage_idx ON contradiction_action_protocol_inputs(expectation_id,asset,assessment_stage,available_at);

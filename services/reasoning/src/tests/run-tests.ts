@@ -66,6 +66,7 @@ import { runProviderLivePayloadValidationTests } from './provider-live-payload-v
 import { runExpectationRealityTests } from './expectation-reality.test.js';
 import { runHistoricalAnalogMemoryTests } from './historical-analog-memory.test.js';
 import { runContradictionActionProtocolTests } from './contradiction-action-protocol.test.js';
+import { runMarketCleanlinessTests } from './market-cleanliness.test.js';
 
 async function run(): Promise<void> {
   runReasoningTests();
@@ -134,6 +135,7 @@ async function run(): Promise<void> {
   await runExpectationRealityTests();
   await runHistoricalAnalogMemoryTests();
   await runContradictionActionProtocolTests();
+  await runMarketCleanlinessTests();
   runRcAFormulaRegressionTests();
   console.log('reasoning runtime contract tests passed');
 }

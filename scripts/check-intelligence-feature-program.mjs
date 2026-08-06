@@ -427,7 +427,7 @@ for (const phrase of [
   'actual historical rejected outcome alone does not review',
   'actual historical reversed outcome alone does not escalate',
 ]) if (!ifp3Surface.includes(phrase)) fail(`IFP-3 implementation surface missing: ${phrase}`);
-for (const phrase of ['IFP-1 closed', 'IFP-2 closed', 'IFP-3 active', 'IFP-4 not started', 'RC-K not started', 'RC-I2-CERT and RC-J-ENV remain external blockers']) if (!doc.includes(phrase)) fail(`IFP-3 status missing: ${phrase}`);
+for (const phrase of ['IFP-1 closed', 'IFP-2 closed', 'IFP-3 closed', 'IFP-4 active', 'IFP-5 not started', 'RC-K not started', 'RC-I2-CERT and RC-J-ENV remain external blockers']) if (!doc.includes(phrase)) fail(`IFP status missing: ${phrase}`);
 
 if (/^### .*C6-R9H|^### .*C6-R10|Phase ID: C6-R9H|Phase ID: C6-R10|^### C6-/m.test(doc)) fail('prohibited C6-R9H, C6-R10, or new C6 phase introduced');
 if (/^### Affiliate-\d+/m.test(doc) || /^### IFP-\d+.*Affiliate/im.test(doc)) fail('affiliate phase represented as IFP phase');
@@ -438,6 +438,12 @@ for (const [path, content] of [['docs/intelligence-feature-program.md', doc], ..
 const ifp3Tests = read('services/reasoning/src/tests/contradiction-action-protocol.test.ts');
 if (/historicalOutcome:\s*['"]invalidated['"]/.test(ifp3Tests)) fail('IFP-3 analog fixture uses non-canonical invalidated outcome');
 if (/const analog=\(overrides:any/.test(ifp3Tests)) fail('IFP-3 analog fixture remains untyped');
+
+
+const ifp4Surfaces = [read('services/reasoning/src/tests/market-cleanliness.test.ts'), read('services/reasoning/src/market-cleanliness/contracts.ts'), read('services/reasoning/src/market-cleanliness/evaluator.ts'), read('infra/db/schema/0045_market_cleanliness_ranking.sql'), read('scripts/test-ifp4-postgres.mjs')].join('\n');
+for (const label of ['IFP4 clean rejection','IFP4 release/primary conflict','IFP4 related-market conflict','IFP4 missing volatility insufficiency','IFP4 stage-safe evaluation','IFP4 point-in-time rejection','IFP4 PostgreSQL persistence','IFP4 memory/SQL parity','IFP4 visible components','IFP4 hard-conflict visibility','IFP4 no-advice boundary']) if (!ifp4Surfaces.includes(label)) fail(`IFP-4 behavioural assertion missing: ${label}`);
+for (const path of ['market-cleanliness-v1','MarketCleanlinessComponent','hardConflictFlags','evidenceCoverageRatio']) if (!ifp4Surfaces.includes(path)) fail(`IFP-4 implementation contract missing: ${path}`);
+if (!/IFP-1 closed; IFP-2 closed; IFP-3 closed; IFP-4 active; IFP-5 not started/.test(doc)) fail('IFP-4 active status line is missing');
 
 if (failures.length) {
   console.error('IFP documentation consistency check failed:');

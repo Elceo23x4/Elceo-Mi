@@ -47,7 +47,8 @@
     "rollback:rehearsal": "node scripts/rehearse-rollback.mjs",
     "verify:deployment-gates": "node scripts/verify-deployment-promotion-gates.mjs",
     "check:ifp": "node scripts/check-intelligence-feature-program.mjs",
-    "test:ifp3-postgres": "npm run -w services/reasoning test && node scripts/test-ifp3-postgres.mjs"
+    "test:ifp3-postgres": "npm run -w services/reasoning test && node scripts/test-ifp3-postgres.mjs",
+    "test:ifp4-postgres": "npm run -w services/reasoning test && node scripts/test-ifp4-postgres.mjs"
   },
   "engines": {
     "node": "24.x",

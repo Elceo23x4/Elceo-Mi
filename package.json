@@ -46,7 +46,8 @@
     "backup:restore-rehearsal": "node scripts/rehearse-backup-restore.mjs",
     "rollback:rehearsal": "node scripts/rehearse-rollback.mjs",
     "verify:deployment-gates": "node scripts/verify-deployment-promotion-gates.mjs",
-    "check:ifp": "node scripts/check-intelligence-feature-program.mjs"
+    "check:ifp": "node scripts/check-intelligence-feature-program.mjs",
+    "test:ifp3-postgres": "npm run -w services/reasoning test && node scripts/test-ifp3-postgres.mjs"
   },
   "engines": {
     "node": "24.x",
@@ -82,6 +83,7 @@
     "@svgr/plugin-svgo": "8.1.0",
     "@svgr/webpack": "^8.1.0",
     "next": "16.3.0",
+    "pg": "^8.22.0",
     "playwright": "^1.59.1",
     "sharp": "0.35.3",
     "svgo": "4.0.2"

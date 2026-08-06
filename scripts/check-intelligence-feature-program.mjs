@@ -325,11 +325,119 @@ const blockerSentence = 'Production launch remains blocked until RC-I2-CERT, RC-
 if (!productionStatus.includes(blockerSentence)) fail('final production blocker list does not include RC-I2-CERT, RC-J-ENV, IFP, and RC-K');
 if (productionStatus.includes('RC-J remains a mandatory subsequent launch batch')) fail('final production status contains stale RC-J current lifecycle phrase');
 
+
+const ifp3Sources = [
+  'services/reasoning/src/contradiction-action-protocol/contracts.ts',
+  'services/reasoning/src/contradiction-action-protocol/state-machine.ts',
+  'services/reasoning/src/contradiction-action-protocol/identity.ts',
+  'services/reasoning/src/contradiction-action-protocol/repository.ts',
+  'services/reasoning/src/contradiction-action-protocol/sql-repository.ts',
+  'services/reasoning/src/contradiction-action-protocol/service.ts',
+  'services/reasoning/src/contradiction-action-protocol/input-repository.ts',
+  'services/reasoning/src/contradiction-action-protocol/sql-input-repository.ts',
+  'services/reasoning/src/contradiction-action-protocol/policy.ts',
+  'services/reasoning/src/tests/contradiction-action-protocol.test.ts',
+  'infra/db/schema/0044_contradiction_action_protocol.sql',
+  'services/reasoning/src/persistence/contracts.ts',
+  'services/reasoning/src/persistence/memory-reasoning-repository.ts',
+  'services/reasoning/src/persistence/sql-reasoning-repository.ts',
+  'services/reasoning/src/tests/run-tests.ts',
+  'docs/contradiction-to-action-protocol.md',
+  'docs/ifp-3-confidence-zero-impact-diagnosis.md',
+  'scripts/test-ifp3-postgres.mjs',
+  '.github/workflows/ci.yml',
+  'package.json',
+];
+for (const path of ifp3Sources) {
+  try { read(path); } catch { fail(`IFP-3 implementation surface missing file: ${path}`); }
+}
+const ifp3Surface = ifp3Sources.map((path) => { try { return read(path); } catch { return ''; } }).join('\n');
+for (const phrase of [
+  'contradiction-action-protocol-v1',
+  'wait_for_confirmation',
+  'review_required',
+  'invalidate_thesis',
+  'escalate_review',
+  'archive_resolved',
+  'ProtocolAuditRecord',
+  'decideProtocolState',
+  'protocolDecisionId',
+  'protocolEvidenceSnapshotId',
+  'MemoryContradictionActionProtocolRepository',
+  'SqlContradictionActionProtocolRepository',
+  'validateNoAdviceRecord',
+  '0044_contradiction_action_protocol',
+  'canonical persisted broken cognition invalidation has highest precedence',
+  'public dependency has no completed matrix callback',
+  'contradiction_evidence_after_protocol_cutoff',
+  'canonical memory persistence composition exposes protocol repository',
+  'runContradictionActionProtocolTests',
+  'MemoryPersistedContradictionInputRepository',
+  'SqlPersistedContradictionInputRepository',
+  'normalizeContradictionInput',
+  'createContradictionActionProtocolService',
+  'ConcurrentRacePool',
+  "stateFor('reversed',severity)",
+  "stateFor('mispriced_candidate',severity)",
+  'SQL input canonical save parity',
+  'evidence points require exact provenance coverage',
+  'SQL input rollback leaves no partial row',
+  'analog outcomes are context only',
+  'assessment progression is monotonic 1-2-3',
+  'SQL transition insertion executed',
+  'transition rollback removes new parent',
+  'cross-event analog retrieval rejected',
+  'T+3/T+6 analog stage cannot leak',
+  'outcome-only analog changes preserve matrix hash',
+  'one shared event repository returns full timeline',
+  'confirmation stage reviews',
+  'follow-through is the single final assessment',
+  'full event-instance history query returns linear chain',
+  'protocol_supersession_fork',
+  'three-record PostgreSQL protocol history',
+  'terminal SQL archive record',
+  'losing fork parent absent',
+  'losing fork evidence absent',
+  'duplicate event input normalized',
+  'missing event evaluation normalized',
+  'invalid stage normalized',
+  'structurally impossible',
+  'satisfies HistoricalAnalogRetrievalResult',
+  'full memory lineage matrix preserves three-record history',
+  'SQL same-stage successor rejection',
+  'SQL cross-expectation rejection',
+  'SQL cross-release rejection',
+  'SQL cross-version rejection',
+  'SQL cross-asset rejection',
+  'SQL missing previous rejection',
+  'contradiction_input_event_evaluation_missing',
+  'contradiction_input_expectation_missing',
+  'invalid_contradiction_input_stage',
+  'invalid_contradiction_input_asset',
+  'invalid_contradiction_input_assessment_hash',
+  'contradiction_input_available_after_cutoff',
+  'contradiction_input_created_after_cutoff',
+  'finalizable rejected readiness false waits',
+  'finalizable critical reversal readiness false waits',
+  'finalizable rejected readiness true reviews',
+  'test:ifp3-postgres',
+  'app_event_reality_final_uidx',
+  'exactly one competing successor commits',
+  'contradiction_action_protocol_event_history_idx',
+  'actual historical rejected outcome alone does not review',
+  'actual historical reversed outcome alone does not escalate',
+]) if (!ifp3Surface.includes(phrase)) fail(`IFP-3 implementation surface missing: ${phrase}`);
+for (const phrase of ['IFP-1 closed', 'IFP-2 closed', 'IFP-3 active', 'IFP-4 not started', 'RC-K not started', 'RC-I2-CERT and RC-J-ENV remain external blockers']) if (!doc.includes(phrase)) fail(`IFP-3 status missing: ${phrase}`);
+
 if (/^### .*C6-R9H|^### .*C6-R10|Phase ID: C6-R9H|Phase ID: C6-R10|^### C6-/m.test(doc)) fail('prohibited C6-R9H, C6-R10, or new C6 phase introduced');
 if (/^### Affiliate-\d+/m.test(doc) || /^### IFP-\d+.*Affiliate/im.test(doc)) fail('affiliate phase represented as IFP phase');
 for (const [path, content] of [['docs/intelligence-feature-program.md', doc], ...alignmentDocs.map((path) => [path, read(path)])]) {
   if (/\b(deferred|postponed)\b/i.test(content)) fail(`prohibited launch-delay terminology appears in ${path}`);
 }
+
+const ifp3Tests = read('services/reasoning/src/tests/contradiction-action-protocol.test.ts');
+if (/historicalOutcome:\s*['"]invalidated['"]/.test(ifp3Tests)) fail('IFP-3 analog fixture uses non-canonical invalidated outcome');
+if (/const analog=\(overrides:any/.test(ifp3Tests)) fail('IFP-3 analog fixture remains untyped');
 
 if (failures.length) {
   console.error('IFP documentation consistency check failed:');

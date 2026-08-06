@@ -344,6 +344,9 @@ const ifp3Sources = [
   'services/reasoning/src/tests/run-tests.ts',
   'docs/contradiction-to-action-protocol.md',
   'docs/ifp-3-confidence-zero-impact-diagnosis.md',
+  'scripts/test-ifp3-postgres.mjs',
+  '.github/workflows/ci.yml',
+  'package.json',
 ];
 for (const path of ifp3Sources) {
   try { read(path); } catch { fail(`IFP-3 implementation surface missing file: ${path}`); }
@@ -392,6 +395,15 @@ for (const phrase of [
   'follow-through is the single final assessment',
   'full event-instance history query returns linear chain',
   'protocol_supersession_fork',
+  'finalizable rejected readiness false waits',
+  'finalizable critical reversal readiness false waits',
+  'finalizable rejected readiness true reviews',
+  'test:ifp3-postgres',
+  'app_event_reality_final_uidx',
+  'exactly one competing successor commits',
+  'contradiction_action_protocol_event_history_idx',
+  'actual historical rejected outcome alone does not review',
+  'actual historical reversed outcome alone does not escalate',
 ]) if (!ifp3Surface.includes(phrase)) fail(`IFP-3 implementation surface missing: ${phrase}`);
 for (const phrase of ['IFP-1 closed', 'IFP-2 closed', 'IFP-3 active', 'IFP-4 not started', 'RC-K not started', 'RC-I2-CERT and RC-J-ENV remain external blockers']) if (!doc.includes(phrase)) fail(`IFP-3 status missing: ${phrase}`);
 

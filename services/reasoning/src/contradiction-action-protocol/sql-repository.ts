@@ -7,6 +7,20 @@ type ClientLike = { query(sql: string, params?: unknown[]): Promise<QueryResult>
 export type ContradictionActionProtocolPool = { connect(): Promise<ClientLike>; query(sql: string, params?: unknown[]): Promise<QueryResult> };
 const payload = (row: unknown): ProtocolAuditRecord => { const value = (row as { canonical_payload: unknown }).canonical_payload; return (typeof value === 'string' ? JSON.parse(value) : value) as ProtocolAuditRecord; };
 const count = (result: QueryResult): number => result.rowCount ?? result.rows.length;
+type PostgresError = Error & { code?: string; constraint?: string };
+
+function normalizedPersistenceError(error: unknown): Error {
+  const postgres = error as PostgresError;
+  if (postgres.code !== '23505') return error instanceof Error ? error : new Error(String(error));
+  switch (postgres.constraint) {
+    case 'contradiction_action_protocol_transition_previous_key': return new Error('protocol_supersession_fork');
+    case 'contradiction_action_protocol_transition_next_key': return new Error('protocol_transition_next_conflict');
+    case 'contradiction_action_protocol_transitions_pkey': return new Error('protocol_transition_id_conflict');
+    case 'contradiction_action_protocol_records_pkey':
+    case 'contradiction_action_protocol_records_canonical_payload_hash_key': return new Error('immutable_protocol_record_conflict');
+    default: return new Error('protocol_persistence_unique_conflict');
+  }
+}
 
 export class SqlContradictionActionProtocolRepository implements ContradictionActionProtocolRepository {
   constructor(private readonly pool: ContradictionActionProtocolPool) {}
@@ -44,7 +58,7 @@ export class SqlContradictionActionProtocolRepository implements ContradictionAc
         if (canonicalJson(canonical) === canonicalJson(record)) return canonical;
         throw new Error('immutable_protocol_record_conflict');
       }
-      throw error;
+      throw normalizedPersistenceError(error);
     } finally { client.release(); }
   }
 

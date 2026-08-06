@@ -59,13 +59,15 @@ CREATE TABLE IF NOT EXISTS contradiction_action_protocol_evidence_refs (
   PRIMARY KEY (protocol_decision_id, source_type, source_id)
 );
 CREATE TABLE IF NOT EXISTS contradiction_action_protocol_transitions (
-  transition_id TEXT PRIMARY KEY,
+  transition_id TEXT CONSTRAINT contradiction_action_protocol_transitions_pkey PRIMARY KEY,
   previous_protocol_decision_id TEXT NOT NULL REFERENCES contradiction_action_protocol_records(protocol_decision_id) ON DELETE RESTRICT,
   next_protocol_decision_id TEXT NOT NULL REFERENCES contradiction_action_protocol_records(protocol_decision_id) ON DELETE RESTRICT,
   supersedes BOOLEAN NOT NULL DEFAULT TRUE,
-  CHECK (previous_protocol_decision_id <> next_protocol_decision_id),
-  UNIQUE (next_protocol_decision_id),
-  UNIQUE (previous_protocol_decision_id)
+  CONSTRAINT contradiction_action_protocol_transition_not_self CHECK (previous_protocol_decision_id <> next_protocol_decision_id),
+  CONSTRAINT contradiction_action_protocol_transition_next_key UNIQUE (next_protocol_decision_id),
+  CONSTRAINT contradiction_action_protocol_transition_previous_key UNIQUE (previous_protocol_decision_id)
 );
 CREATE INDEX IF NOT EXISTS contradiction_action_protocol_event_idx ON contradiction_action_protocol_records(source_event_evaluation_id, created_at);
 CREATE INDEX IF NOT EXISTS contradiction_action_protocol_input_lineage_idx ON contradiction_action_protocol_inputs(expectation_id,asset,assessment_stage,available_at);
+
+CREATE INDEX IF NOT EXISTS contradiction_action_protocol_event_history_idx ON contradiction_action_protocol_records(event_instance_key, source_assessment_stage_order, evidence_cutoff_at, protocol_decision_id);

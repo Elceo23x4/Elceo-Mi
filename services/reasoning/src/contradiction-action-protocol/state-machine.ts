@@ -29,6 +29,8 @@ export function decideProtocolState(bundle: ProtocolEvidenceBundle): { state: Pr
 
   const waitReasons: TransitionReason[] = [];
   if (evaluation.finalizationStatus === 'provisional') waitReasons.push('non_final_assessment');
+  if (!evaluation.finalizationReadiness?.ready) waitReasons.push('finalization_readiness_pending');
+  if (evaluation.finalizationReadiness?.reasonCodes.length) waitReasons.push('finalization_readiness_pending');
   if (evaluation.outcome === 'insufficient_data') waitReasons.push('insufficient_direct_evidence');
   if (evaluation.relatedEvidenceStatus === 'pending') waitReasons.push('pending_related_market_evidence');
   if (matrix.status === 'pending_confirmation' || matrix.warnings.includes('pending_price_confirmation') || matrix.warnings.includes('missing_price_reaction')) waitReasons.push('pending_price_confirmation');

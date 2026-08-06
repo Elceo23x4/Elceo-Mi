@@ -249,8 +249,8 @@ RC-J-ENV — External Infrastructure and Disaster-Recovery Certification
 - Remaining launch work must not use prohibited delay labels.
 
 
-## IFP-1 active status
+## Intelligence feature program status
 
-IFP-1 is the active approved intelligence capability. IFP-1 and IFP-2 are closed. IFP-3 is active until its PR is accepted and merged. IFP-4 has not started. The full IFP is not complete. Configuration versioning, confidence-floor diagnosis, auditability and empirical validation are cross-cutting requirements; they do not replace the seven approved engines.
+IFP-1 and IFP-2 are closed. IFP-3 is active until its PR is accepted and merged. IFP-4 has not started. The complete IFP is unfinished, and RC-K has not started. Configuration versioning, confidence-floor diagnosis, auditability and empirical validation are cross-cutting requirements; they do not replace the seven approved engines.
 
 Note: IFP retains a cross-cutting requirement to diagnose confidence-floor saturation empirically; it does not mean formulas were changed.

@@ -336,6 +336,10 @@ const ifp3Sources = [
   'services/reasoning/src/contradiction-action-protocol/policy.ts',
   'services/reasoning/src/tests/contradiction-action-protocol.test.ts',
   'infra/db/schema/0044_contradiction_action_protocol.sql',
+  'services/reasoning/src/persistence/contracts.ts',
+  'services/reasoning/src/persistence/memory-reasoning-repository.ts',
+  'services/reasoning/src/persistence/sql-reasoning-repository.ts',
+  'services/reasoning/src/tests/run-tests.ts',
   'docs/contradiction-to-action-protocol.md',
   'docs/ifp-3-confidence-zero-impact-diagnosis.md',
 ];
@@ -358,9 +362,11 @@ for (const phrase of [
   'SqlContradictionActionProtocolRepository',
   'validateNoAdviceRecord',
   '0044_contradiction_action_protocol',
-  'confidence zero alone cannot produce invalidation or escalation',
-  'analog outcome alone cannot cause a hard state',
-  'concurrent identical save behavior',
+  'canonical persisted broken cognition invalidation has highest precedence',
+  'public dependency has no completed matrix callback',
+  'contradiction_evidence_after_protocol_cutoff',
+  'canonical memory persistence composition exposes protocol repository',
+  'runContradictionActionProtocolTests',
 ]) if (!ifp3Surface.includes(phrase)) fail(`IFP-3 implementation surface missing: ${phrase}`);
 for (const phrase of ['IFP-1 closed', 'IFP-2 closed', 'IFP-3 active', 'IFP-4 not started', 'RC-K not started', 'RC-I2-CERT and RC-J-ENV remain external blockers']) if (!doc.includes(phrase)) fail(`IFP-3 status missing: ${phrase}`);
 

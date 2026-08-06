@@ -14,13 +14,13 @@ export function directConfirmedInvalidation(bundle: ProtocolEvidenceBundle): boo
 }
 
 const requiredEvidenceIsTrusted = (bundle: ProtocolEvidenceBundle): boolean =>
-  bundle.requiredDirectReliability.length > 0 && bundle.requiredDirectReliability.every((value) => value === 'verified' || value === 'replay');
+  bundle.requiredDirectReliability.length > 0 && bundle.requiredDirectReliability.every((value) => value === 'verified' || value === 'replay') && bundle.persistedContradictionInput.providerReliabilitySupplied && bundle.persistedContradictionInput.sourceIndependenceVerified && !bundle.contradictionMatrix.warnings.includes('missing_provider_reliability');
 
 export function decideProtocolState(bundle: ProtocolEvidenceBundle): { state: ProtocolDecisionState; sufficiency: EvidenceSufficiency; reasons: TransitionReason[]; warnings: string[]; limitations: string[]; rationale: string } {
   const evaluation = bundle.eventEvaluation;
   const matrix = bundle.contradictionMatrix;
   const warnings = [...new Set([...evaluation.warnings, ...matrix.warnings])].sort();
-  const limitations = [...new Set([...evaluation.reality.limitations, ...(bundle.analogRetrieval?.limitations ?? [])])].sort();
+  const limitations = [...new Set([...evaluation.reality.limitations, ...bundle.persistedContradictionInput.limitations, ...(bundle.analogRetrieval?.limitations ?? []), ...(!bundle.persistedContradictionInput.providerReliabilitySupplied?['contradiction_provider_reliability_missing']:[]), ...(!bundle.persistedContradictionInput.sourceIndependenceVerified?['contradiction_source_independence_unverified']:[])])].sort();
   const trusted = requiredEvidenceIsTrusted(bundle);
 
   if (directConfirmedInvalidation(bundle) && trusted) {
@@ -31,9 +31,9 @@ export function decideProtocolState(bundle: ProtocolEvidenceBundle): { state: Pr
   if (evaluation.finalizationStatus !== 'final') reasons.push('non_final_assessment');
   if (evaluation.outcome === 'insufficient_data') reasons.push('insufficient_direct_evidence');
   if (evaluation.relatedEvidenceStatus === 'pending') reasons.push('pending_related_market_evidence');
-  if (evaluation.finalizationStatus !== 'final' && (matrix.status === 'pending_confirmation' || matrix.warnings.includes('pending_price_confirmation'))) reasons.push('pending_price_confirmation');
+  if (matrix.status === 'pending_confirmation' || matrix.warnings.includes('pending_price_confirmation') || matrix.warnings.includes('missing_price_reaction')) reasons.push('pending_price_confirmation');
   if (!trusted) reasons.push('provenance_limitation');
-  if (matrix.warnings.includes('source_independence_unverified')) reasons.push('source_disagreement_unresolved');
+  if (!bundle.persistedContradictionInput.sourceIndependenceVerified || matrix.warnings.includes('source_independence_unverified')) reasons.push('source_disagreement_unresolved');
   if (evaluation.finalizationStatus !== 'final' && evaluation.outcome === 'absorbed') reasons.push('absorbed_reaction_pending_later_window');
   if (evaluation.finalizationStatus !== 'final' && evaluation.outcome === 'delayed') reasons.push('delayed_reaction_pending_later_window');
   if (evaluation.finalizationStatus !== 'final' && evaluation.outcome === 'ambiguous') reasons.push('ambiguous_reaction_pending_later_window');
@@ -46,6 +46,8 @@ export function decideProtocolState(bundle: ProtocolEvidenceBundle): { state: Pr
   if (evaluation.outcome === 'ambiguous' || evaluation.outcome === 'delayed') {
     return { state: 'review_required', sufficiency: 'sufficient', reasons: ['final_ambiguous_evidence'], warnings, limitations, rationale: 'Final delayed or ambiguous direct evidence requires review and cannot be archived implicitly.' };
   }
+  if (evaluation.outcome === 'reversed' && severity < 4) reasons.push('material_contradiction');
+  if (evaluation.outcome === 'mispriced_candidate' && severity < 3) reasons.push('material_contradiction');
   if (evaluation.outcome === 'reversed' && severity >= 4) reasons.push('critical_direct_contradiction');
   if (evaluation.relatedEvidenceStatus === 'conflicting_final' && severity >= 3) reasons.push('compound_direct_contradiction', 'related_market_conflict');
   if (evaluation.outcome === 'mispriced_candidate' && severity >= 3) reasons.push('mispriced_candidate_critical_conflict');

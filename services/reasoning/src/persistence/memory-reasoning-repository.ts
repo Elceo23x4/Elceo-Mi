@@ -11,6 +11,7 @@ import type {
 import { MemoryHistoricalAnalogRepository } from '../historical-analog-memory/repository';
 import { MemoryEventExpectationRepository, MemoryEventRealityRepository, MemoryExpectationRealityRepository, MemoryExpectationRepository } from '../expectation-reality/repository';
 import { MemoryContradictionActionProtocolRepository } from '../contradiction-action-protocol/repository';
+import { MemoryPersistedContradictionInputRepository } from '../contradiction-action-protocol/input-repository';
 
 export class MemoryReasoningRunRepository implements ReasoningRunRepository {
   private readonly rows = new Map<string, PersistedReasoningRun>();
@@ -101,6 +102,7 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
   readonly eventRealityRepository: MemoryEventRealityRepository;
   readonly historicalAnalogRepository: MemoryHistoricalAnalogRepository;
   readonly contradictionActionProtocolRepository: MemoryContradictionActionProtocolRepository;
+  readonly persistedContradictionInputRepository: MemoryPersistedContradictionInputRepository;
 
   constructor(
     runRepository: ReasoningRunRepository = new MemoryReasoningRunRepository(),
@@ -111,7 +113,8 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
     eventExpectationRepository: MemoryEventExpectationRepository = new MemoryEventExpectationRepository(),
     eventRealityRepository: MemoryEventRealityRepository = new MemoryEventRealityRepository(),
     historicalAnalogRepository: MemoryHistoricalAnalogRepository = new MemoryHistoricalAnalogRepository(),
-    contradictionActionProtocolRepository: MemoryContradictionActionProtocolRepository = new MemoryContradictionActionProtocolRepository()
+    contradictionActionProtocolRepository: MemoryContradictionActionProtocolRepository = new MemoryContradictionActionProtocolRepository(),
+    persistedContradictionInputRepository: MemoryPersistedContradictionInputRepository = new MemoryPersistedContradictionInputRepository()
   ) {
     this.runRepository = runRepository;
     this.snapshotRepository = snapshotRepository;
@@ -122,5 +125,6 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
     this.eventRealityRepository = eventRealityRepository;
     this.historicalAnalogRepository = historicalAnalogRepository;
     this.contradictionActionProtocolRepository = contradictionActionProtocolRepository;
+    this.persistedContradictionInputRepository = persistedContradictionInputRepository;
   }
 }

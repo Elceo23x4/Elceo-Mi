@@ -1,4 +1,4 @@
-import type { CanonicalCognitionState, MarketContradictionInput } from '@elceo/types';
+import type { CanonicalCognitionState } from '@elceo/types';
 import { evaluateMarketContradictionMatrix } from '../contradiction-matrix/index';
 import type { EventExpectationRepository, EventRealityRepository } from '../expectation-reality/repository';
 import { canonicalHash } from '../expectation-reality/identity';
@@ -7,14 +7,12 @@ import type { HistoricalAnalogRepository } from '../historical-analog-memory/con
 import type { CognitionSnapshotRepository, PersistedCognitionSnapshot } from '../persistence/contracts';
 import { deserializeCanonicalCognitionState } from '../persistence/serialization';
 import { BLOCKED_ACTION_CLASSES, CONTRADICTION_ACTION_PROTOCOL_POLICY_VERSION, reviewPromptForState, validateNoAdviceRecord } from './policy';
-import { makeSupersession, normalizedContradiction, payloadHash, protocolDecisionId, protocolEvidenceSnapshotId } from './identity';
+import { makeSupersession, normalizeContradictionInput, normalizedContradiction, payloadHash, protocolDecisionId, protocolEvidenceSnapshotId } from './identity';
 import { assessmentStageOrder, decideProtocolState } from './state-machine';
 import type { ContradictionActionProtocolRepository } from './repository';
 import type { EvidenceReference, EvidenceReliability, ProtocolAuditRecord, ProtocolDecisionRequest, ProtocolEvidenceBundle } from './contracts';
-
-export type PersistedContradictionInputRepository = {
-  loadInputForEvent(params: { eventEvaluationId: string; expectationId: string; evidenceCutoffAt: string }): Promise<MarketContradictionInput>;
-};
+import type { PersistedContradictionInputRepository } from './input-repository';
+import type { ReasoningPersistenceRepository } from '../persistence/contracts';
 
 export type ProtocolEvidenceLoaders = {
   eventRealityRepository: EventRealityRepository;
@@ -63,18 +61,30 @@ export class ContradictionActionProtocolService {
     const expectation = await this.deps.eventExpectationRepository.getEventExpectationById(evaluation.expectationId);
     if (!expectation) throw new Error('event_expectation_not_found');
     if (expectation.expectationId !== evaluation.expectationId || expectation.asset !== evaluation.asset || expectation.eventReleaseId !== evaluation.releaseId) throw new Error('mismatched_event_expectation_identity');
+    if (expectation.preEventCognitionSnapshotId !== evaluation.preEventCognitionSnapshotId) throw new Error('pre_event_cognition_identity_mismatch');
     if (parseIso(evaluation.interpretedAt, 'event_interpreted_at') > cutoff || parseIso(evaluation.createdAt, 'event_created_at') > cutoff) throw new Error('evidence_after_protocol_cutoff');
     if (!evaluation.assessmentEvidenceHash || !evaluation.observationContentHash) throw new Error('missing_content_hash');
 
     const prePersisted = await this.deps.cognitionSnapshotRepository.getSnapshotById(evaluation.preEventCognitionSnapshotId);
     if (!prePersisted) throw new Error('pre_event_cognition_snapshot_not_found');
     const preCognition = validateCognitionSnapshot(prePersisted, evaluation.preEventCognitionSnapshotId, evaluation.asset, cutoff);
+    const expectationCutoff=parseIso(expectation.dataCutoffAt,'expectation_data_cutoff');
+    const issuedAt=parseIso(expectation.issuedAt,'expectation_issued_at');
+    const releaseAt=parseIso(expectation.scheduledReleaseTime,'scheduled_release');
+    const preEvaluated=parseIso(prePersisted.evaluatedAt,'pre_cognition_evaluated_at');
+    if(preEvaluated>expectationCutoff || preEvaluated>issuedAt || preEvaluated>=releaseAt) throw new Error('pre_event_cognition_temporal_leakage');
+    if(parseIso(preCognition.audit.dataCutoffAt,'pre_cognition_data_cutoff')>expectationCutoff) throw new Error('pre_event_cognition_future_data_cutoff');
     const postPersisted = evaluation.postEventCognitionSnapshotId ? await this.deps.cognitionSnapshotRepository.getSnapshotById(evaluation.postEventCognitionSnapshotId) : null;
     if (evaluation.postEventCognitionSnapshotId && !postPersisted) throw new Error('post_event_cognition_snapshot_not_found');
     const postCognition = postPersisted ? validateCognitionSnapshot(postPersisted, evaluation.postEventCognitionSnapshotId!, evaluation.asset, cutoff) : null;
     if (postPersisted && (parseIso(postPersisted.evaluatedAt, 'post_cognition_evaluated_at') < parseIso(evaluation.reality.observedAt, 'release_observed_at') || parseIso(postPersisted.evaluatedAt, 'post_cognition_evaluated_at') > parseIso(evaluation.interpretedAt, 'event_interpreted_at'))) throw new Error('post_event_cognition_time_mismatch');
 
-    const contradictionInput = await this.deps.contradictionInputRepository.loadInputForEvent({ eventEvaluationId: evaluation.eventEvaluationId, expectationId: expectation.expectationId, evidenceCutoffAt: request.evidenceCutoffAt });
+    const persistedContradictionInput = await this.deps.contradictionInputRepository.getContradictionInputForEvent(evaluation.eventEvaluationId);
+    if(!persistedContradictionInput) throw new Error('persisted_contradiction_input_not_found');
+    if(persistedContradictionInput.eventEvaluationId!==evaluation.eventEvaluationId || persistedContradictionInput.expectationId!==expectation.expectationId || persistedContradictionInput.asset!==evaluation.asset || persistedContradictionInput.assessmentStage!==evaluation.assessmentStage || persistedContradictionInput.assessmentEvidenceHash!==evaluation.assessmentEvidenceHash) throw new Error('persisted_contradiction_input_lineage_mismatch');
+    if(parseIso(persistedContradictionInput.availableAt,'contradiction_input_available_at')>cutoff || parseIso(persistedContradictionInput.createdAt,'contradiction_input_created_at')>cutoff || parseIso(persistedContradictionInput.evidenceCutoffAt,'contradiction_input_evidence_cutoff')>cutoff) throw new Error('contradiction_input_after_protocol_cutoff');
+    const contradictionInput = persistedContradictionInput.input;
+    if(canonicalHash(normalizeContradictionInput(contradictionInput))!==persistedContradictionInput.normalizedInputHash) throw new Error('contradiction_input_hash_mismatch');
     if (contradictionInput.asset !== evaluation.asset) throw new Error('contradiction_input_asset_mismatch');
     if (parseIso(contradictionInput.generatedAt, 'contradiction_generated_at') > cutoff) throw new Error('contradiction_input_after_protocol_cutoff');
     for (const point of contradictionInput.evidencePoints) {
@@ -95,8 +105,9 @@ export class ContradictionActionProtocolService {
       ...expectation.provenance.map(effectiveReliability),
       ...evaluation.reality.provenance.map(effectiveReliability),
       ...evaluation.reactionProvenance.map(envelopeReliability),
+      ...persistedContradictionInput.provenance.map((source)=>source.reliability==='replay'&&(!source.verificationRef||!source.verifiedAt)?'unverified':source.reliability),
     ];
-    const bundle: ProtocolEvidenceBundle = { eventEvaluation: evaluation, expectation, analogRetrieval: analog, preEventCognition: { persisted: prePersisted, cognition: preCognition }, postEventCognition: postPersisted && postCognition ? { persisted: postPersisted, cognition: postCognition } : null, contradictionInput, contradictionMatrix: matrix, invalidationState: (postCognition ?? preCognition).invalidation, requiredDirectReliability: reliability };
+    const bundle: ProtocolEvidenceBundle = { eventEvaluation: evaluation, expectation, analogRetrieval: analog, preEventCognition: { persisted: prePersisted, cognition: preCognition }, postEventCognition: postPersisted && postCognition ? { persisted: postPersisted, cognition: postCognition } : null, persistedContradictionInput, contradictionInput, contradictionMatrix: matrix, invalidationState: (postCognition ?? preCognition).invalidation, requiredDirectReliability: reliability };
 
     const prior = request.previousProtocolDecisionId ? await this.deps.protocolRepository.getProtocolRecordById(request.previousProtocolDecisionId) : null;
     if (request.previousProtocolDecisionId && !prior) throw new Error('previous_protocol_decision_missing');
@@ -116,11 +127,11 @@ export class ContradictionActionProtocolService {
     ]);
     const warnings = sortedUnique([...decision.warnings, ...provenanceLimitations]);
     const limitations = sortedUnique([...decision.limitations, ...provenanceLimitations, ...(analog && analog.evidenceSufficiency !== 'sufficient' ? [`analog_${analog.evidenceSufficiency}`] : [])]);
-    const inputHash = canonicalHash({ ...contradictionInput, evidencePoints:[...contradictionInput.evidencePoints].sort((a,b) => canonicalHash(a).localeCompare(canonicalHash(b))) });
+    const inputHash = canonicalHash(normalizeContradictionInput(contradictionInput));
     const matrixHash = canonicalHash(normalizedContradiction(matrix));
     const invalidationHash = canonicalHash(bundle.invalidationState);
     const noHash: Omit<ProtocolAuditRecord, 'canonicalPayloadHash'> = {
-      protocolDecisionId: id, policyVersion: CONTRADICTION_ACTION_PROTOCOL_POLICY_VERSION, sourceEventEvaluationId: evaluation.eventEvaluationId, sourceExpectationId: expectation.expectationId, sourceAnalogRetrievalId: analog?.retrievalId ?? null, sourceCognitionSnapshotIds: cognitionIds,
+      protocolDecisionId: id, policyVersion: CONTRADICTION_ACTION_PROTOCOL_POLICY_VERSION, sourceEventEvaluationId: evaluation.eventEvaluationId, sourceExpectationId: expectation.expectationId, sourceContradictionInputId:persistedContradictionInput.recordId, sourceAnalogRetrievalId: analog?.retrievalId ?? null, sourceCognitionSnapshotIds: cognitionIds,
       sourceAsset: evaluation.asset, sourceReleaseId: evaluation.releaseId, sourceReleaseVersion: evaluation.releaseVersion, sourceAssessmentStage: evaluation.assessmentStage, sourceAssessmentStageOrder: assessmentStageOrder(evaluation.assessmentStage), eventInstanceKey,
       contradictionEvidenceHash: matrixHash, invalidationStateHash: invalidationHash, analogContextHash: analogHash, evidenceCutoffAt: request.evidenceCutoffAt, evidenceSufficiency: decision.sufficiency, protocolState: decision.state, transitionReasons: sortedUnique(decision.reasons), reviewPrompts: [reviewPromptForState(decision.state)], blockedActionClasses: sortedUnique([...BLOCKED_ACTION_CLASSES]), warnings, limitations, deterministicRationale: decision.rationale, sourceEvidenceReferences: refs,
       contradictionEvidence: { evidenceSnapshotId: protocolEvidenceSnapshotId(bundle), inputHash, matrixResultHash: matrixHash, severity: matrix.highestSeverity, status: matrix.status, score: evaluation.reality.postEventContradiction, families: sortedUnique(matrix.signals.map((signal) => signal.family)), warnings: sortedUnique(matrix.warnings), reasonCodes: sortedUnique(matrix.reasonCodes) },
@@ -142,13 +153,18 @@ export class ContradictionActionProtocolService {
       { sourceType: 'event_expectation', sourceId: bundle.expectation.expectationId, contentHash: canonicalHash(bundle.expectation), observedAt: bundle.expectation.createdAt, reliability: fallback },
       { sourceType: 'cognition_snapshot', sourceId: bundle.preEventCognition.persisted.snapshotId, contentHash: canonicalHash(bundle.preEventCognition.cognition), observedAt: bundle.preEventCognition.persisted.evaluatedAt, reliability: fallback },
       { sourceType: 'invalidation_state', sourceId: bundle.postEventCognition?.persisted.snapshotId ?? bundle.preEventCognition.persisted.snapshotId, contentHash: canonicalHash(bundle.invalidationState), observedAt: bundle.postEventCognition?.persisted.evaluatedAt ?? bundle.preEventCognition.persisted.evaluatedAt, reliability: fallback },
-      { sourceType: 'contradiction_input', sourceId: `contradiction-input:${canonicalHash({ ...bundle.contradictionInput, evidencePoints:[...bundle.contradictionInput.evidencePoints].sort((a,b)=>canonicalHash(a).localeCompare(canonicalHash(b))) })}`, contentHash: canonicalHash({ ...bundle.contradictionInput, evidencePoints:[...bundle.contradictionInput.evidencePoints].sort((a,b)=>canonicalHash(a).localeCompare(canonicalHash(b))) }), observedAt: bundle.contradictionInput.generatedAt, reliability: fallback },
+      { sourceType: 'contradiction_input', sourceId: bundle.persistedContradictionInput.recordId, contentHash: bundle.persistedContradictionInput.normalizedInputHash, observedAt: bundle.persistedContradictionInput.availableAt, reliability: fallback },
       { sourceType: 'contradiction_matrix', sourceId: `contradiction-matrix:${canonicalHash(normalizedContradiction(bundle.contradictionMatrix))}`, contentHash: canonicalHash(normalizedContradiction(bundle.contradictionMatrix)), observedAt: bundle.contradictionMatrix.generatedAt, reliability: fallback },
     ];
     if (bundle.postEventCognition) refs.push({ sourceType: 'cognition_snapshot', sourceId: bundle.postEventCognition.persisted.snapshotId, contentHash: canonicalHash(bundle.postEventCognition.cognition), observedAt: bundle.postEventCognition.persisted.evaluatedAt, reliability: fallback });
     bundle.expectation.provenance.forEach((source) => refs.push({ sourceType: 'release_observation', sourceId: source.sourceId, contentHash: source.contentHash ?? canonicalHash(source), observedAt: bundle.expectation.createdAt, reliability: effectiveReliability(source) }));
     bundle.eventEvaluation.reactionProvenance.forEach((source) => refs.push({ sourceType: 'reaction_observation', sourceId: source.sourceId, contentHash: source.calculatedContentHash ?? source.suppliedContentHash ?? canonicalHash(source), observedAt: source.reactionInput.candles.at(-1)?.closedAt ?? source.reactionInput.eventTime ?? bundle.eventEvaluation.interpretedAt, reliability: envelopeReliability(source) }));
+    bundle.persistedContradictionInput.provenance.forEach((source)=>refs.push({sourceType:'contradiction_input',sourceId:`${bundle.persistedContradictionInput.recordId}:${source.sourceId}`,contentHash:source.contentHash,observedAt:bundle.persistedContradictionInput.availableAt,reliability:source.reliability==='replay'&&(!source.verificationRef||!source.verifiedAt)?'unverified':source.reliability}));
     if (bundle.analogRetrieval) refs.push({ sourceType: 'analog_retrieval', sourceId: bundle.analogRetrieval.retrievalId, contentHash: canonicalHash({ retrievalId: bundle.analogRetrieval.retrievalId, queryFeatureHash: bundle.analogRetrieval.queryFeatureHash }), observedAt: bundle.analogRetrieval.createdAt, reliability: fallback });
     return payloadHash.normalizeReferences(refs);
   }
+}
+
+export function createContradictionActionProtocolService(persistence:ReasoningPersistenceRepository):ContradictionActionProtocolService {
+  return new ContradictionActionProtocolService({eventRealityRepository:persistence.eventRealityRepository,eventExpectationRepository:persistence.eventExpectationRepository,cognitionSnapshotRepository:persistence.snapshotRepository,contradictionInputRepository:persistence.persistedContradictionInputRepository,analogRepository:persistence.historicalAnalogRepository,protocolRepository:persistence.contradictionActionProtocolRepository});
 }

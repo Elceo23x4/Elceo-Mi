@@ -5,6 +5,8 @@ import { SqlHistoricalAnalogRepository } from '../historical-analog-memory/sql-r
 import type { HistoricalAnalogRepository } from '../historical-analog-memory/contracts';
 import { SqlContradictionActionProtocolRepository } from '../contradiction-action-protocol/sql-repository';
 import type { ContradictionActionProtocolRepository } from '../contradiction-action-protocol/repository';
+import { SqlPersistedContradictionInputRepository } from '../contradiction-action-protocol/sql-input-repository';
+import type { PersistedContradictionInputRepository } from '../contradiction-action-protocol/input-repository';
 import type {
   CognitionDriftRepository,
   CognitionSnapshotRepository,
@@ -494,6 +496,7 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
   readonly eventRealityRepository: EventRealityRepository;
   readonly historicalAnalogRepository: HistoricalAnalogRepository;
   readonly contradictionActionProtocolRepository: ContradictionActionProtocolRepository;
+  readonly persistedContradictionInputRepository: PersistedContradictionInputRepository;
 
   constructor(
     runRepository: ReasoningRunRepository = new SqlReasoningRunRepository(),
@@ -504,7 +507,8 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
     eventExpectationRepository: EventExpectationRepository = new SqlEventExpectationRepository(),
     eventRealityRepository: EventRealityRepository = new SqlEventRealityRepository(),
     historicalAnalogRepository: HistoricalAnalogRepository = new SqlHistoricalAnalogRepository(queryDb, transactionDb),
-    contradictionActionProtocolRepository?: ContradictionActionProtocolRepository
+    contradictionActionProtocolRepository?: ContradictionActionProtocolRepository,
+    persistedContradictionInputRepository: PersistedContradictionInputRepository = new SqlPersistedContradictionInputRepository(queryDb, transactionDb)
   ) {
     this.runRepository = runRepository;
     this.snapshotRepository = snapshotRepository;
@@ -526,6 +530,7 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
         return { rows: result.rows, rowCount: result.rows.length };
       },
     });
+    this.persistedContradictionInputRepository = persistedContradictionInputRepository;
   }
 }
 

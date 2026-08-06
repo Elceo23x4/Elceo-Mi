@@ -4,4 +4,6 @@ export * from './identity';
 export * from './state-machine';
 export * from './repository';
 export * from './sql-repository';
+export * from './input-repository';
+export * from './sql-input-repository';
 export * from './service';

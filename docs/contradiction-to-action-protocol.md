@@ -7,7 +7,7 @@ IFP-3 transforms persisted, evidence-backed contradiction conditions into determ
 The implementation lives in `services/reasoning/src/contradiction-action-protocol/` with versioned contracts, policy constants, deterministic identity, state machine, service, memory repository, SQL repository, and exports.
 
 ## Evidence sources
-The service accepts persisted identities: event evaluation ID, optional analog retrieval ID, previous decision ID, and an evidence cutoff. It loads the IFP-1 event evaluation and expectation, both persisted canonical cognition payloads, and optional IFP-2 analog context. A dedicated repository supplies persisted-source `MarketContradictionInput`; the service validates its asset, generation time, evidence identities, evidence-point times, provenance boundary, and required fields before always invoking the existing contradiction-matrix evaluator internally. Callers cannot provide a completed matrix result.
+The service accepts persisted identities: event evaluation ID, optional analog retrieval ID, previous decision ID, and an evidence cutoff. It loads the IFP-1 event evaluation and expectation, both persisted canonical cognition payloads, and optional IFP-2 analog context. Memory and SQL repositories persist a content-bound `PersistedContradictionInputRecord` tied to the exact evaluation, expectation, asset, assessment stage/evidence hash, and point-in-time cutoff. The production factory obtains that repository from canonical reasoning persistence; consumers do not invent adapters. The service validates the record before invoking the existing contradiction-matrix evaluator internally.
 
 ## State definitions
 - `wait_for_confirmation`: evidence is provisional, pending, ambiguous, provenance-limited, or otherwise immature.
@@ -23,13 +23,13 @@ Trusted confirmed canonical invalidation (`invalidation.primary != null`, `prima
 Analog outcomes are context only. They cannot independently invalidate or escalate, do not alter ranking identity, and sparse, provenance-limited, or no-comparable-history results are limitations.
 
 ## Provenance rules
-Reliability is preserved from expectation, release, and reaction provenance; replay requires certification artifacts. Fixture and unverified required evidence cannot produce hard states and remain visible in references, warnings, limitations, sufficiency, and exact provenance counts. Cognition invalidation is loaded from canonical payloads rather than expectation fields.
+Reliability is preserved from expectation, release, reaction, and persisted contradiction-point provenance; replay requires certification artifacts. Missing provider reliability, unverified source independence, fixture evidence, and unverified evidence block hard states and remain visible in references, warnings, limitations, sufficiency, and exact provenance counts. Pre-event cognition must precede the expectation cutoff, issuance, and scheduled release, and its audit cutoff cannot exceed the expectation cutoff.
 
 ## Deterministic identity
 Protocol evidence snapshots and decisions are content-bound using canonical JSON hashing. Decision identity includes policy version, source evaluation/evidence hashes, expectation, cognition snapshots, contradiction hash, invalidation hash, analog retrieval/query-feature hash when present, cutoff, and previous decision.
 
 ## Persistence
-Records are immutable and append-only. Immediate, confirmation, and follow-through assessments may supersede earlier records only within the same expectation/release/version/asset event lineage and without stage regression. SQL writes are transactional across parent, evidence reference, and transition rows, and the protocol repository is part of canonical memory and SQL reasoning persistence composition.
+Records are immutable and append-only. Immediate, confirmation, and follow-through assessments may supersede earlier records only within the same expectation/release/version/asset event lineage and without stage regression. SQL writes are transactional across parent, evidence reference, and transition rows. Tests use independent concurrent connections synchronized at the insert boundary so both transactions reach the uniqueness race before either commits; rollback tests verify no partial parent or children remain.
 
 ## Safe-language boundary
 All generated text is validated by a no-advice guard. Blocked classes include trade execution, position entry, position exit, position sizing, leverage selection, stop placement, and target placement.

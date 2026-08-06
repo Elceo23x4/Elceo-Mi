@@ -333,6 +333,8 @@ const ifp3Sources = [
   'services/reasoning/src/contradiction-action-protocol/repository.ts',
   'services/reasoning/src/contradiction-action-protocol/sql-repository.ts',
   'services/reasoning/src/contradiction-action-protocol/service.ts',
+  'services/reasoning/src/contradiction-action-protocol/input-repository.ts',
+  'services/reasoning/src/contradiction-action-protocol/sql-input-repository.ts',
   'services/reasoning/src/contradiction-action-protocol/policy.ts',
   'services/reasoning/src/tests/contradiction-action-protocol.test.ts',
   'infra/db/schema/0044_contradiction_action_protocol.sql',
@@ -367,6 +369,11 @@ for (const phrase of [
   'contradiction_evidence_after_protocol_cutoff',
   'canonical memory persistence composition exposes protocol repository',
   'runContradictionActionProtocolTests',
+  'MemoryPersistedContradictionInputRepository',
+  'SqlPersistedContradictionInputRepository',
+  'normalizeContradictionInput',
+  'createContradictionActionProtocolService',
+  'ConcurrentRacePool',
 ]) if (!ifp3Surface.includes(phrase)) fail(`IFP-3 implementation surface missing: ${phrase}`);
 for (const phrase of ['IFP-1 closed', 'IFP-2 closed', 'IFP-3 active', 'IFP-4 not started', 'RC-K not started', 'RC-I2-CERT and RC-J-ENV remain external blockers']) if (!doc.includes(phrase)) fail(`IFP-3 status missing: ${phrase}`);
 

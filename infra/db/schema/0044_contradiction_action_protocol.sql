@@ -1,10 +1,32 @@
 -- 0044_contradiction_action_protocol
 -- IFP-3 Contradiction-to-Action Protocol immutable audit records.
+CREATE TABLE IF NOT EXISTS contradiction_action_protocol_inputs (
+  record_id TEXT PRIMARY KEY,
+  event_evaluation_id TEXT NOT NULL UNIQUE REFERENCES app_event_reality_evaluations(event_evaluation_id) ON DELETE RESTRICT,
+  expectation_id TEXT NOT NULL REFERENCES app_expectation_records(expectation_id) ON DELETE RESTRICT,
+  asset TEXT NOT NULL CHECK (length(asset) > 0),
+  assessment_stage TEXT NOT NULL CHECK (assessment_stage IN ('immediate','confirmation','follow_through')),
+  assessment_evidence_hash TEXT NOT NULL CHECK (length(assessment_evidence_hash) > 0),
+  available_at TIMESTAMPTZ NOT NULL,
+  evidence_cutoff_at TIMESTAMPTZ NOT NULL,
+  normalized_input_hash TEXT NOT NULL UNIQUE,
+  provider_reliability_supplied BOOLEAN NOT NULL,
+  source_independence_verified BOOLEAN NOT NULL,
+  provenance_classes TEXT[] NOT NULL,
+  warnings TEXT[] NOT NULL DEFAULT '{}',
+  limitations TEXT[] NOT NULL DEFAULT '{}',
+  canonical_payload JSONB NOT NULL,
+  canonical_payload_hash TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ NOT NULL,
+  CHECK (available_at <= evidence_cutoff_at),
+  CHECK (created_at <= evidence_cutoff_at)
+);
 CREATE TABLE IF NOT EXISTS contradiction_action_protocol_records (
   protocol_decision_id TEXT PRIMARY KEY,
   policy_version TEXT NOT NULL CHECK (policy_version = 'contradiction-action-protocol-v1'),
   source_event_evaluation_id TEXT NOT NULL REFERENCES app_event_reality_evaluations(event_evaluation_id) ON DELETE RESTRICT,
   source_expectation_id TEXT NOT NULL REFERENCES app_expectation_records(expectation_id) ON DELETE RESTRICT,
+  source_contradiction_input_id TEXT NOT NULL REFERENCES contradiction_action_protocol_inputs(record_id) ON DELETE RESTRICT,
   source_analog_retrieval_id TEXT NULL REFERENCES app_historical_analog_retrievals(retrieval_id) ON DELETE RESTRICT,
   source_asset TEXT NOT NULL,
   source_release_id TEXT NOT NULL,
@@ -45,3 +67,4 @@ CREATE TABLE IF NOT EXISTS contradiction_action_protocol_transitions (
   UNIQUE (next_protocol_decision_id)
 );
 CREATE INDEX IF NOT EXISTS contradiction_action_protocol_event_idx ON contradiction_action_protocol_records(source_event_evaluation_id, created_at);
+CREATE INDEX IF NOT EXISTS contradiction_action_protocol_input_lineage_idx ON contradiction_action_protocol_inputs(expectation_id,asset,assessment_stage,available_at);

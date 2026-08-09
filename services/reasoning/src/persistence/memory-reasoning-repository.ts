@@ -12,6 +12,8 @@ import { MemoryHistoricalAnalogRepository } from '../historical-analog-memory/re
 import { MemoryEventExpectationRepository, MemoryEventRealityRepository, MemoryExpectationRealityRepository, MemoryExpectationRepository } from '../expectation-reality/repository';
 import { MemoryContradictionActionProtocolRepository } from '../contradiction-action-protocol/repository';
 import { MemoryPersistedContradictionInputRepository } from '../contradiction-action-protocol/input-repository';
+import { MemoryMarketSessionLiquidityContextRepository } from '../market-cleanliness/context-repository';
+import { MemoryMarketCleanlinessRepository } from '../market-cleanliness/repository';
 
 export class MemoryReasoningRunRepository implements ReasoningRunRepository {
   private readonly rows = new Map<string, PersistedReasoningRun>();
@@ -103,6 +105,8 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
   readonly historicalAnalogRepository: MemoryHistoricalAnalogRepository;
   readonly contradictionActionProtocolRepository: MemoryContradictionActionProtocolRepository;
   readonly persistedContradictionInputRepository: MemoryPersistedContradictionInputRepository;
+  readonly marketSessionLiquidityContextRepository: MemoryMarketSessionLiquidityContextRepository;
+  readonly marketCleanlinessRepository: MemoryMarketCleanlinessRepository;
 
   constructor(
     runRepository: ReasoningRunRepository = new MemoryReasoningRunRepository(),
@@ -114,7 +118,9 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
     eventRealityRepository: MemoryEventRealityRepository = new MemoryEventRealityRepository(),
     historicalAnalogRepository: MemoryHistoricalAnalogRepository = new MemoryHistoricalAnalogRepository(),
     contradictionActionProtocolRepository: MemoryContradictionActionProtocolRepository = new MemoryContradictionActionProtocolRepository(),
-    persistedContradictionInputRepository: MemoryPersistedContradictionInputRepository = new MemoryPersistedContradictionInputRepository()
+    persistedContradictionInputRepository: MemoryPersistedContradictionInputRepository = new MemoryPersistedContradictionInputRepository(),
+    marketSessionLiquidityContextRepository = new MemoryMarketSessionLiquidityContextRepository(),
+    marketCleanlinessRepository = new MemoryMarketCleanlinessRepository()
   ) {
     this.runRepository = runRepository;
     this.snapshotRepository = snapshotRepository;
@@ -126,5 +132,7 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
     this.historicalAnalogRepository = historicalAnalogRepository;
     this.contradictionActionProtocolRepository = contradictionActionProtocolRepository;
     this.persistedContradictionInputRepository = persistedContradictionInputRepository;
+    this.marketSessionLiquidityContextRepository = marketSessionLiquidityContextRepository;
+    this.marketCleanlinessRepository = marketCleanlinessRepository;
   }
 }

@@ -3,6 +3,8 @@ import type { EventExpectationRepository, EventRealityRepository, ExpectationRea
 import type { HistoricalAnalogRepository } from '../historical-analog-memory/contracts';
 import type { ContradictionActionProtocolRepository } from '../contradiction-action-protocol/repository';
 import type { PersistedContradictionInputRepository } from '../contradiction-action-protocol/input-repository';
+import type { MarketSessionLiquidityContextRepository } from '../market-cleanliness/context-repository';
+import type { MarketCleanlinessRepository } from '../market-cleanliness/repository';
 
 export type PersistedReasoningRun = {
   reasoningRunId: string;
@@ -70,6 +72,8 @@ export type ReasoningPersistenceRepository = {
   historicalAnalogRepository: HistoricalAnalogRepository;
   contradictionActionProtocolRepository: ContradictionActionProtocolRepository;
   persistedContradictionInputRepository: PersistedContradictionInputRepository;
+  marketSessionLiquidityContextRepository: MarketSessionLiquidityContextRepository;
+  marketCleanlinessRepository: MarketCleanlinessRepository;
 };
 
 export type PersistedCognitionDriftRecord = {

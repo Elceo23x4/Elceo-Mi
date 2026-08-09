@@ -7,6 +7,10 @@ import { SqlContradictionActionProtocolRepository } from '../contradiction-actio
 import type { ContradictionActionProtocolRepository } from '../contradiction-action-protocol/repository';
 import { SqlPersistedContradictionInputRepository } from '../contradiction-action-protocol/sql-input-repository';
 import type { PersistedContradictionInputRepository } from '../contradiction-action-protocol/input-repository';
+import { SqlMarketSessionLiquidityContextRepository } from '../market-cleanliness/sql-context-repository';
+import { SqlMarketCleanlinessRepository } from '../market-cleanliness/sql-repository';
+import type { MarketSessionLiquidityContextRepository } from '../market-cleanliness/context-repository';
+import type { MarketCleanlinessRepository } from '../market-cleanliness/repository';
 import type {
   CognitionDriftRepository,
   CognitionSnapshotRepository,
@@ -497,6 +501,8 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
   readonly historicalAnalogRepository: HistoricalAnalogRepository;
   readonly contradictionActionProtocolRepository: ContradictionActionProtocolRepository;
   readonly persistedContradictionInputRepository: PersistedContradictionInputRepository;
+  readonly marketSessionLiquidityContextRepository: MarketSessionLiquidityContextRepository;
+  readonly marketCleanlinessRepository: MarketCleanlinessRepository;
 
   constructor(
     runRepository: ReasoningRunRepository = new SqlReasoningRunRepository(),
@@ -508,7 +514,9 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
     eventRealityRepository: EventRealityRepository = new SqlEventRealityRepository(),
     historicalAnalogRepository: HistoricalAnalogRepository = new SqlHistoricalAnalogRepository(queryDb, transactionDb),
     contradictionActionProtocolRepository?: ContradictionActionProtocolRepository,
-    persistedContradictionInputRepository: PersistedContradictionInputRepository = new SqlPersistedContradictionInputRepository(queryDb, transactionDb)
+    persistedContradictionInputRepository: PersistedContradictionInputRepository = new SqlPersistedContradictionInputRepository(queryDb, transactionDb),
+    marketSessionLiquidityContextRepository?: MarketSessionLiquidityContextRepository,
+    marketCleanlinessRepository?: MarketCleanlinessRepository
   ) {
     this.runRepository = runRepository;
     this.snapshotRepository = snapshotRepository;
@@ -531,6 +539,12 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
       },
     });
     this.persistedContradictionInputRepository = persistedContradictionInputRepository;
+    const cleanlinessPool = {
+      query: async (sql:string,params?:unknown[]) => { const pool=await getPool(); const result=await pool.query(sql,params); return {rows:result.rows,rowCount:result.rows.length}; },
+      connect: async () => { const pool=await getPool(); if(!pool.connect)throw new Error('sql_pool_transactions_unavailable'); return pool.connect(); }
+    };
+    this.marketSessionLiquidityContextRepository = marketSessionLiquidityContextRepository ?? new SqlMarketSessionLiquidityContextRepository(cleanlinessPool);
+    this.marketCleanlinessRepository = marketCleanlinessRepository ?? new SqlMarketCleanlinessRepository(cleanlinessPool);
   }
 }
 

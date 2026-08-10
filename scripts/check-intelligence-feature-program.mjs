@@ -427,7 +427,7 @@ for (const phrase of [
   'actual historical rejected outcome alone does not review',
   'actual historical reversed outcome alone does not escalate',
 ]) if (!ifp3Surface.includes(phrase)) fail(`IFP-3 implementation surface missing: ${phrase}`);
-for (const phrase of ['IFP-1 closed', 'IFP-2 closed', 'IFP-3 closed', 'IFP-4 active', 'IFP-5 not started', 'RC-K not started', 'RC-I2-CERT and RC-J-ENV remain external blockers']) if (!doc.includes(phrase)) fail(`IFP status missing: ${phrase}`);
+for (const phrase of ['IFP-1 closed', 'IFP-2 closed', 'IFP-3 closed', 'IFP-4 closed', 'IFP-5 active', 'IFP-6 not started', 'RC-K not started', 'RC-I2-CERT and RC-J-ENV remain external blockers']) if (!doc.includes(phrase)) fail(`IFP status missing: ${phrase}`);
 
 if (/^### .*C6-R9H|^### .*C6-R10|Phase ID: C6-R9H|Phase ID: C6-R10|^### C6-/m.test(doc)) fail('prohibited C6-R9H, C6-R10, or new C6 phase introduced');
 if (/^### Affiliate-\d+/m.test(doc) || /^### IFP-\d+.*Affiliate/im.test(doc)) fail('affiliate phase represented as IFP phase');
@@ -449,7 +449,9 @@ if (/\bany\b/.test(ifp4Fixtures) || /function event\(overrides:any/.test(ifp4Tes
 for (const executable of ['buildCleanlinessEventFixture','buildAnalogRetrievalFixture','HistoricalAnalogRetrievalResult','confirmation T+6 mutation neutrality','outcome-only analog isolation','memory-snapshot cutoff rejection','report no-advice validator execution']) if (!ifp4Surfaces.includes(executable)) fail(`IFP-4 executable test proof missing: ${executable}`);
 for (const postgresCase of ['SQL clean confirmation','actual service-driven PostgreSQL clean rejection','SQL clean neutral inline','SQL release primary conflict','SQL follow-through reversal','SQL related final conflict','SQL missing volatility insufficiency','SQL provenance-limited insufficiency','SQL session liquidity limitation','SQL service-driven provenance-limited session blocks clean','SQL service-driven provenance-limited analog blocks clean','IFP4 PostgreSQL confirmation flip conflict','SQL sparse analog unavailable','SQL concurrent identical save','SQL concurrent conflicting save','SQL report grouping and distributions','canonical memory SQL parity']) if (!ifp4Postgres.includes(postgresCase)) fail(`IFP-4 standalone PostgreSQL case missing: ${postgresCase}`);
 for (const path of ['market-cleanliness-v1','MarketCleanlinessComponent','hardConflictFlags','evidenceCoverageRatio','MemoryMarketCleanlinessRepository','SqlMarketCleanlinessRepository']) if (!ifp4Surfaces.includes(path)) fail(`IFP-4 implementation contract missing: ${path}`);
-if (!/IFP-1 closed; IFP-2 closed; IFP-3 closed; IFP-4 active; IFP-5 not started/.test(doc)) fail('IFP-4 active status line is missing');
+if (!/IFP-1 closed; IFP-2 closed; IFP-3 closed; IFP-4 closed; IFP-5 active; IFP-6 not started/.test(doc)) fail('IFP-5 active status line is missing');
+const ifp5Surface=[read('services/reasoning/src/tests/narrative-decay.test.ts'),read('services/reasoning/src/narrative-decay/contracts.ts'),read('services/reasoning/src/narrative-decay/evaluator.ts'),read('services/reasoning/src/narrative-decay/service.ts'),read('services/reasoning/src/narrative-decay/repository.ts'),read('services/reasoning/src/narrative-decay/sql-repository.ts'),read('infra/db/schema/0046_news_half_life_narrative_decay.sql'),read('scripts/test-ifp5-postgres.mjs')].join('\n');
+for(const executable of ['narrativeAsOf','evidenceQualifiedPersistenceScore','observed_interval','source_freshness_is_non_authoritative','equalOrEarlierAnalogStage','MemoryNarrativeDecayRepository','SqlNarrativeDecayRepository','IFP5 actual service-driven PostgreSQL clean rejection'])if(!ifp5Surface.includes(executable))fail(`IFP-5 executable surface missing: ${executable}`);
 
 if (failures.length) {
   console.error('IFP documentation consistency check failed:');

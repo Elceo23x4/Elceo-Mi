@@ -5,6 +5,8 @@ import type { ContradictionActionProtocolRepository } from '../contradiction-act
 import type { PersistedContradictionInputRepository } from '../contradiction-action-protocol/input-repository';
 import type { MarketSessionLiquidityContextRepository } from '../market-cleanliness/context-repository';
 import type { MarketCleanlinessRepository } from '../market-cleanliness/repository';
+import type { NarrativeContinuationObservationRepository } from '../narrative-decay/observation-repository';
+import type { NarrativeDecayRepository } from '../narrative-decay/repository';
 
 export type PersistedReasoningRun = {
   reasoningRunId: string;
@@ -74,6 +76,8 @@ export type ReasoningPersistenceRepository = {
   persistedContradictionInputRepository: PersistedContradictionInputRepository;
   marketSessionLiquidityContextRepository: MarketSessionLiquidityContextRepository;
   marketCleanlinessRepository: MarketCleanlinessRepository;
+  narrativeContinuationObservationRepository: NarrativeContinuationObservationRepository;
+  narrativeDecayRepository: NarrativeDecayRepository;
 };
 
 export type PersistedCognitionDriftRecord = {

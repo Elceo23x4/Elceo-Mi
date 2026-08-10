@@ -14,7 +14,7 @@ try {
   const { SqlReasoningPersistenceRepository } = await import(new URL('persistence/sql-reasoning-repository.cjs', compiled));
   const { MemoryReasoningPersistenceRepository } = await import(new URL('persistence/memory-reasoning-repository.cjs', compiled));
   const { createMarketSessionLiquidityContext, createMarketCleanlinessService, evaluateMarketCleanliness, buildMarketCleanlinessDistributionReport } = await import(new URL('market-cleanliness/index.cjs', compiled));
-  const { buildCleanlinessEventFixture, buildSessionContextDraft, CLEANLINESS_CUTOFF } = await import(new URL('tests/market-cleanliness-fixtures.cjs', compiled));
+  const { buildCleanlinessEventFixture, buildSessionContextDraft, buildAnalogRetrievalFixture, CLEANLINESS_CUTOFF } = await import(new URL('tests/market-cleanliness-fixtures.cjs', compiled));
   const persistence = new SqlReasoningPersistenceRepository();
 
   await pool.query(`INSERT INTO app_cognition_snapshots(snapshot_id,reasoning_run_id,asset,timeframe,evaluated_at,bias,confidence_score,contradiction_score,freshness_score,reasoning_version,scoring_version,cognition_json,created_at) VALUES
@@ -47,10 +47,16 @@ try {
   assert.equal((await scenario('missing-volatility', {}, {}, (event) => { event.reality.priceReactionTimeline.primaryObservation.reactionInput.volatilityBasisPct=null; return event; })).cleanlinessState, 'insufficient_data', 'SQL missing volatility insufficiency');
   assert.equal((await scenario('provenance-limited', { releaseProvenance:[{sourceId:'release',provider:'source',reliability:'verified',effectiveReliability:'fixture'}] })).cleanlinessState, 'insufficient_data', 'SQL provenance-limited insufficiency');
   assert((await scenario('thin-session', {}, { liquidityState:'thin', spreadState:'wide' })).components.find((item) => item.component==='session_liquidity_quality').score < 60, 'SQL session liquidity limitation');
+  const limitedSession = await scenario('limited-session', {}, { sourceEvidenceIds:['fixture-liquidity'], provenance:[{sourceId:'fixture-liquidity',provider:'fixture',reliability:'fixture'}] });
+  assert.notEqual(limitedSession.cleanlinessState, 'clean', 'SQL service-driven provenance-limited session blocks clean');
 
   const sparse = { retrievalId:'ifp4-sparse-retrieval',queryEventEvaluationId:'placeholder',queryEventInstanceKey:'sparse-event',queryCutoffAt:'2026-01-01T01:00:00.000Z',queryElapsedMs:60,queryEvidenceMaturityRatio:1,retrievalPolicyVersion:'historical-analog-retrieval-v1',featurePolicyVersion:'historical-analog-features-v1',queryFeatureHash:'sparse-query',rankingMemorySnapshotHash:'sparse-rank',outcomeAttachmentSnapshotHash:'sparse-outcome',memorySnapshotHash:'sparse-memory',memorySnapshot:[],evidenceSufficiency:'sparse',eligibleUniqueEventCount:1,strongAnalogCount:0,exclusionReasonCounts:{},matches:[],warnings:[],limitations:['sparse history'],createdAt:'2026-01-01T01:00:00.000Z' };
   const sparseEvaluation = await scenario('sparse-analog', {}, {}, (event) => event, sparse);
   assert.equal(sparseEvaluation.components.find((item) => item.component==='analog_consistency').availability, 'unavailable', 'SQL sparse analog unavailable');
+  const limitedAnalog = buildAnalogRetrievalFixture({retrievalId:'ifp4-limited-retrieval',queryEventEvaluationId:'placeholder',memorySnapshot:[],matches:[],eligibleUniqueEventCount:0,strongAnalogCount:0,evidenceSufficiency:'provenance_limited'});
+  const limitedAnalogEvaluation = await scenario('limited-analog', {}, {}, (event) => event, limitedAnalog);
+  assert.equal(limitedAnalogEvaluation.components.find((item) => item.component==='analog_consistency').availability, 'provenance_limited', 'SQL supplied analog retains provenance limitation');
+  assert.notEqual(limitedAnalogEvaluation.cleanlinessState, 'clean', 'SQL service-driven provenance-limited analog blocks clean');
 
   const service = createMarketCleanlinessService(persistence);
   assert.deepEqual(await service.evaluate({eventEvaluationId:'ifp4-eval-rejection',sessionLiquidityContextId:persisted.get('rejection').context.contextId,evidenceCutoffAt:CLEANLINESS_CUTOFF}), rejection, 'SQL immutable identical service replay');

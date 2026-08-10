@@ -427,7 +427,7 @@ for (const phrase of [
   'actual historical rejected outcome alone does not review',
   'actual historical reversed outcome alone does not escalate',
 ]) if (!ifp3Surface.includes(phrase)) fail(`IFP-3 implementation surface missing: ${phrase}`);
-for (const phrase of ['IFP-1 closed', 'IFP-2 closed', 'IFP-3 active', 'IFP-4 not started', 'RC-K not started', 'RC-I2-CERT and RC-J-ENV remain external blockers']) if (!doc.includes(phrase)) fail(`IFP-3 status missing: ${phrase}`);
+for (const phrase of ['IFP-1 closed', 'IFP-2 closed', 'IFP-3 closed', 'IFP-4 active', 'IFP-5 not started', 'RC-K not started', 'RC-I2-CERT and RC-J-ENV remain external blockers']) if (!doc.includes(phrase)) fail(`IFP status missing: ${phrase}`);
 
 if (/^### .*C6-R9H|^### .*C6-R10|Phase ID: C6-R9H|Phase ID: C6-R10|^### C6-/m.test(doc)) fail('prohibited C6-R9H, C6-R10, or new C6 phase introduced');
 if (/^### Affiliate-\d+/m.test(doc) || /^### IFP-\d+.*Affiliate/im.test(doc)) fail('affiliate phase represented as IFP phase');
@@ -438,6 +438,18 @@ for (const [path, content] of [['docs/intelligence-feature-program.md', doc], ..
 const ifp3Tests = read('services/reasoning/src/tests/contradiction-action-protocol.test.ts');
 if (/historicalOutcome:\s*['"]invalidated['"]/.test(ifp3Tests)) fail('IFP-3 analog fixture uses non-canonical invalidated outcome');
 if (/const analog=\(overrides:any/.test(ifp3Tests)) fail('IFP-3 analog fixture remains untyped');
+
+
+const ifp4Tests = read('services/reasoning/src/tests/market-cleanliness.test.ts');
+const ifp4Fixtures = read('services/reasoning/src/tests/market-cleanliness-fixtures.ts');
+const ifp4Postgres = read('scripts/test-ifp4-postgres.mjs');
+const ifp4Surfaces = [ifp4Tests, ifp4Fixtures, read('services/reasoning/src/market-cleanliness/contracts.ts'), read('services/reasoning/src/market-cleanliness/evaluator.ts'), read('services/reasoning/src/market-cleanliness/sql-context-repository.ts'), read('services/reasoning/src/market-cleanliness/sql-repository.ts'), read('services/reasoning/src/persistence/memory-reasoning-repository.ts'), read('services/reasoning/src/persistence/sql-reasoning-repository.ts'), read('infra/db/schema/0045_market_cleanliness_ranking.sql'), ifp4Postgres].join('\n');
+for (const label of ['IFP4 effective-reliability downgrade','IFP4 clean canonical rejection','IFP4 neutral/inline coherence','IFP4 confirmation T+6 mutation neutrality','IFP4 confirmation path direction flip','IFP4 confirmation direction flip hard conflict','IFP4 strong analog cannot wash out confirmation flip','IFP4 provenance-limited session blocks clean','IFP4 provenance-limited analog blocks clean','IFP4 path source references','IFP4 related source references','IFP4 session-state consistency','IFP4 typed analog point-in-time safety','IFP4 analog source references','IFP4 canonical persistence composition','IFP4 standalone migration execution','IFP4 actual service-driven PostgreSQL clean rejection','IFP4 SQL context/evaluation lineage rejection','cleanliness_score_out_of_range','IFP4 no-advice validator execution']) if (!ifp4Surfaces.includes(label)) fail(`IFP-4 executable acceptance surface missing: ${label}`);
+if (/\bany\b/.test(ifp4Fixtures) || /function event\(overrides:any/.test(ifp4Tests)) fail('IFP-4 core fixtures must remain fully typed');
+for (const executable of ['buildCleanlinessEventFixture','buildAnalogRetrievalFixture','HistoricalAnalogRetrievalResult','confirmation T+6 mutation neutrality','outcome-only analog isolation','memory-snapshot cutoff rejection','report no-advice validator execution']) if (!ifp4Surfaces.includes(executable)) fail(`IFP-4 executable test proof missing: ${executable}`);
+for (const postgresCase of ['SQL clean confirmation','actual service-driven PostgreSQL clean rejection','SQL clean neutral inline','SQL release primary conflict','SQL follow-through reversal','SQL related final conflict','SQL missing volatility insufficiency','SQL provenance-limited insufficiency','SQL session liquidity limitation','SQL service-driven provenance-limited session blocks clean','SQL service-driven provenance-limited analog blocks clean','IFP4 PostgreSQL confirmation flip conflict','SQL sparse analog unavailable','SQL concurrent identical save','SQL concurrent conflicting save','SQL report grouping and distributions','canonical memory SQL parity']) if (!ifp4Postgres.includes(postgresCase)) fail(`IFP-4 standalone PostgreSQL case missing: ${postgresCase}`);
+for (const path of ['market-cleanliness-v1','MarketCleanlinessComponent','hardConflictFlags','evidenceCoverageRatio','MemoryMarketCleanlinessRepository','SqlMarketCleanlinessRepository']) if (!ifp4Surfaces.includes(path)) fail(`IFP-4 implementation contract missing: ${path}`);
+if (!/IFP-1 closed; IFP-2 closed; IFP-3 closed; IFP-4 active; IFP-5 not started/.test(doc)) fail('IFP-4 active status line is missing');
 
 if (failures.length) {
   console.error('IFP documentation consistency check failed:');

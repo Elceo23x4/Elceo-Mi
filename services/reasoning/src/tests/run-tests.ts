@@ -70,7 +70,7 @@ import { runMarketCleanlinessTests } from './market-cleanliness.test.js';
 import { runNarrativeDecayTests } from './narrative-decay.test.js';
 
 async function run(): Promise<void> {
-  runNarrativeDecayTests();
+  await runNarrativeDecayTests();
   runReasoningTests();
   runEvidenceProjectionTests();
   runDirectionalSupportTests();

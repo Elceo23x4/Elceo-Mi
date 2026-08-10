@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS market_session_liquidity_contexts (
  source_evidence_ids TEXT[] NOT NULL, provenance JSONB NOT NULL, warnings TEXT[] NOT NULL DEFAULT '{}', limitations TEXT[] NOT NULL DEFAULT '{}', canonical_payload JSONB NOT NULL,
  canonical_payload_hash TEXT NOT NULL CONSTRAINT market_session_liquidity_contexts_payload_hash_key UNIQUE, created_at TIMESTAMPTZ NOT NULL,
  CONSTRAINT market_session_liquidity_contexts_cutoff_check CHECK(observed_at<=evidence_cutoff_at AND available_at<=evidence_cutoff_at AND created_at<=evidence_cutoff_at),
- CONSTRAINT market_session_liquidity_contexts_state_consistency_check CHECK((market_state='continuous' AND session_state='continuous') OR (market_state='open' AND session_state IN('active','overlap','off_hours')) OR (market_state='closed' AND session_state='closed') OR market_state='unknown'),
+ CONSTRAINT market_session_liquidity_contexts_state_consistency_check CHECK((market_state='continuous' AND session_state='continuous') OR (market_state='open' AND session_state IN('active','overlap','off_hours','unknown')) OR (market_state='closed' AND session_state='closed') OR market_state='unknown'),
  CONSTRAINT market_session_liquidity_contexts_lineage_key UNIQUE(context_id,event_evaluation_id,asset,evidence_cutoff_at)
 );
 CREATE TABLE IF NOT EXISTS market_cleanliness_evaluations (

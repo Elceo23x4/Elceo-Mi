@@ -22,6 +22,14 @@ try {
     ('post','ifp4-run-post','xau_usd','H1','2026-01-01T00:30:00Z','bearish',60,10,100,'rv','sv','{}','2026-01-01T00:30:00Z')`);
 
   const persisted = new Map();
+  async function seedAnalogLineage(analog) {
+    for (const match of analog.matches) {
+      const historical = buildCleanlinessEventFixture({expectationId:`ifp4-${match.analogMemoryId}-expectation`,eventEvaluationId:match.sourceEventEvaluationId});
+      await persistence.eventExpectationRepository.saveEventExpectation(historical.expectation);
+      await persistence.eventRealityRepository.saveEventEvaluation(historical);
+      await pool.query(`INSERT INTO app_historical_analog_memory(analog_memory_id,source_event_evaluation_id,source_expectation_id,source_event_instance_key,source_asset,canonical_asset_family,event_kind,indicator_kind,indicator_category,memory_indexed_at,available_at,feature_policy_version,feature_content_hash,stage_feature_timeline_hash,assessment_evidence_hash,outcome_context_hash,audit_json,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,[match.analogMemoryId,match.sourceEventEvaluationId,historical.expectationId,match.sourceEventInstanceKey,match.sourceAsset,match.sourceAssetFamily,historical.expectation.eventKind,historical.expectation.indicatorKind,historical.expectation.indicatorCategory,'2025-01-01T01:00:00.000Z','2025-01-01T01:01:00.000Z',analog.featurePolicyVersion,`feature-${match.rank}`,`timeline-${match.rank}`,`assessment-${match.rank}`,`outcome-${match.rank}`,JSON.stringify({match}),'2025-01-01T01:00:00.000Z']);
+    }
+  }
   async function scenario(name, overrides = {}, contextOverrides = {}, mutate = (event) => event, analog = null) {
     const expectationId = `ifp4-exp-${name}`;
     const eventEvaluationId = `ifp4-eval-${name}`;
@@ -30,7 +38,7 @@ try {
     await persistence.eventRealityRepository.saveEventEvaluation(event);
     const context = createMarketSessionLiquidityContext(buildSessionContextDraft({ ...contextOverrides, eventEvaluationId, evidenceCutoffAt:CLEANLINESS_CUTOFF }));
     await persistence.marketSessionLiquidityContextRepository.saveContext(context);
-    if (analog) await persistence.historicalAnalogRepository.saveRetrievalResult({ ...analog, queryEventEvaluationId:eventEvaluationId });
+    if (analog) { await seedAnalogLineage(analog); await persistence.historicalAnalogRepository.saveRetrievalResult({ ...analog, queryEventEvaluationId:eventEvaluationId }); }
     const service = createMarketCleanlinessService(persistence);
     const evaluation = await service.evaluate({ eventEvaluationId, sessionLiquidityContextId:context.contextId, ...(analog ? { analogRetrievalId:analog.retrievalId } : {}), evidenceCutoffAt:CLEANLINESS_CUTOFF });
     persisted.set(name, { event, context, evaluation });
@@ -57,6 +65,12 @@ try {
   const limitedAnalogEvaluation = await scenario('limited-analog', {}, {}, (event) => event, limitedAnalog);
   assert.equal(limitedAnalogEvaluation.components.find((item) => item.component==='analog_consistency').availability, 'provenance_limited', 'SQL supplied analog retains provenance limitation');
   assert.notEqual(limitedAnalogEvaluation.cleanlinessState, 'clean', 'SQL service-driven provenance-limited analog blocks clean');
+  const flipAnalog = buildAnalogRetrievalFixture({retrievalId:'ifp4-confirmation-flip-retrieval'});
+  const confirmationFlip = await scenario('confirmation-flip', {stage:'confirmation',direction:'bullish',primaryDirection:'bullish',expectationDirection:'bullish',releaseStatus:'aligned',immediateState:'confirmed',confirmationState:'rejected',immediateDirection:'bullish',confirmationDirection:'bearish'}, {}, (event) => event, flipAnalog);
+  assert.equal(confirmationFlip.cleanlinessState, 'conflicted', 'IFP4 PostgreSQL confirmation flip conflict');
+  assert(confirmationFlip.hardConflictFlags.includes('confirmation_path_direction_flip'), 'PostgreSQL confirmation direction flip hard conflict persisted');
+  const confirmationFlipReplay = await createMarketCleanlinessService(persistence).evaluate({eventEvaluationId:'ifp4-eval-confirmation-flip',sessionLiquidityContextId:persisted.get('confirmation-flip').context.contextId,analogRetrievalId:flipAnalog.retrievalId,evidenceCutoffAt:CLEANLINESS_CUTOFF});
+  assert.deepEqual(confirmationFlipReplay, confirmationFlip, 'PostgreSQL confirmation flip conflict replays identically');
 
   const service = createMarketCleanlinessService(persistence);
   assert.deepEqual(await service.evaluate({eventEvaluationId:'ifp4-eval-rejection',sessionLiquidityContextId:persisted.get('rejection').context.contextId,evidenceCutoffAt:CLEANLINESS_CUTOFF}), rejection, 'SQL immutable identical service replay');

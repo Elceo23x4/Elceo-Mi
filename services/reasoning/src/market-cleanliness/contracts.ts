@@ -11,7 +11,7 @@ export type CleanlinessComponentName = 'release_clarity'|'primary_reaction_coher
 export type ComponentAvailability = 'available'|'unavailable'|'structurally_unavailable'|'provenance_limited';
 export type ComponentStatus = 'supportive'|'neutral'|'conflicting'|'severely_conflicting'|'insufficient';
 export type CleanlinessState = 'clean'|'mixed'|'conflicted'|'insufficient_data';
-export type HardConflictFlag = 'release_primary_direction_conflict'|'confirmation_follow_through_reversal'|'initial_confirmation_lost'|'two_sided_expansion'|'related_market_final_conflict'|'resolved_release_with_ambiguous_primary'|'provenance_conflict';
+export type HardConflictFlag = 'release_primary_direction_conflict'|'confirmation_path_direction_flip'|'confirmation_follow_through_reversal'|'initial_confirmation_lost'|'two_sided_expansion'|'related_market_final_conflict'|'resolved_release_with_ambiguous_primary'|'provenance_conflict';
 export type CleanlinessEvidenceReference = { sourceType:string; sourceId:string; contentHash:string; observedAt:string; availableAt:string; reliability:'verified'|'replay'|'fixture'|'unverified' };
 
 export type MarketSessionLiquidityContextRecord = Readonly<{

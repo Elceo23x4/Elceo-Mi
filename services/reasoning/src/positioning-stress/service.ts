@@ -1,0 +1,2 @@
+import type { PositioningStressEvaluationInput } from './evaluator';import { evaluatePositioningStress } from './evaluator';import type { PositioningStressRepository } from './repository';
+export class PositioningStressService{constructor(private repository:PositioningStressRepository){}async evaluate(input:PositioningStressEvaluationInput){return this.repository.saveEvaluation(evaluatePositioningStress(input));}}

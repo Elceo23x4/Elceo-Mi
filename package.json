@@ -49,7 +49,8 @@
     "check:ifp": "node scripts/check-intelligence-feature-program.mjs",
     "test:ifp3-postgres": "npm run -w services/reasoning test && node scripts/test-ifp3-postgres.mjs",
     "test:ifp4-postgres": "npm run -w services/reasoning test && node scripts/test-ifp4-postgres.mjs",
-    "test:ifp5-postgres": "npm run -w services/reasoning test && node scripts/test-ifp5-postgres.mjs"
+    "test:ifp5-postgres": "npm run -w services/reasoning test && node scripts/test-ifp5-postgres.mjs",
+    "test:ifp6-postgres": "npm run -w services/reasoning test && node scripts/test-ifp6-postgres.mjs"
   },
   "engines": {
     "node": "24.x",

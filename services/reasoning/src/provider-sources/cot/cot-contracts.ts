@@ -13,6 +13,15 @@ export type CotReportRow = {
   nonCommercialLong: number | null;
   nonCommercialShort: number | null;
   nonCommercialSpreading: number | null;
+  producerMerchantLong?: number | null;
+  producerMerchantShort?: number | null;
+  swapDealerLong?: number | null;
+  swapDealerShort?: number | null;
+  swapDealerSpreading?: number | null;
+  managedMoneyLong?: number | null;
+  managedMoneyShort?: number | null;
+  managedMoneySpreading?: number | null;
+  otherReportablesSpreading?: number | null;
   dealerLong: number | null;
   dealerShort: number | null;
   assetManagerLong: number | null;

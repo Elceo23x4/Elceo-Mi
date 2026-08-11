@@ -68,9 +68,11 @@ import { runHistoricalAnalogMemoryTests } from './historical-analog-memory.test.
 import { runContradictionActionProtocolTests } from './contradiction-action-protocol.test.js';
 import { runMarketCleanlinessTests } from './market-cleanliness.test.js';
 import { runNarrativeDecayTests } from './narrative-decay.test.js';
+import { runPositioningStressTests } from './positioning-stress.test.js';
 
 async function run(): Promise<void> {
   await runNarrativeDecayTests();
+  await runPositioningStressTests();
   runReasoningTests();
   runEvidenceProjectionTests();
   runDirectionalSupportTests();

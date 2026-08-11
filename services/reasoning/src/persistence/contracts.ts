@@ -9,6 +9,7 @@ import type { NarrativeContinuationObservationRepository } from '../narrative-de
 import type { NarrativeDecayRepository } from '../narrative-decay/repository';
 import type { PositioningEvidenceRepository } from '../positioning-stress/positioning-evidence-repository';
 import type { PositioningStressRepository } from '../positioning-stress/repository';
+import type { FragilityScoreRepository } from '../fragility-score/repository';
 
 export type PersistedReasoningRun = {
   reasoningRunId: string;
@@ -82,6 +83,7 @@ export type ReasoningPersistenceRepository = {
   narrativeDecayRepository: NarrativeDecayRepository;
   positioningEvidenceRepository: PositioningEvidenceRepository;
   positioningStressRepository: PositioningStressRepository;
+  fragilityScoreRepository: FragilityScoreRepository;
 };
 
 export type PersistedCognitionDriftRecord = {

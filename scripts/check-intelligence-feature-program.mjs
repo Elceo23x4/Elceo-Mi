@@ -8,6 +8,8 @@ const deploymentGate = read('scripts/verify-deployment-promotion-gates.mjs');
 const rcjSelfTest = read('scripts/security-rc-j-self-test.mjs');
 const readinessChecklist = read('docs/production-readiness-checklist.md');
 const packageJson = JSON.parse(read('package.json'));
+const fragilityDoc = read('docs/fragility-score.md');
+const fragilityContracts = read('services/reasoning/src/fragility-score/contracts.ts');
 const alignmentDocs = [
   'docs/backend-open-loop-register.md',
   'docs/final-production-status-report.md',
@@ -33,6 +35,10 @@ const failures = [];
 const fail = (message) => failures.push(message);
 
 if (packageJson.scripts?.['check:ifp'] !== 'node scripts/check-intelligence-feature-program.mjs') fail('package.json check:ifp script is missing or changed');
+if (packageJson.scripts?.['test:ifp7-postgres'] !== 'npm run -w services/reasoning test && node scripts/test-ifp7-postgres.mjs') fail('IFP-7 PostgreSQL script is missing');
+if (!ci.includes('IFP-7 PostgreSQL integration')) fail('IFP-7 PostgreSQL CI step is missing');
+if (!fragilityContracts.includes("'fragility-score-v1'")) fail('IFP-7 policy contract is missing');
+for (const phrase of ['non-predictive','availableWeight / expectedWeight','never multiplied by coverage','IFP-8 has not started']) if(!fragilityDoc.includes(phrase)) fail(`fragility documentation missing: ${phrase}`);
 if (!/name:\s*Check Intelligence Feature Program contract[\s\S]*?run:\s*npm run check:ifp/.test(ci)) fail('GitHub CI does not run check:ifp with the expected step name');
 if (!/label:\s*['"]npm run check:ifp['"][\s\S]*?args:\s*\[[^\]]*['"]run['"][^\]]*['"]check:ifp['"][^\]]*\]/.test(releaseGate)) fail('release gate does not include npm run check:ifp');
 
@@ -427,7 +433,7 @@ for (const phrase of [
   'actual historical rejected outcome alone does not review',
   'actual historical reversed outcome alone does not escalate',
 ]) if (!ifp3Surface.includes(phrase)) fail(`IFP-3 implementation surface missing: ${phrase}`);
-for (const phrase of ['IFP-1 closed', 'IFP-2 closed', 'IFP-3 closed', 'IFP-4 closed', 'IFP-5 closed', 'IFP-6 active', 'IFP-7 not started', 'RC-K not started', 'RC-I2-CERT and RC-J-ENV remain external blockers']) if (!doc.includes(phrase)) fail(`IFP status missing: ${phrase}`);
+for (const phrase of ['IFP-1 closed', 'IFP-2 closed', 'IFP-3 closed', 'IFP-4 closed', 'IFP-5 closed', 'IFP-6 closed', 'IFP-7 active', 'IFP-8 not started', 'RC-K not started', 'RC-I2-CERT and RC-J-ENV remain external blockers']) if (!doc.includes(phrase)) fail(`IFP status missing: ${phrase}`);
 
 if (/^### .*C6-R9H|^### .*C6-R10|Phase ID: C6-R9H|Phase ID: C6-R10|^### C6-/m.test(doc)) fail('prohibited C6-R9H, C6-R10, or new C6 phase introduced');
 if (/^### Affiliate-\d+/m.test(doc) || /^### IFP-\d+.*Affiliate/im.test(doc)) fail('affiliate phase represented as IFP phase');
@@ -449,7 +455,7 @@ if (/\bany\b/.test(ifp4Fixtures) || /function event\(overrides:any/.test(ifp4Tes
 for (const executable of ['buildCleanlinessEventFixture','buildAnalogRetrievalFixture','HistoricalAnalogRetrievalResult','confirmation T+6 mutation neutrality','outcome-only analog isolation','memory-snapshot cutoff rejection','report no-advice validator execution']) if (!ifp4Surfaces.includes(executable)) fail(`IFP-4 executable test proof missing: ${executable}`);
 for (const postgresCase of ['SQL clean confirmation','actual service-driven PostgreSQL clean rejection','SQL clean neutral inline','SQL release primary conflict','SQL follow-through reversal','SQL related final conflict','SQL missing volatility insufficiency','SQL provenance-limited insufficiency','SQL session liquidity limitation','SQL service-driven provenance-limited session blocks clean','SQL service-driven provenance-limited analog blocks clean','IFP4 PostgreSQL confirmation flip conflict','SQL sparse analog unavailable','SQL concurrent identical save','SQL concurrent conflicting save','SQL report grouping and distributions','canonical memory SQL parity']) if (!ifp4Postgres.includes(postgresCase)) fail(`IFP-4 standalone PostgreSQL case missing: ${postgresCase}`);
 for (const path of ['market-cleanliness-v1','MarketCleanlinessComponent','hardConflictFlags','evidenceCoverageRatio','MemoryMarketCleanlinessRepository','SqlMarketCleanlinessRepository']) if (!ifp4Surfaces.includes(path)) fail(`IFP-4 implementation contract missing: ${path}`);
-if (!/IFP-1 closed; IFP-2 closed; IFP-3 closed; IFP-4 closed; IFP-5 closed; IFP-6 active; IFP-7 not started/.test(doc)) fail('IFP-6 active status line is missing');
+if (!/IFP-1 closed; IFP-2 closed; IFP-3 closed; IFP-4 closed; IFP-5 closed; IFP-6 closed; IFP-7 active; IFP-8 not started/.test(doc)) fail('IFP-7 active status line is missing');
 const ifp5Surface=[read('services/reasoning/src/tests/narrative-decay.test.ts'),read('services/reasoning/src/narrative-decay/contracts.ts'),read('services/reasoning/src/narrative-decay/evaluator.ts'),read('services/reasoning/src/narrative-decay/service.ts'),read('services/reasoning/src/narrative-decay/repository.ts'),read('services/reasoning/src/narrative-decay/sql-repository.ts'),read('infra/db/schema/0046_news_half_life_narrative_decay.sql'),read('scripts/test-ifp5-postgres.mjs')].join('\n');
 for(const executable of ['narrativeAsOf', 'evidenceQualifiedPersistenceScore', 'observed_interval', 'source_freshness_is_non_authoritative', 'MemoryNarrativeDecayRepository', 'SqlNarrativeDecayRepository', 'IFP5 superseded old version terminal', 'IFP5 revision baseline cognition cutoff', 'IFP5 temporal checkpoint exact dedupe', 'IFP5 proportional related coverage ratio', 'IFP5 memory SQL event-version parity visibility rule', 'IFP5 PostgreSQL lifecycle matrix superseded old version terminal', 'IFP5 same-time primary providers remain one temporal checkpoint', 'IFP5 same-time primary provider order neutrality', 'IFP5 duplicate primary provider evidence cannot manufacture expiry', 'IFP5 same-checkpoint related evidence aggregation', 'IFP5 provider-ID neutral related conflict survives aggregation', 'IFP5 same-checkpoint cognition conflict governance', 'IFP5 source-owned cutoff eligibility one checkpoint', 'IFP5 provider-ID neutrality across different cutoffs', 'IFP5 no retroactive primary replay promotion', 'IFP5 PostgreSQL source-owned cutoff eligibility', 'IFP5 PostgreSQL split-cutoff reconciliation', 'IFP5 zero-eligible primary cannot retroactively qualify', 'IFP5 single failed replay remains provenance limited', 'IFP5 PostgreSQL zero-eligible primary cannot retroactively qualify', 'IFP5 PostgreSQL no retroactive replay promotion', 'IFP5 PostgreSQL hosted acceptance multi-provider deterministic replay', 'IFP5 SQL concurrent identical save', 'IFP5 SQL bad-lineage rollback'] )if(!ifp5Surface.includes(executable))fail(`IFP-5 executable surface missing: ${executable}`);
 

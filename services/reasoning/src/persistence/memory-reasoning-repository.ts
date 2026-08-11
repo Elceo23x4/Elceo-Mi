@@ -18,6 +18,7 @@ import { MemoryNarrativeContinuationObservationRepository } from '../narrative-d
 import { MemoryNarrativeDecayRepository } from '../narrative-decay/repository';
 import { MemoryPositioningEvidenceRepository } from '../positioning-stress/positioning-evidence-repository';
 import { MemoryPositioningStressRepository } from '../positioning-stress/repository';
+import { MemoryFragilityScoreRepository } from '../fragility-score/repository';
 
 export class MemoryReasoningRunRepository implements ReasoningRunRepository {
   private readonly rows = new Map<string, PersistedReasoningRun>();
@@ -115,6 +116,7 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
   readonly narrativeDecayRepository: MemoryNarrativeDecayRepository;
   readonly positioningEvidenceRepository: MemoryPositioningEvidenceRepository;
   readonly positioningStressRepository: MemoryPositioningStressRepository;
+  readonly fragilityScoreRepository: MemoryFragilityScoreRepository;
 
   constructor(
     runRepository: ReasoningRunRepository = new MemoryReasoningRunRepository(),
@@ -132,7 +134,8 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
     narrativeContinuationObservationRepository = new MemoryNarrativeContinuationObservationRepository(),
     narrativeDecayRepository = new MemoryNarrativeDecayRepository(),
     positioningEvidenceRepository = new MemoryPositioningEvidenceRepository(),
-    positioningStressRepository = new MemoryPositioningStressRepository()
+    positioningStressRepository = new MemoryPositioningStressRepository(),
+    fragilityScoreRepository = new MemoryFragilityScoreRepository()
   ) {
     this.runRepository = runRepository;
     this.snapshotRepository = snapshotRepository;
@@ -150,5 +153,6 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
     this.narrativeDecayRepository = narrativeDecayRepository;
     this.positioningEvidenceRepository = positioningEvidenceRepository;
     this.positioningStressRepository = positioningStressRepository;
+    this.fragilityScoreRepository = fragilityScoreRepository;
   }
 }

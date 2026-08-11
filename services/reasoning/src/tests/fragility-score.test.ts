@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import { counterfactual, fragilityState, FRAGILITY_WEIGHTS } from '../fragility-score/evaluator.js';
+import { counterfactual, fragilityState, FRAGILITY_WEIGHTS, FRAGILITY_SOURCE_OWNERS } from '../fragility-score/evaluator.js';
 import type { FragilityComponent, FragilityComponentName } from '../fragility-score/contracts.js';
 import { MemoryFragilityScoreRepository } from '../fragility-score/repository.js';
-const c=(component:FragilityComponentName,score:number,weight=FRAGILITY_WEIGHTS[component]):FragilityComponent=>({component,availability:'available',score,weight,effectiveWeight:weight,sourcePhase:'immediate',sourceEvaluationIds:['source'],sourceReferences:['source'],reasonCodes:[],warnings:[],limitations:[],rationale:'descriptive'});
+const c=(component:FragilityComponentName,score:number,weight=FRAGILITY_WEIGHTS[component]):FragilityComponent=>({component,availability:'available',score,weight,effectiveWeight:weight,sourceOwner:'derived',assessmentStage:'immediate',sourceEvaluationIds:['source'],sourceReferences:['source'],reasonCodes:[],warnings:[],limitations:[],rationale:'descriptive'});
 export async function runFragilityScoreTests(){
  assert.deepEqual([24.999999,25,49.999999,50,74.999999,75,100].map(fragilityState),['low','elevated','elevated','high','high','severe','severe']);assert.equal(fragilityState(null),'insufficient_data');
- assert.equal(Object.values(FRAGILITY_WEIGHTS).reduce((a,b)=>a+b,0),100);
+ assert.equal(Object.values(FRAGILITY_WEIGHTS).reduce((a,b)=>a+b,0),100);assert.deepEqual(FRAGILITY_SOURCE_OWNERS,{counterfactual_dependency_fragility:'derived',contradiction_invalidation_pressure:'ifp_3',path_instability:'ifp_1',context_coherence_fragility:'ifp_4',narrative_decay_vulnerability:'ifp_5',crowding_amplification:'ifp_6',volatility_sensitivity:'ifp_4',historical_analog_dispersion:'ifp_2'});
  const one=counterfactual([c('path_instability',0)],'immediate');assert.equal(one.component.score,100);assert.equal(one.audit.supportConcentrationIndex,100);
  const two=counterfactual([c('path_instability',0,10),c('volatility_sensitivity',0,10)],'immediate');assert.equal(two.component.score,50);assert.equal(two.audit.supportConcentrationIndex,50);assert.deepEqual(two.audit.removalScenarios.map(x=>x.removedFamily),['path_instability','volatility_sensitivity']);
  assert.equal(counterfactual([c('path_instability',100)],'immediate').component.score,100);

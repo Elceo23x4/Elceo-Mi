@@ -14,6 +14,8 @@ import { MemoryContradictionActionProtocolRepository } from '../contradiction-ac
 import { MemoryPersistedContradictionInputRepository } from '../contradiction-action-protocol/input-repository';
 import { MemoryMarketSessionLiquidityContextRepository } from '../market-cleanliness/context-repository';
 import { MemoryMarketCleanlinessRepository } from '../market-cleanliness/repository';
+import { MemoryNarrativeContinuationObservationRepository } from '../narrative-decay/observation-repository';
+import { MemoryNarrativeDecayRepository } from '../narrative-decay/repository';
 
 export class MemoryReasoningRunRepository implements ReasoningRunRepository {
   private readonly rows = new Map<string, PersistedReasoningRun>();
@@ -107,6 +109,8 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
   readonly persistedContradictionInputRepository: MemoryPersistedContradictionInputRepository;
   readonly marketSessionLiquidityContextRepository: MemoryMarketSessionLiquidityContextRepository;
   readonly marketCleanlinessRepository: MemoryMarketCleanlinessRepository;
+  readonly narrativeContinuationObservationRepository: MemoryNarrativeContinuationObservationRepository;
+  readonly narrativeDecayRepository: MemoryNarrativeDecayRepository;
 
   constructor(
     runRepository: ReasoningRunRepository = new MemoryReasoningRunRepository(),
@@ -120,7 +124,9 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
     contradictionActionProtocolRepository: MemoryContradictionActionProtocolRepository = new MemoryContradictionActionProtocolRepository(),
     persistedContradictionInputRepository: MemoryPersistedContradictionInputRepository = new MemoryPersistedContradictionInputRepository(),
     marketSessionLiquidityContextRepository = new MemoryMarketSessionLiquidityContextRepository(),
-    marketCleanlinessRepository = new MemoryMarketCleanlinessRepository()
+    marketCleanlinessRepository = new MemoryMarketCleanlinessRepository(),
+    narrativeContinuationObservationRepository = new MemoryNarrativeContinuationObservationRepository(),
+    narrativeDecayRepository = new MemoryNarrativeDecayRepository()
   ) {
     this.runRepository = runRepository;
     this.snapshotRepository = snapshotRepository;
@@ -134,5 +140,7 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
     this.persistedContradictionInputRepository = persistedContradictionInputRepository;
     this.marketSessionLiquidityContextRepository = marketSessionLiquidityContextRepository;
     this.marketCleanlinessRepository = marketCleanlinessRepository;
+    this.narrativeContinuationObservationRepository = narrativeContinuationObservationRepository;
+    this.narrativeDecayRepository = narrativeDecayRepository;
   }
 }

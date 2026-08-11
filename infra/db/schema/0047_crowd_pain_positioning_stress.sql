@@ -1,4 +1,9 @@
 BEGIN;
+CREATE TABLE IF NOT EXISTS positioning_payload_provenance (
+ positioning_payload_provenance_id text PRIMARY KEY, source_payload_id text NOT NULL UNIQUE REFERENCES app_normalized_market_evidence_payloads(payload_id),
+ provider text NOT NULL, source_id text NOT NULL, reliability text NOT NULL CHECK(reliability='replay'), verification_ref text NOT NULL, trust_basis text NOT NULL CHECK(trust_basis='provider_api_gate_captured_replay'), verified_at timestamptz NOT NULL,
+ gate_request_id text NOT NULL, gate_response_id text NOT NULL UNIQUE, canonical_payload jsonb NOT NULL, canonical_payload_hash text NOT NULL UNIQUE, created_at timestamptz NOT NULL
+);
 CREATE TABLE IF NOT EXISTS positioning_evidence (
  positioning_evidence_id text PRIMARY KEY, policy_version text NOT NULL CHECK(policy_version='positioning-stress-v1'), source_payload_id text NOT NULL REFERENCES app_normalized_market_evidence_payloads(payload_id),
  provider text NOT NULL, asset text NOT NULL, source_market_code text NOT NULL, report_kind text NOT NULL, cohort text NOT NULL, orientation text NOT NULL CHECK(orientation IN ('same','inverse')),

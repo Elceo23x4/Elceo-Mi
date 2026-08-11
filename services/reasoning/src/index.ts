@@ -58,3 +58,5 @@ export * from './historical-analog-memory';
 export * from './contradiction-action-protocol/index';
 export * from './market-cleanliness/index';
 export * from './narrative-decay/index';
+
+export * as positioningStress from './positioning-stress/index';

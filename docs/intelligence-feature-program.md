@@ -1,6 +1,6 @@
 # Intelligence Feature Program
 
-Status: **IFP-1 closed; IFP-2 closed; IFP-3 closed; IFP-4 closed; IFP-5 active; IFP-6 not started; complete IFP not finished; RC-K not started; RC-I2-CERT and RC-J-ENV remain external blockers**. This document defines the controlled Intelligence Feature Program before any IFP runtime development begins. IFP-0 implements no intelligence feature and does not complete IFP.
+Status: **IFP-1 closed; IFP-2 closed; IFP-3 closed; IFP-4 closed; IFP-5 closed; IFP-6 active; IFP-7 not started; complete IFP not finished; RC-K not started; RC-I2-CERT and RC-J-ENV remain external blockers**. This document defines the controlled Intelligence Feature Program before any IFP runtime development begins. IFP-0 implements no intelligence feature and does not complete IFP.
 
 ## Program purpose
 
@@ -207,7 +207,7 @@ IFP-0 does not raise confidence values, change confidence bands, weaken readines
 
 IFP-1 requires pre-event expectation; actual and forecast; previous and revised previous; normalized surprise; primary-asset price reaction; follow-through; related-market response; volatility adjustment; confidence shift; immutable audit trail. Cognition-path OHLC assessment may exist only as an internal component, not the complete event engine.
 
-IFP-1, IFP-2, IFP-3 and IFP-4 are closed. IFP-5 is active. IFP-6 has not started. The full IFP is not complete. Configuration versioning, confidence-floor diagnosis, auditability and empirical validation are cross-cutting requirements; they do not replace the seven approved engines.
+IFP-1 through IFP-5 are closed. IFP-6 is active. IFP-7 has not started. The full IFP is not complete. Configuration versioning, confidence-floor diagnosis, auditability and empirical validation are cross-cutting requirements; they do not replace the seven approved engines.
 
 ## Dependency graph
 
@@ -251,6 +251,6 @@ RC-J-ENV — External Infrastructure and Disaster-Recovery Certification
 
 ## Intelligence feature program status
 
-IFP-1, IFP-2, IFP-3 and IFP-4 are closed. IFP-5 is active. IFP-6 has not started. The complete IFP is unfinished, and RC-K has not started. Configuration versioning, confidence-floor diagnosis, auditability and empirical validation are cross-cutting requirements; they do not replace the seven approved engines.
+IFP-1 through IFP-5 are closed. IFP-6 is active. IFP-7 has not started. The complete IFP is unfinished, and RC-K has not started. Configuration versioning, confidence-floor diagnosis, auditability and empirical validation are cross-cutting requirements; they do not replace the seven approved engines.
 
 Note: IFP retains a cross-cutting requirement to diagnose confidence-floor saturation empirically; it does not mean formulas were changed.

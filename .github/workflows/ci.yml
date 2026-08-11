@@ -73,6 +73,10 @@ jobs:
         env:
           DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3
         run: npm run test:ifp5-postgres
+      - name: IFP-6 PostgreSQL integration
+        env:
+          DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3
+        run: npm run test:ifp6-postgres
       - name: Production build
         run: npm run build
       - name: Native sharp runtime

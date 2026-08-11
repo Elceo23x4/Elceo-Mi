@@ -16,6 +16,8 @@ import { MemoryMarketSessionLiquidityContextRepository } from '../market-cleanli
 import { MemoryMarketCleanlinessRepository } from '../market-cleanliness/repository';
 import { MemoryNarrativeContinuationObservationRepository } from '../narrative-decay/observation-repository';
 import { MemoryNarrativeDecayRepository } from '../narrative-decay/repository';
+import { MemoryPositioningEvidenceRepository } from '../positioning-stress/positioning-evidence-repository';
+import { MemoryPositioningStressRepository } from '../positioning-stress/repository';
 
 export class MemoryReasoningRunRepository implements ReasoningRunRepository {
   private readonly rows = new Map<string, PersistedReasoningRun>();
@@ -111,6 +113,8 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
   readonly marketCleanlinessRepository: MemoryMarketCleanlinessRepository;
   readonly narrativeContinuationObservationRepository: MemoryNarrativeContinuationObservationRepository;
   readonly narrativeDecayRepository: MemoryNarrativeDecayRepository;
+  readonly positioningEvidenceRepository: MemoryPositioningEvidenceRepository;
+  readonly positioningStressRepository: MemoryPositioningStressRepository;
 
   constructor(
     runRepository: ReasoningRunRepository = new MemoryReasoningRunRepository(),
@@ -126,7 +130,9 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
     marketSessionLiquidityContextRepository = new MemoryMarketSessionLiquidityContextRepository(),
     marketCleanlinessRepository = new MemoryMarketCleanlinessRepository(),
     narrativeContinuationObservationRepository = new MemoryNarrativeContinuationObservationRepository(),
-    narrativeDecayRepository = new MemoryNarrativeDecayRepository()
+    narrativeDecayRepository = new MemoryNarrativeDecayRepository(),
+    positioningEvidenceRepository = new MemoryPositioningEvidenceRepository(),
+    positioningStressRepository = new MemoryPositioningStressRepository()
   ) {
     this.runRepository = runRepository;
     this.snapshotRepository = snapshotRepository;
@@ -142,5 +148,7 @@ export class MemoryReasoningPersistenceRepository implements ReasoningPersistenc
     this.marketCleanlinessRepository = marketCleanlinessRepository;
     this.narrativeContinuationObservationRepository = narrativeContinuationObservationRepository;
     this.narrativeDecayRepository = narrativeDecayRepository;
+    this.positioningEvidenceRepository = positioningEvidenceRepository;
+    this.positioningStressRepository = positioningStressRepository;
   }
 }

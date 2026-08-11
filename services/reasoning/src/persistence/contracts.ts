@@ -7,6 +7,8 @@ import type { MarketSessionLiquidityContextRepository } from '../market-cleanlin
 import type { MarketCleanlinessRepository } from '../market-cleanliness/repository';
 import type { NarrativeContinuationObservationRepository } from '../narrative-decay/observation-repository';
 import type { NarrativeDecayRepository } from '../narrative-decay/repository';
+import type { PositioningEvidenceRepository } from '../positioning-stress/positioning-evidence-repository';
+import type { PositioningStressRepository } from '../positioning-stress/repository';
 
 export type PersistedReasoningRun = {
   reasoningRunId: string;
@@ -78,6 +80,8 @@ export type ReasoningPersistenceRepository = {
   marketCleanlinessRepository: MarketCleanlinessRepository;
   narrativeContinuationObservationRepository: NarrativeContinuationObservationRepository;
   narrativeDecayRepository: NarrativeDecayRepository;
+  positioningEvidenceRepository: PositioningEvidenceRepository;
+  positioningStressRepository: PositioningStressRepository;
 };
 
 export type PersistedCognitionDriftRecord = {

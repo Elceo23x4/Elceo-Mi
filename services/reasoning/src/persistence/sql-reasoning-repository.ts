@@ -15,6 +15,10 @@ import { SqlNarrativeContinuationObservationRepository } from '../narrative-deca
 import { SqlNarrativeDecayRepository } from '../narrative-decay/sql-repository';
 import type { NarrativeContinuationObservationRepository } from '../narrative-decay/observation-repository';
 import type { NarrativeDecayRepository } from '../narrative-decay/repository';
+import { SqlPositioningEvidenceRepository } from '../positioning-stress/sql-positioning-evidence-repository';
+import type { PositioningEvidenceRepository } from '../positioning-stress/positioning-evidence-repository';
+import { SqlPositioningStressRepository } from '../positioning-stress/sql-repository';
+import type { PositioningStressRepository } from '../positioning-stress/repository';
 import type {
   CognitionDriftRepository,
   CognitionSnapshotRepository,
@@ -509,6 +513,8 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
   readonly marketCleanlinessRepository: MarketCleanlinessRepository;
   readonly narrativeContinuationObservationRepository: NarrativeContinuationObservationRepository;
   readonly narrativeDecayRepository: NarrativeDecayRepository;
+  readonly positioningEvidenceRepository: PositioningEvidenceRepository;
+  readonly positioningStressRepository: PositioningStressRepository;
 
   constructor(
     runRepository: ReasoningRunRepository = new SqlReasoningRunRepository(),
@@ -524,7 +530,9 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
     marketSessionLiquidityContextRepository?: MarketSessionLiquidityContextRepository,
     marketCleanlinessRepository?: MarketCleanlinessRepository,
     narrativeContinuationObservationRepository?: NarrativeContinuationObservationRepository,
-    narrativeDecayRepository?: NarrativeDecayRepository
+    narrativeDecayRepository?: NarrativeDecayRepository,
+    positioningEvidenceRepository?: PositioningEvidenceRepository,
+    positioningStressRepository?: PositioningStressRepository
   ) {
     this.runRepository = runRepository;
     this.snapshotRepository = snapshotRepository;
@@ -555,6 +563,8 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
     this.marketCleanlinessRepository = marketCleanlinessRepository ?? new SqlMarketCleanlinessRepository(cleanlinessPool);
     this.narrativeContinuationObservationRepository = narrativeContinuationObservationRepository ?? new SqlNarrativeContinuationObservationRepository(cleanlinessPool);
     this.narrativeDecayRepository = narrativeDecayRepository ?? new SqlNarrativeDecayRepository(cleanlinessPool);
+    this.positioningEvidenceRepository = positioningEvidenceRepository ?? new SqlPositioningEvidenceRepository(cleanlinessPool);
+    this.positioningStressRepository = positioningStressRepository ?? new SqlPositioningStressRepository(cleanlinessPool);
   }
 }
 

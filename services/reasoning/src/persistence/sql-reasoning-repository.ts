@@ -19,6 +19,8 @@ import { SqlPositioningEvidenceRepository } from '../positioning-stress/sql-posi
 import type { PositioningEvidenceRepository } from '../positioning-stress/positioning-evidence-repository';
 import { SqlPositioningStressRepository } from '../positioning-stress/sql-repository';
 import type { PositioningStressRepository } from '../positioning-stress/repository';
+import { SqlFragilityScoreRepository } from '../fragility-score/sql-repository';
+import type { FragilityScoreRepository } from '../fragility-score/repository';
 import type {
   CognitionDriftRepository,
   CognitionSnapshotRepository,
@@ -515,6 +517,7 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
   readonly narrativeDecayRepository: NarrativeDecayRepository;
   readonly positioningEvidenceRepository: PositioningEvidenceRepository;
   readonly positioningStressRepository: PositioningStressRepository;
+  readonly fragilityScoreRepository: FragilityScoreRepository;
 
   constructor(
     runRepository: ReasoningRunRepository = new SqlReasoningRunRepository(),
@@ -532,7 +535,8 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
     narrativeContinuationObservationRepository?: NarrativeContinuationObservationRepository,
     narrativeDecayRepository?: NarrativeDecayRepository,
     positioningEvidenceRepository?: PositioningEvidenceRepository,
-    positioningStressRepository?: PositioningStressRepository
+    positioningStressRepository?: PositioningStressRepository,
+    fragilityScoreRepository?: FragilityScoreRepository
   ) {
     this.runRepository = runRepository;
     this.snapshotRepository = snapshotRepository;
@@ -565,6 +569,7 @@ export class SqlReasoningPersistenceRepository implements ReasoningPersistenceRe
     this.narrativeDecayRepository = narrativeDecayRepository ?? new SqlNarrativeDecayRepository(cleanlinessPool);
     this.positioningEvidenceRepository = positioningEvidenceRepository ?? new SqlPositioningEvidenceRepository(cleanlinessPool);
     this.positioningStressRepository = positioningStressRepository ?? new SqlPositioningStressRepository(cleanlinessPool);
+    this.fragilityScoreRepository = fragilityScoreRepository ?? new SqlFragilityScoreRepository(cleanlinessPool);
   }
 }
 

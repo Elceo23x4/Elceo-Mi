@@ -69,10 +69,12 @@ import { runContradictionActionProtocolTests } from './contradiction-action-prot
 import { runMarketCleanlinessTests } from './market-cleanliness.test.js';
 import { runNarrativeDecayTests } from './narrative-decay.test.js';
 import { runPositioningStressTests } from './positioning-stress.test.js';
+import { runFragilityScoreTests } from './fragility-score.test.js';
 
 async function run(): Promise<void> {
   await runNarrativeDecayTests();
   await runPositioningStressTests();
+  await runFragilityScoreTests();
   runReasoningTests();
   runEvidenceProjectionTests();
   runDirectionalSupportTests();

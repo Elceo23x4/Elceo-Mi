@@ -60,3 +60,4 @@ export * from './market-cleanliness/index';
 export * from './narrative-decay/index';
 
 export * as positioningStress from './positioning-stress/index';
+export * from './fragility-score/index';

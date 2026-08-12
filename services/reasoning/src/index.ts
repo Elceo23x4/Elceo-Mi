@@ -61,3 +61,4 @@ export * from './narrative-decay/index';
 
 export * as positioningStress from './positioning-stress/index';
 export * from './fragility-score/index';
+export * from './intelligence-acceptance/index';

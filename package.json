@@ -52,6 +52,7 @@
     "test:ifp5-postgres": "npm run -w services/reasoning test && node scripts/test-ifp5-postgres.mjs",
     "test:ifp6-postgres": "npm run -w services/reasoning test && node scripts/test-ifp6-postgres.mjs",
     "test:ifp7-postgres": "npm run -w services/reasoning test && node scripts/test-ifp7-postgres.mjs"
+    ,"test:ifp8-postgres": "npm run -w services/reasoning test && node scripts/test-ifp8-postgres.mjs"
   },
   "engines": {
     "node": "24.x",

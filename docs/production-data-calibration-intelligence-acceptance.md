@@ -1,0 +1,58 @@
+# IFP-8 — Production-data calibration and intelligence acceptance
+
+## Purpose and current truth
+
+IFP-8 is an empirical evidence and calibration-governance boundary around the unchanged IFP-1 through IFP-7 services. It is not a reasoning engine, provider activation, or RC-K. The repository contains no adequate certified non-fixture corpus, so the current deterministic state is `blocked_missing_certified_evidence`; fixture and golden runs always have `productionAcceptance = false`. IFP-8 remains active and RC-K remains untouched.
+
+## Repository replay inventory
+
+| Material | Evidence class | Production acceptance use |
+| --- | --- | --- |
+| launch asset and provider fixtures | synthetic fixture | regression only |
+| 33 golden scenarios | golden deterministic fixture | regression only |
+| Provider API Gate smoke/replay inputs | captured fixture replay or dry-run | boundary validation only |
+| scheduled-ingestion replay | captured fixture replay | operational replay validation only |
+| notification/payment replay material | out of intelligence scope | none |
+| certified replay | absent | required |
+| staging-live capture | absent | required/acceptable when certified |
+| production-like certified corpus | absent | required/acceptable |
+
+Unknown material is treated as unverifiable, never promoted. IFP-8 makes no provider network calls.
+
+## Immutable corpus and decision-time boundary
+
+The `intelligence-acceptance-v1` manifest binds dataset identity/version/class, time range, registry version/hash, source IDs, asset/event/horizon coverage, counts, provenance, raw hashes, normalization/outcome/split policies, and all three partition hashes. Only `certified_replay`, `staging_capture`, and `production_like_certified` can satisfy the empirical-class gate.
+
+Each case separates `decisionTimeEvidence` from `evaluationOutcome`. Every runtime source has observed, available, provider/capture, content-hash and qualification fields. Missing `availableAt`, `availableAt` after cutoff, or an injected outcome fails before the production chain or persistence. Outcomes can be attached only after IFP outputs are frozen and persisted.
+
+## Chronological split and single-use holdout
+
+Event instances are fixed chronologically as calibration → embargo → holdout. Membership hashes reject overlap and release-family leakage. The embargo must exceed the maximum outcome horizon, and calibration outcome windows must end before holdout. Candidate selection freezes before the single-use holdout opens. A failed holdout is recorded and cannot mutate the selected candidate; retuning requires a new versioned cycle and uncontaminated tranche.
+
+## Calibration and configuration governance
+
+The ledger records every candidate, including rejection, sequence, parent configuration, changed parameters, rationale and calibration-metrics hash. Immutable configuration snapshots bind all IFP policy versions and parameter hashes. Permitted change classes are `no_change` and explicitly approved parameter calibration. Codex does not approve a candidate. Formula/algorithm findings become blocking `reasoning_correction_required` residual risks and are not repaired in IFP-8.
+
+Version-ID resolution, an exact parameter hash, rollback target, and replay-output hash evidence prove recovery. Tests may use an alternate test-only snapshot; production semantics remain unchanged. Missing recovery evidence blocks acceptance.
+
+## Coverage contract
+
+The mandatory matrix reports every asset × event/indicator class × horizon/stage cell, required evidence families, minimum sample, structural decision and reason. The 12 launch assets remain XAU/USD, eight FX pairs, BTC/USD, Nasdaq 100, S&P 500 and DE30. DXY and VIX are separate diagnostics. Structural unavailability requires an existing approved decision. IFP-2 minimums remain 10 unique comparable events and 5 strong analogs. Any unresolved required cell blocks.
+
+## Diagnostics and invariants
+
+Diagnostics are segmented by asset, event class, horizon/stage, regime and provenance quality. IFP-1 reports alignment/reaction/impulse/follow-through/reversal and insufficiency. IFP-2 reports retrieval sufficiency, counts, stability, orientation and outcome-family dispersion without outcome reranking or probability claims. IFP-3 retains sole invalidation authority. IFP-4 cleanliness, IFP-5 interval-censored decay, IFP-6 direct-positioning qualification, and non-predictive ordinal IFP-7 fragility retain their accepted semantics.
+
+Cross-engine checks reject hidden insufficiency, proxy promotion, expired narrative support, IFP-7 invalidation authority, lineage loss, future evidence, fabricated zero strength, nondeterminism, and financial-advice output.
+
+Every case carries confidence pre/post clamp, components, penalties, completeness, provider qualification, price confirmation, contradiction, FX/macro completeness, coverage effects, reasons and sources. Zero rates are segmented; `unexplainedZeroCount` must be zero. Numerical diagnostics include quantiles, null/zero and exact/near-boundary occupancy. Sensitivity probes diagnose explicit discontinuities but never mutate thresholds.
+
+## Acceptance, persistence, and risks
+
+The evidence-integrity, mandatory-coverage, and empirical-intelligence gates are independent. Leakage, contaminated holdout, wrong lineage, invariant failure, missing coverage, unexplained zero, blocking residual risk, nondeterminism or missing rollback cannot be offset by aggregate results. Immutable memory/SQL repositories are idempotent for identical content and reject identity conflicts; SQL transactions prohibit partial runs.
+
+Residual risks identify scope, severity, evidence, affected cells, classification, resolution, owner and blocking status. Current blocking risk: no certified non-fixture corpus and therefore no empirical per-engine result, candidate discovery, or truthful acceptance. The exact next evidence need is certified cases for every required launch coverage cell with decision-time source timestamps, mechanically reproducible later outcomes, chronological families, and sufficient embargo.
+
+## Approval and RC-K handoff
+
+Truthful completion requires a persisted accepted record backed by qualified held-out evidence, complete coverage, zero correctness violations, explained confidence floors and replayable rollback. Until supplied, machinery acceptance is not empirical acceptance, IFP-8 stays active, and RC-K does not start. An eventual immutable evidence package may be hash-validated by CI; CI fixture success cannot close IFP-8.

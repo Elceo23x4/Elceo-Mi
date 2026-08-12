@@ -1,0 +1,5 @@
+import type {CoverageCell,CoverageDecision,DecisionTimeEvidence} from './contracts';
+export const LAUNCH_ASSETS=['xau_usd','eur_usd','gbp_usd','usd_jpy','aud_usd','usd_chf','nzd_usd','usd_cad','btc_usd','nasdaq_100','sp500','de30'] as const;
+export const DIAGNOSTIC_ASSETS=['dxy','vix'] as const;
+export function evaluateCoverage(cells:readonly CoverageCell[],cases:readonly DecisionTimeEvidence[]):CoverageDecision[]{return [...cells].sort((a,b)=>`${a.asset}:${a.eventClass}:${a.horizon}`.localeCompare(`${b.asset}:${b.eventClass}:${b.horizon}`)).map(cell=>{if(cell.structurallyUnavailable){if(!cell.structuralDecisionApproved)throw new Error('unapproved_structural_unavailable');return{...cell,observedSample:0,state:'structurally_unavailable'};}const observedSample=cases.filter(c=>c.asset===cell.asset&&c.eventClass===cell.eventClass&&c.horizon===cell.horizon).length;return{...cell,observedSample,state:observedSample>=cell.minimumSample?'sufficient':'insufficient_data'};});}
+export const mandatoryCoveragePass=(d:readonly CoverageDecision[])=>d.every(x=>!x.required||x.state!=='insufficient_data');

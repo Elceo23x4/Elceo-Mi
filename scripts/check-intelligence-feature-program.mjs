@@ -10,6 +10,8 @@ const readinessChecklist = read('docs/production-readiness-checklist.md');
 const packageJson = JSON.parse(read('package.json'));
 const fragilityDoc = read('docs/fragility-score.md');
 const fragilityContracts = read('services/reasoning/src/fragility-score/contracts.ts');
+const acceptanceContracts = read('services/reasoning/src/intelligence-acceptance/contracts.ts');
+const acceptanceDoc = read('docs/production-data-calibration-intelligence-acceptance.md');
 const alignmentDocs = [
   'docs/backend-open-loop-register.md',
   'docs/final-production-status-report.md',
@@ -37,6 +39,10 @@ const fail = (message) => failures.push(message);
 if (packageJson.scripts?.['check:ifp'] !== 'node scripts/check-intelligence-feature-program.mjs') fail('package.json check:ifp script is missing or changed');
 if (packageJson.scripts?.['test:ifp7-postgres'] !== 'npm run -w services/reasoning test && node scripts/test-ifp7-postgres.mjs') fail('IFP-7 PostgreSQL script is missing');
 if (!ci.includes('IFP-7 PostgreSQL integration')) fail('IFP-7 PostgreSQL CI step is missing');
+if (packageJson.scripts?.['test:ifp8-postgres'] !== 'npm run -w services/reasoning test && node scripts/test-ifp8-postgres.mjs') fail('IFP-8 PostgreSQL script is missing');
+if (!ci.includes('IFP-8 PostgreSQL integration')) fail('IFP-8 PostgreSQL CI step is missing');
+for(const phrase of ["'intelligence-acceptance-v1'",'productionAcceptance','unexplainedZeroCount'])if(!acceptanceContracts.includes(phrase))fail(`IFP-8 contract missing: ${phrase}`);
+for(const phrase of ['blocked_missing_certified_evidence','single-use holdout','RC-K remains untouched'])if(!acceptanceDoc.includes(phrase))fail(`IFP-8 documentation missing: ${phrase}`);
 if (!fragilityContracts.includes("'fragility-score-v1'")) fail('IFP-7 policy contract is missing');
 for (const phrase of ['non-predictive','availableWeight / expectedWeight','never multiplied by coverage','IFP-8 has not started']) if(!fragilityDoc.includes(phrase)) fail(`fragility documentation missing: ${phrase}`);
 if (!/name:\s*Check Intelligence Feature Program contract[\s\S]*?run:\s*npm run check:ifp/.test(ci)) fail('GitHub CI does not run check:ifp with the expected step name');

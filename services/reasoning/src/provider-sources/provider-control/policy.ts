@@ -29,4 +29,6 @@ export function assertLivePolicyAuthority(policy:ProviderControlPolicy,request:{
   if(policy.status!=='approved') throw new Error('provider_control_policy_not_approved');
   if(policy.sourceId!==request.sourceId||(policy.capabilityId!==request.capabilityId&&policy.capabilityId!=='*')||policy.credentialPoolId!==trustedPool) throw new Error('provider_control_policy_scope_mismatch');
 }
+export const PROVIDER_SETTLEMENT_SAFETY_MARGIN_MS=250;
+export function validateProviderExecutionLease(policy:ProviderControlPolicy):void {if(policy.concurrency.providerTimeoutMs+PROVIDER_SETTLEMENT_SAFETY_MARGIN_MS>=policy.concurrency.leaseDurationMs)throw new Error('provider_control_lease_timeout_invariant');}
 export function buildProviderAdmissionId(requestId:string):string { return `admission:sha256:${createHash('sha256').update(`elceo_provider_admission_v1\0${requestId}`).digest('hex')}`; }

@@ -5,8 +5,8 @@ CREATE TABLE IF NOT EXISTS intelligence_acceptance_records (
  canonical_payload JSONB NOT NULL,
  canonical_payload_hash TEXT NOT NULL CHECK(canonical_payload_hash ~ '^[a-f0-9]{64}$'),
  created_at TIMESTAMPTZ NOT NULL,
- CHECK(canonical_payload->>'canonicalPayloadHash'=canonical_payload_hash),
- CHECK(record_id=CASE record_kind
+ CHECK(canonical_payload ? 'canonicalPayloadHash' AND canonical_payload->>'canonicalPayloadHash' IS NOT NULL AND canonical_payload->>'canonicalPayloadHash'=canonical_payload_hash),
+ CHECK(COALESCE(CASE record_kind
   WHEN 'dataset_manifest' THEN canonical_payload->>'datasetId'
   WHEN 'dataset_certification' THEN canonical_payload->>'datasetId'
   WHEN 'split_manifest' THEN canonical_payload->>'datasetId'
@@ -18,7 +18,19 @@ CREATE TABLE IF NOT EXISTS intelligence_acceptance_records (
   WHEN 'coverage_decision' THEN canonical_payload->>'coverageDecisionId'
   WHEN 'residual_risk' THEN canonical_payload->>'riskId'
   WHEN 'rollback_evidence' THEN canonical_payload->>'rollbackEvidenceId'
- END),
+ END,'')<>'' AND record_id=COALESCE(CASE record_kind
+  WHEN 'dataset_manifest' THEN canonical_payload->>'datasetId'
+  WHEN 'dataset_certification' THEN canonical_payload->>'datasetId'
+  WHEN 'split_manifest' THEN canonical_payload->>'datasetId'
+  WHEN 'configuration_version' THEN canonical_payload->>'configurationVersionId'
+  WHEN 'calibration_trial' THEN canonical_payload->>'trialId'
+  WHEN 'holdout_lifecycle' THEN canonical_payload->>'acceptanceRunFamilyId'
+  WHEN 'acceptance_run' THEN canonical_payload->>'acceptanceRunId'
+  WHEN 'case_result' THEN canonical_payload->>'caseResultId'
+  WHEN 'coverage_decision' THEN canonical_payload->>'coverageDecisionId'
+  WHEN 'residual_risk' THEN canonical_payload->>'riskId'
+  WHEN 'rollback_evidence' THEN canonical_payload->>'rollbackEvidenceId'
+ END,'')),
  PRIMARY KEY(record_kind,record_id),
  UNIQUE(record_kind,canonical_payload_hash)
 );

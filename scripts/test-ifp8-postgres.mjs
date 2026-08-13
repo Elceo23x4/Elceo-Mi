@@ -204,6 +204,16 @@ try {
     diagnosticAssets: ['dxy', 'vix'],
     approvalReference: 'TEST-ONLY-NOT-PRODUCTION',
   };
+  assert.throws(
+    () =>
+      api.evaluateCoverage(
+        { ...testCoverageBody, canonicalPayloadHash: api.canonicalHash(testCoverageBody) },
+        [],
+        new Set(),
+        { datasetId: fixture.datasetId, splitId: '', acceptanceRunFamilyId: preflightFamily, createdAt: at },
+      ),
+    /coverage_split_id_required/,
+  );
   const [coverageDecision] = api.evaluateCoverage(
     { ...testCoverageBody, canonicalPayloadHash: api.canonicalHash(testCoverageBody) },
     [
@@ -223,7 +233,7 @@ try {
     new Set(),
     {
       datasetId: fixture.datasetId,
-      splitId: '',
+      splitId: split.splitId,
       acceptanceRunFamilyId: preflightFamily,
       createdAt: at,
     },
@@ -356,6 +366,19 @@ try {
       selectedConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId, selectedAt: at,
     }));
     await sql.openHoldout(family, at);
+    const caseBody = {
+      caseId: `case-${suffix}`, eventInstanceId: holdoutId,
+      decisionTimeEvidenceHash: '1'.repeat(64), outputs: {}, canonicalOutputHashes: [],
+      frozenAt: at, outcome: {},
+    };
+    const caseHash = api.canonicalHash(caseBody);
+    const caseResult = { ...caseBody, caseResultId: `ifp8-case-${caseHash.slice(0, 32)}`, canonicalPayloadHash: caseHash };
+    const [atomicCoverage] = api.evaluateCoverage(
+      { ...testCoverageBody, canonicalPayloadHash: api.canonicalHash(testCoverageBody) },
+      [{ caseId: caseBody.caseId, eventInstanceId: holdoutId, eventFamilyId: `c-${suffix}`, evidenceCutoffAt: at, asset: 'xau_usd', eventClass: 'cpi', horizon: 'follow_through', qualifiedEvidenceFamilies: [], references: [], productionInput: { eventEvaluationId: `event-${suffix}`, evidenceCutoffAt: at } }],
+      new Set(),
+      { datasetId: atomicDataset.datasetId, splitId: atomicSplit.splitId, acceptanceRunFamilyId: family, createdAt: at },
+    );
     const rollback = api.createRollbackEvidence({
       datasetId: atomicDataset.datasetId,
       splitId: atomicSplit.splitId,
@@ -375,8 +398,8 @@ try {
       split: atomicSplit,
       configuration: api.CANONICAL_RUNTIME_BASELINE,
       trial: null,
-      cases: [],
-      coverage: [],
+      cases: [caseResult],
+      coverage: [atomicCoverage],
       coverageContractApproved: false,
       outcomePolicyApproved: false,
       empiricalAcceptancePolicy: null,
@@ -386,14 +409,16 @@ try {
     });
     return {
       run,
-      cases: [],
-      coverage: [],
+      cases: [caseResult],
+      coverage: [atomicCoverage],
       risks: [risk],
       rollback,
       referenceLinks: [
         { kind: 'dataset_manifest', id: atomicDataset.datasetId },
         { kind: 'split_manifest', id: atomicDataset.datasetId },
         { kind: 'configuration_version', id: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId },
+        { kind: 'case_result', id: caseResult.caseResultId },
+        { kind: 'coverage_decision', id: atomicCoverage.coverageDecisionId },
         { kind: 'residual_risk', id: risk.riskId },
         { kind: 'rollback_evidence', id: rollback.rollbackEvidenceId },
       ],
@@ -405,6 +430,8 @@ try {
     () => sql.finalizeAcceptanceBundle(atomicFailureFamily, failureBundle, at, 1),
     /injected_bundle_failure/,
   );
+  assert.equal(await sql.get('case_result', failureBundle.cases[0].caseResultId), null);
+  assert.equal(await sql.get('coverage_decision', failureBundle.coverage[0].coverageDecisionId), null);
   assert.equal(await sql.get('residual_risk', failureBundle.risks[0].riskId), null);
   assert.equal(await sql.get('rollback_evidence', failureBundle.rollback.rollbackEvidenceId), null);
   assert.equal(await sql.get('acceptance_run', failureBundle.run.acceptanceRunId), null);
@@ -417,6 +444,8 @@ try {
   const successBundle = await makeAtomicBundle(atomicSuccessFamily, 'success');
   await sql.finalizeAcceptanceBundle(atomicSuccessFamily, successBundle, at);
   assert.equal(successBundle.run.productionAcceptance, false);
+  assert.deepEqual(await sql.get('case_result', successBundle.cases[0].caseResultId), successBundle.cases[0]);
+  assert.deepEqual(await sql.get('coverage_decision', successBundle.coverage[0].coverageDecisionId), successBundle.coverage[0]);
   assert.deepEqual(await sql.get('residual_risk', successBundle.risks[0].riskId), successBundle.risks[0]);
   assert.deepEqual(await sql.get('acceptance_run', successBundle.run.acceptanceRunId), successBundle.run);
   assert((await sql.listLinks(successBundle.run.acceptanceRunId)).some((link) => link.kind === 'residual_risk' && link.id === successBundle.risks[0].riskId));

@@ -16,18 +16,23 @@ import type { RollbackEvidence } from './contracts';
 import { createRollbackEvidence } from './configuration-registry';
 import type { ConfigurationVersion } from './contracts';
 import { deserializeCanonicalCognitionState } from '../persistence/serialization';
+import type { RuntimeBaselineConfigurationAuthority } from './runtime-baseline';
+import { assertRuntimeBaseline } from './runtime-baseline';
 
 export class ProductionIfpChainAdapter {
-  constructor(private readonly persistence: ReasoningPersistenceRepository) {}
+  constructor(
+    private readonly persistence: ReasoningPersistenceRepository,
+    private readonly baselineAuthority: RuntimeBaselineConfigurationAuthority,
+  ) {}
+  async validateConfiguration(configuration: ConfigurationVersion) {
+    return assertRuntimeBaseline(configuration, this.baselineAuthority);
+  }
   async runAndPersist(
     input: ProductionChainInput,
     evidence: DecisionTimeEvidence,
     configuration: ConfigurationVersion,
   ): Promise<EngineOutputs> {
-    if (configuration.changeClass !== 'no_change')
-      throw new Error('unsupported_runtime_parameter_calibration');
-    if (canonicalHash(configuration.parameterSnapshot) !== configuration.parameterSnapshotHash)
-      throw new Error('runtime_configuration_snapshot_mismatch');
+    await assertRuntimeBaseline(configuration, this.baselineAuthority);
     for (const key of ['ifp1', 'ifp2', 'ifp3', 'ifp4', 'ifp5', 'ifp6', 'ifp7'] as const)
       if (!configuration.policyVersions[key])
         throw new Error('runtime_configuration_policy_snapshot_incomplete');

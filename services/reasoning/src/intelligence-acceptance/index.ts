@@ -12,3 +12,4 @@ export * from './repository';
 export * from './sql-repository';
 export * from './service';
 export * from './integrity';
+export * from './runtime-baseline';

@@ -74,9 +74,48 @@ export class IntelligenceAcceptanceService {
         'configuration_version',
         input.configurationVersionId,
       )) as ConfigurationVersion;
+      await this.chain.validateConfiguration(configuration);
       const trial = configuration.sourceCalibrationRunId
         ? await this.repository.get('calibration_trial', configuration.sourceCalibrationRunId)
         : null;
+      if (configuration.changeClass === 'explicitly_approved_parameter_calibration' && !trial)
+        throw new Error('preflight_calibration_trial_missing');
+      const rollback = (await this.required(
+        'rollback_evidence',
+        input.rollbackEvidenceId,
+      )) as RollbackEvidence;
+      const restored = (await this.required(
+        'configuration_version',
+        rollback.restoredConfigurationVersionId,
+      )) as ConfigurationVersion;
+      const previous = (await this.required(
+        'configuration_version',
+        rollback.fromConfigurationVersionId,
+      )) as ConfigurationVersion;
+      verifyRollback(rollback, previous, restored);
+      if (
+        rollback.datasetId !== dataset.datasetId ||
+        rollback.splitId !== split.splitId ||
+        rollback.acceptanceRunFamilyId !== input.runFamilyId
+      )
+        throw new Error('rollback_acceptance_scope_mismatch');
+      const authority = await this.coverageAuthority.resolve();
+      const outcomePolicy = await this.acceptancePolicyAuthority.resolveOutcomePolicy(),
+        empiricalPolicy = await this.acceptancePolicyAuthority.resolveEmpiricalPolicy();
+      const approvedPolicy = (
+        policy: OutcomePolicyAuthorityRecord | EmpiricalAcceptancePolicy | null,
+      ) => {
+        if (!policy || policy.status !== 'approved' || !policy.approvalReference) return false;
+        const { canonicalPayloadHash, ...body } = policy;
+        return canonicalHash(body) === canonicalPayloadHash;
+      };
+      if (!certification) throw new Error('preflight_blocked_missing_certified_evidence');
+      if (!authority || authority.policy.status !== 'approved')
+        throw new Error('preflight_blocked_missing_approved_coverage_contract');
+      if (!approvedPolicy(outcomePolicy))
+        throw new Error('preflight_blocked_missing_approved_outcome_policy');
+      if (!approvedPolicy(empiricalPolicy))
+        throw new Error('preflight_blocked_missing_approved_empirical_acceptance_policy');
       const lifecycle = await this.repository.get('holdout_lifecycle', input.runFamilyId);
       if (
         !lifecycle ||
@@ -146,25 +185,6 @@ export class IntelligenceAcceptanceService {
           }),
         );
       }
-      const rollback = (await this.required(
-        'rollback_evidence',
-        input.rollbackEvidenceId,
-      )) as RollbackEvidence;
-      const restored = (await this.required(
-        'configuration_version',
-        rollback.restoredConfigurationVersionId,
-      )) as ConfigurationVersion;
-      const previous = (await this.required(
-        'configuration_version',
-        rollback.fromConfigurationVersionId,
-      )) as ConfigurationVersion;
-      verifyRollback(rollback, previous, restored);
-      if (
-        rollback.datasetId !== dataset.datasetId ||
-        rollback.splitId !== split.splitId ||
-        rollback.acceptanceRunFamilyId !== input.runFamilyId
-      )
-        throw new Error('rollback_acceptance_scope_mismatch');
       const rollbackCases = new Map(rollback.reproductions.map((row) => [row.caseId, row]));
       if (
         rollbackCases.size !== cases.length ||
@@ -175,7 +195,6 @@ export class IntelligenceAcceptanceService {
         )
       )
         throw new Error('rollback_acceptance_cases_mismatch');
-      const authority = await this.coverageAuthority.resolve();
       const coveragePolicy = authority?.policy ?? MISSING_APPROVED_COVERAGE_POLICY;
       const qualifiedEvidence = evidence.map((item) => {
         const result = cases.find((row) => row.caseId === item.caseId)!;
@@ -212,15 +231,6 @@ export class IntelligenceAcceptanceService {
         },
       );
       const risks = input.residualRisks ?? [];
-      const outcomePolicy = await this.acceptancePolicyAuthority.resolveOutcomePolicy(),
-        empiricalPolicy = await this.acceptancePolicyAuthority.resolveEmpiricalPolicy();
-      const approvedPolicy = (
-        policy: OutcomePolicyAuthorityRecord | EmpiricalAcceptancePolicy | null,
-      ) => {
-        if (!policy || policy.status !== 'approved' || !policy.approvalReference) return false;
-        const { canonicalPayloadHash, ...body } = policy;
-        return canonicalHash(body) === canonicalPayloadHash;
-      };
       const run = decideValidatedAcceptance({
         runFamilyId: input.runFamilyId,
         dataset,
@@ -239,11 +249,11 @@ export class IntelligenceAcceptanceService {
       });
       const references: AcceptanceBundle['referenceLinks'] = [
         { kind: 'dataset_manifest', id: dataset.datasetId },
-        { kind: 'split_manifest', id: split.splitId },
+        { kind: 'split_manifest', id: dataset.datasetId },
         { kind: 'configuration_version', id: configuration.configurationVersionId },
         { kind: 'rollback_evidence', id: rollback.rollbackEvidenceId },
         ...(certification
-          ? [{ kind: 'dataset_certification' as const, id: certification.certificationId }]
+          ? [{ kind: 'dataset_certification' as const, id: dataset.datasetId }]
           : []),
         ...(trial ? [{ kind: 'calibration_trial' as const, id: trial.trialId }] : []),
         ...cases.map((c) => ({ kind: 'case_result' as const, id: c.caseResultId })),

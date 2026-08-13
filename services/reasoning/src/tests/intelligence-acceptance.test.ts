@@ -14,7 +14,12 @@ import {
   verifyManifestSplit,
   verifyRollback,
   validateDecisionTimeEvidence,
+  IntelligenceAcceptanceService,
+  CANONICAL_RUNTIME_BASELINE,
+  CanonicalRuntimeBaselineAuthority,
+  assertRuntimeBaseline,
 } from '../intelligence-acceptance/index.js';
+import type { ProductionIfpChainAdapter } from '../intelligence-acceptance/production-chain.js';
 const at = '2026-01-01T00:00:00.000Z';
 const manifest = (datasetClass: 'fixture' | 'certified_replay') =>
   finalizeDatasetManifest({
@@ -283,5 +288,73 @@ export async function runIntelligenceAcceptanceTests() {
   assert.equal((await repo.get('holdout_lifecycle', 'family'))?.state, 'completed');
   const reuse = createHoldoutLifecycle({ ...lifecycle, acceptanceRunFamilyId: 'other-family' });
   await assert.rejects(() => repo.freezeCandidate(reuse), /reserved/);
+  const preflightRepo = new MemoryIntelligenceAcceptanceRepository();
+  await assert.rejects(
+    () => assertRuntimeBaseline(baseline, new CanonicalRuntimeBaselineAuthority()),
+    /not_canonical_baseline/,
+  );
+  await preflightRepo.save('dataset_manifest', fixture.datasetId, fixture);
+  await preflightRepo.save('dataset_certification', fixture.datasetId, fixtureCertification);
+  await preflightRepo.save('split_manifest', fixture.datasetId, split);
+  await preflightRepo.save(
+    'configuration_version',
+    CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+    CANONICAL_RUNTIME_BASELINE,
+  );
+  const preflightRollback = createRollbackEvidence({
+    datasetId: fixture.datasetId,
+    splitId: split.splitId,
+    acceptanceRunFamilyId: 'family',
+    fromConfigurationVersionId: CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+    restoredConfigurationVersionId: CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+    expectedPreviousParameterSnapshotHash: CANONICAL_RUNTIME_BASELINE.parameterSnapshotHash,
+    restoredParameterSnapshotHash: CANONICAL_RUNTIME_BASELINE.parameterSnapshotHash,
+    reproductions: [
+      {
+        caseId: 'case',
+        decisionTimeEvidenceHash: 'e'.repeat(64),
+        previousCanonicalOutputHash: 'f'.repeat(64),
+        restoredCanonicalOutputHash: 'f'.repeat(64),
+        match: true,
+      },
+    ],
+    createdAt: at,
+  });
+  await preflightRepo.save(
+    'rollback_evidence',
+    preflightRollback.rollbackEvidenceId,
+    preflightRollback,
+  );
+  await preflightRepo.freezeCandidate(lifecycle);
+  let sourceCalls = 0;
+  const preflightService = new IntelligenceAcceptanceService(
+    preflightRepo,
+    {
+      validateConfiguration: async () => CANONICAL_RUNTIME_BASELINE,
+    } as unknown as ProductionIfpChainAdapter,
+    {
+      list: async () => {
+        sourceCalls++;
+        return [];
+      },
+      outcomeObservations: async () => null,
+    },
+    { verify: async () => true },
+    { resolve: async () => null },
+    { resolveOutcomePolicy: async () => null, resolveEmpiricalPolicy: async () => null },
+  );
+  await assert.rejects(
+    () =>
+      preflightService.run({
+        runFamilyId: 'family',
+        datasetId: fixture.datasetId,
+        configurationVersionId: CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+        rollbackEvidenceId: preflightRollback.rollbackEvidenceId,
+        createdAt: at,
+      }),
+    /preflight_blocked_missing_certified_evidence/,
+  );
+  assert.equal(sourceCalls, 0);
+  assert.equal((await preflightRepo.get('holdout_lifecycle', 'family'))?.state, 'selected');
   console.log('IFP-8 production acceptance integrity tests passed');
 }

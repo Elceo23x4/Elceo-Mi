@@ -55,7 +55,11 @@ export class MemoryIntelligenceAcceptanceRepository implements IntelligenceAccep
     const reused = [...this.rows.values()]
       .filter(
         (row): row is HoldoutLifecycle =>
-          typeof row === 'object' && row !== null && 'holdoutPartitionHash' in row,
+          typeof row === 'object' &&
+          row !== null &&
+          'holdoutPartitionHash' in row &&
+          'acceptanceRunFamilyId' in row &&
+          'state' in row,
       )
       .find(
         (row) =>
@@ -76,7 +80,11 @@ export class MemoryIntelligenceAcceptanceRepository implements IntelligenceAccep
     const reused = [...this.rows.values()]
       .filter(
         (row): row is HoldoutLifecycle =>
-          typeof row === 'object' && row !== null && 'holdoutPartitionHash' in row,
+          typeof row === 'object' &&
+          row !== null &&
+          'holdoutPartitionHash' in row &&
+          'acceptanceRunFamilyId' in row &&
+          'state' in row,
       )
       .find(
         (row) =>

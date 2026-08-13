@@ -89,6 +89,38 @@ try {
     await repo.save('dataset_certification', fixture.datasetId, certification);
     assert.deepEqual(await repo.get('dataset_certification', fixture.datasetId), certification);
   }
+  const split = api.finalizeSplit({
+    datasetId: fixture.datasetId,
+    calibrationEventIds: ['cal'],
+    embargoEventIds: ['emb'],
+    holdoutEventIds: ['hold'],
+    eventFamilies: { cal: 'a', emb: 'b', hold: 'c' },
+    eventTimes: { cal: '2025-01-01', emb: '2025-01-04', hold: '2025-01-10' },
+    outcomeWindowEnds: { cal: '2025-01-02', emb: '2025-01-05', hold: '2025-01-11' },
+    maximumOutcomeHorizonMs: 86400000,
+  });
+  await sql.save('split_manifest', fixture.datasetId, split);
+  assert.deepEqual(await sql.get('split_manifest', fixture.datasetId), split);
+  await pool.query(
+    "INSERT INTO intelligence_acceptance_records(record_kind,record_id,canonical_payload,canonical_payload_hash,created_at) VALUES('acceptance_run','link-proof','{}',$1,$2)",
+    ['c'.repeat(64), at],
+  );
+  await pool.query(
+    "INSERT INTO intelligence_acceptance_links(acceptance_run_id,record_kind,record_id,created_at) VALUES('link-proof','dataset_certification',$1,$2),('link-proof','split_manifest',$1,$2)",
+    [fixture.datasetId, at],
+  );
+  assert.deepEqual(
+    (await sql.listLinks('link-proof')).map((link) => link.id),
+    [fixture.datasetId, fixture.datasetId],
+  );
+  await assert.rejects(
+    () =>
+      pool.query(
+        "INSERT INTO intelligence_acceptance_links(acceptance_run_id,record_kind,record_id,created_at) VALUES('link-proof','dataset_certification',$1,$2)",
+        [certification.certificationId, at],
+      ),
+    /foreign key/i,
+  );
   const lifecycle = api.createHoldoutLifecycle({
     acceptanceRunFamilyId: 'ifp8-family',
     datasetId: fixture.datasetId,

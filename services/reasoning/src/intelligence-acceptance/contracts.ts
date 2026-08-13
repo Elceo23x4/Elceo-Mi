@@ -296,6 +296,30 @@ export type EmpiricalAcceptancePolicy = Readonly<{
   >;
   approvalReference: string | null;
   canonicalPayloadHash: string;
+  criteria: readonly Readonly<{
+    criterionId: string;
+    engine: 'ifp1' | 'ifp2' | 'ifp3' | 'ifp4' | 'ifp5' | 'ifp6' | 'ifp7';
+    metric: string;
+    scope: Readonly<{
+      assets: readonly string[];
+      eventClasses: readonly string[];
+      horizons: readonly string[];
+      segments: readonly string[];
+    }>;
+    rule:
+      | 'gte'
+      | 'lte'
+      | 'between'
+      | 'zero_required'
+      | 'monotonic_order_required'
+      | 'no_correctness_violation';
+    threshold: number | null;
+    upperThreshold: number | null;
+    minimumSampleSize: number;
+    required: boolean;
+    structuralTreatment: 'not_applicable_allowed' | 'must_evaluate';
+    rationale: string;
+  }>[];
 }>;
 export type FrozenCaseResult = Readonly<{
   caseResultId: string;

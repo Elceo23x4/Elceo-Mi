@@ -102,6 +102,44 @@ export function decideValidatedAcceptance(input: ValidatedAcceptanceState): Acce
           'insufficient_evidence',
         ]),
       ) as ReturnType<typeof empiricalStates>);
+  if (input.empiricalAcceptancePolicy) {
+    const metric = (path: string) =>
+      path
+        .split('.')
+        .reduce<unknown>(
+          (value, key) =>
+            typeof value === 'object' && value !== null
+              ? (value as Record<string, unknown>)[key]
+              : undefined,
+          diagnostics,
+        );
+    for (const criterion of input.empiricalAcceptancePolicy.criteria) {
+      if (input.cases.length < criterion.minimumSampleSize) {
+        if (criterion.required) engineStates[criterion.engine] = 'insufficient_evidence';
+        continue;
+      }
+      const value = metric(`${criterion.engine}.${criterion.metric}`);
+      let passed = false;
+      if (criterion.rule === 'no_correctness_violation')
+        passed = !violations.some((item) => item.includes(criterion.metric));
+      else if (typeof value === 'number')
+        passed =
+          criterion.rule === 'gte' && criterion.threshold !== null
+            ? value >= criterion.threshold
+            : criterion.rule === 'lte' && criterion.threshold !== null
+              ? value <= criterion.threshold
+              : criterion.rule === 'between' &&
+                  criterion.threshold !== null &&
+                  criterion.upperThreshold !== null
+                ? value >= criterion.threshold && value <= criterion.upperThreshold
+                : criterion.rule === 'zero_required'
+                  ? value === 0
+                  : false;
+      else if (criterion.rule === 'monotonic_order_required') passed = value === true;
+      if (!passed)
+        engineStates[criterion.engine] = value === undefined ? 'insufficient_evidence' : 'fail';
+    }
+  }
   if (
     Object.values(engineStates).some(
       (state) => state === 'fail' || state === 'insufficient_evidence',

@@ -288,6 +288,101 @@ try {
       sql.save('coverage_decision', `${coverageDecision.coverageDecisionId}-tampered`, coverageDecision),
     /storage_identity/,
   );
+  const futureContext = await fixtureApi.buildContractValidAcceptanceCaseContext('future-service');
+  const futureFamily = 'ifp8-future-outcome-service';
+  const futureSplit = api.finalizeSplit({
+    datasetId: 'ifp8-future-outcome-dataset', createdAt: at,
+    calibrationEventIds: ['future-cal'], embargoEventIds: ['future-emb'],
+    holdoutEventIds: [futureContext.evidence.eventInstanceId],
+    eventFamilies: { 'future-cal': 'future-a', 'future-emb': 'future-b',
+      [futureContext.evidence.eventInstanceId]: futureContext.evidence.eventFamilyId },
+    eventTimes: { 'future-cal': '2025-01-01', 'future-emb': '2025-01-04',
+      [futureContext.evidence.eventInstanceId]: '2025-01-10' },
+    outcomeWindowEnds: { 'future-cal': '2025-01-02', 'future-emb': '2025-01-05',
+      [futureContext.evidence.eventInstanceId]: '2025-01-11' },
+    maximumOutcomeHorizonMs: 86400000,
+  });
+  const { canonicalPayloadHash: ignoredFutureHash, ...futureDatasetDraft } = fixture;
+  void ignoredFutureHash;
+  const futureDataset = api.finalizeDatasetManifest({
+    ...futureDatasetDraft, datasetId: futureSplit.datasetId, datasetClass: 'certified_replay',
+    provenanceSummary: 'TEST-ONLY replay evidence; not production acceptance',
+    sourceIds: ['test-only-source'], rawArtifactHashes: ['8'.repeat(64)],
+    calibrationPartitionHash: futureSplit.calibrationPartitionHash,
+    embargoPartitionHash: futureSplit.embargoPartitionHash,
+    holdoutPartitionHash: futureSplit.holdoutPartitionHash,
+  });
+  const futureCertification = api.finalizeCertification({
+    datasetId: futureDataset.datasetId, datasetVersion: futureDataset.datasetVersion,
+    datasetManifestHash: futureDataset.canonicalPayloadHash,
+    claimedDatasetClass: futureDataset.datasetClass,
+    sourceRegistryVersion: futureDataset.sourceRegistryVersion,
+    sourceRegistryHash: futureDataset.sourceRegistryHash,
+    rawArtifactHashes: futureDataset.rawArtifactHashes,
+    captureReplayProvenance: ['TEST-ONLY-replay'], sourceIds: futureDataset.sourceIds,
+    reliabilitySummary: { 'test-only-source': 1 }, fixtureContamination: false,
+    unverifiedContamination: false, certificationEvidenceReferences: ['TEST-ONLY-certification'],
+    certifiedAt: at,
+  });
+  const futureRollback = api.createRollbackEvidence({
+    datasetId: futureDataset.datasetId, splitId: futureSplit.splitId,
+    acceptanceRunFamilyId: futureFamily,
+    fromConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+    restoredConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+    expectedPreviousParameterSnapshotHash: api.CANONICAL_RUNTIME_BASELINE.parameterSnapshotHash,
+    restoredParameterSnapshotHash: api.CANONICAL_RUNTIME_BASELINE.parameterSnapshotHash,
+    reproductions: [{ caseId: futureContext.evidence.caseId,
+      decisionTimeEvidenceHash: api.canonicalHash(futureContext.evidence),
+      previousCanonicalOutputHash: api.canonicalHash(futureContext.outputs.canonicalOutputHashes),
+      restoredCanonicalOutputHash: api.canonicalHash(futureContext.outputs.canonicalOutputHashes),
+      match: true }], createdAt: '2026-01-01T02:30:00Z',
+  });
+  for (const [kind, id, entity] of [
+    ['dataset_manifest', futureDataset.datasetId, futureDataset],
+    ['dataset_certification', futureDataset.datasetId, futureCertification],
+    ['split_manifest', futureDataset.datasetId, futureSplit],
+    ['rollback_evidence', futureRollback.rollbackEvidenceId, futureRollback],
+  ]) await sql.save(kind, id, entity);
+  await sql.freezeCandidate(api.createHoldoutLifecycle({
+    acceptanceRunFamilyId: futureFamily, datasetId: futureDataset.datasetId,
+    holdoutPartitionHash: futureSplit.holdoutPartitionHash,
+    selectedConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+    selectedAt: at,
+  }));
+  const outcomePolicyBody = { policyId: 'TEST-ONLY-outcome', policyVersion: 'test-v1',
+    status: 'approved', supportedProperties: [], approvalReference: 'TEST-ONLY-NOT-PRODUCTION' };
+  const empiricalPolicyBody = { policyId: 'TEST-ONLY-empirical', policyVersion: 'test-v1',
+    status: 'approved', minimumSamples: { ifp1: 1, ifp2: 1, ifp3: 1, ifp4: 1, ifp5: 1, ifp6: 1, ifp7: 1 },
+    requiredMetrics: { ifp1: [], ifp2: [], ifp3: [], ifp4: [], ifp5: [], ifp6: [], ifp7: [] },
+    approvalReference: 'TEST-ONLY-NOT-PRODUCTION', criteria: [] };
+  const futureService = new api.IntelligenceAcceptanceService(
+    sql,
+    { validateConfiguration: async () => api.CANONICAL_RUNTIME_BASELINE,
+      runAndPersist: async () => futureContext.outputs },
+    { list: async () => [futureContext.evidence],
+      outcomeObservations: async () => ({
+        caseId: futureContext.evidence.caseId,
+        eventInstanceId: futureContext.evidence.eventInstanceId,
+        asset: futureContext.evidence.asset, horizon: futureContext.evidence.horizon,
+        measurementStartAt: '2026-01-01T02:00:00Z', measurementEndAt: '2026-01-01T03:00:00Z',
+        outcomeAvailableAt: '2026-01-01T03:00:00Z', observations: [],
+      }) },
+    { verify: async () => true },
+    { resolve: async () => ({ policy: { ...testCoverageBody,
+      canonicalPayloadHash: api.canonicalHash(testCoverageBody) }, approvedStructuralDecisionIds: new Set() }) },
+    { resolveOutcomePolicy: async () => ({ ...outcomePolicyBody,
+      canonicalPayloadHash: api.canonicalHash(outcomePolicyBody) }),
+      resolveEmpiricalPolicy: async () => ({ ...empiricalPolicyBody,
+        canonicalPayloadHash: api.canonicalHash(empiricalPolicyBody) }) },
+  );
+  await assert.rejects(() => futureService.run({
+    runFamilyId: futureFamily, datasetId: futureDataset.datasetId,
+    configurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+    rollbackEvidenceId: futureRollback.rollbackEvidenceId, createdAt: '2026-01-01T02:30:00Z',
+  }), /outcome_not_available_at_acceptance_time/);
+  assert.equal((await sql.get('holdout_lifecycle', futureFamily)).state, 'failed');
+  assert.equal(await sql.get('acceptance_run', `ifp8-${futureFamily}`), null);
+  assert.equal((await pool.query("SELECT count(*) n FROM intelligence_acceptance_records WHERE record_kind IN ('case_result','coverage_decision','residual_risk','acceptance_run') AND canonical_payload->>'acceptanceRunFamilyId'=$1", [futureFamily])).rows[0].n, '0');
   const riskBody = {
     riskId: 'ifp8-test-risk',
     scope: 'test-only',
@@ -401,7 +496,7 @@ try {
     };
     return { ...body, canonicalPayloadHash: api.canonicalHash(body) };
   };
-  const makeAtomicBundle = async (family, suffix) => {
+  const makeAtomicBundle = async (family, suffix, repository = sql) => {
     const acceptanceAt = '2026-01-01T04:00:00.000Z';
     const { canonicalPayloadHash: ignoredAtomicHash, ...atomicDatasetDraft } = fixture;
     void ignoredAtomicHash;
@@ -420,14 +515,19 @@ try {
       embargoPartitionHash: atomicSplit.embargoPartitionHash,
       holdoutPartitionHash: atomicSplit.holdoutPartitionHash,
     });
-    await sql.save('dataset_manifest', atomicDataset.datasetId, atomicDataset);
-    await sql.save('split_manifest', atomicDataset.datasetId, atomicSplit);
-    await sql.freezeCandidate(api.createHoldoutLifecycle({
+    await repository.save('dataset_manifest', atomicDataset.datasetId, atomicDataset);
+    await repository.save('split_manifest', atomicDataset.datasetId, atomicSplit);
+    await repository.save(
+      'configuration_version',
+      api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+      api.CANONICAL_RUNTIME_BASELINE,
+    );
+    await repository.freezeCandidate(api.createHoldoutLifecycle({
       acceptanceRunFamilyId: family, datasetId: atomicDataset.datasetId,
       holdoutPartitionHash: atomicSplit.holdoutPartitionHash,
       selectedConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId, selectedAt: at,
     }));
-    await sql.openHoldout(family, acceptanceAt);
+    await repository.openHoldout(family, acceptanceAt);
     const caseResult = await fixtureApi.buildContractValidAcceptanceCase(suffix);
     const [atomicCoverage] = api.evaluateCoverage(
       { ...testCoverageBody, canonicalPayloadHash: api.canonicalHash(testCoverageBody) },
@@ -476,6 +576,8 @@ try {
       risks: [risk],
       rollback,
       completedAt: acceptanceAt,
+      atomicDataset,
+      atomicSplit,
       referenceLinks: [
         { kind: 'dataset_manifest', id: atomicDataset.datasetId },
         { kind: 'split_manifest', id: atomicDataset.datasetId },
@@ -487,6 +589,81 @@ try {
       ],
     };
   };
+  const scopedCoverage = (bundle, overrides) => api.evaluateCoverage(
+    { ...testCoverageBody, canonicalPayloadHash: api.canonicalHash(testCoverageBody) },
+    [{ caseId: bundle.cases[0].caseId, eventInstanceId: bundle.cases[0].eventInstanceId,
+      eventFamilyId: 'matrix-family', evidenceCutoffAt: at, asset: 'xau_usd', eventClass: 'cpi',
+      horizon: 'follow_through', qualifiedEvidenceFamilies: [], references: [],
+      productionInput: { eventEvaluationId: 'matrix-event', evidenceCutoffAt: at } }],
+    new Set(),
+    { datasetId: bundle.run.datasetId, splitId: bundle.run.splitId,
+      acceptanceRunFamilyId: bundle.run.acceptanceRunFamilyId, createdAt: bundle.completedAt,
+      ...overrides },
+  )[0];
+  const scopedRollback = (bundle, overrides) => api.createRollbackEvidence({
+    datasetId: bundle.run.datasetId, splitId: bundle.run.splitId,
+    acceptanceRunFamilyId: bundle.run.acceptanceRunFamilyId,
+    fromConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+    restoredConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+    expectedPreviousParameterSnapshotHash: api.CANONICAL_RUNTIME_BASELINE.parameterSnapshotHash,
+    restoredParameterSnapshotHash: api.CANONICAL_RUNTIME_BASELINE.parameterSnapshotHash,
+    reproductions: bundle.rollback.reproductions, createdAt: bundle.completedAt, ...overrides,
+  });
+  const malformedCases = [
+    ['wrong run family', (bundle) => ({ runFamilyId: `${bundle.run.acceptanceRunFamilyId}-wrong` })],
+    ['missing declared case', (bundle) => ({ bundle: { ...bundle, cases: [] } })],
+    ['extra undeclared case', async (bundle, suffix) => ({ bundle: {
+      ...bundle,
+      cases: [...bundle.cases, await fixtureApi.buildContractValidAcceptanceCase(`${suffix}-extra`)],
+    } })],
+    ['duplicate case', (bundle) => ({ bundle: { ...bundle, cases: [...bundle.cases, ...bundle.cases] } })],
+    ['case hash mismatch', (bundle) => ({ bundle: { ...bundle, run: { ...bundle.run, caseResultHashes: ['f'.repeat(64)] } } })],
+    ['coverage wrong family', (bundle) => ({ bundle: { ...bundle, coverage: [scopedCoverage(bundle, { acceptanceRunFamilyId: 'wrong-family' })] } })],
+    ['coverage wrong dataset', (bundle) => ({ bundle: { ...bundle, coverage: [scopedCoverage(bundle, { datasetId: 'wrong-dataset' })] } })],
+    ['coverage wrong split', (bundle) => ({ bundle: { ...bundle, coverage: [scopedCoverage(bundle, { splitId: 'wrong-split' })] } })],
+    ['extra coverage', (bundle) => ({ bundle: { ...bundle, coverage: [...bundle.coverage, scopedCoverage(bundle, { createdAt: '2026-01-01T04:00:01Z' })] } })],
+    ['wrong risk', (bundle, suffix) => ({ bundle: { ...bundle, risks: [makeRisk(`wrong-${suffix}`, bundle.completedAt)] } })],
+    ['extra risk', (bundle, suffix) => ({ bundle: { ...bundle, risks: [...bundle.risks, makeRisk(`extra-${suffix}`, bundle.completedAt)] } })],
+    ['rollback wrong family', (bundle) => ({ bundle: { ...bundle, rollback: scopedRollback(bundle, { acceptanceRunFamilyId: 'wrong-family' }) } })],
+    ['rollback wrong dataset', (bundle) => ({ bundle: { ...bundle, rollback: scopedRollback(bundle, { datasetId: 'wrong-dataset' }) } })],
+    ['rollback wrong split', (bundle) => ({ bundle: { ...bundle, rollback: scopedRollback(bundle, { splitId: 'wrong-split' }) } })],
+    ['missing case link', (bundle) => ({ bundle: { ...bundle, referenceLinks: bundle.referenceLinks.filter((x) => x.kind !== 'case_result') } })],
+    ['missing coverage link', (bundle) => ({ bundle: { ...bundle, referenceLinks: bundle.referenceLinks.filter((x) => x.kind !== 'coverage_decision') } })],
+    ['missing risk link', (bundle) => ({ bundle: { ...bundle, referenceLinks: bundle.referenceLinks.filter((x) => x.kind !== 'residual_risk') } })],
+    ['duplicate link', (bundle) => ({ bundle: { ...bundle, referenceLinks: [...bundle.referenceLinks, bundle.referenceLinks[0]] } })],
+    ['unexplained link', (bundle) => ({ bundle: { ...bundle, referenceLinks: [...bundle.referenceLinks, { kind: 'dataset_manifest', id: 'unexplained' }] } })],
+    ['freeze before outcome', (bundle) => ({ bundle: { ...bundle, cases: [{ ...bundle.cases[0], frozenAt: '2026-01-01T02:59:59Z' }] } })],
+    ['run before freeze', (bundle) => ({ bundle: { ...bundle, run: { ...bundle.run, createdAt: '2026-01-01T02:59:59Z' } } })],
+    ['completion before run', (bundle) => ({ completedAt: '2026-01-01T03:59:59Z' })],
+  ];
+  for (const [repositoryName, repositoryFactory] of [
+    ['memory', () => new api.MemoryIntelligenceAcceptanceRepository()],
+    ['sql', () => sql],
+  ]) {
+    let matrixIndex = 0;
+    for (const [name, mutate] of malformedCases) {
+      const suffix = `matrix-${repositoryName}-${matrixIndex++}`;
+      const repository = repositoryFactory();
+      const family = `ifp8-${suffix}`;
+      const valid = await makeAtomicBundle(family, suffix, repository);
+      const mutation = await mutate(valid, suffix);
+      const malformed = mutation.bundle ?? valid;
+      await assert.rejects(
+        () => repository.finalizeAcceptanceBundle(
+          mutation.runFamilyId ?? family, malformed, mutation.completedAt ?? valid.completedAt,
+        ),
+        /coherence_mismatch|temporal_mismatch/,
+        `${repositoryName}: ${name}`,
+      );
+      assert.equal(await repository.get('case_result', valid.cases[0].caseResultId), null, name);
+      assert.equal(await repository.get('coverage_decision', valid.coverage[0].coverageDecisionId), null, name);
+      assert.equal(await repository.get('residual_risk', valid.risks[0].riskId), null, name);
+      assert.equal(await repository.get('rollback_evidence', valid.rollback.rollbackEvidenceId), null, name);
+      assert.equal(await repository.get('acceptance_run', valid.run.acceptanceRunId), null, name);
+      assert.deepEqual(await repository.listLinks(valid.run.acceptanceRunId), [], name);
+      assert.equal((await repository.get('holdout_lifecycle', family)).state, 'opened', name);
+    }
+  }
   const atomicFailureFamily = 'ifp8-atomic-failure';
   const failureBundle = await makeAtomicBundle(atomicFailureFamily, 'failure');
   await assert.rejects(

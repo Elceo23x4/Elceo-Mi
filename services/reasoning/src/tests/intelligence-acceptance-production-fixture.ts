@@ -13,7 +13,7 @@ import { serializeCanonicalCognitionState } from '../persistence/serialization.j
 import { buildCleanlinessEventFixture } from './market-cleanliness-fixtures.js';
 
 /** Test-only production-chain fixture. It invokes the real IFP services; it is not certified evidence. */
-export async function buildContractValidAcceptanceCase(suffix: string): Promise<FrozenCaseResult> {
+export async function buildContractValidAcceptanceCaseContext(suffix: string) {
   const persistence = new MemoryReasoningPersistenceRepository();
   const interpretedAt = '2026-01-01T01:00:00.000Z';
   const event = buildCleanlinessEventFixture({
@@ -89,9 +89,14 @@ export async function buildContractValidAcceptanceCase(suffix: string): Promise<
     frozenAt: outcome.outcomeAvailableAt, outcome,
   };
   const canonicalPayloadHash = canonicalHash(body);
-  return Object.freeze({
+  const caseResult: FrozenCaseResult = Object.freeze({
     ...body,
     caseResultId: `ifp8-case-${canonicalPayloadHash.slice(0, 32)}`,
     canonicalPayloadHash,
   });
+  return { caseResult, evidence, outputs, outcome };
+}
+
+export async function buildContractValidAcceptanceCase(suffix: string): Promise<FrozenCaseResult> {
+  return (await buildContractValidAcceptanceCaseContext(suffix)).caseResult;
 }

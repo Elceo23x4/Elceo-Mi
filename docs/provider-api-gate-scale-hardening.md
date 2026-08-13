@@ -10,11 +10,11 @@ The official `redis` client is created lazily from `REDIS_URL`; importing the mo
 
 ## Keys and cluster slot
 
-Production keys use `elceo:provider-control:v1:{sourceId|capabilityId|credentialPoolId|policyVersion}:<rate|quota|cost|leases|reservations>`. Tests supply a unique namespace. The braces are an intentional Redis Cluster hash tag, so every key touched by an admission or settlement script shares one slot. Scope components accept only constrained non-secret logical identifiers. API keys, credential values, hashes of credentials, and user data are prohibited.
+Production keys use `elceo:provider-control:v1:{sourceId|capabilityId|credentialPoolId}:policy:<policyVersion>:<rate|quota|cost|leases>` plus a bounded `:admission:<admissionId>` key. Tests supply a unique namespace. The braces are an intentional Redis Cluster hash tag, so every key touched by an admission or settlement script shares one slot. Scope components accept only constrained non-secret logical identifiers. API keys, credential values, hashes of credentials, and user data are prohibited.
 
 ## Policy and request identity
 
-Policies carry an ID/version, source/capability/credential-pool scope, effective interval, approval status, provenance, rate refill parameters, optional quota window, integer cost units, bounded concurrency/lease and provider timeout, plus a canonical SHA-256 policy hash. No provider limits are supplied by this batch; integration policies are marked test-only. Missing live policy blocks with `provider_control_policy_missing`.
+Policies carry an ID/version, source/capability/credential-pool scope, effective interval, approval status, provenance, rate refill parameters, optional quota window, integer cost units, bounded concurrency/lease and provider timeout, plus a canonical SHA-256 policy hash. No provider limits are supplied by this batch; test fixtures may use test-only policies, but staging-live authorization requires an approved policy. Missing live policy blocks with `provider_control_policy_missing`.
 
 Request fingerprints use schema `elceo_provider_request_v1`, recursively sorted object keys, deterministic value validation, and SHA-256. They include source, capability, asset, region, time range, pagination cursor, and the separately typed `providerRequestParams`. Request IDs, provenance/actor, idempotency, observability metadata, timestamps unrelated to the upstream response, and credentials are excluded.
 
@@ -27,3 +27,13 @@ Denied admission mutates no rate, quota, cost, or concurrency state. Expired lea
 ## Sequence status
 
 PGS-1 covers distributed admission correctness only. PGS-2 cache/single-flight orchestration, PGS-3 circuit/backpressure orchestration, PGS-4 adaptive scheduling, and PGS-5 load acceptance remain required future batches and were not started here.
+
+## PGS-1A correctness closure
+
+Live policy authority is server-side: `ProviderApiGateExecutionContext` supplies a trusted policy resolver and credential-pool identifier. A request-carried policy is compatibility data only and cannot authorize staging live. Resolved policies must be `approved`, effective, canonically hashed, and bound to the requested source, exact or explicit `*` capability, and trusted pool. `test_only` and `disabled` policies cannot authorize live execution.
+
+A deterministic admission ID is derived from the logical request ID, while reservation and owner IDs are independently random. The per-admission Redis key is checked inside the admission Lua script before capacity is consumed. Matching retries reuse the reservation; changed fingerprint or policy produces `provider_control_idempotency_conflict`. This makes an ambiguous client command timeout safe to retry without double reservation.
+
+Admission records are per-admission keys in the same provider/source/pool cluster slot, not fields in an indefinitely extended hash. Active records have bounded TTLs and settlement converts them to short-lived tombstones. Reservations retain fingerprint, policy hash, rate and quota units, quota/cost window identities, reservation ID, and owner. Settlement changes quota/cost only when the stored window still matches the current state. Pre-invocation `RELEASED` atomically refunds rate (capped at capacity), current-window quota, current-window cost, and the owner lease; `COMMITTED` and `COMMIT_REQUIRED_UNKNOWN_OUTCOME` never refund rate or quota and conservatively commit cost only in the matching window.
+
+Gate results expose settlement state, including `settlement_unconfirmed`; a failed settlement is never silently represented as healthy. Distributed denials also update the corresponding legacy rate/quota/cost status instead of leaving it `ok`. PGS-1 policies support only explicit `fixed_duration` quota and cost windows; calendar-month behavior is unsupported rather than approximated.

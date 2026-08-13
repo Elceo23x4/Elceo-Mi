@@ -9,6 +9,7 @@ import type {
 import type { IntelligenceAcceptanceRepository } from './repository';
 import { canonicalHash } from './identity';
 import { validateAcceptanceEntity } from './integrity';
+import { validateAcceptanceBundleCoherence } from './bundle-integrity';
 const payload = <K extends AcceptanceRecordKind>(row: { canonical_payload: unknown }) =>
   (typeof row.canonical_payload === 'string'
     ? JSON.parse(row.canonical_payload)
@@ -217,6 +218,7 @@ export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptan
     completedAt: string,
     injectFailureAfter = Number.POSITIVE_INFINITY,
   ) {
+    await validateAcceptanceBundleCoherence(runFamilyId, bundle, this.get.bind(this));
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
@@ -227,14 +229,21 @@ export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptan
       if (!lifecycleQuery.rows[0]) throw new Error('holdout_missing');
       const lifecycle = payload<'holdout_lifecycle'>(lifecycleQuery.rows[0]);
       if (lifecycle.state !== 'opened') throw new Error('holdout_not_opened');
+      if (lifecycle.datasetId !== bundle.run.datasetId)
+        throw new Error('acceptance_bundle_coherence_mismatch');
       let count = 0;
       for (const c of bundle.cases) {
         await this.saveWith(client, 'case_result', c.caseResultId, c);
         if (++count === injectFailureAfter) throw new Error('injected_bundle_failure');
       }
-      for (const c of bundle.coverage)
+      for (const c of bundle.coverage) {
         await this.saveWith(client, 'coverage_decision', c.coverageDecisionId, c);
-      for (const r of bundle.risks) await this.saveWith(client, 'residual_risk', r.riskId, r);
+        if (++count === injectFailureAfter) throw new Error('injected_bundle_failure');
+      }
+      for (const r of bundle.risks) {
+        await this.saveWith(client, 'residual_risk', r.riskId, r);
+        if (++count === injectFailureAfter) throw new Error('injected_bundle_failure');
+      }
       await this.saveWith(
         client,
         'rollback_evidence',

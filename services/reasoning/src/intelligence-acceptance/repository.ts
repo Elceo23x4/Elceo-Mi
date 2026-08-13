@@ -6,6 +6,7 @@ import type {
   HoldoutLifecycle,
 } from './contracts';
 import { validateAcceptanceEntity } from './integrity';
+import { validateAcceptanceBundleCoherence } from './bundle-integrity';
 export interface IntelligenceAcceptanceRepository {
   save<K extends AcceptanceRecordKind>(
     kind: K,
@@ -136,19 +137,26 @@ export class MemoryIntelligenceAcceptanceRepository implements IntelligenceAccep
     completedAt: string,
     injectFailureAfter = Number.POSITIVE_INFINITY,
   ) {
+    await validateAcceptanceBundleCoherence(runFamilyId, bundle, this.get.bind(this));
     const snapshot = new Map(this.rows),
       priorLinks = new Map(this.links);
     try {
       const lifecycle = await this.get('holdout_lifecycle', runFamilyId);
       if (!lifecycle || lifecycle.state !== 'opened') throw new Error('holdout_not_opened');
+      if (lifecycle.datasetId !== bundle.run.datasetId) throw new Error('acceptance_bundle_coherence_mismatch');
       let count = 0;
       for (const c of bundle.cases) {
         await this.save('case_result', c.caseResultId, c);
         if (++count === injectFailureAfter) throw new Error('injected_bundle_failure');
       }
-      for (const c of bundle.coverage)
+      for (const c of bundle.coverage) {
         await this.save('coverage_decision', c.coverageDecisionId, c);
-      for (const r of bundle.risks) await this.save('residual_risk', r.riskId, r);
+        if (++count === injectFailureAfter) throw new Error('injected_bundle_failure');
+      }
+      for (const r of bundle.risks) {
+        await this.save('residual_risk', r.riskId, r);
+        if (++count === injectFailureAfter) throw new Error('injected_bundle_failure');
+      }
       await this.save('rollback_evidence', bundle.rollback.rollbackEvidenceId, bundle.rollback);
       await this.save('acceptance_run', bundle.run.acceptanceRunId, bundle.run);
       this.links.set(bundle.run.acceptanceRunId, deepCloneFreeze(bundle.referenceLinks));

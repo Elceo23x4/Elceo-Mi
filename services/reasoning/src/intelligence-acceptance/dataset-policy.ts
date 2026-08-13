@@ -17,13 +17,15 @@ const sorted = (values: readonly string[]) => [...new Set(values)].sort();
 export function finalizeDatasetManifest(
   draft: Omit<DatasetManifest, 'canonicalPayloadHash'>,
 ): DatasetManifest {
+  const { canonicalPayloadHash: ignored, ...domainDraft } = draft as DatasetManifest;
+  void ignored;
   const body = {
-    ...draft,
-    sourceIds: sorted(draft.sourceIds),
-    assetCoverage: sorted(draft.assetCoverage),
-    eventClassCoverage: sorted(draft.eventClassCoverage),
-    horizonCoverage: sorted(draft.horizonCoverage),
-    rawArtifactHashes: sorted(draft.rawArtifactHashes),
+    ...domainDraft,
+    sourceIds: sorted(domainDraft.sourceIds),
+    assetCoverage: sorted(domainDraft.assetCoverage),
+    eventClassCoverage: sorted(domainDraft.eventClassCoverage),
+    horizonCoverage: sorted(domainDraft.horizonCoverage),
+    rawArtifactHashes: sorted(domainDraft.rawArtifactHashes),
   };
   return Object.freeze({ ...body, canonicalPayloadHash: canonicalHash(body) });
 }

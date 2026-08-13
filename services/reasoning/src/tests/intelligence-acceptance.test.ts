@@ -37,6 +37,7 @@ import { serializeCanonicalCognitionState } from '../persistence/serialization.j
 import { buildCleanlinessEventFixture } from './market-cleanliness-fixtures.js';
 import { buildCanonicalCognitionStateFixture } from '../../../../packages/schemas/src/test-fixtures.js';
 import { normalizePersistedContradictionInputRecord } from '../contradiction-action-protocol/input-repository.js';
+import { validateAcceptanceBundleCoherence } from '../intelligence-acceptance/bundle-integrity.js';
 const at = '2026-01-01T00:00:00.000Z';
 const manifest = (datasetClass: 'fixture' | 'certified_replay') =>
   finalizeDatasetManifest({
@@ -220,12 +221,87 @@ export async function runIntelligenceAcceptanceTests() {
   assert.equal(productionOutputs.confidence.preSnapshotId, 'pre');
   assert.equal(productionOutputs.confidence.postSnapshotId, 'post');
   assert.equal(productionOutputs.confidence.availability, 'available');
+  assert.deepEqual(
+    await productionPersistence.historicalAnalogRepository.getRetrievalById(
+      productionOutputs.ifp2!.retrievalId,
+    ),
+    productionOutputs.ifp2,
+  );
+  assert.deepEqual(
+    await productionPersistence.contradictionActionProtocolRepository.getProtocolRecordById(
+      productionOutputs.ifp3.protocolDecisionId,
+    ),
+    productionOutputs.ifp3,
+  );
+  assert.deepEqual(
+    await productionPersistence.marketCleanlinessRepository.getEvaluationById(
+      productionOutputs.ifp4.cleanlinessEvaluationId,
+    ),
+    productionOutputs.ifp4,
+  );
+  assert.deepEqual(
+    await productionPersistence.narrativeDecayRepository.getEvaluationById(
+      productionOutputs.ifp5.narrativeDecayEvaluationId,
+    ),
+    productionOutputs.ifp5,
+  );
+  assert.deepEqual(
+    await productionPersistence.positioningStressRepository.getEvaluationById(
+      productionOutputs.ifp6.positioningStressEvaluationId,
+    ),
+    productionOutputs.ifp6,
+  );
+  assert.deepEqual(
+    await productionPersistence.fragilityScoreRepository.getEvaluationById(
+      productionOutputs.ifp7.fragilityScoreEvaluationId,
+    ),
+    productionOutputs.ifp7,
+  );
   const replayedOutputs = await productionAdapter.runAndPersist(
     productionEvidence.productionInput,
     productionEvidence,
     CANONICAL_RUNTIME_BASELINE,
   );
   assert.deepEqual(replayedOutputs.canonicalOutputHashes, productionOutputs.canonicalOutputHashes);
+  const provisionalEvent = structuredClone(productionEvent);
+  provisionalEvent.eventEvaluationId = 'ifp8-production-chain-provisional-event';
+  provisionalEvent.postEventCognitionSnapshotId = null;
+  provisionalEvent.reality.postEventCognitionSnapshotId = null;
+  provisionalEvent.reality.postEventCognitionEvaluatedAt = null;
+  provisionalEvent.reality.postEventConfidence = null;
+  provisionalEvent.assessmentEvidenceHash = 'ifp8-provisional-assessment';
+  await productionPersistence.eventRealityRepository.saveEventEvaluation(provisionalEvent);
+  await productionPersistence.persistedContradictionInputRepository.saveContradictionInput(
+    normalizePersistedContradictionInputRecord({
+      recordId: '', eventEvaluationId: provisionalEvent.eventEvaluationId,
+      expectationId: provisionalEvent.expectationId, asset: 'xau_usd',
+      assessmentStage: provisionalEvent.assessmentStage,
+      assessmentEvidenceHash: provisionalEvent.assessmentEvidenceHash,
+      availableAt: provisionalEvent.interpretedAt, evidenceCutoffAt: provisionalEvent.interpretedAt,
+      input: contradictionInput, normalizedInputHash: '', sourceEvidenceIds: ['ifp8-source'],
+      provenance: [{ sourceId: 'ifp8-source', contentHash: 'ifp8-source-hash', reliability: 'verified' }],
+      providerReliabilitySupplied: true, sourceIndependenceVerified: true,
+      warnings: [], limitations: [], createdAt: provisionalEvent.interpretedAt,
+      canonicalPayloadHash: '',
+    }),
+  );
+  const provisionalEvidence = {
+    ...productionEvidence,
+    caseId: 'ifp8-production-chain-provisional-case',
+    eventInstanceId: 'ifp8-production-chain-provisional-instance',
+    productionInput: {
+      ...productionEvidence.productionInput,
+      eventEvaluationId: provisionalEvent.eventEvaluationId,
+    },
+  };
+  const provisionalOutputs = await productionAdapter.runAndPersist(
+    provisionalEvidence.productionInput,
+    provisionalEvidence,
+    CANONICAL_RUNTIME_BASELINE,
+  );
+  assert.equal(provisionalOutputs.confidence.postSnapshotId, null);
+  assert.equal(provisionalOutputs.confidence.postClampValue, null);
+  assert.equal(provisionalOutputs.confidence.availability, 'provisional');
   const coveragePolicyBody = {
     coveragePolicyId: 'test-only-coverage-policy',
     status: 'approved' as const,
@@ -528,6 +604,59 @@ export async function runIntelligenceAcceptanceTests() {
     coverage,
   )[0]!;
   assert.equal(unsupported.state, 'insufficient_evidence');
+  const coherentBundle = {
+    run: scopedDecision,
+    cases: scopedCases,
+    coverage,
+    risks: [],
+    rollback,
+    referenceLinks: [
+      { kind: 'dataset_manifest' as const, id: relabeled.datasetId },
+      { kind: 'split_manifest' as const, id: relabeled.datasetId },
+      { kind: 'configuration_version' as const, id: baseline.configurationVersionId },
+      { kind: 'rollback_evidence' as const, id: rollback.rollbackEvidenceId },
+      ...scopedCases.map((row) => ({ kind: 'case_result' as const, id: row.caseResultId })),
+      ...coverage.map((row) => ({ kind: 'coverage_decision' as const, id: row.coverageDecisionId })),
+    ],
+  };
+  const resolveBundle = async (kind: string, id: string) => {
+    if (kind === 'dataset_manifest' && id === relabeled.datasetId) return relabeled;
+    if (kind === 'split_manifest' && id === relabeled.datasetId) return split;
+    if (kind === 'configuration_version' && id === baseline.configurationVersionId) return baseline;
+    return null;
+  };
+  await validateAcceptanceBundleCoherence(
+    scopedDecision.acceptanceRunFamilyId,
+    coherentBundle,
+    resolveBundle as never,
+  );
+  await assert.rejects(
+    () =>
+      validateAcceptanceBundleCoherence(
+        'wrong-family',
+        coherentBundle,
+        resolveBundle as never,
+      ),
+    /coherence_mismatch/,
+  );
+  await assert.rejects(
+    () =>
+      validateAcceptanceBundleCoherence(
+        scopedDecision.acceptanceRunFamilyId,
+        { ...coherentBundle, cases: coherentBundle.cases.slice(1) },
+        resolveBundle as never,
+      ),
+    /coherence_mismatch/,
+  );
+  await assert.rejects(
+    () =>
+      validateAcceptanceBundleCoherence(
+        scopedDecision.acceptanceRunFamilyId,
+        { ...coherentBundle, referenceLinks: coherentBundle.referenceLinks.slice(1) },
+        resolveBundle as never,
+      ),
+    /coherence_mismatch/,
+  );
   const trial = createTrial({
     trialId: 'trial',
     acceptanceRunFamilyId: 'family',

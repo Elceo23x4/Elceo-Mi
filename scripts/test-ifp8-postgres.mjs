@@ -469,7 +469,16 @@ try {
         ...fixture,
         provenanceSummary: 'conflict',
       }),
-    /immutable/,
+    /invalid_dataset_manifest_canonical_hash/,
+  );
+  const validConflict = api.finalizeDatasetManifest({
+    ...fixture,
+    provenanceSummary: 'valid immutable conflict',
+    canonicalPayloadHash: undefined,
+  });
+  await assert.rejects(
+    () => sql.save('dataset_manifest', fixture.datasetId, validConflict),
+    /immutable_acceptance_conflict/,
   );
   console.log(
     'IFP-8 PostgreSQL certification, relabel rejection, durable holdout, concurrency, restart and parity passed; fixture cannot production-pass',

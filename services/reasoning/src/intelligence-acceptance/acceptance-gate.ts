@@ -53,10 +53,13 @@ export function evaluateEmpiricalCriteria(
     });
     const structurallyUnavailable =
       criterion.structuralTreatment === 'not_applicable_allowed' &&
+      criterion.structuralDecisionIds.length > 0 &&
       coverageInScope.length > 0 &&
       coverageInScope.every(
         (decision) =>
-          decision.state === 'structurally_unavailable' && decision.structuralDecisionId !== null,
+          decision.state === 'structurally_unavailable' &&
+          decision.structuralDecisionId !== null &&
+          criterion.structuralDecisionIds.includes(decision.structuralDecisionId),
       );
     if (structurallyUnavailable)
       return {

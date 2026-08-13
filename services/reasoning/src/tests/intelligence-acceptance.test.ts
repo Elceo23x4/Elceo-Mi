@@ -24,12 +24,19 @@ import {
 import {
   caseMatchesEmpiricalScope,
   evaluateEmpiricalCriteria,
+  decideValidatedAcceptance,
 } from '../intelligence-acceptance/acceptance-gate.js';
 import type { ProductionIfpChainAdapter } from '../intelligence-acceptance/production-chain.js';
 import type {
   EmpiricalAcceptancePolicy,
   FrozenCaseResult,
 } from '../intelligence-acceptance/contracts.js';
+import { ProductionIfpChainAdapter as ActualProductionIfpChainAdapter } from '../intelligence-acceptance/production-chain.js';
+import { MemoryReasoningPersistenceRepository } from '../persistence/memory-reasoning-repository.js';
+import { serializeCanonicalCognitionState } from '../persistence/serialization.js';
+import { buildCleanlinessEventFixture } from './market-cleanliness-fixtures.js';
+import { buildCanonicalCognitionStateFixture } from '../../../../packages/schemas/src/test-fixtures.js';
+import { normalizePersistedContradictionInputRecord } from '../contradiction-action-protocol/input-repository.js';
 const at = '2026-01-01T00:00:00.000Z';
 const manifest = (datasetClass: 'fixture' | 'certified_replay') =>
   finalizeDatasetManifest({
@@ -105,6 +112,120 @@ export async function runIntelligenceAcceptanceTests() {
     maximumOutcomeHorizonMs: 86400000,
   });
   verifyManifestSplit(relabeled, split);
+  const productionPersistence = new MemoryReasoningPersistenceRepository();
+  const productionEvent = buildCleanlinessEventFixture({
+    eventEvaluationId: 'ifp8-production-chain-event',
+    interpretedAt: '2026-01-01T01:00:00.000Z',
+  });
+  await productionPersistence.eventExpectationRepository.saveEventExpectation(
+    productionEvent.expectation,
+  );
+  await productionPersistence.eventRealityRepository.saveEventEvaluation(productionEvent);
+  const contradictionInput = {
+    asset: 'xau_usd',
+    horizon: 'intraday',
+    generatedAt: productionEvent.interpretedAt,
+    evidencePoints: [
+      {
+        evidencePointId: 'ifp8-point', asset: 'xau_usd', horizon: 'intraday',
+        observedAt: '2026-01-01T00:45:00.000Z', evidenceClass: 'diagnostic',
+        driverKind: 'unknown', side: 'context', direction: 'unknown', strength: 0,
+        quality: 1, providerId: 'test-provider', sourceId: 'ifp8-source',
+        rationale: 'Persisted test context.', reasonCodes: [], warnings: [],
+      },
+    ],
+    priceReactionAvailable: true,
+    priceReaction: productionEvent.reality.primaryPriceReaction,
+    providerReliabilitySupplied: true,
+    sourceIndependenceVerified: true,
+    warnings: [],
+  } as never;
+  await productionPersistence.persistedContradictionInputRepository.saveContradictionInput(
+    normalizePersistedContradictionInputRecord({
+      recordId: '', eventEvaluationId: productionEvent.eventEvaluationId,
+      expectationId: productionEvent.expectationId, asset: 'xau_usd',
+      assessmentStage: productionEvent.assessmentStage,
+      assessmentEvidenceHash: productionEvent.assessmentEvidenceHash,
+      availableAt: productionEvent.interpretedAt, evidenceCutoffAt: productionEvent.interpretedAt,
+      input: contradictionInput, normalizedInputHash: '', sourceEvidenceIds: ['ifp8-source'],
+      provenance: [{ sourceId: 'ifp8-source', contentHash: 'ifp8-source-hash', reliability: 'verified' }],
+      providerReliabilitySupplied: true, sourceIndependenceVerified: true,
+      warnings: [], limitations: [], createdAt: productionEvent.interpretedAt,
+      canonicalPayloadHash: '',
+    }),
+  );
+  for (const [snapshotId, reasoningRunId, evaluatedAt] of [
+    ['pre', 'ifp8-pre-run', '2025-12-30T23:59:00.000Z'],
+    ['post', 'ifp8-post-run', '2026-01-01T00:30:00.000Z'],
+  ] as const) {
+    const cognition = buildCanonicalCognitionStateFixture({
+      asset: 'xau_usd',
+      evaluatedAt,
+      evaluationWindowStart: evaluatedAt,
+      evaluationWindowEnd: evaluatedAt,
+      audit: { dataCutoffAt: evaluatedAt },
+    } as never);
+    await productionPersistence.snapshotRepository.saveCognitionSnapshot({
+      snapshotId,
+      reasoningRunId,
+      asset: 'xau_usd',
+      timeframe: 'H1',
+      evaluatedAt,
+      bias: cognition.bias,
+      confidenceScore: cognition.confidence.score,
+      contradictionScore: cognition.contradiction.score,
+      freshnessScore: cognition.freshness.freshnessScore,
+      sourceIngestionRunId: null,
+      sourceIngestionRequestKey: null,
+      reasoningVersion: cognition.audit.reasoningVersion,
+      scoringVersion: cognition.audit.scoringVersion,
+      cognitionJson: serializeCanonicalCognitionState(cognition),
+      createdAt: evaluatedAt,
+    });
+  }
+  const productionEvidence = {
+    caseId: 'ifp8-production-chain-case',
+    eventInstanceId: 'ifp8-production-chain-event-instance',
+    eventFamilyId: 'ifp8-production-chain-family',
+    evidenceCutoffAt: productionEvent.interpretedAt,
+    asset: productionEvent.asset,
+    eventClass: productionEvent.expectation.eventKind,
+    horizon: productionEvent.assessmentStage,
+    qualifiedEvidenceFamilies: [],
+    references: [],
+    productionInput: {
+      eventEvaluationId: productionEvent.eventEvaluationId,
+      evidenceCutoffAt: productionEvent.interpretedAt,
+    },
+  } as const;
+  const productionAdapter = new ActualProductionIfpChainAdapter(
+    productionPersistence,
+    new CanonicalRuntimeBaselineAuthority(),
+  );
+  const productionOutputs = await productionAdapter.runAndPersist(
+    productionEvidence.productionInput,
+    productionEvidence,
+    CANONICAL_RUNTIME_BASELINE,
+  );
+  assert.equal(productionOutputs.ifp1.eventEvaluationId, productionEvent.eventEvaluationId);
+  assert(productionOutputs.ifp2?.retrievalId);
+  assert(productionOutputs.ifp3.protocolDecisionId);
+  assert(productionOutputs.ifp4.cleanlinessEvaluationId);
+  assert(productionOutputs.ifp5.narrativeDecayEvaluationId);
+  assert(productionOutputs.ifp6.positioningStressEvaluationId);
+  assert(productionOutputs.ifp7.fragilityScoreEvaluationId);
+  assert.equal(productionOutputs.canonicalOutputHashes.length, 7);
+  assert.equal(productionOutputs.configurationVersionId, CANONICAL_RUNTIME_BASELINE.configurationVersionId);
+  assert.equal(productionOutputs.parameterSnapshotHash, CANONICAL_RUNTIME_BASELINE.parameterSnapshotHash);
+  assert.equal(productionOutputs.confidence.preSnapshotId, 'pre');
+  assert.equal(productionOutputs.confidence.postSnapshotId, 'post');
+  assert.equal(productionOutputs.confidence.availability, 'available');
+  const replayedOutputs = await productionAdapter.runAndPersist(
+    productionEvidence.productionInput,
+    productionEvidence,
+    CANONICAL_RUNTIME_BASELINE,
+  );
+  assert.deepEqual(replayedOutputs.canonicalOutputHashes, productionOutputs.canonicalOutputHashes);
   const coveragePolicyBody = {
     coveragePolicyId: 'test-only-coverage-policy',
     status: 'approved' as const,
@@ -191,6 +312,7 @@ export async function runIntelligenceAcceptanceTests() {
     minimumSampleSize: 2,
     required: true,
     structuralTreatment: 'must_evaluate' as const,
+    structuralDecisionIds: [],
     rationale: 'test-only scoped selection',
   } satisfies EmpiricalAcceptancePolicy['criteria'][number];
   const scopedCase = (asset: string, eventClass: string, horizon: string, regime: string) =>
@@ -228,6 +350,7 @@ export async function runIntelligenceAcceptanceTests() {
   const structuralCriterion = {
     ...criterion,
     structuralTreatment: 'not_applicable_allowed' as const,
+    structuralDecisionIds: ['approved-existing-structural-decision'],
   };
   const structuralPolicy = { ...empiricalPolicy, criteria: [structuralCriterion] };
   assert.equal(
@@ -236,6 +359,14 @@ export async function runIntelligenceAcceptanceTests() {
   );
   assert.equal(
     evaluateEmpiricalCriteria(structuralPolicy, [], coverage)[0]?.state,
+    'insufficient_evidence',
+  );
+  const unrelatedStructuralPolicy = {
+    ...empiricalPolicy,
+    criteria: [{ ...structuralCriterion, structuralDecisionIds: ['unrelated-decision'] }],
+  };
+  assert.equal(
+    evaluateEmpiricalCriteria(unrelatedStructuralPolicy, [], [structuralDecision])[0]?.state,
     'insufficient_evidence',
   );
   assert.throws(() => finalizeSplit({ ...split, holdoutEventIds: ['cal'] }), /overlap/);
@@ -280,6 +411,123 @@ export async function runIntelligenceAcceptanceTests() {
     createdAt: at,
   });
   verifyRollback(rollback, baseline, restored);
+  const empiricalCase = (
+    caseId: string,
+    asset: string,
+    releaseStatus: 'aligned' | 'contradicted',
+  ) => {
+    const outputs = {
+      ...productionOutputs,
+      ifp1: {
+        ...productionOutputs.ifp1,
+        reality: {
+          ...productionOutputs.ifp1.reality,
+          releaseAlignment: {
+            ...productionOutputs.ifp1.reality.releaseAlignment,
+            status: releaseStatus,
+          },
+        },
+      },
+      confidence: {
+        ...productionOutputs.confidence,
+        caseId,
+        asset,
+        eventClass: 'cpi',
+        horizon: 'follow_through',
+        sourceClass: 'qualified',
+      },
+    };
+    return {
+      caseResultId: `test-${caseId}`,
+      caseId,
+      eventInstanceId: `event-${caseId}`,
+      decisionTimeEvidenceHash: canonicalHash(caseId),
+      outputs,
+      canonicalOutputHashes: outputs.canonicalOutputHashes,
+      frozenAt: at,
+      outcome: {
+        caseId,
+        eventInstanceId: `event-${caseId}`,
+        horizon: 'follow_through',
+        measurementStartAt: at,
+        measurementEndAt: '2026-01-01T01:00:00.000Z',
+        outcomeAvailableAt: '2026-01-01T02:00:00.000Z',
+        asset,
+        calculationPolicyVersion: 'ifp8-outcome-observation-v1' as const,
+        sourceReferences: [],
+        properties: { releaseAligned: true },
+        notEvaluable: [],
+        canonicalPayloadHash: canonicalHash({ caseId, asset }),
+      },
+      canonicalPayloadHash: canonicalHash({ caseId }),
+    } satisfies FrozenCaseResult;
+  };
+  const scopedCases = [
+    empiricalCase('target-fail', 'xau_usd', 'contradicted'),
+    empiricalCase('global-pass-1', 'eur_usd', 'aligned'),
+    empiricalCase('global-pass-2', 'eur_usd', 'aligned'),
+    empiricalCase('global-pass-3', 'eur_usd', 'aligned'),
+  ];
+  const scopedCriterion = {
+    ...criterion,
+    minimumSampleSize: 1,
+    threshold: 0.5,
+    structuralDecisionIds: [],
+  };
+  const scopedPolicy = { ...empiricalPolicy, criteria: [scopedCriterion] };
+  const globalResult = evaluateEmpiricalCriteria(
+    { ...empiricalPolicy, criteria: [{ ...scopedCriterion, scope: wildcard.scope }] },
+    scopedCases,
+    coverage,
+  )[0]!;
+  const scopedResult = evaluateEmpiricalCriteria(scopedPolicy, scopedCases, coverage)[0]!;
+  assert.equal(globalResult.metricValue, 0.75);
+  assert.deepEqual(scopedResult, {
+    criterionId: criterion.criterionId,
+    matchedSampleN: 1,
+    metricValue: 0,
+    state: 'fail',
+    reason: 'scoped_criterion_failed',
+  });
+  const scopedDecision = decideValidatedAcceptance({
+    runFamilyId: 'scoped-family',
+    dataset: relabeled,
+    certification: null,
+    split,
+    configuration: baseline,
+    trial: null,
+    cases: scopedCases,
+    coverage,
+    coverageContractApproved: true,
+    outcomePolicyApproved: true,
+    empiricalAcceptancePolicy: scopedPolicy,
+    rollback,
+    residualRisks: [],
+    createdAt: at,
+  });
+  assert.equal(scopedDecision.empiricalCriterionResults[0]?.state, 'fail');
+  assert.equal(scopedDecision.empiricalEngineStates.ifp1, 'fail');
+  assert.notEqual(scopedDecision.empiricalIntelligenceGate, 'pass');
+  assert.equal(scopedDecision.productionAcceptance, false);
+  const optionalDecision = decideValidatedAcceptance({
+    ...{
+      runFamilyId: 'optional-family', dataset: relabeled, certification: null, split,
+      configuration: baseline, trial: null, cases: scopedCases, coverage,
+      coverageContractApproved: true, outcomePolicyApproved: true, rollback,
+      residualRisks: [], createdAt: at,
+    },
+    empiricalAcceptancePolicy: {
+      ...scopedPolicy,
+      criteria: [{ ...scopedCriterion, required: false }],
+    },
+  });
+  assert.notEqual(optionalDecision.empiricalEngineStates.ifp1, 'fail');
+  const unsupported = evaluateEmpiricalCriteria(
+    { ...scopedPolicy, criteria: [{ ...scopedCriterion, metric: 'unsupportedMetric' }] },
+    scopedCases,
+    coverage,
+  )[0]!;
+  assert.equal(unsupported.state, 'insufficient_evidence');
   const trial = createTrial({
     trialId: 'trial',
     acceptanceRunFamilyId: 'family',

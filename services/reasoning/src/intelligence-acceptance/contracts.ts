@@ -321,6 +321,7 @@ export type EmpiricalAcceptancePolicy = Readonly<{
     minimumSampleSize: number;
     required: boolean;
     structuralTreatment: 'not_applicable_allowed' | 'must_evaluate';
+    structuralDecisionIds: readonly string[];
     rationale: string;
   }>[];
 }>;

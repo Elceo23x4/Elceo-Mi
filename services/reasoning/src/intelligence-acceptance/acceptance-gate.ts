@@ -35,12 +35,37 @@ export function caseMatchesEmpiricalScope(row: FrozenCaseResult, criterion: Empi
   );
 }
 
-function criterionResults(
+export function evaluateEmpiricalCriteria(
   policy: EmpiricalAcceptancePolicy,
   cases: readonly FrozenCaseResult[],
+  coverage: readonly CoverageDecision[],
 ): EmpiricalCriterionResult[] {
   return policy.criteria.map((criterion) => {
     const scoped = cases.filter((row) => caseMatchesEmpiricalScope(row, criterion));
+    const coverageInScope = coverage.filter((decision) => {
+      const matches = (allowed: readonly string[], value: string) =>
+        allowed.length === 0 || allowed.includes(value);
+      return (
+        matches(criterion.scope.assets, decision.asset) &&
+        matches(criterion.scope.eventClasses, decision.eventClass) &&
+        matches(criterion.scope.horizons, decision.horizon)
+      );
+    });
+    const structurallyUnavailable =
+      criterion.structuralTreatment === 'not_applicable_allowed' &&
+      coverageInScope.length > 0 &&
+      coverageInScope.every(
+        (decision) =>
+          decision.state === 'structurally_unavailable' && decision.structuralDecisionId !== null,
+      );
+    if (structurallyUnavailable)
+      return {
+        criterionId: criterion.criterionId,
+        matchedSampleN: scoped.length,
+        metricValue: null,
+        state: 'not_applicable',
+        reason: 'approved_structural_unavailability',
+      };
     if (scoped.length < criterion.minimumSampleSize)
       return {
         criterionId: criterion.criterionId,
@@ -177,7 +202,7 @@ export function decideValidatedAcceptance(input: ValidatedAcceptanceState): Acce
         ]),
       ) as ReturnType<typeof empiricalStates>);
   const evaluatedCriteria = input.empiricalAcceptancePolicy
-    ? criterionResults(input.empiricalAcceptancePolicy, input.cases)
+    ? evaluateEmpiricalCriteria(input.empiricalAcceptancePolicy, input.cases, input.coverage)
     : [];
   if (input.empiricalAcceptancePolicy)
     input.empiricalAcceptancePolicy.criteria.forEach((criterion, index) => {

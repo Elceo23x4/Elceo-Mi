@@ -84,6 +84,10 @@ export function validateAcceptanceEntity<K extends AcceptanceRecordKind>(
     )
       throw new Error('invalid_coverage_decision_derived_id');
   }
+  if (kind === 'residual_risk') {
+    const row = value as AcceptanceEntityMap['residual_risk'];
+    if (id !== row.riskId) throw new Error('invalid_residual_risk_id');
+  }
   if (kind === 'acceptance_run') {
     const row = value as AcceptanceEntityMap['acceptance_run'];
     if (id !== row.acceptanceRunId || row.acceptanceRunId !== `ifp8-${hash.slice(0, 32)}`)

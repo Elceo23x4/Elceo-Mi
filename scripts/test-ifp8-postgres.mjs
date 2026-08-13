@@ -31,6 +31,10 @@ try {
     import.meta.url,
   );
   const api = await import(new URL('index.cjs', compiled));
+  const acceptanceApi = await import(new URL('acceptance-gate.cjs', compiled));
+  const persistenceApi = await import(
+    new URL('../persistence/memory-reasoning-repository.cjs', compiled)
+  );
   const sql = new api.SqlIntelligenceAcceptanceRepository(pool),
     memory = new api.MemoryIntelligenceAcceptanceRepository(),
     at = '2026-01-01T00:00:00Z';
@@ -138,14 +142,13 @@ try {
     }),
   );
   let publicSourceCalls = 0;
+  const productionAdapter = new api.ProductionIfpChainAdapter(
+    new persistenceApi.MemoryReasoningPersistenceRepository(),
+    new api.CanonicalRuntimeBaselineAuthority(),
+  );
   const service = new api.IntelligenceAcceptanceService(
     sql,
-    {
-      validateConfiguration: async (configuration) => {
-        api.assertRuntimeBaseline(configuration, new api.CanonicalRuntimeBaselineAuthority());
-        return api.CANONICAL_RUNTIME_BASELINE;
-      },
-    },
+    productionAdapter,
     {
       list: async () => {
         publicSourceCalls++;
@@ -170,6 +173,19 @@ try {
   );
   assert.equal(publicSourceCalls, 0);
   assert.equal((await sql.get('holdout_lifecycle', preflightFamily)).state, 'selected');
+  await assert.rejects(
+    () =>
+      sql.freezeCandidate(
+        api.createHoldoutLifecycle({
+          acceptanceRunFamilyId: 'ifp8-preflight-conflicting-family',
+          datasetId: fixture.datasetId,
+          holdoutPartitionHash: split.holdoutPartitionHash,
+          selectedConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+          selectedAt: at,
+        }),
+      ),
+    /holdout_tranche_already_reserved/,
+  );
   const testCoverageBody = {
     coveragePolicyId: 'TEST-ONLY-NOT-PRODUCTION',
     status: 'approved',
@@ -261,8 +277,8 @@ try {
   );
   const lifecycle = api.createHoldoutLifecycle({
     acceptanceRunFamilyId: 'ifp8-family',
-    datasetId: fixture.datasetId,
-    holdoutPartitionHash: fixture.holdoutPartitionHash,
+    datasetId: 'ifp8-pg-lifecycle-fixture',
+    holdoutPartitionHash: api.partitionHash(['lifecycle-hold']),
     selectedConfigurationVersionId: 'baseline',
     selectedAt: at,
   });
@@ -297,6 +313,122 @@ try {
       ),
     /reserved/i,
   );
+  const makeCase = (caseId) => {
+    const body = {
+      caseId,
+      eventInstanceId: `${caseId}-event`,
+      decisionTimeEvidenceHash: '1'.repeat(64),
+      outputs: {},
+      canonicalOutputHashes: [],
+      frozenAt: at,
+      outcome: {},
+    };
+    const hash = api.canonicalHash(body);
+    return { ...body, caseResultId: `ifp8-case-${hash.slice(0, 32)}`, canonicalPayloadHash: hash };
+  };
+  const makeRisk = (riskId) => {
+    const body = {
+      riskId,
+      scope: 'test-only-atomicity',
+      severity: 'high',
+      evidence: ['fixture-test-authority'],
+      affectedAssets: ['xau_usd'],
+      eventClasses: ['cpi'],
+      horizons: ['follow_through'],
+      classification: 'empirical_limitation',
+      resolutionState: 'open',
+      blocksAcceptance: true,
+      owner: 'ifp8-test',
+      createdAt: at,
+    };
+    return { ...body, canonicalPayloadHash: api.canonicalHash(body) };
+  };
+  const makeAtomicBundle = (family, suffix) => {
+    const rollback = api.createRollbackEvidence({
+      datasetId: fixture.datasetId,
+      splitId: split.splitId,
+      acceptanceRunFamilyId: family,
+      fromConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+      restoredConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+      expectedPreviousParameterSnapshotHash: api.CANONICAL_RUNTIME_BASELINE.parameterSnapshotHash,
+      restoredParameterSnapshotHash: api.CANONICAL_RUNTIME_BASELINE.parameterSnapshotHash,
+      reproductions: [{ caseId: `case-${suffix}`, decisionTimeEvidenceHash: '1'.repeat(64), previousCanonicalOutputHash: '2'.repeat(64), restoredCanonicalOutputHash: '2'.repeat(64), match: true }],
+      createdAt: at,
+    });
+    const risk = makeRisk(`risk-${suffix}`);
+    const run = acceptanceApi.decideValidatedAcceptance({
+      runFamilyId: family,
+      dataset: fixture,
+      certification: null,
+      split,
+      configuration: api.CANONICAL_RUNTIME_BASELINE,
+      trial: null,
+      cases: [],
+      coverage: [],
+      coverageContractApproved: false,
+      outcomePolicyApproved: false,
+      empiricalAcceptancePolicy: null,
+      rollback,
+      residualRisks: [risk],
+      createdAt: at,
+    });
+    const caseResult = makeCase(`case-${suffix}`);
+    return {
+      run,
+      cases: [caseResult],
+      coverage: [],
+      risks: [risk],
+      rollback,
+      referenceLinks: [
+        { kind: 'dataset_manifest', id: fixture.datasetId },
+        { kind: 'split_manifest', id: fixture.datasetId },
+        { kind: 'configuration_version', id: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId },
+        { kind: 'case_result', id: caseResult.caseResultId },
+        { kind: 'residual_risk', id: risk.riskId },
+        { kind: 'rollback_evidence', id: rollback.rollbackEvidenceId },
+      ],
+    };
+  };
+  const atomicFailureFamily = 'ifp8-atomic-failure';
+  await sql.freezeCandidate(api.createHoldoutLifecycle({
+    acceptanceRunFamilyId: atomicFailureFamily,
+    datasetId: 'ifp8-atomic-failure-dataset',
+    holdoutPartitionHash: api.partitionHash(['atomic-failure']),
+    selectedConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+    selectedAt: at,
+  }));
+  await sql.openHoldout(atomicFailureFamily, at);
+  const failureBundle = makeAtomicBundle(atomicFailureFamily, 'failure');
+  await assert.rejects(
+    () => sql.finalizeAcceptanceBundle(atomicFailureFamily, failureBundle, at, 1),
+    /injected_bundle_failure/,
+  );
+  assert.equal(await sql.get('case_result', failureBundle.cases[0].caseResultId), null);
+  assert.equal(await sql.get('residual_risk', failureBundle.risks[0].riskId), null);
+  assert.equal(await sql.get('rollback_evidence', failureBundle.rollback.rollbackEvidenceId), null);
+  assert.equal(await sql.get('acceptance_run', failureBundle.run.acceptanceRunId), null);
+  assert.deepEqual(await sql.listLinks(failureBundle.run.acceptanceRunId), []);
+  assert.equal((await sql.get('holdout_lifecycle', atomicFailureFamily)).state, 'opened');
+  await sql.failHoldout(atomicFailureFamily, at, 'injected_bundle_failure');
+  assert.equal((await sql.get('holdout_lifecycle', atomicFailureFamily)).state, 'failed');
+
+  const atomicSuccessFamily = 'ifp8-atomic-success';
+  await sql.freezeCandidate(api.createHoldoutLifecycle({
+    acceptanceRunFamilyId: atomicSuccessFamily,
+    datasetId: 'ifp8-atomic-success-dataset',
+    holdoutPartitionHash: api.partitionHash(['atomic-success']),
+    selectedConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+    selectedAt: at,
+  }));
+  await sql.openHoldout(atomicSuccessFamily, at);
+  const successBundle = makeAtomicBundle(atomicSuccessFamily, 'success');
+  await sql.finalizeAcceptanceBundle(atomicSuccessFamily, successBundle, at);
+  assert.equal(successBundle.run.productionAcceptance, false);
+  assert.deepEqual(await sql.get('case_result', successBundle.cases[0].caseResultId), successBundle.cases[0]);
+  assert.deepEqual(await sql.get('residual_risk', successBundle.risks[0].riskId), successBundle.risks[0]);
+  assert.deepEqual(await sql.get('acceptance_run', successBundle.run.acceptanceRunId), successBundle.run);
+  assert((await sql.listLinks(successBundle.run.acceptanceRunId)).some((link) => link.kind === 'residual_risk' && link.id === successBundle.risks[0].riskId));
+  assert.equal((await sql.get('holdout_lifecycle', atomicSuccessFamily)).state, 'completed');
   const failedLifecycle = api.createHoldoutLifecycle({
     ...lifecycle,
     acceptanceRunFamilyId: 'ifp8-family-failed',

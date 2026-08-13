@@ -259,6 +259,7 @@ export class IntelligenceAcceptanceService {
         ...(trial ? [{ kind: 'calibration_trial' as const, id: trial.trialId }] : []),
         ...cases.map((c) => ({ kind: 'case_result' as const, id: c.caseResultId })),
         ...coverage.map((c) => ({ kind: 'coverage_decision' as const, id: c.coverageDecisionId })),
+        ...risks.map((risk) => ({ kind: 'residual_risk' as const, id: risk.riskId })),
       ];
       await this.repository.finalizeAcceptanceBundle(
         input.runFamilyId,

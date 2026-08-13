@@ -21,7 +21,10 @@ import {
   evaluateCoverage,
   canonicalHash,
 } from '../intelligence-acceptance/index.js';
-import { caseMatchesEmpiricalScope } from '../intelligence-acceptance/acceptance-gate.js';
+import {
+  caseMatchesEmpiricalScope,
+  evaluateEmpiricalCriteria,
+} from '../intelligence-acceptance/acceptance-gate.js';
 import type { ProductionIfpChainAdapter } from '../intelligence-acceptance/production-chain.js';
 import type {
   EmpiricalAcceptancePolicy,
@@ -154,6 +157,24 @@ export async function runIntelligenceAcceptanceTests() {
       ),
     /derived_id/,
   );
+  const riskBody = {
+    riskId: 'risk-test',
+    scope: 'ifp8',
+    severity: 'low' as const,
+    evidence: ['fixture'],
+    affectedAssets: ['xau_usd'],
+    eventClasses: ['cpi'],
+    horizons: ['follow_through'],
+    classification: 'empirical_limitation' as const,
+    resolutionState: 'open',
+    blocksAcceptance: true,
+    owner: 'test',
+    createdAt: at,
+  };
+  const risk = { ...riskBody, canonicalPayloadHash: canonicalHash(riskBody) };
+  const riskRepo = new MemoryIntelligenceAcceptanceRepository();
+  await riskRepo.save('residual_risk', risk.riskId, risk);
+  await assert.rejects(() => riskRepo.save('residual_risk', 'wrong-risk-id', risk), /risk_id/);
   const criterion = {
     criterionId: 'scoped-xau-cpi',
     engine: 'ifp1' as const,
@@ -180,6 +201,43 @@ export async function runIntelligenceAcceptanceTests() {
   assert.equal(caseMatchesEmpiricalScope(scopedCase('xau_usd', 'cpi', 'initial', 'calm'), criterion), false);
   const wildcard = { ...criterion, scope: { assets: [], eventClasses: [], horizons: [], segments: [] } };
   assert.equal(caseMatchesEmpiricalScope(scopedCase('eur_usd', 'nfp', 'initial', 'tense'), wildcard), true);
+  const empiricalPolicy = {
+    policyId: 'test-only-empirical-policy',
+    policyVersion: 'test-v1',
+    status: 'approved' as const,
+    minimumSamples: { ifp1: 1, ifp2: 1, ifp3: 1, ifp4: 1, ifp5: 1, ifp6: 1, ifp7: 1 },
+    requiredMetrics: { ifp1: [], ifp2: [], ifp3: [], ifp4: [], ifp5: [], ifp6: [], ifp7: [] },
+    approvalReference: 'TEST-ONLY-NOT-PRODUCTION',
+    criteria: [criterion],
+    canonicalPayloadHash: 'test-only',
+  } satisfies EmpiricalAcceptancePolicy;
+  assert.deepEqual(evaluateEmpiricalCriteria(empiricalPolicy, [], coverage), [
+    {
+      criterionId: criterion.criterionId,
+      matchedSampleN: 0,
+      metricValue: null,
+      state: 'insufficient_evidence',
+      reason: 'scoped_minimum_sample_not_met',
+    },
+  ]);
+  const structuralDecision = {
+    ...coverage[0]!,
+    structuralDecisionId: 'approved-existing-structural-decision',
+    state: 'structurally_unavailable' as const,
+  };
+  const structuralCriterion = {
+    ...criterion,
+    structuralTreatment: 'not_applicable_allowed' as const,
+  };
+  const structuralPolicy = { ...empiricalPolicy, criteria: [structuralCriterion] };
+  assert.equal(
+    evaluateEmpiricalCriteria(structuralPolicy, [], [structuralDecision])[0]?.state,
+    'not_applicable',
+  );
+  assert.equal(
+    evaluateEmpiricalCriteria(structuralPolicy, [], coverage)[0]?.state,
+    'insufficient_evidence',
+  );
   assert.throws(() => finalizeSplit({ ...split, holdoutEventIds: ['cal'] }), /overlap/);
   const baseline = createConfiguration({
     configurationVersionId: 'baseline',

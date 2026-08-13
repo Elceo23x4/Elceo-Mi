@@ -359,7 +359,7 @@ export async function runIntelligenceAcceptanceTests() {
         `${coverage[0]!.coverageDecisionId}-tampered`,
         coverage[0]!,
       ),
-    /derived_id/,
+    /storage_identity/,
   );
   const riskBody = {
     riskId: 'risk-test',
@@ -378,7 +378,18 @@ export async function runIntelligenceAcceptanceTests() {
   const risk = { ...riskBody, canonicalPayloadHash: canonicalHash(riskBody) };
   const riskRepo = new MemoryIntelligenceAcceptanceRepository();
   await riskRepo.save('residual_risk', risk.riskId, risk);
-  await assert.rejects(() => riskRepo.save('residual_risk', 'wrong-risk-id', risk), /risk_id/);
+  await assert.rejects(() => riskRepo.save('residual_risk', 'wrong-risk-id', risk), /storage_identity/);
+  for (const [kind, value] of [
+    ['dataset_manifest', fixture],
+    ['dataset_certification', fixtureCertification],
+    ['split_manifest', split],
+    ['configuration_version', CANONICAL_RUNTIME_BASELINE],
+    ['holdout_lifecycle', createHoldoutLifecycle({ acceptanceRunFamilyId: 'identity-family', datasetId: 'dataset', holdoutPartitionHash: split.holdoutPartitionHash, selectedConfigurationVersionId: CANONICAL_RUNTIME_BASELINE.configurationVersionId, selectedAt: at })],
+  ] as const)
+    await assert.rejects(
+      () => new MemoryIntelligenceAcceptanceRepository().save(kind, 'wrong-storage-id', value),
+      /storage_identity/,
+    );
   const criterion = {
     criterionId: 'scoped-xau-cpi',
     engine: 'ifp1' as const,

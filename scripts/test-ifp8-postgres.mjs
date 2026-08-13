@@ -236,7 +236,7 @@ try {
   await assert.rejects(
     () =>
       sql.save('coverage_decision', `${coverageDecision.coverageDecisionId}-tampered`, coverageDecision),
-    /derived_id/,
+    /storage_identity/,
   );
   const riskBody = {
     riskId: 'ifp8-test-risk',
@@ -256,8 +256,8 @@ try {
   await sql.save('residual_risk', risk.riskId, risk);
   assert.deepEqual(await sql.get('residual_risk', risk.riskId), risk);
   await pool.query(
-    "INSERT INTO intelligence_acceptance_records(record_kind,record_id,canonical_payload,canonical_payload_hash,created_at) VALUES('acceptance_run','link-proof','{}',$1,$2)",
-    ['c'.repeat(64), at],
+    "INSERT INTO intelligence_acceptance_records(record_kind,record_id,canonical_payload,canonical_payload_hash,created_at) VALUES('acceptance_run','link-proof',$1,$2,$3)",
+    [JSON.stringify({ acceptanceRunId: 'link-proof', canonicalPayloadHash: 'c'.repeat(64) }), 'c'.repeat(64), at],
   );
   await pool.query(
     "INSERT INTO intelligence_acceptance_links(acceptance_run_id,record_kind,record_id,created_at) VALUES('link-proof','dataset_certification',$1,$2),('link-proof','split_manifest',$1,$2)",
@@ -330,10 +330,35 @@ try {
     };
     return { ...body, canonicalPayloadHash: api.canonicalHash(body) };
   };
-  const makeAtomicBundle = (family, suffix) => {
+  const makeAtomicBundle = async (family, suffix) => {
+    const { canonicalPayloadHash: ignoredAtomicHash, ...atomicDatasetDraft } = fixture;
+    void ignoredAtomicHash;
+    const calibrationId = `cal-${suffix}`, embargoId = `emb-${suffix}`, holdoutId = `hold-${suffix}`;
+    const atomicSplit = api.finalizeSplit({
+      datasetId: `ifp8-atomic-${suffix}`, createdAt: at,
+      calibrationEventIds: [calibrationId], embargoEventIds: [embargoId], holdoutEventIds: [holdoutId],
+      eventFamilies: { [calibrationId]: `a-${suffix}`, [embargoId]: `b-${suffix}`, [holdoutId]: `c-${suffix}` },
+      eventTimes: { [calibrationId]: '2025-01-01', [embargoId]: '2025-01-04', [holdoutId]: '2025-01-10' },
+      outcomeWindowEnds: { [calibrationId]: '2025-01-02', [embargoId]: '2025-01-05', [holdoutId]: '2025-01-11' },
+      maximumOutcomeHorizonMs: 86400000,
+    });
+    const atomicDataset = api.finalizeDatasetManifest({
+      ...atomicDatasetDraft, datasetId: atomicSplit.datasetId,
+      calibrationPartitionHash: atomicSplit.calibrationPartitionHash,
+      embargoPartitionHash: atomicSplit.embargoPartitionHash,
+      holdoutPartitionHash: atomicSplit.holdoutPartitionHash,
+    });
+    await sql.save('dataset_manifest', atomicDataset.datasetId, atomicDataset);
+    await sql.save('split_manifest', atomicDataset.datasetId, atomicSplit);
+    await sql.freezeCandidate(api.createHoldoutLifecycle({
+      acceptanceRunFamilyId: family, datasetId: atomicDataset.datasetId,
+      holdoutPartitionHash: atomicSplit.holdoutPartitionHash,
+      selectedConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId, selectedAt: at,
+    }));
+    await sql.openHoldout(family, at);
     const rollback = api.createRollbackEvidence({
-      datasetId: fixture.datasetId,
-      splitId: '',
+      datasetId: atomicDataset.datasetId,
+      splitId: atomicSplit.splitId,
       acceptanceRunFamilyId: family,
       fromConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
       restoredConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
@@ -345,9 +370,9 @@ try {
     const risk = makeRisk(`risk-${suffix}`);
     const run = acceptanceApi.decideValidatedAcceptance({
       runFamilyId: family,
-      dataset: fixture,
+      dataset: atomicDataset,
       certification: null,
-      split: null,
+      split: atomicSplit,
       configuration: api.CANONICAL_RUNTIME_BASELINE,
       trial: null,
       cases: [],
@@ -366,7 +391,8 @@ try {
       risks: [risk],
       rollback,
       referenceLinks: [
-        { kind: 'dataset_manifest', id: fixture.datasetId },
+        { kind: 'dataset_manifest', id: atomicDataset.datasetId },
+        { kind: 'split_manifest', id: atomicDataset.datasetId },
         { kind: 'configuration_version', id: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId },
         { kind: 'residual_risk', id: risk.riskId },
         { kind: 'rollback_evidence', id: rollback.rollbackEvidenceId },
@@ -374,15 +400,7 @@ try {
     };
   };
   const atomicFailureFamily = 'ifp8-atomic-failure';
-  await sql.freezeCandidate(api.createHoldoutLifecycle({
-    acceptanceRunFamilyId: atomicFailureFamily,
-    datasetId: fixture.datasetId,
-    holdoutPartitionHash: api.partitionHash(['atomic-failure']),
-    selectedConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
-    selectedAt: at,
-  }));
-  await sql.openHoldout(atomicFailureFamily, at);
-  const failureBundle = makeAtomicBundle(atomicFailureFamily, 'failure');
+  const failureBundle = await makeAtomicBundle(atomicFailureFamily, 'failure');
   await assert.rejects(
     () => sql.finalizeAcceptanceBundle(atomicFailureFamily, failureBundle, at, 1),
     /injected_bundle_failure/,
@@ -396,15 +414,7 @@ try {
   assert.equal((await sql.get('holdout_lifecycle', atomicFailureFamily)).state, 'failed');
 
   const atomicSuccessFamily = 'ifp8-atomic-success';
-  await sql.freezeCandidate(api.createHoldoutLifecycle({
-    acceptanceRunFamilyId: atomicSuccessFamily,
-    datasetId: fixture.datasetId,
-    holdoutPartitionHash: api.partitionHash(['atomic-success']),
-    selectedConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
-    selectedAt: at,
-  }));
-  await sql.openHoldout(atomicSuccessFamily, at);
-  const successBundle = makeAtomicBundle(atomicSuccessFamily, 'success');
+  const successBundle = await makeAtomicBundle(atomicSuccessFamily, 'success');
   await sql.finalizeAcceptanceBundle(atomicSuccessFamily, successBundle, at);
   assert.equal(successBundle.run.productionAcceptance, false);
   assert.deepEqual(await sql.get('residual_risk', successBundle.risks[0].riskId), successBundle.risks[0]);

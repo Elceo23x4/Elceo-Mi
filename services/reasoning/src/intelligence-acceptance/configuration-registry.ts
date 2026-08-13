@@ -49,6 +49,7 @@ export function createRollbackEvidence(
 ): RollbackEvidence {
   const { rollbackEvidenceId: ignoredId, reproductionMatch: ignoredMatch, canonicalPayloadHash: ignoredHash, ...domainDraft } = draft as RollbackEvidence;
   void ignoredId; void ignoredMatch; void ignoredHash;
+  if (!domainDraft.splitId) throw new Error('rollback_split_id_required');
   if (!domainDraft.reproductions.length) throw new Error('rollback_replay_evidence_empty');
   if (new Set(domainDraft.reproductions.map((row) => row.caseId)).size !== domainDraft.reproductions.length)
     throw new Error('rollback_replay_case_duplicate');

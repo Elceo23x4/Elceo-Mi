@@ -10,6 +10,22 @@ export function validateAcceptanceEntity<K extends AcceptanceRecordKind>(
   const record = value as unknown as Record<string, unknown>,
     hash = String(record.canonicalPayloadHash),
     body = without(record, 'canonicalPayloadHash');
+  const identityFields: Record<AcceptanceRecordKind, string> = {
+    dataset_manifest: 'datasetId',
+    dataset_certification: 'datasetId',
+    split_manifest: 'datasetId',
+    configuration_version: 'configurationVersionId',
+    calibration_trial: 'trialId',
+    holdout_lifecycle: 'acceptanceRunFamilyId',
+    case_result: 'caseResultId',
+    coverage_decision: 'coverageDecisionId',
+    residual_risk: 'riskId',
+    rollback_evidence: 'rollbackEvidenceId',
+    acceptance_run: 'acceptanceRunId',
+  };
+  const semanticId = record[identityFields[kind]];
+  if (!id || typeof semanticId !== 'string' || !semanticId || id !== semanticId)
+    throw new Error(`invalid_${kind}_storage_identity`);
   const timestampFields: Record<AcceptanceRecordKind, string> = {
     dataset_manifest: 'generatedAt',
     dataset_certification: 'certifiedAt',
@@ -57,6 +73,7 @@ export function validateAcceptanceEntity<K extends AcceptanceRecordKind>(
   if (kind === 'rollback_evidence') {
     const row = value as AcceptanceEntityMap['rollback_evidence'];
     if (
+      !row.splitId ||
       id !== row.rollbackEvidenceId ||
       row.rollbackEvidenceId !== `ifp8-rollback-${hash.slice(0, 32)}`
     )
@@ -79,6 +96,7 @@ export function validateAcceptanceEntity<K extends AcceptanceRecordKind>(
   if (kind === 'coverage_decision') {
     const row = value as AcceptanceEntityMap['coverage_decision'];
     if (
+      !row.splitId ||
       id !== row.coverageDecisionId ||
       row.coverageDecisionId !== `ifp8-coverage-${hash.slice(0, 32)}`
     )

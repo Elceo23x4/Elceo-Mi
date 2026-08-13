@@ -34,6 +34,7 @@ export function evaluateCoverage(
     createdAt: string;
   },
 ): CoverageDecision[] {
+  if (!identity.splitId) throw new Error('coverage_split_id_required');
   if (policy.status !== 'approved') return [];
   const { canonicalPayloadHash, ...policyBody } = policy;
   if (!policy.approvalReference || canonicalHash(policyBody) !== canonicalPayloadHash)

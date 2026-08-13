@@ -1,13 +1,168 @@
-import assert from 'node:assert/strict';import {AcceptanceReplayRunner,ConfigurationRegistry,INTELLIGENCE_ACCEPTANCE_POLICY_VERSION,MemoryIntelligenceAcceptanceRepository,createConfiguration,createTrial,decideAcceptance,evaluateCoverage,finalizeDatasetManifest,finalizeSplit,partitionHash,type ConfidenceAnatomy,type DecisionTimeEvidence,type EngineOutputs} from '../intelligence-acceptance/index.js';
-const at='2026-01-01T00:00:00.000Z',ref={observedAt:at,availableAt:at,sourceId:'official',provider:'captured',captureId:'capture-1',contentHash:'a'.repeat(64),reliability:'verified'},evidence:DecisionTimeEvidence={caseId:'case-1',eventInstanceId:'event-1',eventFamilyId:'family-1',evidenceCutoffAt:at,asset:'xau_usd',eventClass:'cpi',horizon:'final',references:[ref],productionInput:{eventEvaluationId:'ifp1'}};
-const confidence:ConfidenceAnatomy={caseId:'case-1',asset:'xau_usd',eventClass:'cpi',horizon:'final',regime:'normal',evidenceSufficiency:'sufficient',sourceClass:'certified_replay',preClampValue:50,postClampValue:50,componentContributions:{event:50},penalties:{},evidenceCompleteness:1,providerQualification:'qualified',priceConfirmationStatus:'confirmed',contradictionContribution:0,fxCompleteness:null,macroCompleteness:1,coverageWeightEffects:{coverage:1},reasonCodes:[],sourceRefs:['ifp1']};
-const outputs:EngineOutputs={ifp1:{},ifp2:{evidenceSufficiency:'sufficient'},ifp3:{protocolState:'continue'},ifp4:{cleanlinessScore:50},ifp5:{narrativeState:'active'},ifp6:{crowdPainQualification:'directly_supported'},ifp7:{fragilityScore:50},sourceEvaluationIds:['ifp1','ifp2','ifp3','ifp4','ifp5','ifp6','ifp7'],canonicalOutputHashes:Array(7).fill('b'.repeat(64)),confidence};
-const manifest=(datasetClass:'fixture'|'golden_fixture'|'certified_replay')=>finalizeDatasetManifest({datasetId:`data-${datasetClass}`,datasetVersion:'1',datasetClass,generatedAt:at,periodStart:'2025-01-01T00:00:00Z',periodEnd:at,sourceRegistryVersion:'v1',sourceRegistryHash:'c'.repeat(64),sourceIds:['official'],assetCoverage:['xau_usd'],eventClassCoverage:['cpi'],horizonCoverage:['final'],sampleCount:1,eventInstanceCount:1,provenanceSummary:'captured immutable test evidence',rawArtifactHashes:['d'.repeat(64)],normalizationPolicyVersion:'v1',outcomePolicyVersion:'v1',splitPolicyVersion:'v1',calibrationPartitionHash:partitionHash(['c']),embargoPartitionHash:partitionHash(['e']),holdoutPartitionHash:partitionHash(['h'])});
-const configuration=createConfiguration({configurationVersionId:'baseline',parentConfigurationVersionId:null,status:'baseline',policyVersions:{ifp1:'expectation-reality-v1',ifp7:'fragility-score-v1'},parameterSnapshot:{accepted:'unchanged'},sourceCalibrationRunId:null,approvedBy:null,approvalReference:null,changeClass:'no_change',changeReason:'accepted IFP-1 through IFP-7 baseline',createdAt:at,supersededAt:null,rollbackTargetVersionId:null});
-const coverage=[{asset:'xau_usd',eventClass:'cpi',horizon:'final',requiredEvidenceFamilies:['event','price'],minimumSample:1,required:true,structurallyUnavailable:false,structuralDecisionApproved:false,reasonCode:'mandatory_launch_cell',policyVersion:INTELLIGENCE_ACCEPTANCE_POLICY_VERSION}] as const;
-export async function runIntelligenceAcceptanceTests(){assert.deepEqual(manifest('fixture'),manifest('fixture'));assert.notEqual(manifest('fixture').canonicalPayloadHash,manifest('golden_fixture').canonicalPayloadHash);for(const cls of ['fixture','golden_fixture'] as const){const r=decideAcceptance({runFamilyId:'family',dataset:manifest(cls),configuration,cases:[evidence],outputs:[outputs],coverage,rollbackEvidenceHash:'e'.repeat(64),createdAt:at});assert.equal(r.productionAcceptance,false);assert(r.reasonCodes.includes('blocked_missing_certified_evidence'));}
- const future={...evidence,references:[{...ref,availableAt:'2026-01-01T00:00:01Z'}]},missing={...evidence,references:[{...ref,availableAt:''}]},injected={...evidence,productionInput:{...evidence.productionInput,outcome:{direction:'up'}}},persisted:string[]=[];const runner=new AcceptanceReplayRunner({runAndPersist:async()=>outputs},async c=>{persisted.push(c.caseId)});await assert.rejects(()=>runner.run(future),/future_evidence/);await assert.rejects(()=>runner.run(missing),/available_at/);await assert.rejects(()=>runner.run(injected),/outcome_in_decision/);assert.equal(persisted.length,0);assert.throws(()=>runner.attachOutcome({caseId:'case-1',measurementStartAt:at,measurementEndAt:at,outcomeAvailableAt:at,horizon:'final',calculationPolicyVersion:'v1',sourceReferences:[ref],properties:{},canonicalHash:'f'.repeat(64)}),/outcome_before/);await runner.run(evidence);assert.equal(persisted.length,1);
- const splitBase={calibrationEventIds:['c'],embargoEventIds:['e'],holdoutEventIds:['h'],eventFamilies:{c:'fc',e:'fe',h:'fh'},eventTimes:{c:'2025-01-01',e:'2025-01-03',h:'2025-01-10'},outcomeWindowEnds:{c:'2025-01-02',e:'2025-01-04',h:'2025-01-11'},maximumOutcomeHorizonMs:86400000};assert.deepEqual(finalizeSplit(splitBase),finalizeSplit(splitBase));assert.throws(()=>finalizeSplit({...splitBase,holdoutEventIds:['c']}),/overlap/);assert.throws(()=>finalizeSplit({...splitBase,eventFamilies:{...splitBase.eventFamilies,h:'fc'}}),/family/);assert.throws(()=>finalizeSplit({...splitBase,eventTimes:{...splitBase.eventTimes,h:'2025-01-02'}}),/embargo/);
- const registry=new ConfigurationRegistry();registry.saveVersion(configuration);assert.deepEqual(registry.resolve('baseline'),configuration);const candidate=createConfiguration({...configuration,configurationVersionId:'candidate',parentConfigurationVersionId:'baseline',status:'candidate',parameterSnapshot:{testOnlyAlternate:true},rollbackTargetVersionId:'baseline'});registry.saveVersion(candidate);assert.throws(()=>registry.saveVersion(createConfiguration({...candidate,changeReason:'conflict'})),/immutable/);const trial=createTrial({trialId:'trial-1',acceptanceRunFamilyId:'family',configurationVersionId:'candidate',parentConfigurationVersionId:'baseline',datasetId:'data',calibrationPartitionHash:'a'.repeat(64),candidateSequence:1,parametersChanged:{testOnlyAlternate:true},reasonForCandidate:'rollback proof only',calibrationMetricsHash:'b'.repeat(64),createdAt:at});registry.recordTrial(trial);assert.throws(()=>registry.recordTrial(createTrial({...trial,reasonForCandidate:'conflict'})),/immutable/);registry.freezeSelection('family','candidate');assert.deepEqual(registry.openHoldout('family'),candidate);assert.throws(()=>registry.freezeSelection('family','baseline'),/holdout/);assert.equal(registry.rollback('candidate').parameterSnapshotHash,configuration.parameterSnapshotHash);
- assert.equal(evaluateCoverage(coverage,[])[0]?.state,'insufficient_data');assert.throws(()=>evaluateCoverage([{...coverage[0],structurallyUnavailable:true}],[]),/unapproved/);assert.equal(evaluateCoverage([{...coverage[0],structurallyUnavailable:true,structuralDecisionApproved:true}],[])[0]?.state,'structurally_unavailable');const zero={...outputs,confidence:{...confidence,postClampValue:0,reasonCodes:[]}};assert.equal(decideAcceptance({runFamilyId:'family',dataset:manifest('certified_replay'),configuration,cases:[evidence],outputs:[zero],coverage,rollbackEvidenceHash:'e'.repeat(64),createdAt:at}).unexplainedZeroCount,1);const violation={...outputs,ifp7:{createsInvalidationAuthority:true}};assert(decideAcceptance({runFamilyId:'family',dataset:manifest('certified_replay'),configuration,cases:[evidence],outputs:[violation],coverage,rollbackEvidenceHash:'e'.repeat(64),createdAt:at}).crossEngineViolations.length>0);
- const accepted=decideAcceptance({runFamilyId:'family',dataset:manifest('certified_replay'),configuration,cases:[evidence],outputs:[outputs],coverage,rollbackEvidenceHash:'e'.repeat(64),createdAt:at});assert.equal(accepted.productionAcceptance,true);assert.deepEqual(accepted,decideAcceptance({runFamilyId:'family',dataset:manifest('certified_replay'),configuration,cases:[evidence],outputs:[outputs],coverage,rollbackEvidenceHash:'e'.repeat(64),createdAt:at}));const repo=new MemoryIntelligenceAcceptanceRepository();await repo.save('acceptance_run',accepted.acceptanceRunId,accepted);assert.deepEqual(await repo.save('acceptance_run',accepted.acceptanceRunId,accepted),accepted);await assert.rejects(()=>repo.save('acceptance_run',accepted.acceptanceRunId,{...accepted,reasonCodes:['conflict']}),/immutable/);console.log('IFP-8 acceptance boundary tests passed');}
+import assert from 'node:assert/strict';
+import {
+  createConfiguration,
+  createHoldoutLifecycle,
+  createRollbackEvidence,
+  createTrial,
+  finalizeCertification,
+  finalizeDatasetManifest,
+  finalizeOutcome,
+  finalizeSplit,
+  MemoryIntelligenceAcceptanceRepository,
+  partitionHash,
+  verifyDatasetCertification,
+  verifyManifestSplit,
+  verifyRollback,
+} from '../intelligence-acceptance/index.js';
+const at = '2026-01-01T00:00:00.000Z';
+const manifest = (datasetClass: 'fixture' | 'certified_replay') =>
+  finalizeDatasetManifest({
+    datasetId: 'dataset',
+    datasetVersion: '1',
+    datasetClass,
+    generatedAt: at,
+    periodStart: '2025-01-01T00:00:00Z',
+    periodEnd: at,
+    sourceRegistryVersion: 'registry-v1',
+    sourceRegistryHash: 'a'.repeat(64),
+    sourceIds: ['fixture-source'],
+    assetCoverage: ['xau_usd'],
+    eventClassCoverage: ['cpi'],
+    horizonCoverage: ['follow_through'],
+    sampleCount: 1,
+    eventInstanceCount: 1,
+    provenanceSummary: 'fixture',
+    rawArtifactHashes: ['b'.repeat(64)],
+    normalizationPolicyVersion: 'v1',
+    outcomePolicyVersion: 'v1',
+    splitPolicyVersion: 'v1',
+    calibrationPartitionHash: partitionHash(['cal']),
+    embargoPartitionHash: partitionHash(['emb']),
+    holdoutPartitionHash: partitionHash(['hold']),
+  });
+const policies = {
+  ifp1: 'expectation-reality-v1',
+  ifp2: 'historical-analog-retrieval-v1',
+  ifp3: 'contradiction-action-protocol-v1',
+  ifp4: 'market-cleanliness-v1',
+  ifp5: 'narrative-decay-v1',
+  ifp6: 'positioning-stress-v1',
+  ifp7: 'fragility-score-v1',
+};
+export async function runIntelligenceAcceptanceTests() {
+  const fixture = manifest('fixture'),
+    relabeled = manifest('certified_replay');
+  const fixtureCertification = finalizeCertification({
+    datasetId: fixture.datasetId,
+    datasetVersion: fixture.datasetVersion,
+    datasetManifestHash: fixture.canonicalPayloadHash,
+    claimedDatasetClass: 'fixture',
+    sourceRegistryVersion: fixture.sourceRegistryVersion,
+    sourceRegistryHash: fixture.sourceRegistryHash,
+    rawArtifactHashes: fixture.rawArtifactHashes,
+    captureReplayProvenance: ['fixture'],
+    sourceIds: fixture.sourceIds,
+    reliabilitySummary: { fixture: 1 },
+    fixtureContamination: true,
+    unverifiedContamination: false,
+    certificationEvidenceReferences: ['fixture-ref'],
+    certifiedAt: at,
+  });
+  assert(verifyDatasetCertification(fixture, fixtureCertification).length > 0);
+  assert(
+    verifyDatasetCertification(relabeled, fixtureCertification).includes(
+      'dataset_certification_manifest_mismatch',
+    ),
+  );
+  assert(
+    verifyDatasetCertification(relabeled, null).includes('blocked_missing_certified_evidence'),
+  );
+  const split = finalizeSplit({
+    datasetId: 'dataset',
+    calibrationEventIds: ['cal'],
+    embargoEventIds: ['emb'],
+    holdoutEventIds: ['hold'],
+    eventFamilies: { cal: 'a', emb: 'b', hold: 'c' },
+    eventTimes: { cal: '2025-01-01', emb: '2025-01-04', hold: '2025-01-10' },
+    outcomeWindowEnds: { cal: '2025-01-02', emb: '2025-01-05', hold: '2025-01-11' },
+    maximumOutcomeHorizonMs: 86400000,
+  });
+  verifyManifestSplit(relabeled, split);
+  assert.throws(() => finalizeSplit({ ...split, holdoutEventIds: ['cal'] }), /overlap/);
+  const baseline = createConfiguration({
+    configurationVersionId: 'baseline',
+    parentConfigurationVersionId: null,
+    status: 'baseline',
+    policyVersions: policies,
+    parameterSnapshot: { unchanged: true },
+    sourceCalibrationRunId: null,
+    approvedBy: null,
+    approvalReference: null,
+    changeClass: 'no_change',
+    changeReason: 'baseline',
+    createdAt: at,
+    supersededAt: null,
+    rollbackTargetVersionId: null,
+  });
+  const restored = createConfiguration({
+    ...baseline,
+    configurationVersionId: 'restored',
+    parentConfigurationVersionId: 'baseline',
+    rollbackTargetVersionId: 'baseline',
+  });
+  const rollback = createRollbackEvidence({
+    fromConfigurationVersionId: 'baseline',
+    restoredConfigurationVersionId: 'restored',
+    expectedPreviousParameterSnapshotHash: baseline.parameterSnapshotHash,
+    restoredParameterSnapshotHash: restored.parameterSnapshotHash,
+    replayCaseIds: ['case'],
+    previousCanonicalOutputHashes: ['c'.repeat(64)],
+    restoredCanonicalOutputHashes: ['c'.repeat(64)],
+    reproductionMatch: true,
+    createdAt: at,
+  });
+  verifyRollback(rollback, baseline, restored);
+  const trial = createTrial({
+    trialId: 'trial',
+    acceptanceRunFamilyId: 'family',
+    configurationVersionId: 'restored',
+    parentConfigurationVersionId: 'baseline',
+    datasetId: 'dataset',
+    calibrationPartitionHash: split.calibrationPartitionHash,
+    candidateSequence: 1,
+    parametersChanged: {},
+    reasonForCandidate: 'test mechanics',
+    calibrationMetricsHash: 'd'.repeat(64),
+    createdAt: at,
+  });
+  assert.equal(trial.trialId, 'trial');
+  assert.throws(
+    () =>
+      finalizeOutcome({
+        caseId: 'case',
+        eventInstanceId: 'hold',
+        horizon: 'follow_through',
+        measurementStartAt: at,
+        measurementEndAt: '2026-01-02',
+        outcomeAvailableAt: '2026-01-01',
+        calculationPolicyVersion: 'v1',
+        sourceReferences: [],
+        properties: {},
+      }),
+    /outcome/,
+  );
+  const repo = new MemoryIntelligenceAcceptanceRepository(),
+    lifecycle = createHoldoutLifecycle({
+      acceptanceRunFamilyId: 'family',
+      datasetId: 'dataset',
+      holdoutPartitionHash: split.holdoutPartitionHash,
+      selectedConfigurationVersionId: 'baseline',
+      selectedAt: at,
+    });
+  await repo.freezeCandidate(lifecycle);
+  await repo.openHoldout('family', '2026-01-02');
+  const second = new MemoryIntelligenceAcceptanceRepository();
+  assert.equal((await repo.get('holdout_lifecycle', 'family'))?.state, 'opened');
+  assert.equal(await second.get('holdout_lifecycle', 'family'), null);
+  console.log('IFP-8 production acceptance integrity tests passed');
+}

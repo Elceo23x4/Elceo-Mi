@@ -44,7 +44,7 @@ if (!ci.includes('IFP-8 PostgreSQL integration')) fail('IFP-8 PostgreSQL CI step
 for(const phrase of ["'intelligence-acceptance-v1'",'productionAcceptance','unexplainedZeroCount'])if(!acceptanceContracts.includes(phrase))fail(`IFP-8 contract missing: ${phrase}`);
 for(const phrase of ['blocked_missing_certified_evidence','single-use holdout','RC-K remains untouched'])if(!acceptanceDoc.includes(phrase))fail(`IFP-8 documentation missing: ${phrase}`);
 if (!fragilityContracts.includes("'fragility-score-v1'")) fail('IFP-7 policy contract is missing');
-for (const phrase of ['non-predictive','availableWeight / expectedWeight','never multiplied by coverage','IFP-8 has not started']) if(!fragilityDoc.includes(phrase)) fail(`fragility documentation missing: ${phrase}`);
+for (const phrase of ['non-predictive','availableWeight / expectedWeight','never multiplied by coverage','IFP-8 is active and is not empirically complete']) if(!fragilityDoc.includes(phrase)) fail(`fragility documentation missing: ${phrase}`);
 if (!/name:\s*Check Intelligence Feature Program contract[\s\S]*?run:\s*npm run check:ifp/.test(ci)) fail('GitHub CI does not run check:ifp with the expected step name');
 if (!/label:\s*['"]npm run check:ifp['"][\s\S]*?args:\s*\[[^\]]*['"]run['"][^\]]*['"]check:ifp['"][^\]]*\]/.test(releaseGate)) fail('release gate does not include npm run check:ifp');
 

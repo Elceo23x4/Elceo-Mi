@@ -1,6 +1,6 @@
 -- IFP-8 immutable production-data calibration and intelligence acceptance evidence.
 CREATE TABLE IF NOT EXISTS intelligence_acceptance_records (
- record_kind TEXT NOT NULL CHECK(record_kind IN ('dataset_manifest','configuration_version','calibration_trial','acceptance_run','case_result','coverage_decision','residual_risk','rollback_evidence')),
+ record_kind TEXT NOT NULL CHECK(record_kind IN ('dataset_manifest','dataset_certification','split_manifest','configuration_version','calibration_trial','holdout_lifecycle','acceptance_run','case_result','coverage_decision','residual_risk','rollback_evidence')),
  record_id TEXT NOT NULL,
  canonical_payload JSONB NOT NULL,
  canonical_payload_hash TEXT NOT NULL CHECK(canonical_payload_hash ~ '^[a-f0-9]{64}$'),

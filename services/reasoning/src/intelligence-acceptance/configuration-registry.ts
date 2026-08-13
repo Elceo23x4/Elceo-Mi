@@ -1,4 +1,79 @@
-import type {CalibrationTrial,ConfigurationVersion} from './contracts';import {canonicalHash} from './identity';
-export const createConfiguration=(d:Omit<ConfigurationVersion,'parameterSnapshotHash'|'canonicalPayloadHash'>):ConfigurationVersion=>{const parameterSnapshotHash=canonicalHash(d.parameterSnapshot),body={...d,parameterSnapshotHash};return Object.freeze({...body,canonicalPayloadHash:canonicalHash(body)});};
-export const createTrial=(d:Omit<CalibrationTrial,'canonicalPayloadHash'>):CalibrationTrial=>Object.freeze({...d,canonicalPayloadHash:canonicalHash(d)});
-export class ConfigurationRegistry{private versions=new Map<string,ConfigurationVersion>();private trials=new Map<string,CalibrationTrial>();private selected=new Map<string,string>();private opened=new Set<string>();saveVersion(v:ConfigurationVersion){const p=this.versions.get(v.configurationVersionId);if(p&&p.canonicalPayloadHash!==v.canonicalPayloadHash)throw new Error('immutable_configuration_conflict');this.versions.set(v.configurationVersionId,p??v);return p??v;}resolve(id:string){const v=this.versions.get(id);if(!v)throw new Error('configuration_missing');return v;}recordTrial(t:CalibrationTrial){const p=this.trials.get(t.trialId);if(p&&p.canonicalPayloadHash!==t.canonicalPayloadHash)throw new Error('immutable_trial_conflict');this.trials.set(t.trialId,p??t);return p??t;}freezeSelection(family:string,id:string){if(this.opened.has(family))throw new Error('holdout_already_opened');const p=this.selected.get(family);if(p&&p!==id)throw new Error('candidate_selection_frozen');this.resolve(id);this.selected.set(family,id);}openHoldout(family:string){if(!this.selected.has(family))throw new Error('candidate_not_frozen');this.opened.add(family);return this.resolve(this.selected.get(family)!);}rollback(id:string){const current=this.resolve(id);if(!current.rollbackTargetVersionId)throw new Error('rollback_target_missing');return this.resolve(current.rollbackTargetVersionId);}}
+import type {
+  CalibrationTrial,
+  ConfigurationVersion,
+  HoldoutLifecycle,
+  RollbackEvidence,
+} from './contracts';
+import { canonicalHash } from './identity';
+const required = ['ifp1', 'ifp2', 'ifp3', 'ifp4', 'ifp5', 'ifp6', 'ifp7'] as const;
+export function createConfiguration(
+  draft: Omit<ConfigurationVersion, 'parameterSnapshotHash' | 'canonicalPayloadHash'>,
+): ConfigurationVersion {
+  for (const key of required)
+    if (!draft.policyVersions[key]) throw new Error('incomplete_ifp_policy_snapshot');
+  const parameterSnapshotHash = canonicalHash(draft.parameterSnapshot),
+    body = { ...draft, parameterSnapshotHash };
+  return Object.freeze({ ...body, canonicalPayloadHash: canonicalHash(body) });
+}
+export function createTrial(
+  draft: Omit<CalibrationTrial, 'canonicalPayloadHash'>,
+): CalibrationTrial {
+  return Object.freeze({ ...draft, canonicalPayloadHash: canonicalHash(draft) });
+}
+export function createHoldoutLifecycle(
+  draft: Omit<HoldoutLifecycle, 'state' | 'openedAt' | 'completedAt' | 'canonicalPayloadHash'>,
+): HoldoutLifecycle {
+  const body = { ...draft, state: 'selected' as const, openedAt: null, completedAt: null };
+  return Object.freeze({ ...body, canonicalPayloadHash: canonicalHash(body) });
+}
+export function createRollbackEvidence(
+  draft: Omit<RollbackEvidence, 'rollbackEvidenceId' | 'canonicalPayloadHash'>,
+): RollbackEvidence {
+  const body = {
+    ...draft,
+    replayCaseIds: [...draft.replayCaseIds].sort(),
+    previousCanonicalOutputHashes: [...draft.previousCanonicalOutputHashes].sort(),
+    restoredCanonicalOutputHashes: [...draft.restoredCanonicalOutputHashes].sort(),
+  };
+  const hash = canonicalHash(body);
+  return Object.freeze({
+    ...body,
+    rollbackEvidenceId: `ifp8-rollback-${hash.slice(0, 32)}`,
+    canonicalPayloadHash: hash,
+  });
+}
+export function verifyRollback(
+  evidence: RollbackEvidence,
+  previous: ConfigurationVersion,
+  restored: ConfigurationVersion,
+): void {
+  if (
+    evidence.restoredConfigurationVersionId !== restored.configurationVersionId ||
+    evidence.expectedPreviousParameterSnapshotHash !== previous.parameterSnapshotHash ||
+    evidence.restoredParameterSnapshotHash !== restored.parameterSnapshotHash ||
+    previous.parameterSnapshotHash !== restored.parameterSnapshotHash ||
+    !evidence.reproductionMatch ||
+    JSON.stringify(evidence.previousCanonicalOutputHashes) !==
+      JSON.stringify(evidence.restoredCanonicalOutputHashes)
+  )
+    throw new Error('rollback_reproduction_invalid');
+}
+export function deriveCalibrationDecision(
+  configuration: ConfigurationVersion,
+  trial: CalibrationTrial | null,
+  partitionHash: string,
+): 'no_change' | 'candidate_proposed' | 'approved_applied' {
+  if (configuration.changeClass === 'no_change') return 'no_change';
+  if (configuration.status !== 'approved') return 'candidate_proposed';
+  if (
+    !configuration.parentConfigurationVersionId ||
+    !configuration.approvedBy ||
+    !configuration.approvalReference ||
+    !trial ||
+    trial.configurationVersionId !== configuration.configurationVersionId ||
+    trial.parentConfigurationVersionId !== configuration.parentConfigurationVersionId ||
+    trial.calibrationPartitionHash !== partitionHash
+  )
+    throw new Error('approved_calibration_evidence_invalid');
+  return 'approved_applied';
+}

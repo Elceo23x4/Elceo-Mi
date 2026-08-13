@@ -56,3 +56,9 @@ Residual risks identify scope, severity, evidence, affected cells, classificatio
 ## Approval and RC-K handoff
 
 Truthful completion requires a persisted accepted record backed by qualified held-out evidence, complete coverage, zero correctness violations, explained confidence floors and replayable rollback. Until supplied, machinery acceptance is not empirical acceptance, IFP-8 stays active, and RC-K does not start. An eventual immutable evidence package may be hash-validated by CI; CI fixture success cannot close IFP-8.
+
+## Integrity closure
+
+Production acceptance is exposed only through `IntelligenceAcceptanceService`. The service loads the persisted manifest, independent certification, fixed split, complete configuration, durable holdout lifecycle and typed rollback record. It executes the production IFP service adapter, freezes each case before mechanically finalized outcomes are attached, derives diagnostics and canonical coverage, then saves one linked atomic bundle. The pure final policy is intentionally not exported from the package boundary.
+
+A dataset class is only a claim. Independent certification binds the manifest hash, artifacts, registry, sources, capture provenance, reliability, contamination checks and certification evidence. Relabeling a fixture changes its manifest hash and invalidates the existing certification. No approved complete launch event-class/horizon coverage contract currently exists, so the canonical coverage policy fails closed with `blocked_missing_approved_coverage_contract` rather than accepting a caller-selected subset.

@@ -1,5 +1,99 @@
-import type {DatasetClass,DatasetManifest,DecisionTimeEvidence} from './contracts';import {canonicalHash} from './identity';
-const empirical=new Set<DatasetClass>(['certified_replay','staging_capture','production_like_certified']);
-export const isCertifiedEmpiricalClass=(c:DatasetClass)=>empirical.has(c);
-export function finalizeDatasetManifest(d:Omit<DatasetManifest,'canonicalPayloadHash'>):DatasetManifest{return Object.freeze({...d,sourceIds:[...new Set(d.sourceIds)].sort(),assetCoverage:[...new Set(d.assetCoverage)].sort(),eventClassCoverage:[...new Set(d.eventClassCoverage)].sort(),horizonCoverage:[...new Set(d.horizonCoverage)].sort(),rawArtifactHashes:[...new Set(d.rawArtifactHashes)].sort(),canonicalPayloadHash:canonicalHash({...d,sourceIds:[...new Set(d.sourceIds)].sort(),assetCoverage:[...new Set(d.assetCoverage)].sort(),eventClassCoverage:[...new Set(d.eventClassCoverage)].sort(),horizonCoverage:[...new Set(d.horizonCoverage)].sort(),rawArtifactHashes:[...new Set(d.rawArtifactHashes)].sort()})});}
-export function validateDecisionTimeEvidence(e:DecisionTimeEvidence){if('evaluationOutcome' in e.productionInput||'outcome' in e.productionInput)throw new Error('outcome_in_decision_time_evidence');for(const r of e.references){if(!r.availableAt||!Number.isFinite(Date.parse(r.availableAt)))throw new Error('missing_or_invalid_available_at');if(Date.parse(r.availableAt)>Date.parse(e.evidenceCutoffAt))throw new Error('future_evidence_rejected');}return e;}
+import type {
+  DatasetCertification,
+  DatasetClass,
+  DatasetManifest,
+  DecisionTimeEvidence,
+} from './contracts';
+import { DATASET_CERTIFICATION_POLICY_VERSION } from './contracts';
+import { canonicalHash, canonicalJson } from './identity';
+
+const empirical = new Set<DatasetClass>([
+  'certified_replay',
+  'staging_capture',
+  'production_like_certified',
+]);
+const sorted = (values: readonly string[]) => [...new Set(values)].sort();
+
+export function finalizeDatasetManifest(
+  draft: Omit<DatasetManifest, 'canonicalPayloadHash'>,
+): DatasetManifest {
+  const body = {
+    ...draft,
+    sourceIds: sorted(draft.sourceIds),
+    assetCoverage: sorted(draft.assetCoverage),
+    eventClassCoverage: sorted(draft.eventClassCoverage),
+    horizonCoverage: sorted(draft.horizonCoverage),
+    rawArtifactHashes: sorted(draft.rawArtifactHashes),
+  };
+  return Object.freeze({ ...body, canonicalPayloadHash: canonicalHash(body) });
+}
+
+export function finalizeCertification(
+  draft: Omit<
+    DatasetCertification,
+    'certificationId' | 'certificationPolicyVersion' | 'canonicalPayloadHash'
+  >,
+): DatasetCertification {
+  const body = {
+    ...draft,
+    rawArtifactHashes: sorted(draft.rawArtifactHashes),
+    captureReplayProvenance: sorted(draft.captureReplayProvenance),
+    sourceIds: sorted(draft.sourceIds),
+    certificationEvidenceReferences: sorted(draft.certificationEvidenceReferences),
+    certificationPolicyVersion: DATASET_CERTIFICATION_POLICY_VERSION,
+  };
+  const hash = canonicalHash(body);
+  return Object.freeze({
+    ...body,
+    certificationId: `ifp8-cert-${hash.slice(0, 32)}`,
+    canonicalPayloadHash: hash,
+  });
+}
+
+export function verifyDatasetCertification(
+  manifest: DatasetManifest,
+  certification: DatasetCertification | null,
+): string[] {
+  const reasons: string[] = [];
+  if (!certification) return ['blocked_missing_certified_evidence'];
+  if (
+    certification.datasetId !== manifest.datasetId ||
+    certification.datasetVersion !== manifest.datasetVersion ||
+    certification.datasetManifestHash !== manifest.canonicalPayloadHash
+  )
+    reasons.push('dataset_certification_manifest_mismatch');
+  if (
+    certification.claimedDatasetClass !== manifest.datasetClass ||
+    !empirical.has(manifest.datasetClass)
+  )
+    reasons.push('dataset_class_not_empirically_qualified');
+  if (
+    certification.sourceRegistryHash !== manifest.sourceRegistryHash ||
+    certification.sourceRegistryVersion !== manifest.sourceRegistryVersion
+  )
+    reasons.push('dataset_certification_registry_mismatch');
+  if (
+    canonicalJson(certification.rawArtifactHashes) !==
+      canonicalJson(sorted(manifest.rawArtifactHashes)) ||
+    canonicalJson(certification.sourceIds) !== canonicalJson(sorted(manifest.sourceIds))
+  )
+    reasons.push('dataset_certification_artifact_mismatch');
+  if (certification.fixtureContamination || certification.unverifiedContamination)
+    reasons.push('dataset_certification_contaminated');
+  if (
+    !certification.captureReplayProvenance.length ||
+    !certification.certificationEvidenceReferences.length
+  )
+    reasons.push('dataset_certification_evidence_missing');
+  return [...new Set(reasons)].sort();
+}
+
+export function validateDecisionTimeEvidence(evidence: DecisionTimeEvidence): DecisionTimeEvidence {
+  for (const reference of evidence.references) {
+    if (!reference.availableAt || !Number.isFinite(Date.parse(reference.availableAt)))
+      throw new Error('missing_or_invalid_available_at');
+    if (Date.parse(reference.availableAt) > Date.parse(evidence.evidenceCutoffAt))
+      throw new Error('future_evidence_rejected');
+  }
+  return evidence;
+}

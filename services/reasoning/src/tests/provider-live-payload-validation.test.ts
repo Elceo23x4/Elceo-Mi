@@ -32,8 +32,9 @@ export async function runProviderLivePayloadValidationTests(){
   assert.equal(resolveProviderRuntimeRequest(base).reason,'staging_live_requires_explicit_allow');
   assert.equal(resolveProviderRuntimeRequest({ ...base, policy:{ explicitStagingLiveAllow:true } }).reason,'staging_live_missing_required_secret');
   const gated = await executeProviderApiGateRequest({ ...base, policy:{ explicitStagingLiveAllow:true, requestMetadata:{ credentialPresent:true }, allowedNullableFields:['volume'], allowUnknownFields:true } }, new TiingoMarketDataAdapter());
-  assert.equal(gated.decision.providerCallMode,'live_staging_call');
-  assert.ok(gated.response);
+  assert.equal(gated.decision.providerCallMode,'blocked_live');
+  assert.equal(gated.decision.reason,'provider_control_policy_missing');
+  assert.equal(gated.response,null);
   assert.equal(resolveProviderRuntimeRequest({ ...base, activationMode:'production_live_allowed', policy:{ explicitProductionLiveAllow:true, requestMetadata:{ credentialPresent:true } } }).reason,'production_live_not_approved');
   assert.equal(resolveProviderRuntimeRequest({ ...base, policy:{ explicitStagingLiveAllow:true, requestMetadata:{ credentialPresent:true }, quotaUsed:1, quotaLimit:1 } }).reason,'quota_exceeded');
   assert.equal(resolveProviderRuntimeRequest({ ...base, policy:{ explicitStagingLiveAllow:true, requestMetadata:{ credentialPresent:true }, rateLimitRemaining:0 } }).reason,'rate_limit_exceeded');
@@ -60,9 +61,8 @@ export async function runProviderLivePayloadValidationTests(){
   assert.match(unsupported.stderr,/staging_live_not_implemented_for_provider/);
   assert.equal(`${unsupported.stdout}${unsupported.stderr}`.includes('fred-not-printed'),false);
   const fake = spawnSync('node', ['scripts/provider-staging-smoke.mjs'], { cwd: repoCwd, env: smokeEnv({ ELCEO_PROVIDER_STAGING_SMOKE: '1', ELCEO_PROVIDER_STAGING_SMOKE_FAKE_ADAPTER: '1', [tiingoEnvName]: 'fake-tiingo-not-printed' }), encoding: 'utf8' });
-  assert.equal(fake.status,0, fake.stderr || fake.stdout);
-  assert.match(fake.stdout,/"providerCallMode":"live_staging_call"/);
-  assert.match(fake.stdout,/"status":"staging_live_validated"/);
+  assert.equal(fake.status,5, fake.stderr || fake.stdout);
+  assert.match(fake.stderr,/provider_control_policy_missing/);
   assert.equal(`${fake.stdout}${fake.stderr}`.includes('fake-tiingo-not-printed'),false);
 
   const rawPayload = { fixtureKind:'sanitized_replay_fixture', rows:[{ id:'ok', observedAt:'2026-01-01T00:00:00.000Z' }] };

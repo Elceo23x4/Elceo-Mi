@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { TiingoMarketDataAdapter } from '../provider-sources/tiingo/tiingo-adapter.js';
 import { buildProviderApiGateSnapshot, executeProviderApiGateRequest, redactProviderSecrets, resolveProviderRuntimeRequest, translateProviderCapability, validateProviderRuntimeResponse, type ProviderRuntimeRequest, type ProviderRuntimeResponse } from '../provider-sources/provider-api-gate.js';
+import { buildTestProviderControlPolicy } from './provider-control.test.js';
 
 const base = (overrides: Partial<ProviderRuntimeRequest> = {}): ProviderRuntimeRequest => ({
   requestId: 'req-1', sourceId: 'tiingo_market_data', capabilityId: 'market_price_history', asset: 'eur_usd',
@@ -34,6 +35,8 @@ export async function runProviderApiGateTests(){
   assert.equal(resolveProviderRuntimeRequest(base({ policy:{ expectedAdapterId:'wrong_adapter' as never } })).reason,'adapter_capability_mismatch');
   assert.equal(resolveProviderRuntimeRequest(base({ policy:{ requiredFields:['endAt'] }, endAt:null })).reason,'missing_required_field:endAt');
   assert.equal(resolveProviderRuntimeRequest(base()).normalizedRequestKey, resolveProviderRuntimeRequest(base({ requestId:'req-2' })).normalizedRequestKey);
+  assert.equal(resolveProviderRuntimeRequest(base({metadata:{trace:'one'}})).normalizedRequestKey, resolveProviderRuntimeRequest(base({metadata:{trace:'two'}})).normalizedRequestKey);
+  assert.notEqual(resolveProviderRuntimeRequest(base()).normalizedRequestKey, resolveProviderRuntimeRequest(base({providerRequestParams:{interval:'1h'}})).normalizedRequestKey);
   assert.equal(resolveProviderRuntimeRequest(base({ policy:{ circuitState:'half_open' } })).circuitUpdateRecommendation,'close_after_successful_probe');
 
   const dry=await executeProviderApiGateRequest(base()); assert.equal(dry.response?.payloadSchemaStatus,'valid');
@@ -42,6 +45,8 @@ export async function runProviderApiGateTests(){
   let adapterCalls=0; const countingAdapter={ descriptor:new TiingoMarketDataAdapter({mode:'fixture'}).descriptor, fetch:async (request: never)=>{ adapterCalls+=1; return new TiingoMarketDataAdapter({mode:'fixture'}).fetch(request); }, normalize:async()=>[] };
   const cache=await executeProviderApiGateRequest(base({ policy:{ cacheHitPayload: response({ responseId:'cache-1' }) } }), countingAdapter); assert.equal(cache.decision.cacheStatus,'hit'); assert.equal(cache.response?.responseId,'cache-1'); assert.equal(adapterCalls,0);
   const live=await executeProviderApiGateRequest(base({ activationMode:'staging_live_allowed', policy:{ explicitStagingLiveAllow:true } })); assert.equal(live.decision.reason,'staging_live_missing_required_secret');
+  const missingControl=await executeProviderApiGateRequest(base({ activationMode:'staging_live_allowed', policy:{ explicitStagingLiveAllow:true,requestMetadata:{credentialPresent:true} } }),countingAdapter);assert.equal(missingControl.decision.reason,'provider_control_policy_missing');assert.equal(adapterCalls,0);
+  const unavailable=await executeProviderApiGateRequest(base({ activationMode:'staging_live_allowed', policy:{ explicitStagingLiveAllow:true,requestMetadata:{credentialPresent:true} },providerControlPolicy:buildTestProviderControlPolicy() }),countingAdapter);assert.equal(unavailable.decision.reason,'provider_control_unavailable');assert.equal(adapterCalls,0);
   const stale=await executeProviderApiGateRequest(base({ policy:{ circuitState:'open', fallbackMode:'stale_if_error', stalePayload:response({responseId:'stale-1'}) } })); assert.equal(stale.response?.responseId,'stale-1');
   const noStale=await executeProviderApiGateRequest(base({ policy:{ circuitState:'open', stalePayload:response({responseId:'stale-2'}) } })); assert.equal(noStale.response,null);
 

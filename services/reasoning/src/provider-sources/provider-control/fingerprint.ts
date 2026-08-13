@@ -1,0 +1,5 @@
+import { createHash } from 'node:crypto';
+import { canonicalizeProviderControlValue } from './policy';
+export type ProviderFingerprintInput={sourceId:string;capabilityId:string;asset?:string|null;region?:string|null;startAt?:string|null;endAt?:string|null;paginationCursor?:string|null;providerRequestParams?:Record<string,unknown>};
+const SECRET=/api[-_]?key|authorization|bearer|secret|token|credential/i;
+export function buildProviderRequestFingerprint(input:ProviderFingerprintInput):string { const params=input.providerRequestParams??{}; if(Object.keys(params).some(k=>SECRET.test(k))||SECRET.test(JSON.stringify(params))) throw new Error('secret_like_provider_request_parameter'); const canonical=canonicalizeProviderControlValue({schema:'elceo_provider_request_v1',sourceId:input.sourceId,capabilityId:input.capabilityId,asset:input.asset??null,region:input.region??null,startAt:input.startAt??null,endAt:input.endAt??null,paginationCursor:input.paginationCursor??null,providerRequestParams:params}); return `v1:sha256:${createHash('sha256').update(canonical).digest('hex')}`; }

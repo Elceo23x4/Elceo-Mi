@@ -25,6 +25,15 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -61,6 +70,10 @@ jobs:
         run: npm run typecheck
       - name: Repository tests
         run: npm run test
+      - name: Provider API Gate Redis integration
+        env:
+          REDIS_URL: redis://127.0.0.1:6379
+        run: npm run test:provider-control-redis
       - name: IFP-3 PostgreSQL integration
         env:
           DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3

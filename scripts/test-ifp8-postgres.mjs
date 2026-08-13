@@ -375,14 +375,28 @@ try {
       resolveEmpiricalPolicy: async () => ({ ...empiricalPolicyBody,
         canonicalPayloadHash: api.canonicalHash(empiricalPolicyBody) }) },
   );
+  const futureRisk = (() => {
+    const body = { riskId: 'ifp8-future-service-risk', scope: 'TEST-ONLY', severity: 'high',
+      evidence: ['future-outcome'], affectedAssets: ['xau_usd'], eventClasses: ['cpi'],
+      horizons: ['follow_through'], classification: 'empirical_limitation', resolutionState: 'open',
+      blocksAcceptance: true, owner: 'ifp8-test', createdAt: '2026-01-01T02:30:00Z' };
+    return { ...body, canonicalPayloadHash: api.canonicalHash(body) };
+  })();
+  const linksBeforeFutureRun = Number((await pool.query(
+    'SELECT count(*) n FROM intelligence_acceptance_links',
+  )).rows[0].n);
   await assert.rejects(() => futureService.run({
     runFamilyId: futureFamily, datasetId: futureDataset.datasetId,
     configurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
-    rollbackEvidenceId: futureRollback.rollbackEvidenceId, createdAt: '2026-01-01T02:30:00Z',
+    rollbackEvidenceId: futureRollback.rollbackEvidenceId, residualRisks: [futureRisk],
+    createdAt: '2026-01-01T02:30:00Z',
   }), /outcome_not_available_at_acceptance_time/);
   assert.equal((await sql.get('holdout_lifecycle', futureFamily)).state, 'failed');
-  assert.equal(await sql.get('acceptance_run', `ifp8-${futureFamily}`), null);
-  assert.equal((await pool.query("SELECT count(*) n FROM intelligence_acceptance_records WHERE record_kind IN ('case_result','coverage_decision','residual_risk','acceptance_run') AND canonical_payload->>'acceptanceRunFamilyId'=$1", [futureFamily])).rows[0].n, '0');
+  assert.equal((await pool.query("SELECT count(*) n FROM intelligence_acceptance_records WHERE record_kind='case_result' AND canonical_payload->>'caseId'=$1", [futureContext.evidence.caseId])).rows[0].n, '0');
+  for (const kind of ['coverage_decision', 'acceptance_run'])
+    assert.equal((await pool.query("SELECT count(*) n FROM intelligence_acceptance_records WHERE record_kind=$1 AND canonical_payload->>'acceptanceRunFamilyId'=$2", [kind, futureFamily])).rows[0].n, '0');
+  assert.equal(await sql.get('residual_risk', futureRisk.riskId), null);
+  assert.equal(Number((await pool.query('SELECT count(*) n FROM intelligence_acceptance_links')).rows[0].n), linksBeforeFutureRun);
   const riskBody = {
     riskId: 'ifp8-test-risk',
     scope: 'test-only',
@@ -496,7 +510,7 @@ try {
     };
     return { ...body, canonicalPayloadHash: api.canonicalHash(body) };
   };
-  const makeAtomicBundle = async (family, suffix, repository = sql) => {
+  const makeAtomicBundle = async (family, suffix, repository = sql, options = {}) => {
     const acceptanceAt = '2026-01-01T04:00:00.000Z';
     const { canonicalPayloadHash: ignoredAtomicHash, ...atomicDatasetDraft } = fixture;
     void ignoredAtomicHash;
@@ -516,18 +530,56 @@ try {
       holdoutPartitionHash: atomicSplit.holdoutPartitionHash,
     });
     await repository.save('dataset_manifest', atomicDataset.datasetId, atomicDataset);
-    await repository.save('split_manifest', atomicDataset.datasetId, atomicSplit);
+    const persistedSplit = options.persistedSplit?.(atomicSplit) ?? atomicSplit;
+    await repository.save('split_manifest', atomicDataset.datasetId, persistedSplit);
+    const sourceTrialId = options.withTrial ? `trial-${suffix}` : null;
+    const configuration = options.withTrial ? api.createConfiguration({
+      ...api.CANONICAL_RUNTIME_BASELINE,
+      configurationVersionId: `configuration-${suffix}`,
+      sourceCalibrationRunId: sourceTrialId,
+      changeClass: 'explicitly_approved_parameter_calibration',
+      approvedBy: 'TEST-ONLY', approvalReference: 'TEST-ONLY-NOT-PRODUCTION',
+      changeReason: 'test-only relationship proof', createdAt: at,
+    }) : api.CANONICAL_RUNTIME_BASELINE;
     await repository.save(
       'configuration_version',
-      api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
-      api.CANONICAL_RUNTIME_BASELINE,
+      configuration.configurationVersionId,
+      configuration,
     );
+    const canonicalTrial = sourceTrialId ? api.createTrial({
+      trialId: sourceTrialId, acceptanceRunFamilyId: family,
+      configurationVersionId: configuration.configurationVersionId,
+      parentConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+      datasetId: atomicDataset.datasetId,
+      calibrationPartitionHash: atomicSplit.calibrationPartitionHash,
+      candidateSequence: 1, parametersChanged: {}, reasonForCandidate: 'test-only relationship proof',
+      calibrationMetricsHash: '7'.repeat(64), createdAt: at,
+    }) : null;
+    const persistedTrial = canonicalTrial && (options.persistedTrial?.(canonicalTrial) ?? canonicalTrial);
+    if (persistedTrial && !options.missingTrial)
+      await repository.save('calibration_trial', persistedTrial.trialId, persistedTrial);
+    const certification = options.withCertification ? api.finalizeCertification({
+      datasetId: atomicDataset.datasetId, datasetVersion: atomicDataset.datasetVersion,
+      datasetManifestHash: atomicDataset.canonicalPayloadHash,
+      claimedDatasetClass: atomicDataset.datasetClass,
+      sourceRegistryVersion: atomicDataset.sourceRegistryVersion,
+      sourceRegistryHash: atomicDataset.sourceRegistryHash,
+      rawArtifactHashes: atomicDataset.rawArtifactHashes,
+      captureReplayProvenance: ['TEST-ONLY'], sourceIds: atomicDataset.sourceIds,
+      reliabilitySummary: { test: 1 }, fixtureContamination: true, unverifiedContamination: false,
+      certificationEvidenceReferences: ['TEST-ONLY'], certifiedAt: at,
+    }) : null;
+    const persistedCertification = certification &&
+      (options.persistedCertification?.(certification) ?? certification);
+    if (persistedCertification)
+      await repository.save('dataset_certification', atomicDataset.datasetId, persistedCertification);
     await repository.freezeCandidate(api.createHoldoutLifecycle({
       acceptanceRunFamilyId: family, datasetId: atomicDataset.datasetId,
       holdoutPartitionHash: atomicSplit.holdoutPartitionHash,
-      selectedConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId, selectedAt: at,
+      selectedConfigurationVersionId: configuration.configurationVersionId, selectedAt: at,
+      ...options.lifecycleOverrides,
     }));
-    await repository.openHoldout(family, acceptanceAt);
+    await repository.openHoldout(family, options.openedAt ?? acceptanceAt);
     const caseResult = await fixtureApi.buildContractValidAcceptanceCase(suffix);
     const [atomicCoverage] = api.evaluateCoverage(
       { ...testCoverageBody, canonicalPayloadHash: api.canonicalHash(testCoverageBody) },
@@ -539,10 +591,10 @@ try {
       datasetId: atomicDataset.datasetId,
       splitId: atomicSplit.splitId,
       acceptanceRunFamilyId: family,
-      fromConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
-      restoredConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
-      expectedPreviousParameterSnapshotHash: api.CANONICAL_RUNTIME_BASELINE.parameterSnapshotHash,
-      restoredParameterSnapshotHash: api.CANONICAL_RUNTIME_BASELINE.parameterSnapshotHash,
+      fromConfigurationVersionId: configuration.configurationVersionId,
+      restoredConfigurationVersionId: configuration.configurationVersionId,
+      expectedPreviousParameterSnapshotHash: configuration.parameterSnapshotHash,
+      restoredParameterSnapshotHash: configuration.parameterSnapshotHash,
       reproductions: [{
         caseId: caseResult.caseId,
         decisionTimeEvidenceHash: caseResult.decisionTimeEvidenceHash,
@@ -556,10 +608,10 @@ try {
     const run = acceptanceApi.decideValidatedAcceptance({
       runFamilyId: family,
       dataset: atomicDataset,
-      certification: null,
+      certification,
       split: atomicSplit,
-      configuration: api.CANONICAL_RUNTIME_BASELINE,
-      trial: null,
+      configuration,
+      trial: canonicalTrial,
       cases: [caseResult],
       coverage: [atomicCoverage],
       coverageContractApproved: false,
@@ -581,7 +633,9 @@ try {
       referenceLinks: [
         { kind: 'dataset_manifest', id: atomicDataset.datasetId },
         { kind: 'split_manifest', id: atomicDataset.datasetId },
-        { kind: 'configuration_version', id: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId },
+        { kind: 'configuration_version', id: configuration.configurationVersionId },
+        ...(certification ? [{ kind: 'dataset_certification', id: atomicDataset.datasetId }] : []),
+        ...(canonicalTrial ? [{ kind: 'calibration_trial', id: canonicalTrial.trialId }] : []),
         { kind: 'case_result', id: caseResult.caseResultId },
         { kind: 'coverage_decision', id: atomicCoverage.coverageDecisionId },
         { kind: 'residual_risk', id: risk.riskId },
@@ -662,6 +716,65 @@ try {
       assert.equal(await repository.get('acceptance_run', valid.run.acceptanceRunId), null, name);
       assert.deepEqual(await repository.listLinks(valid.run.acceptanceRunId), [], name);
       assert.equal((await repository.get('holdout_lifecycle', family)).state, 'opened', name);
+    }
+  }
+  const relationshipCases = [
+    ['lifecycle configuration mismatch', () => ({
+      lifecycleOverrides: { selectedConfigurationVersionId: 'wrong-configuration' },
+    })],
+    ['lifecycle partition mismatch', () => ({
+      lifecycleOverrides: { holdoutPartitionHash: api.partitionHash(['wrong-holdout']) },
+    })],
+    ['lifecycle opened after run', () => ({ openedAt: '2026-01-01T05:00:00Z' })],
+    ['persisted split semantic mismatch', () => ({
+      persistedSplit: (row) => api.finalizeSplit({
+        datasetId: row.datasetId, createdAt: row.createdAt,
+        calibrationEventIds: ['replacement-cal'], embargoEventIds: ['replacement-emb'],
+        holdoutEventIds: ['replacement-hold'],
+        eventFamilies: { 'replacement-cal': 'a', 'replacement-emb': 'b', 'replacement-hold': 'c' },
+        eventTimes: { 'replacement-cal': '2025-01-01', 'replacement-emb': '2025-01-04', 'replacement-hold': '2025-01-10' },
+        outcomeWindowEnds: { 'replacement-cal': '2025-01-02', 'replacement-emb': '2025-01-05', 'replacement-hold': '2025-01-11' },
+        maximumOutcomeHorizonMs: row.maximumOutcomeHorizonMs,
+      }),
+    })],
+    ['certification id mismatch', () => ({ withCertification: true,
+      persistedCertification: (row) => api.finalizeCertification({ ...row, certifiedAt: '2026-01-01T00:01:00Z' }) })],
+    ['certification version mismatch', () => ({ withCertification: true,
+      persistedCertification: (row) => api.finalizeCertification({ ...row, datasetVersion: 'wrong-version' }) })],
+    ['certification manifest mismatch', () => ({ withCertification: true,
+      persistedCertification: (row) => api.finalizeCertification({ ...row, datasetManifestHash: '6'.repeat(64) }) })],
+    ['required trial missing', () => ({ withTrial: true, missingTrial: true })],
+    ['trial family mismatch', () => ({ withTrial: true,
+      persistedTrial: (row) => api.createTrial({ ...row, acceptanceRunFamilyId: 'wrong-family' }) })],
+    ['trial dataset mismatch', () => ({ withTrial: true,
+      persistedTrial: (row) => api.createTrial({ ...row, datasetId: 'wrong-dataset' }) })],
+    ['trial configuration mismatch', () => ({ withTrial: true,
+      persistedTrial: (row) => api.createTrial({ ...row, configurationVersionId: 'wrong-configuration' }) })],
+  ];
+  for (const [repositoryName, repositoryFactory] of [
+    ['memory', () => new api.MemoryIntelligenceAcceptanceRepository()],
+    ['sql', () => sql],
+  ]) {
+    let relationshipIndex = 0;
+    for (const [name, makeOptions] of relationshipCases) {
+      const suffix = `relationship-${repositoryName}-${relationshipIndex++}`;
+      const repository = repositoryFactory();
+      const family = `ifp8-${suffix}`;
+      const valid = await makeAtomicBundle(family, suffix, repository, makeOptions());
+      await assert.rejects(
+        () => repository.finalizeAcceptanceBundle(family, valid, valid.completedAt),
+        /coherence_mismatch|temporal_mismatch/,
+        `${repositoryName}: ${name}`,
+      );
+      for (const [kind, id] of [
+        ['case_result', valid.cases[0].caseResultId],
+        ['coverage_decision', valid.coverage[0].coverageDecisionId],
+        ['residual_risk', valid.risks[0].riskId],
+        ['rollback_evidence', valid.rollback.rollbackEvidenceId],
+        ['acceptance_run', valid.run.acceptanceRunId],
+      ]) assert.equal(await repository.get(kind, id), null, `${repositoryName}: ${name}`);
+      assert.deepEqual(await repository.listLinks(valid.run.acceptanceRunId), [], name);
+      assert.notEqual((await repository.get('holdout_lifecycle', family)).state, 'completed', name);
     }
   }
   const atomicFailureFamily = 'ifp8-atomic-failure';

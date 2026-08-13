@@ -87,6 +87,14 @@ export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptan
       await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
         value.acceptanceRunFamilyId,
       ]);
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        `${value.datasetId}:${value.holdoutPartitionHash}`,
+      ]);
+      const reused = await client.query(
+        "SELECT record_id FROM intelligence_acceptance_records WHERE record_kind='holdout_lifecycle' AND record_id<>$1 AND canonical_payload->>'datasetId'=$2 AND canonical_payload->>'holdoutPartitionHash'=$3 FOR UPDATE",
+        [value.acceptanceRunFamilyId, value.datasetId, value.holdoutPartitionHash],
+      );
+      if (reused.rows[0]) throw new Error('holdout_tranche_already_reserved');
       const q = await client.query(
         "SELECT canonical_payload FROM intelligence_acceptance_records WHERE record_kind='holdout_lifecycle' AND record_id=$1 FOR UPDATE",
         [value.acceptanceRunFamilyId],
@@ -127,6 +135,14 @@ export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptan
         await client.query('COMMIT');
         return prior;
       }
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        `${prior.datasetId}:${prior.holdoutPartitionHash}`,
+      ]);
+      const consumed = await client.query(
+        "SELECT record_id FROM intelligence_acceptance_records WHERE record_kind='holdout_lifecycle' AND record_id<>$1 AND canonical_payload->>'datasetId'=$2 AND canonical_payload->>'holdoutPartitionHash'=$3 AND canonical_payload->>'state'<>'selected' FOR UPDATE",
+        [id, prior.datasetId, prior.holdoutPartitionHash],
+      );
+      if (consumed.rows[0]) throw new Error('holdout_tranche_already_consumed');
       const base = Object.fromEntries(
         Object.entries(prior).filter(([key]) => key !== 'canonicalPayloadHash'),
       ) as Omit<typeof prior, 'canonicalPayloadHash'>;
@@ -145,6 +161,45 @@ export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptan
       client.release();
     }
   }
+  async completeHoldout(id: string, completedAt: string) {
+    return this.transitionHoldout(id, 'completed', completedAt, null);
+  }
+  async failHoldout(id: string, completedAt: string, reason: string) {
+    return this.transitionHoldout(id, 'failed', completedAt, reason);
+  }
+  private async transitionHoldout(
+    id: string,
+    state: 'completed' | 'failed',
+    completedAt: string,
+    failureReason: string | null,
+  ) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const q = await client.query(
+        "SELECT canonical_payload FROM intelligence_acceptance_records WHERE record_kind='holdout_lifecycle' AND record_id=$1 FOR UPDATE",
+        [id],
+      );
+      if (!q.rows[0]) throw new Error('holdout_missing');
+      const prior = payload<'holdout_lifecycle'>(q.rows[0]);
+      if (prior.state !== 'opened') throw new Error('holdout_not_opened');
+      const { canonicalPayloadHash: ignored, ...base } = prior;
+      void ignored;
+      const body = { ...base, state, completedAt, failureReason },
+        next = { ...body, canonicalPayloadHash: canonicalHash(body) };
+      await client.query(
+        "UPDATE intelligence_acceptance_records SET canonical_payload=$2,canonical_payload_hash=$3 WHERE record_kind='holdout_lifecycle' AND record_id=$1",
+        [id, JSON.stringify(next), next.canonicalPayloadHash],
+      );
+      await client.query('COMMIT');
+      return next;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
   async saveBundle(bundle: AcceptanceBundle, injectFailureAfter = Number.POSITIVE_INFINITY) {
     const client = await this.pool.connect();
     try {
@@ -155,7 +210,7 @@ export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptan
         if (++count === injectFailureAfter) throw new Error('injected_bundle_failure');
       }
       for (const c of bundle.coverage)
-        await this.saveWith(client, 'coverage_decision', c.cellId, c);
+        await this.saveWith(client, 'coverage_decision', c.coverageDecisionId, c);
       for (const r of bundle.risks) await this.saveWith(client, 'residual_risk', r.riskId, r);
       await this.saveWith(
         client,

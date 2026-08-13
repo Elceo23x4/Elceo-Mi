@@ -16,6 +16,42 @@ import { canonicalHash } from './identity';
 import { segmentedEngineDiagnostics } from './metrics';
 import { crossEngineViolations } from './reports';
 import { deriveCalibrationDecision } from './configuration-registry';
+import type { EmpiricalEngineState } from './contracts';
+function empiricalStates(
+  cases: readonly FrozenCaseResult[],
+): Record<'ifp1' | 'ifp2' | 'ifp3' | 'ifp4' | 'ifp5' | 'ifp6' | 'ifp7', EmpiricalEngineState> {
+  const available = (name: string) =>
+    cases.length > 0 &&
+    cases.every(
+      (row) => !row.outcome.notEvaluable.includes(`${name}_canonical_calculation_unavailable`),
+    );
+  return {
+    ifp1:
+      available('releaseAligned') &&
+      available('reactionClass') &&
+      available('initialImpulse') &&
+      available('followThrough')
+        ? 'pass'
+        : 'insufficient_evidence',
+    ifp2: available('outcomeFamily') ? 'pass' : 'insufficient_evidence',
+    ifp3: available('invalidation') ? 'pass' : 'insufficient_evidence',
+    ifp4:
+      cases.length && cases.every((row) => row.outcome.properties.pathCoherence !== undefined)
+        ? 'pass'
+        : 'insufficient_evidence',
+    ifp5: available('narrativeContinued') ? 'pass' : 'insufficient_evidence',
+    ifp6:
+      cases.length &&
+      cases.every(
+        (row) =>
+          row.outputs.ifp6.positioningEvidenceState === 'structurally_unavailable' ||
+          row.outcome.properties.squeezeAmplification !== undefined,
+      )
+        ? 'pass'
+        : 'insufficient_evidence',
+    ifp7: available('structuralBreakdown') ? 'pass' : 'insufficient_evidence',
+  };
+}
 export type ValidatedAcceptanceState = {
   runFamilyId: string;
   dataset: DatasetManifest;
@@ -42,6 +78,13 @@ export function decideValidatedAcceptance(input: ValidatedAcceptanceState): Acce
   if (violations.length) reasons.push('blocked_cross_engine_invariant');
   const diagnostics = segmentedEngineDiagnostics(input.cases),
     unexplainedZeroCount = diagnostics.confidence.unexplainedZeroCount;
+  const engineStates = empiricalStates(input.cases);
+  if (
+    Object.values(engineStates).some(
+      (state) => state === 'fail' || state === 'insufficient_evidence',
+    )
+  )
+    reasons.push('blocked_empirical_engine_insufficient_evidence');
   if (unexplainedZeroCount) reasons.push('blocked_unexplained_confidence_zero');
   if (input.residualRisks.some((r) => r.blocksAcceptance)) reasons.push('blocked_residual_risk');
   let calibrationDecision: 'no_change' | 'candidate_proposed' | 'approved_applied' = 'no_change';
@@ -71,9 +114,13 @@ export function decideValidatedAcceptance(input: ValidatedAcceptanceState): Acce
     input.coverage.every((c) => c.state !== 'insufficient_data')
       ? 'pass'
       : 'fail') as 'pass' | 'fail',
-    empiricalIntelligenceGate: (input.cases.length && !violations.length && !unexplainedZeroCount
+    empiricalIntelligenceGate: (input.cases.length &&
+    !violations.length &&
+    !unexplainedZeroCount &&
+    Object.values(engineStates).every((state) => state === 'pass' || state === 'not_applicable')
       ? 'pass'
       : 'not_evaluated') as 'pass' | 'not_evaluated',
+    empiricalEngineStates: engineStates,
     state,
     productionAcceptance: state === 'accepted',
     reasonCodes: unique,

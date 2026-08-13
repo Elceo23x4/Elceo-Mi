@@ -6,13 +6,14 @@ import {
   createTrial,
   finalizeCertification,
   finalizeDatasetManifest,
-  finalizeOutcome,
+  calculateOutcome,
   finalizeSplit,
   MemoryIntelligenceAcceptanceRepository,
   partitionHash,
   verifyDatasetCertification,
   verifyManifestSplit,
   verifyRollback,
+  validateDecisionTimeEvidence,
 } from '../intelligence-acceptance/index.js';
 const at = '2026-01-01T00:00:00.000Z';
 const manifest = (datasetClass: 'fixture' | 'certified_replay') =>
@@ -115,10 +116,14 @@ export async function runIntelligenceAcceptanceTests() {
     restoredConfigurationVersionId: 'restored',
     expectedPreviousParameterSnapshotHash: baseline.parameterSnapshotHash,
     restoredParameterSnapshotHash: restored.parameterSnapshotHash,
-    replayCaseIds: ['case'],
-    previousCanonicalOutputHashes: ['c'.repeat(64)],
-    restoredCanonicalOutputHashes: ['c'.repeat(64)],
-    reproductionMatch: true,
+    reproductions: [
+      {
+        caseId: 'case',
+        previousCanonicalOutputHash: 'c'.repeat(64),
+        restoredCanonicalOutputHash: 'c'.repeat(64),
+        match: false,
+      },
+    ],
     createdAt: at,
   });
   verifyRollback(rollback, baseline, restored);
@@ -136,21 +141,94 @@ export async function runIntelligenceAcceptanceTests() {
     createdAt: at,
   });
   assert.equal(trial.trialId, 'trial');
+  const decisionEvidence = {
+    caseId: 'case',
+    eventInstanceId: 'hold',
+    eventFamilyId: 'family',
+    evidenceCutoffAt: at,
+    asset: 'xau_usd',
+    eventClass: 'cpi',
+    horizon: 'follow_through',
+    qualifiedEvidenceFamilies: [],
+    references: [],
+    productionInput: { eventEvaluationId: 'event', evidenceCutoffAt: at },
+  } as const;
   assert.throws(
     () =>
-      finalizeOutcome({
+      calculateOutcome(decisionEvidence, {
         caseId: 'case',
         eventInstanceId: 'hold',
+        asset: 'xau_usd',
         horizon: 'follow_through',
-        measurementStartAt: at,
+        measurementStartAt: '2025-12-31',
         measurementEndAt: '2026-01-02',
-        outcomeAvailableAt: '2026-01-01',
-        calculationPolicyVersion: 'v1',
-        sourceReferences: [],
-        properties: {},
+        outcomeAvailableAt: '2026-01-03',
+        observations: [],
       }),
-    /outcome/,
+    /before_decision_cutoff/,
   );
+  const unavailableOutcome = calculateOutcome(decisionEvidence, {
+    caseId: 'case',
+    eventInstanceId: 'hold',
+    asset: 'xau_usd',
+    horizon: 'follow_through',
+    measurementStartAt: at,
+    measurementEndAt: '2026-01-02',
+    outcomeAvailableAt: '2026-01-03',
+    observations: [],
+  });
+  assert.deepEqual(unavailableOutcome.properties, {});
+  assert(
+    unavailableOutcome.notEvaluable.includes('releaseAligned_canonical_calculation_unavailable'),
+  );
+  assert.throws(
+    () =>
+      validateDecisionTimeEvidence({
+        ...decisionEvidence,
+        productionInput: { ...decisionEvidence.productionInput, evidenceCutoffAt: '2026-01-02' },
+      }),
+    /cutoff_mismatch/,
+  );
+  assert.throws(
+    () =>
+      createRollbackEvidence({
+        fromConfigurationVersionId: 'baseline',
+        restoredConfigurationVersionId: 'restored',
+        expectedPreviousParameterSnapshotHash: baseline.parameterSnapshotHash,
+        restoredParameterSnapshotHash: restored.parameterSnapshotHash,
+        reproductions: [],
+        createdAt: at,
+      }),
+    /empty/,
+  );
+  assert.throws(
+    () =>
+      createRollbackEvidence({
+        fromConfigurationVersionId: 'baseline',
+        restoredConfigurationVersionId: 'restored',
+        expectedPreviousParameterSnapshotHash: baseline.parameterSnapshotHash,
+        restoredParameterSnapshotHash: restored.parameterSnapshotHash,
+        reproductions: [
+          {
+            caseId: 'case',
+            previousCanonicalOutputHash: 'a',
+            restoredCanonicalOutputHash: 'a',
+            match: true,
+          },
+          {
+            caseId: 'case',
+            previousCanonicalOutputHash: 'b',
+            restoredCanonicalOutputHash: 'b',
+            match: true,
+          },
+        ],
+        createdAt: at,
+      }),
+    /duplicate/,
+  );
+  const mismatchedRollback=createRollbackEvidence({fromConfigurationVersionId:'baseline',restoredConfigurationVersionId:'restored',expectedPreviousParameterSnapshotHash:baseline.parameterSnapshotHash,restoredParameterSnapshotHash:restored.parameterSnapshotHash,reproductions:[{caseId:'case-a',previousCanonicalOutputHash:'a',restoredCanonicalOutputHash:'b',match:true}],createdAt:at});
+  assert.equal(mismatchedRollback.reproductionMatch,false);
+  assert.throws(()=>verifyRollback(mismatchedRollback,baseline,restored),/invalid/);
   const repo = new MemoryIntelligenceAcceptanceRepository(),
     lifecycle = createHoldoutLifecycle({
       acceptanceRunFamilyId: 'family',
@@ -161,8 +239,10 @@ export async function runIntelligenceAcceptanceTests() {
     });
   await repo.freezeCandidate(lifecycle);
   await repo.openHoldout('family', '2026-01-02');
-  const second = new MemoryIntelligenceAcceptanceRepository();
   assert.equal((await repo.get('holdout_lifecycle', 'family'))?.state, 'opened');
-  assert.equal(await second.get('holdout_lifecycle', 'family'), null);
+  await repo.completeHoldout('family', '2026-01-03');
+  assert.equal((await repo.get('holdout_lifecycle', 'family'))?.state, 'completed');
+  const reuse = createHoldoutLifecycle({ ...lifecycle, acceptanceRunFamilyId: 'other-family' });
+  await assert.rejects(() => repo.freezeCandidate(reuse), /reserved/);
   console.log('IFP-8 production acceptance integrity tests passed');
 }

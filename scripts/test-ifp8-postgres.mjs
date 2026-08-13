@@ -102,6 +102,45 @@ try {
     await restarted.openHoldout('ifp8-family', '2026-01-02T00:00:00Z'),
     await sql.openHoldout('ifp8-family', '2026-01-03T00:00:00Z'),
   );
+  await restarted.completeHoldout('ifp8-family', '2026-01-04T00:00:00Z');
+  assert.equal(
+    (
+      await new api.SqlIntelligenceAcceptanceRepository(pool).get(
+        'holdout_lifecycle',
+        'ifp8-family',
+      )
+    ).state,
+    'completed',
+  );
+  await assert.rejects(
+    () =>
+      sql.freezeCandidate(
+        api.createHoldoutLifecycle({ ...lifecycle, acceptanceRunFamilyId: 'ifp8-family-reuse' }),
+      ),
+    /reserved/i,
+  );
+  const failedLifecycle = api.createHoldoutLifecycle({
+    ...lifecycle,
+    acceptanceRunFamilyId: 'ifp8-family-failed',
+    datasetId: 'ifp8-pg-fixture-failed',
+    holdoutPartitionHash: api.partitionHash(['failed-holdout']),
+  });
+  await sql.freezeCandidate(failedLifecycle);
+  await sql.openHoldout(failedLifecycle.acceptanceRunFamilyId, '2026-01-02T00:00:00Z');
+  await sql.failHoldout(
+    failedLifecycle.acceptanceRunFamilyId,
+    '2026-01-03T00:00:00Z',
+    'injected_failure',
+  );
+  assert.equal(
+    (
+      await new api.SqlIntelligenceAcceptanceRepository(pool).get(
+        'holdout_lifecycle',
+        failedLifecycle.acceptanceRunFamilyId,
+      )
+    ).state,
+    'failed',
+  );
   await assert.rejects(
     () =>
       new api.SqlIntelligenceAcceptanceRepository(pool).freezeCandidate({

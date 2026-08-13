@@ -8,6 +8,9 @@ CREATE TABLE IF NOT EXISTS intelligence_acceptance_records (
  PRIMARY KEY(record_kind,record_id),
  UNIQUE(record_kind,canonical_payload_hash)
 );
+CREATE UNIQUE INDEX IF NOT EXISTS intelligence_acceptance_holdout_tranche_unique
+ ON intelligence_acceptance_records ((canonical_payload->>'datasetId'),(canonical_payload->>'holdoutPartitionHash'))
+ WHERE record_kind='holdout_lifecycle';
 CREATE TABLE IF NOT EXISTS intelligence_acceptance_links (
  acceptance_run_kind TEXT NOT NULL DEFAULT 'acceptance_run' CHECK(acceptance_run_kind='acceptance_run'),
  acceptance_run_id TEXT NOT NULL,

@@ -21,19 +21,39 @@ export function createTrial(
   return Object.freeze({ ...draft, canonicalPayloadHash: canonicalHash(draft) });
 }
 export function createHoldoutLifecycle(
-  draft: Omit<HoldoutLifecycle, 'state' | 'openedAt' | 'completedAt' | 'canonicalPayloadHash'>,
+  draft: Omit<
+    HoldoutLifecycle,
+    'state' | 'openedAt' | 'completedAt' | 'failureReason' | 'canonicalPayloadHash'
+  >,
 ): HoldoutLifecycle {
-  const body = { ...draft, state: 'selected' as const, openedAt: null, completedAt: null };
+  const body = {
+    ...draft,
+    state: 'selected' as const,
+    openedAt: null,
+    completedAt: null,
+    failureReason: null,
+  };
   return Object.freeze({ ...body, canonicalPayloadHash: canonicalHash(body) });
 }
 export function createRollbackEvidence(
-  draft: Omit<RollbackEvidence, 'rollbackEvidenceId' | 'canonicalPayloadHash'>,
+  draft: Omit<
+    RollbackEvidence,
+    'rollbackEvidenceId' | 'reproductionMatch' | 'canonicalPayloadHash'
+  >,
 ): RollbackEvidence {
+  if (!draft.reproductions.length) throw new Error('rollback_replay_evidence_empty');
+  if (new Set(draft.reproductions.map((row) => row.caseId)).size !== draft.reproductions.length)
+    throw new Error('rollback_replay_case_duplicate');
+  const reproductions = [...draft.reproductions]
+    .sort((a, b) => a.caseId.localeCompare(b.caseId))
+    .map((row) => ({
+      ...row,
+      match: row.previousCanonicalOutputHash === row.restoredCanonicalOutputHash,
+    }));
   const body = {
     ...draft,
-    replayCaseIds: [...draft.replayCaseIds].sort(),
-    previousCanonicalOutputHashes: [...draft.previousCanonicalOutputHashes].sort(),
-    restoredCanonicalOutputHashes: [...draft.restoredCanonicalOutputHashes].sort(),
+    reproductions,
+    reproductionMatch: reproductions.every((row) => row.match),
   };
   const hash = canonicalHash(body);
   return Object.freeze({
@@ -52,9 +72,12 @@ export function verifyRollback(
     evidence.expectedPreviousParameterSnapshotHash !== previous.parameterSnapshotHash ||
     evidence.restoredParameterSnapshotHash !== restored.parameterSnapshotHash ||
     previous.parameterSnapshotHash !== restored.parameterSnapshotHash ||
+    !evidence.reproductions.length ||
     !evidence.reproductionMatch ||
-    JSON.stringify(evidence.previousCanonicalOutputHashes) !==
-      JSON.stringify(evidence.restoredCanonicalOutputHashes)
+    evidence.reproductions.some(
+      (row) => !row.match || row.previousCanonicalOutputHash !== row.restoredCanonicalOutputHash,
+    ) ||
+    new Set(evidence.reproductions.map((row) => row.caseId)).size !== evidence.reproductions.length
   )
     throw new Error('rollback_reproduction_invalid');
 }

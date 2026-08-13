@@ -9,6 +9,7 @@ import type { FragilityScoreEvaluation } from '../fragility-score/contracts';
 export const INTELLIGENCE_ACCEPTANCE_POLICY_VERSION = 'intelligence-acceptance-v1' as const;
 export const DATASET_CERTIFICATION_POLICY_VERSION = 'ifp8-dataset-certification-v1' as const;
 export const COVERAGE_POLICY_VERSION = 'ifp8-launch-coverage-v1' as const;
+export const OUTCOME_CALCULATION_POLICY_VERSION = 'ifp8-outcome-observation-v1' as const;
 
 export type DatasetClass =
   | 'fixture'
@@ -98,7 +99,8 @@ export type EvaluationOutcome = Readonly<{
   measurementStartAt: string;
   measurementEndAt: string;
   outcomeAvailableAt: string;
-  calculationPolicyVersion: string;
+  asset: string;
+  calculationPolicyVersion: typeof OUTCOME_CALCULATION_POLICY_VERSION;
   sourceReferences: readonly AcceptanceEvidenceReference[];
   properties: Readonly<{
     releaseAligned?: boolean;
@@ -116,6 +118,7 @@ export type EvaluationOutcome = Readonly<{
     squeezeAmplification?: number;
     outcomeFamily?: string;
   }>;
+  notEvaluable: readonly string[];
   canonicalPayloadHash: string;
 }>;
 export type SplitManifest = Readonly<{
@@ -175,6 +178,7 @@ export type HoldoutLifecycle = Readonly<{
   selectedAt: string;
   openedAt: string | null;
   completedAt: string | null;
+  failureReason: string | null;
   canonicalPayloadHash: string;
 }>;
 export type RollbackEvidence = Readonly<{
@@ -183,9 +187,12 @@ export type RollbackEvidence = Readonly<{
   restoredConfigurationVersionId: string;
   expectedPreviousParameterSnapshotHash: string;
   restoredParameterSnapshotHash: string;
-  replayCaseIds: readonly string[];
-  previousCanonicalOutputHashes: readonly string[];
-  restoredCanonicalOutputHashes: readonly string[];
+  reproductions: readonly Readonly<{
+    caseId: string;
+    previousCanonicalOutputHash: string;
+    restoredCanonicalOutputHash: string;
+    match: boolean;
+  }>[];
   reproductionMatch: boolean;
   createdAt: string;
   canonicalPayloadHash: string;
@@ -210,15 +217,23 @@ export type CoveragePolicy = Readonly<{
 }>;
 export type CoverageDecision = CoverageCell &
   Readonly<{
+    coverageDecisionId: string;
+    coveragePolicyId: string;
+    datasetId: string;
+    splitId: string;
+    acceptanceRunFamilyId: string;
+    observedEvidenceHash: string;
     observedUniqueEventCount: number;
     missingEvidenceFamilies: readonly string[];
     state: 'sufficient' | 'insufficient_data' | 'structurally_unavailable';
   }>;
 export type ConfidenceAnatomy = Readonly<{
   caseId: string;
+  eventEvaluationId: string;
   asset: string;
   eventClass: string;
   horizon: string;
+  evidenceCutoffAt: string;
   regime: string;
   evidenceSufficiency: string;
   sourceClass: string;
@@ -235,7 +250,9 @@ export type ConfidenceAnatomy = Readonly<{
   coverageWeightEffects: Readonly<Record<string, number>>;
   reasonCodes: readonly string[];
   sourceRefs: readonly string[];
+  canonicalSourceHash: string;
 }>;
+export type EmpiricalEngineState = 'pass' | 'fail' | 'insufficient_evidence' | 'not_applicable';
 export type EngineOutputs = Readonly<{
   ifp1: EventRealityEvaluation;
   ifp2: HistoricalAnalogRetrievalResult | null;
@@ -288,6 +305,9 @@ export type AcceptanceRecord = Readonly<{
   evidenceIntegrityGate: 'pass' | 'fail';
   mandatoryCoverageGate: 'pass' | 'fail';
   empiricalIntelligenceGate: 'pass' | 'fail' | 'not_evaluated';
+  empiricalEngineStates: Readonly<
+    Record<'ifp1' | 'ifp2' | 'ifp3' | 'ifp4' | 'ifp5' | 'ifp6' | 'ifp7', EmpiricalEngineState>
+  >;
   state: 'blocked' | 'evidence_ready' | 'accepted';
   productionAcceptance: boolean;
   reasonCodes: readonly string[];

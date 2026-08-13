@@ -89,6 +89,8 @@ export function verifyDatasetCertification(
 }
 
 export function validateDecisionTimeEvidence(evidence: DecisionTimeEvidence): DecisionTimeEvidence {
+  if (evidence.evidenceCutoffAt !== evidence.productionInput.evidenceCutoffAt)
+    throw new Error('decision_time_cutoff_mismatch');
   for (const reference of evidence.references) {
     if (!reference.availableAt || !Number.isFinite(Date.parse(reference.availableAt)))
       throw new Error('missing_or_invalid_available_at');

@@ -1,4 +1,5 @@
 import type { CoverageDecision, CoveragePolicy, DecisionTimeEvidence } from './contracts';
+import { canonicalHash } from './identity';
 export const LAUNCH_ASSETS = [
   'xau_usd',
   'eur_usd',
@@ -26,41 +27,53 @@ export function evaluateCoverage(
   policy: CoveragePolicy,
   cases: readonly DecisionTimeEvidence[],
   approvedStructuralDecisions: ReadonlySet<string>,
+  identity: { datasetId: string; splitId: string; acceptanceRunFamilyId: string },
 ): CoverageDecision[] {
   if (policy.status !== 'approved') return [];
+  const { canonicalPayloadHash, ...policyBody } = policy;
+  if (!policy.approvalReference || canonicalHash(policyBody) !== canonicalPayloadHash)
+    throw new Error('coverage_policy_authority_invalid');
   return policy.cells
     .map((cell) => {
       const matching = cases.filter(
-        (c) =>
-          c.asset === cell.asset && c.eventClass === cell.eventClass && c.horizon === cell.horizon,
-      );
-      const unique = new Map(matching.map((c) => [c.eventInstanceId, c]));
-      const missing = [
-        ...new Set(
-          [...unique.values()].flatMap((c) =>
-            cell.requiredEvidenceFamilies.filter((f) => !c.qualifiedEvidenceFamilies.includes(f)),
-          ),
+          (c) =>
+            c.asset === cell.asset &&
+            c.eventClass === cell.eventClass &&
+            c.horizon === cell.horizon,
         ),
-      ].sort();
+        unique = new Map(matching.map((c) => [c.eventInstanceId, c])),
+        missing = [
+          ...new Set(
+            [...unique.values()].flatMap((c) =>
+              cell.requiredEvidenceFamilies.filter((f) => !c.qualifiedEvidenceFamilies.includes(f)),
+            ),
+          ),
+        ].sort();
+      let state: 'sufficient' | 'insufficient_data' | 'structurally_unavailable';
       if (cell.structuralDecisionId) {
         if (!approvedStructuralDecisions.has(cell.structuralDecisionId))
           throw new Error('unapproved_structural_unavailable');
-        return {
-          ...cell,
-          observedUniqueEventCount: 0,
-          missingEvidenceFamilies: [],
-          state: 'structurally_unavailable' as const,
-        };
-      }
-      return {
-        ...cell,
-        observedUniqueEventCount: unique.size,
-        missingEvidenceFamilies: missing,
-        state:
+        state = 'structurally_unavailable';
+      } else
+        state =
           unique.size >= cell.minimumUniqueEvents && !missing.length
-            ? ('sufficient' as const)
-            : ('insufficient_data' as const),
-      };
+            ? 'sufficient'
+            : 'insufficient_data';
+      const observedEvidenceHash = canonicalHash(
+          [...unique.values()]
+            .map((c) => ({ eventInstanceId: c.eventInstanceId, evidenceHash: canonicalHash(c) }))
+            .sort((a, b) => a.eventInstanceId.localeCompare(b.eventInstanceId)),
+        ),
+        base = {
+          ...cell,
+          coveragePolicyId: policy.coveragePolicyId,
+          ...identity,
+          observedEvidenceHash,
+          observedUniqueEventCount: cell.structuralDecisionId ? 0 : unique.size,
+          missingEvidenceFamilies: cell.structuralDecisionId ? [] : missing,
+          state,
+        };
+      return { ...base, coverageDecisionId: `ifp8-coverage-${canonicalHash(base).slice(0, 32)}` };
     })
     .sort((a, b) => a.cellId.localeCompare(b.cellId));
 }

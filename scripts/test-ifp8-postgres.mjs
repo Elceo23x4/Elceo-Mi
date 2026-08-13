@@ -26,12 +26,52 @@ try {
     ),
     2,
   );
+  const directInsert = (kind, id, payload, hash = 'a'.repeat(64)) =>
+    pool.query(
+      'INSERT INTO intelligence_acceptance_records(record_kind,record_id,canonical_payload,canonical_payload_hash,created_at) VALUES($1,$2,$3,$4,$5)',
+      [kind, id, JSON.stringify(payload), hash, '2026-01-01T00:00:00Z'],
+    );
+  for (const [kind, identityField] of Object.entries({
+    dataset_manifest: 'datasetId',
+    dataset_certification: 'datasetId',
+    split_manifest: 'datasetId',
+    configuration_version: 'configurationVersionId',
+    calibration_trial: 'trialId',
+    holdout_lifecycle: 'acceptanceRunFamilyId',
+    acceptance_run: 'acceptanceRunId',
+    case_result: 'caseResultId',
+    coverage_decision: 'coverageDecisionId',
+    residual_risk: 'riskId',
+    rollback_evidence: 'rollbackEvidenceId',
+  })) {
+    const id = `db-constraint-${kind}`;
+    for (const [label, identity] of [
+      ['missing', undefined], ['null', null], ['empty', ''], ['mismatch', `${id}-other`],
+    ]) {
+      const payload = { canonicalPayloadHash: 'a'.repeat(64) };
+      if (identity !== undefined) payload[identityField] = identity;
+      await assert.rejects(() => directInsert(kind, `${id}-${label}`, payload), /check constraint/i);
+    }
+  }
+  for (const [label, payload, columnHash] of [
+    ['missing', { datasetId: 'db-hash-missing' }, 'a'.repeat(64)],
+    ['null', { datasetId: 'db-hash-null', canonicalPayloadHash: null }, 'a'.repeat(64)],
+    ['mismatch', { datasetId: 'db-hash-mismatch', canonicalPayloadHash: 'b'.repeat(64) }, 'a'.repeat(64)],
+  ]) {
+    await assert.rejects(
+      () => directInsert('dataset_manifest', `db-hash-${label}`, payload, columnHash),
+      /check constraint/i,
+    );
+  }
   const compiled = new URL(
     '../services/reasoning/dist-test-cjs/services/reasoning/src/intelligence-acceptance/',
     import.meta.url,
   );
   const api = await import(new URL('index.cjs', compiled));
   const acceptanceApi = await import(new URL('acceptance-gate.cjs', compiled));
+  const fixtureApi = await import(
+    new URL('../tests/intelligence-acceptance-production-fixture.cjs', compiled)
+  );
   const persistenceApi = await import(
     new URL('../persistence/memory-reasoning-repository.cjs', compiled)
   );
@@ -366,16 +406,10 @@ try {
       selectedConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId, selectedAt: at,
     }));
     await sql.openHoldout(family, at);
-    const caseBody = {
-      caseId: `case-${suffix}`, eventInstanceId: holdoutId,
-      decisionTimeEvidenceHash: '1'.repeat(64), outputs: {}, canonicalOutputHashes: [],
-      frozenAt: at, outcome: {},
-    };
-    const caseHash = api.canonicalHash(caseBody);
-    const caseResult = { ...caseBody, caseResultId: `ifp8-case-${caseHash.slice(0, 32)}`, canonicalPayloadHash: caseHash };
+    const caseResult = await fixtureApi.buildContractValidAcceptanceCase(suffix);
     const [atomicCoverage] = api.evaluateCoverage(
       { ...testCoverageBody, canonicalPayloadHash: api.canonicalHash(testCoverageBody) },
-      [{ caseId: caseBody.caseId, eventInstanceId: holdoutId, eventFamilyId: `c-${suffix}`, evidenceCutoffAt: at, asset: 'xau_usd', eventClass: 'cpi', horizon: 'follow_through', qualifiedEvidenceFamilies: [], references: [], productionInput: { eventEvaluationId: `event-${suffix}`, evidenceCutoffAt: at } }],
+      [{ caseId: caseResult.caseId, eventInstanceId: holdoutId, eventFamilyId: `c-${suffix}`, evidenceCutoffAt: at, asset: 'xau_usd', eventClass: 'cpi', horizon: 'follow_through', qualifiedEvidenceFamilies: [], references: [], productionInput: { eventEvaluationId: `event-${suffix}`, evidenceCutoffAt: at } }],
       new Set(),
       { datasetId: atomicDataset.datasetId, splitId: atomicSplit.splitId, acceptanceRunFamilyId: family, createdAt: at },
     );
@@ -387,7 +421,13 @@ try {
       restoredConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
       expectedPreviousParameterSnapshotHash: api.CANONICAL_RUNTIME_BASELINE.parameterSnapshotHash,
       restoredParameterSnapshotHash: api.CANONICAL_RUNTIME_BASELINE.parameterSnapshotHash,
-      reproductions: [{ caseId: `case-${suffix}`, decisionTimeEvidenceHash: '1'.repeat(64), previousCanonicalOutputHash: '2'.repeat(64), restoredCanonicalOutputHash: '2'.repeat(64), match: true }],
+      reproductions: [{
+        caseId: caseResult.caseId,
+        decisionTimeEvidenceHash: caseResult.decisionTimeEvidenceHash,
+        previousCanonicalOutputHash: api.canonicalHash(caseResult.canonicalOutputHashes),
+        restoredCanonicalOutputHash: api.canonicalHash(caseResult.canonicalOutputHashes),
+        match: true,
+      }],
       createdAt: at,
     });
     const risk = makeRisk(`risk-${suffix}`);
@@ -447,6 +487,7 @@ try {
   assert.deepEqual(await sql.get('case_result', successBundle.cases[0].caseResultId), successBundle.cases[0]);
   assert.deepEqual(await sql.get('coverage_decision', successBundle.coverage[0].coverageDecisionId), successBundle.coverage[0]);
   assert.deepEqual(await sql.get('residual_risk', successBundle.risks[0].riskId), successBundle.risks[0]);
+  assert.deepEqual(await sql.get('rollback_evidence', successBundle.rollback.rollbackEvidenceId), successBundle.rollback);
   assert.deepEqual(await sql.get('acceptance_run', successBundle.run.acceptanceRunId), successBundle.run);
   assert((await sql.listLinks(successBundle.run.acceptanceRunId)).some((link) => link.kind === 'residual_risk' && link.id === successBundle.risks[0].riskId));
   assert.equal((await sql.get('holdout_lifecycle', atomicSuccessFamily)).state, 'completed');

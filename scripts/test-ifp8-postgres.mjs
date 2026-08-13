@@ -98,9 +98,13 @@ try {
   });
   await sql.freezeCandidate(lifecycle);
   const restarted = new api.SqlIntelligenceAcceptanceRepository(pool);
-  assert.deepEqual(
-    await restarted.openHoldout('ifp8-family', '2026-01-02T00:00:00Z'),
-    await sql.openHoldout('ifp8-family', '2026-01-03T00:00:00Z'),
+  assert.equal(
+    (await restarted.openHoldout('ifp8-family', '2026-01-02T00:00:00Z')).state,
+    'opened',
+  );
+  await assert.rejects(
+    () => sql.openHoldout('ifp8-family', '2026-01-03T00:00:00Z'),
+    /already_open/,
   );
   await restarted.completeHoldout('ifp8-family', '2026-01-04T00:00:00Z');
   assert.equal(
@@ -111,6 +115,10 @@ try {
       )
     ).state,
     'completed',
+  );
+  await assert.rejects(
+    () => sql.openHoldout('ifp8-family', '2026-01-05T00:00:00Z'),
+    /already_consumed/,
   );
   await assert.rejects(
     () =>

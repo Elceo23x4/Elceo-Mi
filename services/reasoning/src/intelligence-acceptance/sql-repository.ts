@@ -8,6 +8,7 @@ import type {
 } from './contracts';
 import type { IntelligenceAcceptanceRepository } from './repository';
 import { canonicalHash } from './identity';
+import { validateAcceptanceEntity } from './integrity';
 const payload = <K extends AcceptanceRecordKind>(row: { canonical_payload: unknown }) =>
   (typeof row.canonical_payload === 'string'
     ? JSON.parse(row.canonical_payload)
@@ -15,6 +16,7 @@ const payload = <K extends AcceptanceRecordKind>(row: { canonical_payload: unkno
 export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptanceRepository {
   constructor(private readonly pool: SqlPool) {}
   async save<K extends AcceptanceRecordKind>(kind: K, id: string, value: AcceptanceEntityMap[K]) {
+    validateAcceptanceEntity(kind, id, value);
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
@@ -41,6 +43,7 @@ export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptan
     id: string,
     value: AcceptanceEntityMap[K],
   ) {
+    validateAcceptanceEntity(kind, id, value);
     const found = await client.query(
       'SELECT canonical_payload FROM intelligence_acceptance_records WHERE record_kind=$1 AND record_id=$2 FOR UPDATE',
       [kind, id],
@@ -78,7 +81,9 @@ export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptan
       'SELECT canonical_payload FROM intelligence_acceptance_records WHERE record_kind=$1 AND record_id=$2',
       [kind, id],
     );
-    return q.rows[0] ? payload<K>(q.rows[0]) : null;
+    const value = q.rows[0] ? payload<K>(q.rows[0]) : null;
+    if (value) validateAcceptanceEntity(kind, id, value);
+    return value;
   }
   async freezeCandidate(value: HoldoutLifecycle) {
     const client = await this.pool.connect();
@@ -131,10 +136,10 @@ export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptan
       );
       if (!q.rows[0]) throw new Error('candidate_not_frozen');
       const prior = payload<'holdout_lifecycle'>(q.rows[0]);
-      if (prior.state !== 'selected') {
-        await client.query('COMMIT');
-        return prior;
-      }
+      if (prior.state !== 'selected')
+        throw new Error(
+          prior.state === 'opened' ? 'holdout_already_open' : 'holdout_already_consumed',
+        );
       await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
         `${prior.datasetId}:${prior.holdoutPartitionHash}`,
       ]);
@@ -200,10 +205,22 @@ export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptan
       client.release();
     }
   }
-  async saveBundle(bundle: AcceptanceBundle, injectFailureAfter = Number.POSITIVE_INFINITY) {
+  async finalizeAcceptanceBundle(
+    runFamilyId: string,
+    bundle: AcceptanceBundle,
+    completedAt: string,
+    injectFailureAfter = Number.POSITIVE_INFINITY,
+  ) {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
+      const lifecycleQuery = await client.query(
+        "SELECT canonical_payload FROM intelligence_acceptance_records WHERE record_kind='holdout_lifecycle' AND record_id=$1 FOR UPDATE",
+        [runFamilyId],
+      );
+      if (!lifecycleQuery.rows[0]) throw new Error('holdout_missing');
+      const lifecycle = payload<'holdout_lifecycle'>(lifecycleQuery.rows[0]);
+      if (lifecycle.state !== 'opened') throw new Error('holdout_not_opened');
       let count = 0;
       for (const c of bundle.cases) {
         await this.saveWith(client, 'case_result', c.caseResultId, c);
@@ -224,6 +241,19 @@ export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptan
           'INSERT INTO intelligence_acceptance_links(acceptance_run_id,record_kind,record_id,created_at) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING',
           [bundle.run.acceptanceRunId, link.kind, link.id, bundle.run.createdAt],
         );
+      const { canonicalPayloadHash: ignored, ...lifecycleBody } = lifecycle;
+      void ignored;
+      const completedBody = {
+          ...lifecycleBody,
+          state: 'completed' as const,
+          completedAt,
+          failureReason: null,
+        },
+        completed = { ...completedBody, canonicalPayloadHash: canonicalHash(completedBody) };
+      await client.query(
+        "UPDATE intelligence_acceptance_records SET canonical_payload=$2,canonical_payload_hash=$3 WHERE record_kind='holdout_lifecycle' AND record_id=$1",
+        [runFamilyId, JSON.stringify(completed), completed.canonicalPayloadHash],
+      );
       await client.query('COMMIT');
     } catch (e) {
       await client.query('ROLLBACK');

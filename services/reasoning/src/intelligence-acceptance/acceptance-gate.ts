@@ -16,16 +16,21 @@ import { canonicalHash } from './identity';
 import { segmentedEngineDiagnostics } from './metrics';
 import { crossEngineViolations } from './reports';
 import { deriveCalibrationDecision } from './configuration-registry';
-import type { EmpiricalEngineState } from './contracts';
+import type { EmpiricalEngineState, EmpiricalAcceptancePolicy } from './contracts';
 function empiricalStates(
   cases: readonly FrozenCaseResult[],
+  violations: readonly string[] = [],
+  policy: EmpiricalAcceptancePolicy | null = null,
 ): Record<'ifp1' | 'ifp2' | 'ifp3' | 'ifp4' | 'ifp5' | 'ifp6' | 'ifp7', EmpiricalEngineState> {
   const available = (name: string) =>
     cases.length > 0 &&
     cases.every(
       (row) => !row.outcome.notEvaluable.includes(`${name}_canonical_calculation_unavailable`),
     );
-  return {
+  const states: Record<
+    'ifp1' | 'ifp2' | 'ifp3' | 'ifp4' | 'ifp5' | 'ifp6' | 'ifp7',
+    EmpiricalEngineState
+  > = {
     ifp1:
       available('releaseAligned') &&
       available('reactionClass') &&
@@ -51,6 +56,12 @@ function empiricalStates(
         : 'insufficient_evidence',
     ifp7: available('structuralBreakdown') ? 'pass' : 'insufficient_evidence',
   };
+  if (policy)
+    for (const engine of Object.keys(states) as (keyof typeof states)[])
+      if (cases.length < policy.minimumSamples[engine]) states[engine] = 'insufficient_evidence';
+  if (violations.some((v) => v.includes('invalidation'))) states.ifp3 = 'fail';
+  if (violations.includes('proxy_promoted_to_direct_crowding')) states.ifp6 = 'fail';
+  return states;
 }
 export type ValidatedAcceptanceState = {
   runFamilyId: string;
@@ -62,6 +73,8 @@ export type ValidatedAcceptanceState = {
   cases: readonly FrozenCaseResult[];
   coverage: readonly CoverageDecision[];
   coverageContractApproved: boolean;
+  outcomePolicyApproved: boolean;
+  empiricalAcceptancePolicy: EmpiricalAcceptancePolicy | null;
   rollback: RollbackEvidence | null;
   residualRisks: readonly ResidualRisk[];
   createdAt: string;
@@ -70,6 +83,9 @@ export function decideValidatedAcceptance(input: ValidatedAcceptanceState): Acce
   const reasons = verifyDatasetCertification(input.dataset, input.certification);
   if (!input.split) reasons.push('blocked_missing_split');
   if (!input.coverageContractApproved) reasons.push('blocked_missing_approved_coverage_contract');
+  if (!input.outcomePolicyApproved) reasons.push('blocked_missing_approved_outcome_policy');
+  if (!input.empiricalAcceptancePolicy)
+    reasons.push('blocked_missing_approved_empirical_acceptance_policy');
   if (!input.coverage.length || input.coverage.some((c) => c.state === 'insufficient_data'))
     reasons.push('blocked_mandatory_coverage');
   if (!input.cases.length) reasons.push('blocked_missing_holdout_outcomes');
@@ -78,7 +94,14 @@ export function decideValidatedAcceptance(input: ValidatedAcceptanceState): Acce
   if (violations.length) reasons.push('blocked_cross_engine_invariant');
   const diagnostics = segmentedEngineDiagnostics(input.cases),
     unexplainedZeroCount = diagnostics.confidence.unexplainedZeroCount;
-  const engineStates = empiricalStates(input.cases);
+  const engineStates = input.empiricalAcceptancePolicy
+    ? empiricalStates(input.cases, violations, input.empiricalAcceptancePolicy)
+    : (Object.fromEntries(
+        ['ifp1', 'ifp2', 'ifp3', 'ifp4', 'ifp5', 'ifp6', 'ifp7'].map((key) => [
+          key,
+          'insufficient_evidence',
+        ]),
+      ) as ReturnType<typeof empiricalStates>);
   if (
     Object.values(engineStates).some(
       (state) => state === 'fail' || state === 'insufficient_evidence',

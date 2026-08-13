@@ -187,8 +187,12 @@ export type RollbackEvidence = Readonly<{
   restoredConfigurationVersionId: string;
   expectedPreviousParameterSnapshotHash: string;
   restoredParameterSnapshotHash: string;
+  datasetId: string;
+  splitId: string;
+  acceptanceRunFamilyId: string;
   reproductions: readonly Readonly<{
     caseId: string;
+    decisionTimeEvidenceHash: string;
     previousCanonicalOutputHash: string;
     restoredCanonicalOutputHash: string;
     match: boolean;
@@ -238,7 +242,7 @@ export type ConfidenceAnatomy = Readonly<{
   evidenceSufficiency: string;
   sourceClass: string;
   preClampValue: number;
-  postClampValue: number;
+  postClampValue: number | null;
   componentContributions: Readonly<Record<string, number>>;
   penalties: Readonly<Record<string, number>>;
   evidenceCompleteness: number;
@@ -251,6 +255,11 @@ export type ConfidenceAnatomy = Readonly<{
   reasonCodes: readonly string[];
   sourceRefs: readonly string[];
   canonicalSourceHash: string;
+  preSnapshotId: string;
+  postSnapshotId: string | null;
+  preReasoningRunId: string;
+  postReasoningRunId: string | null;
+  availability: 'available' | 'provisional';
 }>;
 export type EmpiricalEngineState = 'pass' | 'fail' | 'insufficient_evidence' | 'not_applicable';
 export type EngineOutputs = Readonly<{
@@ -263,6 +272,30 @@ export type EngineOutputs = Readonly<{
   ifp7: FragilityScoreEvaluation;
   canonicalOutputHashes: readonly string[];
   confidence: ConfidenceAnatomy;
+  configurationVersionId: string;
+  configurationPayloadHash: string;
+  parameterSnapshotHash: string;
+}>;
+export type OutcomePolicyAuthorityRecord = Readonly<{
+  policyId: string;
+  policyVersion: string;
+  status: 'approved' | 'missing';
+  supportedProperties: readonly string[];
+  approvalReference: string | null;
+  canonicalPayloadHash: string;
+}>;
+export type EmpiricalAcceptancePolicy = Readonly<{
+  policyId: string;
+  policyVersion: string;
+  status: 'approved' | 'missing';
+  minimumSamples: Readonly<
+    Record<'ifp1' | 'ifp2' | 'ifp3' | 'ifp4' | 'ifp5' | 'ifp6' | 'ifp7', number>
+  >;
+  requiredMetrics: Readonly<
+    Record<'ifp1' | 'ifp2' | 'ifp3' | 'ifp4' | 'ifp5' | 'ifp6' | 'ifp7', readonly string[]>
+  >;
+  approvalReference: string | null;
+  canonicalPayloadHash: string;
 }>;
 export type FrozenCaseResult = Readonly<{
   caseResultId: string;

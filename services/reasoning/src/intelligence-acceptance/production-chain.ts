@@ -14,13 +14,23 @@ import type {
 } from './contracts';
 import type { RollbackEvidence } from './contracts';
 import { createRollbackEvidence } from './configuration-registry';
+import type { ConfigurationVersion } from './contracts';
+import { deserializeCanonicalCognitionState } from '../persistence/serialization';
 
 export class ProductionIfpChainAdapter {
   constructor(private readonly persistence: ReasoningPersistenceRepository) {}
   async runAndPersist(
     input: ProductionChainInput,
     evidence: DecisionTimeEvidence,
+    configuration: ConfigurationVersion,
   ): Promise<EngineOutputs> {
+    if (configuration.changeClass !== 'no_change')
+      throw new Error('unsupported_runtime_parameter_calibration');
+    if (canonicalHash(configuration.parameterSnapshot) !== configuration.parameterSnapshotHash)
+      throw new Error('runtime_configuration_snapshot_mismatch');
+    for (const key of ['ifp1', 'ifp2', 'ifp3', 'ifp4', 'ifp5', 'ifp6', 'ifp7'] as const)
+      if (!configuration.policyVersions[key])
+        throw new Error('runtime_configuration_policy_snapshot_incomplete');
     const event = await this.persistence.eventRealityRepository.getEventEvaluationById(
       input.eventEvaluationId,
     );
@@ -82,6 +92,33 @@ export class ProductionIfpChainAdapter {
       evidenceCutoffAt: input.evidenceCutoffAt,
     });
     const values = [event, analog, protocol, cleanliness, narrative, positioning, fragility];
+    const preSnapshot = await this.persistence.snapshotRepository.getSnapshotById(
+      event.preEventCognitionSnapshotId,
+    );
+    if (!preSnapshot) throw new Error('ifp8_pre_cognition_snapshot_missing');
+    const preCognition = deserializeCanonicalCognitionState(preSnapshot.cognitionJson);
+    const postSnapshot = event.postEventCognitionSnapshotId
+      ? await this.persistence.snapshotRepository.getSnapshotById(
+          event.postEventCognitionSnapshotId,
+        )
+      : null;
+    const postCognition = postSnapshot
+      ? deserializeCanonicalCognitionState(postSnapshot.cognitionJson)
+      : null;
+    if (
+      preSnapshot.asset !== event.asset ||
+      preCognition.asset !== event.asset ||
+      preSnapshot.snapshotId !== event.preEventCognitionSnapshotId
+    )
+      throw new Error('ifp8_pre_cognition_lineage_mismatch');
+    if (
+      postSnapshot &&
+      (postSnapshot.asset !== event.asset ||
+        postSnapshot.evaluatedAt > input.evidenceCutoffAt ||
+        postCognition?.asset !== event.asset)
+    )
+      throw new Error('ifp8_post_cognition_lineage_mismatch');
+    const anatomy = postCognition?.confidence.anatomy;
     const confidence: ConfidenceAnatomy = Object.freeze({
       caseId: evidence.caseId,
       eventEvaluationId: event.eventEvaluationId,
@@ -96,9 +133,20 @@ export class ProductionIfpChainAdapter {
         .sort()
         .join(','),
       preClampValue: event.expectation.preEventConfidence,
-      postClampValue: event.reality.postEventConfidence ?? 0,
-      componentContributions: {},
-      penalties: {},
+      postClampValue: postCognition?.confidence.score ?? null,
+      componentContributions: anatomy
+        ? {
+            sourceIntegrity: anatomy.sourceIntegrity,
+            eventAlignment: anatomy.eventAlignment,
+            priceAcceptance: anatomy.priceAcceptance,
+          }
+        : {},
+      penalties: anatomy
+        ? {
+            contradictionPenalty: anatomy.contradictionPenalty,
+            stalenessPenalty: anatomy.stalenessPenalty,
+          }
+        : {},
       evidenceCompleteness: event.finalizationReadiness.ready ? 1 : 0,
       providerQualification: event.reality.provenance.every((source) =>
         ['verified', 'replay'].includes(source.effectiveReliability ?? source.reliability),
@@ -113,6 +161,11 @@ export class ProductionIfpChainAdapter {
       reasonCodes: [...event.reasonCodes, ...event.reality.warnings].sort(),
       sourceRefs: event.reality.provenance.map((source) => source.sourceId).sort(),
       canonicalSourceHash: canonicalHash(event),
+      preSnapshotId: preSnapshot.snapshotId,
+      postSnapshotId: postSnapshot?.snapshotId ?? null,
+      preReasoningRunId: preSnapshot.reasoningRunId,
+      postReasoningRunId: postSnapshot?.reasoningRunId ?? null,
+      availability: postCognition ? 'available' : 'provisional',
     });
     return Object.freeze({
       ifp1: event,
@@ -124,6 +177,9 @@ export class ProductionIfpChainAdapter {
       ifp7: fragility,
       canonicalOutputHashes: values.map(canonicalHash),
       confidence,
+      configurationVersionId: configuration.configurationVersionId,
+      configurationPayloadHash: configuration.canonicalPayloadHash,
+      parameterSnapshotHash: configuration.parameterSnapshotHash,
     });
   }
 }
@@ -135,16 +191,40 @@ export async function createProductionRollbackEvidence(
     expectedPreviousParameterSnapshotHash: string;
     restoredParameterSnapshotHash: string;
     cases: readonly DecisionTimeEvidence[];
+    datasetId: string;
+    splitId: string;
+    acceptanceRunFamilyId: string;
+    previousConfiguration: ConfigurationVersion;
+    restoredConfiguration: ConfigurationVersion;
     createdAt: string;
   },
 ): Promise<RollbackEvidence> {
   if (!input.cases.length) throw new Error('rollback_replay_evidence_empty');
+  if (
+    input.previousConfiguration.configurationVersionId !== input.fromConfigurationVersionId ||
+    input.restoredConfiguration.configurationVersionId !== input.restoredConfigurationVersionId
+  )
+    throw new Error('rollback_runtime_configuration_mismatch');
+  if (
+    input.previousConfiguration.changeClass !== 'no_change' ||
+    input.restoredConfiguration.changeClass !== 'no_change'
+  )
+    throw new Error('unsupported_runtime_parameter_calibration');
   const reproductions = [];
   for (const evidence of input.cases) {
-    const previous = await adapter.runAndPersist(evidence.productionInput, evidence),
-      restored = await adapter.runAndPersist(evidence.productionInput, evidence);
+    const previous = await adapter.runAndPersist(
+        evidence.productionInput,
+        evidence,
+        input.previousConfiguration,
+      ),
+      restored = await adapter.runAndPersist(
+        evidence.productionInput,
+        evidence,
+        input.restoredConfiguration,
+      );
     reproductions.push({
       caseId: evidence.caseId,
+      decisionTimeEvidenceHash: canonicalHash(evidence),
       previousCanonicalOutputHash: canonicalHash(previous.canonicalOutputHashes),
       restoredCanonicalOutputHash: canonicalHash(restored.canonicalOutputHashes),
       match: false,
@@ -155,6 +235,9 @@ export async function createProductionRollbackEvidence(
     restoredConfigurationVersionId: input.restoredConfigurationVersionId,
     expectedPreviousParameterSnapshotHash: input.expectedPreviousParameterSnapshotHash,
     restoredParameterSnapshotHash: input.restoredParameterSnapshotHash,
+    datasetId: input.datasetId,
+    splitId: input.splitId,
+    acceptanceRunFamilyId: input.acceptanceRunFamilyId,
     reproductions,
     createdAt: input.createdAt,
   });

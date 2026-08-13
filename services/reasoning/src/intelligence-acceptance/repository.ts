@@ -5,6 +5,7 @@ import type {
   AcceptanceRecordKind,
   HoldoutLifecycle,
 } from './contracts';
+import { validateAcceptanceEntity } from './integrity';
 export interface IntelligenceAcceptanceRepository {
   save<K extends AcceptanceRecordKind>(
     kind: K,
@@ -16,7 +17,12 @@ export interface IntelligenceAcceptanceRepository {
   openHoldout(runFamilyId: string, openedAt: string): Promise<HoldoutLifecycle>;
   completeHoldout(runFamilyId: string, completedAt: string): Promise<HoldoutLifecycle>;
   failHoldout(runFamilyId: string, completedAt: string, reason: string): Promise<HoldoutLifecycle>;
-  saveBundle(bundle: AcceptanceBundle, injectFailureAfter?: number): Promise<void>;
+  finalizeAcceptanceBundle(
+    runFamilyId: string,
+    bundle: AcceptanceBundle,
+    completedAt: string,
+    injectFailureAfter?: number,
+  ): Promise<void>;
   listLinks(runId: string): Promise<readonly { kind: AcceptanceRecordKind; id: string }[]>;
 }
 export class MemoryIntelligenceAcceptanceRepository implements IntelligenceAcceptanceRepository {
@@ -27,6 +33,7 @@ export class MemoryIntelligenceAcceptanceRepository implements IntelligenceAccep
     id: string,
     value: AcceptanceEntityMap[K],
   ): Promise<AcceptanceEntityMap[K]> {
+    validateAcceptanceEntity(kind, id, value);
     const key = `${kind}:${id}`,
       prior = this.rows.get(key);
     if (prior && canonicalJson(prior) !== canonicalJson(value))
@@ -37,7 +44,9 @@ export class MemoryIntelligenceAcceptanceRepository implements IntelligenceAccep
     return frozen;
   }
   async get<K extends AcceptanceRecordKind>(kind: K, id: string) {
-    return (this.rows.get(`${kind}:${id}`) as AcceptanceEntityMap[K] | undefined) ?? null;
+    const value = (this.rows.get(`${kind}:${id}`) as AcceptanceEntityMap[K] | undefined) ?? null;
+    if (value) validateAcceptanceEntity(kind, id, value);
+    return value;
   }
   async freezeCandidate(value: HoldoutLifecycle) {
     const prior = await this.get('holdout_lifecycle', value.acceptanceRunFamilyId);
@@ -60,7 +69,10 @@ export class MemoryIntelligenceAcceptanceRepository implements IntelligenceAccep
   async openHoldout(id: string, openedAt: string) {
     const prior = await this.get('holdout_lifecycle', id);
     if (!prior) throw new Error('candidate_not_frozen');
-    if (prior.state !== 'selected') return prior;
+    if (prior.state !== 'selected')
+      throw new Error(
+        prior.state === 'opened' ? 'holdout_already_open' : 'holdout_already_consumed',
+      );
     const reused = [...this.rows.values()]
       .filter(
         (row): row is HoldoutLifecycle =>
@@ -110,10 +122,17 @@ export class MemoryIntelligenceAcceptanceRepository implements IntelligenceAccep
     this.rows.set(`holdout_lifecycle:${id}`, next);
     return next;
   }
-  async saveBundle(bundle: AcceptanceBundle, injectFailureAfter = Number.POSITIVE_INFINITY) {
+  async finalizeAcceptanceBundle(
+    runFamilyId: string,
+    bundle: AcceptanceBundle,
+    completedAt: string,
+    injectFailureAfter = Number.POSITIVE_INFINITY,
+  ) {
     const snapshot = new Map(this.rows),
       priorLinks = new Map(this.links);
     try {
+      const lifecycle = await this.get('holdout_lifecycle', runFamilyId);
+      if (!lifecycle || lifecycle.state !== 'opened') throw new Error('holdout_not_opened');
       let count = 0;
       for (const c of bundle.cases) {
         await this.save('case_result', c.caseResultId, c);
@@ -125,6 +144,7 @@ export class MemoryIntelligenceAcceptanceRepository implements IntelligenceAccep
       await this.save('rollback_evidence', bundle.rollback.rollbackEvidenceId, bundle.rollback);
       await this.save('acceptance_run', bundle.run.acceptanceRunId, bundle.run);
       this.links.set(bundle.run.acceptanceRunId, deepCloneFreeze(bundle.referenceLinks));
+      await this.transition(runFamilyId, 'completed', completedAt, null);
     } catch (error) {
       this.rows = snapshot;
       this.links = priorLinks;

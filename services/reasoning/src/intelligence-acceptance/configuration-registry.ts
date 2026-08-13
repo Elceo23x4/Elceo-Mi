@@ -75,7 +75,11 @@ export function verifyRollback(
     !evidence.reproductions.length ||
     !evidence.reproductionMatch ||
     evidence.reproductions.some(
-      (row) => !row.match || row.previousCanonicalOutputHash !== row.restoredCanonicalOutputHash,
+      (row) =>
+        !row.caseId ||
+        !row.decisionTimeEvidenceHash ||
+        !row.match ||
+        row.previousCanonicalOutputHash !== row.restoredCanonicalOutputHash,
     ) ||
     new Set(evidence.reproductions.map((row) => row.caseId)).size !== evidence.reproductions.length
   )

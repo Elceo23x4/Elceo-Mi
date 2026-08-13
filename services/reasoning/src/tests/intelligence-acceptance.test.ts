@@ -112,6 +112,9 @@ export async function runIntelligenceAcceptanceTests() {
     rollbackTargetVersionId: 'baseline',
   });
   const rollback = createRollbackEvidence({
+    datasetId: 'dataset',
+    splitId: split.splitId,
+    acceptanceRunFamilyId: 'family',
     fromConfigurationVersionId: 'baseline',
     restoredConfigurationVersionId: 'restored',
     expectedPreviousParameterSnapshotHash: baseline.parameterSnapshotHash,
@@ -119,6 +122,7 @@ export async function runIntelligenceAcceptanceTests() {
     reproductions: [
       {
         caseId: 'case',
+        decisionTimeEvidenceHash: 'e'.repeat(64),
         previousCanonicalOutputHash: 'c'.repeat(64),
         restoredCanonicalOutputHash: 'c'.repeat(64),
         match: false,
@@ -192,6 +196,9 @@ export async function runIntelligenceAcceptanceTests() {
   assert.throws(
     () =>
       createRollbackEvidence({
+        datasetId: 'dataset',
+        splitId: split.splitId,
+        acceptanceRunFamilyId: 'family',
         fromConfigurationVersionId: 'baseline',
         restoredConfigurationVersionId: 'restored',
         expectedPreviousParameterSnapshotHash: baseline.parameterSnapshotHash,
@@ -204,6 +211,9 @@ export async function runIntelligenceAcceptanceTests() {
   assert.throws(
     () =>
       createRollbackEvidence({
+        datasetId: 'dataset',
+        splitId: split.splitId,
+        acceptanceRunFamilyId: 'family',
         fromConfigurationVersionId: 'baseline',
         restoredConfigurationVersionId: 'restored',
         expectedPreviousParameterSnapshotHash: baseline.parameterSnapshotHash,
@@ -211,12 +221,14 @@ export async function runIntelligenceAcceptanceTests() {
         reproductions: [
           {
             caseId: 'case',
+            decisionTimeEvidenceHash: 'e'.repeat(64),
             previousCanonicalOutputHash: 'a',
             restoredCanonicalOutputHash: 'a',
             match: true,
           },
           {
             caseId: 'case',
+            decisionTimeEvidenceHash: 'e'.repeat(64),
             previousCanonicalOutputHash: 'b',
             restoredCanonicalOutputHash: 'b',
             match: true,
@@ -226,9 +238,27 @@ export async function runIntelligenceAcceptanceTests() {
       }),
     /duplicate/,
   );
-  const mismatchedRollback=createRollbackEvidence({fromConfigurationVersionId:'baseline',restoredConfigurationVersionId:'restored',expectedPreviousParameterSnapshotHash:baseline.parameterSnapshotHash,restoredParameterSnapshotHash:restored.parameterSnapshotHash,reproductions:[{caseId:'case-a',previousCanonicalOutputHash:'a',restoredCanonicalOutputHash:'b',match:true}],createdAt:at});
-  assert.equal(mismatchedRollback.reproductionMatch,false);
-  assert.throws(()=>verifyRollback(mismatchedRollback,baseline,restored),/invalid/);
+  const mismatchedRollback = createRollbackEvidence({
+    datasetId: 'dataset',
+    splitId: split.splitId,
+    acceptanceRunFamilyId: 'family',
+    fromConfigurationVersionId: 'baseline',
+    restoredConfigurationVersionId: 'restored',
+    expectedPreviousParameterSnapshotHash: baseline.parameterSnapshotHash,
+    restoredParameterSnapshotHash: restored.parameterSnapshotHash,
+    reproductions: [
+      {
+        caseId: 'case-a',
+        decisionTimeEvidenceHash: 'e'.repeat(64),
+        previousCanonicalOutputHash: 'a',
+        restoredCanonicalOutputHash: 'b',
+        match: true,
+      },
+    ],
+    createdAt: at,
+  });
+  assert.equal(mismatchedRollback.reproductionMatch, false);
+  assert.throws(() => verifyRollback(mismatchedRollback, baseline, restored), /invalid/);
   const repo = new MemoryIntelligenceAcceptanceRepository(),
     lifecycle = createHoldoutLifecycle({
       acceptanceRunFamilyId: 'family',
@@ -237,6 +267,15 @@ export async function runIntelligenceAcceptanceTests() {
       selectedConfigurationVersionId: 'baseline',
       selectedAt: at,
     });
+  await assert.rejects(
+    () =>
+      repo.save('dataset_manifest', 'tampered', {
+        ...fixture,
+        datasetId: 'tampered',
+        canonicalPayloadHash: 'f'.repeat(64),
+      }),
+    /canonical_hash/,
+  );
   await repo.freezeCandidate(lifecycle);
   await repo.openHoldout('family', '2026-01-02');
   assert.equal((await repo.get('holdout_lifecycle', 'family'))?.state, 'opened');

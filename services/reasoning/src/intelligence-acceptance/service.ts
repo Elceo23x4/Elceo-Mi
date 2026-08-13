@@ -10,6 +10,8 @@ import type {
   ResidualRisk,
   RollbackEvidence,
   SplitManifest,
+  OutcomePolicyAuthorityRecord,
+  EmpiricalAcceptancePolicy,
 } from './contracts';
 import type { IntelligenceAcceptanceRepository } from './repository';
 import { verifyDatasetCertification, validateDecisionTimeEvidence } from './dataset-policy';
@@ -36,6 +38,10 @@ export interface CoveragePolicyAuthority {
     approvedStructuralDecisionIds: ReadonlySet<string>;
   } | null>;
 }
+export interface AcceptancePolicyAuthority {
+  resolveOutcomePolicy(): Promise<OutcomePolicyAuthorityRecord | null>;
+  resolveEmpiricalPolicy(): Promise<EmpiricalAcceptancePolicy | null>;
+}
 export class IntelligenceAcceptanceService {
   constructor(
     private readonly repository: IntelligenceAcceptanceRepository,
@@ -43,6 +49,7 @@ export class IntelligenceAcceptanceService {
     private readonly source: HoldoutCaseSource,
     private readonly certificationAuthority: DatasetCertificationAuthority,
     private readonly coverageAuthority: CoveragePolicyAuthority,
+    private readonly acceptancePolicyAuthority: AcceptancePolicyAuthority,
   ) {}
   async run(input: {
     runFamilyId: string;
@@ -77,7 +84,8 @@ export class IntelligenceAcceptanceService {
         lifecycle.holdoutPartitionHash !== split.holdoutPartitionHash
       )
         throw new Error('durable_holdout_selection_missing');
-      await this.repository.openHoldout(input.runFamilyId, input.createdAt);
+      const opened = await this.repository.openHoldout(input.runFamilyId, input.createdAt);
+      if (opened.state !== 'opened') throw new Error('holdout_open_transition_failed');
       holdoutExposed = true;
       const evidence = [...(await this.source.list(dataset.datasetId, split.holdoutEventIds))];
       if (
@@ -89,7 +97,7 @@ export class IntelligenceAcceptanceService {
       const cases: FrozenCaseResult[] = [];
       for (const item of evidence.sort((a, b) => a.caseId.localeCompare(b.caseId))) {
         validateDecisionTimeEvidence(item);
-        const outputs = await this.chain.runAndPersist(item.productionInput, item);
+        const outputs = await this.chain.runAndPersist(item.productionInput, item, configuration);
         const confidence = outputs.confidence;
         if (
           confidence.caseId !== item.caseId ||
@@ -103,6 +111,21 @@ export class IntelligenceAcceptanceService {
           throw new Error('confidence_provenance_mismatch');
         const draft = await this.source.outcomeObservations(item.caseId);
         if (!draft) throw new Error('required_holdout_outcome_missing');
+        if (!certification) throw new Error('outcome_certification_missing');
+        for (const observation of draft.observations) {
+          const reference = observation.sourceReference,
+            effective = reference.effectiveReliability ?? reference.reliability;
+          if (
+            !certification.sourceIds.includes(reference.sourceId) ||
+            !certification.rawArtifactHashes.includes(reference.contentHash) ||
+            ![
+              ...certification.captureReplayProvenance,
+              ...certification.certificationEvidenceReferences,
+            ].includes(reference.captureId) ||
+            !['verified', 'replay'].includes(effective ?? '')
+          )
+            throw new Error('outcome_observation_not_certified');
+        }
         const outcome = calculateOutcome(item, draft);
         validateOutcomeBinding(item, outcome);
         const body = {
@@ -136,11 +159,51 @@ export class IntelligenceAcceptanceService {
         rollback.fromConfigurationVersionId,
       )) as ConfigurationVersion;
       verifyRollback(rollback, previous, restored);
+      if (
+        rollback.datasetId !== dataset.datasetId ||
+        rollback.splitId !== split.splitId ||
+        rollback.acceptanceRunFamilyId !== input.runFamilyId
+      )
+        throw new Error('rollback_acceptance_scope_mismatch');
+      const rollbackCases = new Map(rollback.reproductions.map((row) => [row.caseId, row]));
+      if (
+        rollbackCases.size !== cases.length ||
+        cases.some(
+          (row) =>
+            rollbackCases.get(row.caseId)?.decisionTimeEvidenceHash !==
+            row.decisionTimeEvidenceHash,
+        )
+      )
+        throw new Error('rollback_acceptance_cases_mismatch');
       const authority = await this.coverageAuthority.resolve();
       const coveragePolicy = authority?.policy ?? MISSING_APPROVED_COVERAGE_POLICY;
+      const qualifiedEvidence = evidence.map((item) => {
+        const result = cases.find((row) => row.caseId === item.caseId)!;
+        const families: string[] = [];
+        if (
+          result.outputs.ifp1.finalizationStatus === 'final' &&
+          result.outputs.ifp1.reality.provenance.every((source) =>
+            ['verified', 'replay'].includes(source.effectiveReliability ?? source.reliability),
+          )
+        )
+          families.push('ifp1_event_reality');
+        if (result.outputs.ifp2?.evidenceSufficiency === 'sufficient')
+          families.push('ifp2_historical_analog');
+        if (result.outputs.ifp3.evidenceSufficiency === 'sufficient')
+          families.push('ifp3_contradiction');
+        if (result.outputs.ifp4.cleanlinessState !== 'insufficient_data')
+          families.push('ifp4_cleanliness');
+        if (result.outputs.ifp5.evidenceSufficiency === 'sufficient')
+          families.push('ifp5_narrative');
+        if (result.outputs.ifp6.positioningEvidenceState === 'available')
+          families.push('ifp6_positioning');
+        if (result.outputs.ifp7.evidenceSufficiency === 'sufficient')
+          families.push('ifp7_fragility');
+        return { ...item, qualifiedEvidenceFamilies: families };
+      });
       const coverage = evaluateCoverage(
         coveragePolicy,
-        evidence,
+        qualifiedEvidence,
         authority?.approvedStructuralDecisionIds ?? new Set(),
         {
           datasetId: dataset.datasetId,
@@ -149,6 +212,15 @@ export class IntelligenceAcceptanceService {
         },
       );
       const risks = input.residualRisks ?? [];
+      const outcomePolicy = await this.acceptancePolicyAuthority.resolveOutcomePolicy(),
+        empiricalPolicy = await this.acceptancePolicyAuthority.resolveEmpiricalPolicy();
+      const approvedPolicy = (
+        policy: OutcomePolicyAuthorityRecord | EmpiricalAcceptancePolicy | null,
+      ) => {
+        if (!policy || policy.status !== 'approved' || !policy.approvalReference) return false;
+        const { canonicalPayloadHash, ...body } = policy;
+        return canonicalHash(body) === canonicalPayloadHash;
+      };
       const run = decideValidatedAcceptance({
         runFamilyId: input.runFamilyId,
         dataset,
@@ -159,6 +231,8 @@ export class IntelligenceAcceptanceService {
         cases,
         coverage,
         coverageContractApproved: coveragePolicy.status === 'approved' && authority !== null,
+        outcomePolicyApproved: approvedPolicy(outcomePolicy),
+        empiricalAcceptancePolicy: approvedPolicy(empiricalPolicy) ? empiricalPolicy : null,
         rollback,
         residualRisks: risks,
         createdAt: input.createdAt,
@@ -175,15 +249,18 @@ export class IntelligenceAcceptanceService {
         ...cases.map((c) => ({ kind: 'case_result' as const, id: c.caseResultId })),
         ...coverage.map((c) => ({ kind: 'coverage_decision' as const, id: c.coverageDecisionId })),
       ];
-      await this.repository.saveBundle({
-        run,
-        cases,
-        coverage,
-        risks,
-        rollback,
-        referenceLinks: references,
-      });
-      await this.repository.completeHoldout(input.runFamilyId, input.createdAt);
+      await this.repository.finalizeAcceptanceBundle(
+        input.runFamilyId,
+        {
+          run,
+          cases,
+          coverage,
+          risks,
+          rollback,
+          referenceLinks: references,
+        },
+        input.createdAt,
+      );
       return run;
     } catch (error) {
       if (holdoutExposed)

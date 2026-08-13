@@ -11,3 +11,4 @@ export * from './production-chain';
 export * from './repository';
 export * from './sql-repository';
 export * from './service';
+export * from './integrity';

@@ -16,42 +16,51 @@ export function finalizeSplit(
     | 'canonicalPayloadHash'
   >,
 ): SplitManifest {
-  const calibrationEventIds = [...new Set(draft.calibrationEventIds)].sort();
-  const embargoEventIds = [...new Set(draft.embargoEventIds)].sort();
-  const holdoutEventIds = [...new Set(draft.holdoutEventIds)].sort();
+  const {
+    splitId: ignoredId,
+    calibrationPartitionHash: ignoredCalibration,
+    embargoPartitionHash: ignoredEmbargo,
+    holdoutPartitionHash: ignoredHoldout,
+    canonicalPayloadHash: ignoredHash,
+    ...domainDraft
+  } = draft as SplitManifest;
+  void ignoredId; void ignoredCalibration; void ignoredEmbargo; void ignoredHoldout; void ignoredHash;
+  const calibrationEventIds = [...new Set(domainDraft.calibrationEventIds)].sort();
+  const embargoEventIds = [...new Set(domainDraft.embargoEventIds)].sort();
+  const holdoutEventIds = [...new Set(domainDraft.holdoutEventIds)].sort();
   const all = [...calibrationEventIds, ...embargoEventIds, ...holdoutEventIds];
   if (new Set(all).size !== all.length) throw new Error('partition_overlap');
   if (!calibrationEventIds.length || !embargoEventIds.length || !holdoutEventIds.length)
     throw new Error('partition_missing');
   for (const id of all) {
-    if (!draft.eventFamilies[id] || !draft.eventTimes[id] || !draft.outcomeWindowEnds[id])
+    if (!domainDraft.eventFamilies[id] || !domainDraft.eventTimes[id] || !domainDraft.outcomeWindowEnds[id])
       throw new Error('split_event_metadata_missing');
-    time(draft.eventTimes[id], 'split_invalid_timestamp');
-    time(draft.outcomeWindowEnds[id], 'split_invalid_timestamp');
+    time(domainDraft.eventTimes[id], 'split_invalid_timestamp');
+    time(domainDraft.outcomeWindowEnds[id], 'split_invalid_timestamp');
   }
-  const family = new Set(calibrationEventIds.map((id) => draft.eventFamilies[id]));
-  if (holdoutEventIds.some((id) => family.has(draft.eventFamilies[id])))
+  const family = new Set(calibrationEventIds.map((id) => domainDraft.eventFamilies[id]));
+  if (holdoutEventIds.some((id) => family.has(domainDraft.eventFamilies[id])))
     throw new Error('event_family_cross_split');
   const calibrationEnd = Math.max(
     ...calibrationEventIds.map((id) =>
-      time(draft.outcomeWindowEnds[id], 'split_invalid_timestamp'),
+      time(domainDraft.outcomeWindowEnds[id], 'split_invalid_timestamp'),
     ),
   );
   const embargoStart = Math.min(
-    ...embargoEventIds.map((id) => time(draft.eventTimes[id], 'split_invalid_timestamp')),
+    ...embargoEventIds.map((id) => time(domainDraft.eventTimes[id], 'split_invalid_timestamp')),
   );
   const embargoEnd = Math.max(
-    ...embargoEventIds.map((id) => time(draft.outcomeWindowEnds[id], 'split_invalid_timestamp')),
+    ...embargoEventIds.map((id) => time(domainDraft.outcomeWindowEnds[id], 'split_invalid_timestamp')),
   );
   const holdoutStart = Math.min(
-    ...holdoutEventIds.map((id) => time(draft.eventTimes[id], 'split_invalid_timestamp')),
+    ...holdoutEventIds.map((id) => time(domainDraft.eventTimes[id], 'split_invalid_timestamp')),
   );
   if (!(calibrationEnd < embargoStart && embargoStart <= embargoEnd && embargoEnd < holdoutStart))
     throw new Error('split_not_chronological');
-  if (holdoutStart - calibrationEnd < draft.maximumOutcomeHorizonMs)
+  if (holdoutStart - calibrationEnd < domainDraft.maximumOutcomeHorizonMs)
     throw new Error('embargo_or_outcome_window_violation');
   const body = {
-    ...draft,
+    ...domainDraft,
     calibrationEventIds,
     embargoEventIds,
     holdoutEventIds,

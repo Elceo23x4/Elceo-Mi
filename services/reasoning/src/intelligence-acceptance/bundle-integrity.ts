@@ -23,7 +23,18 @@ export async function validateAcceptanceBundleCoherence(
   };
   if (
     bundle.run.acceptanceRunFamilyId !== runFamilyId ||
-    bundle.run.rollbackEvidenceId !== bundle.rollback.rollbackEvidenceId
+    bundle.run.rollbackEvidenceId !== bundle.rollback.rollbackEvidenceId ||
+    bundle.rollback.acceptanceRunFamilyId !== runFamilyId ||
+    bundle.rollback.datasetId !== bundle.run.datasetId ||
+    (bundle.run.splitId !== null
+      ? bundle.rollback.splitId !== bundle.run.splitId
+      : Boolean(bundle.rollback.splitId)) ||
+    bundle.coverage.some(
+      (row) =>
+        row.acceptanceRunFamilyId !== runFamilyId ||
+        row.datasetId !== bundle.run.datasetId ||
+        row.splitId !== bundle.run.splitId,
+    )
   )
     fail();
   const caseHashes = bundle.cases.map((row) => row.canonicalPayloadHash).sort();
@@ -37,7 +48,27 @@ export async function validateAcceptanceBundleCoherence(
   )
     fail();
   const configuration = await resolve('configuration_version', bundle.run.configurationVersionId);
-  if (!configuration) fail();
+  if (!configuration) throw new Error('acceptance_bundle_coherence_mismatch');
+  const lifecycle = await resolve('holdout_lifecycle', runFamilyId);
+  if (!lifecycle) throw new Error('acceptance_bundle_coherence_mismatch');
+  if (
+    lifecycle.acceptanceRunFamilyId !== runFamilyId ||
+    lifecycle.datasetId !== bundle.run.datasetId ||
+    lifecycle.selectedConfigurationVersionId !== bundle.run.configurationVersionId
+  )
+    fail();
+  let trial: AcceptanceEntityMap['calibration_trial'] | null = null;
+  if (configuration.sourceCalibrationRunId) {
+    trial = await resolve('calibration_trial', configuration.sourceCalibrationRunId);
+    if (
+      !trial ||
+      trial.trialId !== configuration.sourceCalibrationRunId ||
+      trial.configurationVersionId !== configuration.configurationVersionId ||
+      trial.datasetId !== bundle.run.datasetId ||
+      trial.acceptanceRunFamilyId !== runFamilyId
+    )
+      fail();
+  }
   const expected = [
     { kind: 'dataset_manifest' as const, id: bundle.run.datasetId },
     { kind: 'configuration_version' as const, id: bundle.run.configurationVersionId },
@@ -69,7 +100,12 @@ export async function validateAcceptanceBundleCoherence(
   if (!(await resolve('dataset_manifest', bundle.run.datasetId))) fail();
   if (bundle.run.splitId) {
     const split = await resolve('split_manifest', bundle.run.datasetId);
-    if (!split || split.splitId !== bundle.run.splitId) fail();
+    if (
+      !split ||
+      split.splitId !== bundle.run.splitId ||
+      lifecycle.holdoutPartitionHash !== split.holdoutPartitionHash
+    )
+      fail();
   }
   if (bundle.run.certificationId) {
     const certification = await resolve('dataset_certification', bundle.run.datasetId);

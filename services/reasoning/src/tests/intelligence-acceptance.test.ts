@@ -263,13 +263,19 @@ export async function runIntelligenceAcceptanceTests() {
     CANONICAL_RUNTIME_BASELINE,
   );
   assert.deepEqual(replayedOutputs.canonicalOutputHashes, productionOutputs.canonicalOutputHashes);
-  const provisionalEvent = structuredClone(productionEvent);
-  provisionalEvent.eventEvaluationId = 'ifp8-production-chain-provisional-event';
+  const provisionalEvent = buildCleanlinessEventFixture({
+    expectationId: 'ifp8-production-chain-provisional-expectation',
+    eventEvaluationId: 'ifp8-production-chain-provisional-event',
+    interpretedAt: productionEvent.interpretedAt,
+  });
   provisionalEvent.postEventCognitionSnapshotId = null;
   provisionalEvent.reality.postEventCognitionSnapshotId = null;
   provisionalEvent.reality.postEventCognitionEvaluatedAt = null;
   provisionalEvent.reality.postEventConfidence = null;
   provisionalEvent.assessmentEvidenceHash = 'ifp8-provisional-assessment';
+  await productionPersistence.eventExpectationRepository.saveEventExpectation(
+    provisionalEvent.expectation,
+  );
   await productionPersistence.eventRealityRepository.saveEventEvaluation(provisionalEvent);
   await productionPersistence.persistedContradictionInputRepository.saveContradictionInput(
     normalizePersistedContradictionInputRecord({
@@ -300,6 +306,7 @@ export async function runIntelligenceAcceptanceTests() {
     CANONICAL_RUNTIME_BASELINE,
   );
   assert.equal(provisionalOutputs.confidence.postSnapshotId, null);
+  assert.equal(provisionalOutputs.confidence.postReasoningRunId, null);
   assert.equal(provisionalOutputs.confidence.postClampValue, null);
   assert.equal(provisionalOutputs.confidence.availability, 'provisional');
   const coveragePolicyBody = {
@@ -565,6 +572,21 @@ export async function runIntelligenceAcceptanceTests() {
     state: 'fail',
     reason: 'scoped_criterion_failed',
   });
+  const scopedRollback = createRollbackEvidence({
+    ...rollback,
+    acceptanceRunFamilyId: 'scoped-family',
+  });
+  const scopedCoverage = evaluateCoverage(
+    { ...coveragePolicyBody, canonicalPayloadHash: canonicalHash(coveragePolicyBody) },
+    [],
+    new Set(),
+    {
+      datasetId: relabeled.datasetId,
+      splitId: split.splitId,
+      acceptanceRunFamilyId: 'scoped-family',
+      createdAt: at,
+    },
+  );
   const scopedDecision = decideValidatedAcceptance({
     runFamilyId: 'scoped-family',
     dataset: relabeled,
@@ -573,11 +595,11 @@ export async function runIntelligenceAcceptanceTests() {
     configuration: baseline,
     trial: null,
     cases: scopedCases,
-    coverage,
+    coverage: scopedCoverage,
     coverageContractApproved: true,
     outcomePolicyApproved: true,
     empiricalAcceptancePolicy: scopedPolicy,
-    rollback,
+    rollback: scopedRollback,
     residualRisks: [],
     createdAt: at,
   });
@@ -601,28 +623,36 @@ export async function runIntelligenceAcceptanceTests() {
   const unsupported = evaluateEmpiricalCriteria(
     { ...scopedPolicy, criteria: [{ ...scopedCriterion, metric: 'unsupportedMetric' }] },
     scopedCases,
-    coverage,
+    scopedCoverage,
   )[0]!;
   assert.equal(unsupported.state, 'insufficient_evidence');
   const coherentBundle = {
     run: scopedDecision,
     cases: scopedCases,
-    coverage,
+    coverage: scopedCoverage,
     risks: [],
-    rollback,
+    rollback: scopedRollback,
     referenceLinks: [
       { kind: 'dataset_manifest' as const, id: relabeled.datasetId },
       { kind: 'split_manifest' as const, id: relabeled.datasetId },
       { kind: 'configuration_version' as const, id: baseline.configurationVersionId },
-      { kind: 'rollback_evidence' as const, id: rollback.rollbackEvidenceId },
+      { kind: 'rollback_evidence' as const, id: scopedRollback.rollbackEvidenceId },
       ...scopedCases.map((row) => ({ kind: 'case_result' as const, id: row.caseResultId })),
-      ...coverage.map((row) => ({ kind: 'coverage_decision' as const, id: row.coverageDecisionId })),
+      ...scopedCoverage.map((row) => ({ kind: 'coverage_decision' as const, id: row.coverageDecisionId })),
     ],
   };
   const resolveBundle = async (kind: string, id: string) => {
     if (kind === 'dataset_manifest' && id === relabeled.datasetId) return relabeled;
     if (kind === 'split_manifest' && id === relabeled.datasetId) return split;
     if (kind === 'configuration_version' && id === baseline.configurationVersionId) return baseline;
+    if (kind === 'holdout_lifecycle' && id === scopedDecision.acceptanceRunFamilyId)
+      return createHoldoutLifecycle({
+        acceptanceRunFamilyId: scopedDecision.acceptanceRunFamilyId,
+        datasetId: relabeled.datasetId,
+        holdoutPartitionHash: split.holdoutPartitionHash,
+        selectedConfigurationVersionId: baseline.configurationVersionId,
+        selectedAt: at,
+      });
     return null;
   };
   await validateAcceptanceBundleCoherence(
@@ -671,6 +701,19 @@ export async function runIntelligenceAcceptanceTests() {
     createdAt: at,
   });
   assert.equal(trial.trialId, 'trial');
+  assert.deepEqual(finalizeCertification({ ...fixtureCertification } as never), fixtureCertification);
+  assert.deepEqual(finalizeSplit({ ...split } as never), split);
+  assert.deepEqual(createConfiguration({ ...baseline } as never), baseline);
+  assert.deepEqual(createTrial({ ...trial } as never), trial);
+  const constructorLifecycle = createHoldoutLifecycle({
+    acceptanceRunFamilyId: 'constructor-family',
+    datasetId: 'dataset',
+    holdoutPartitionHash: split.holdoutPartitionHash,
+    selectedConfigurationVersionId: baseline.configurationVersionId,
+    selectedAt: at,
+  });
+  assert.deepEqual(createHoldoutLifecycle({ ...constructorLifecycle } as never), constructorLifecycle);
+  assert.deepEqual(createRollbackEvidence({ ...rollback } as never), rollback);
   const decisionEvidence = {
     caseId: 'case',
     eventInstanceId: 'hold',

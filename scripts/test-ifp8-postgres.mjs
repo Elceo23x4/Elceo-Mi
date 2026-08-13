@@ -223,7 +223,7 @@ try {
     new Set(),
     {
       datasetId: fixture.datasetId,
-      splitId: split.splitId,
+      splitId: '',
       acceptanceRunFamilyId: preflightFamily,
       createdAt: at,
     },
@@ -333,7 +333,7 @@ try {
   const makeAtomicBundle = (family, suffix) => {
     const rollback = api.createRollbackEvidence({
       datasetId: fixture.datasetId,
-      splitId: split.splitId,
+      splitId: '',
       acceptanceRunFamilyId: family,
       fromConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
       restoredConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
@@ -347,7 +347,7 @@ try {
       runFamilyId: family,
       dataset: fixture,
       certification: null,
-      split,
+      split: null,
       configuration: api.CANONICAL_RUNTIME_BASELINE,
       trial: null,
       cases: [],
@@ -367,7 +367,6 @@ try {
       rollback,
       referenceLinks: [
         { kind: 'dataset_manifest', id: fixture.datasetId },
-        { kind: 'split_manifest', id: fixture.datasetId },
         { kind: 'configuration_version', id: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId },
         { kind: 'residual_risk', id: risk.riskId },
         { kind: 'rollback_evidence', id: rollback.rollbackEvidenceId },

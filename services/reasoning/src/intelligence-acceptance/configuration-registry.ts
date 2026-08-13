@@ -9,16 +9,20 @@ const required = ['ifp1', 'ifp2', 'ifp3', 'ifp4', 'ifp5', 'ifp6', 'ifp7'] as con
 export function createConfiguration(
   draft: Omit<ConfigurationVersion, 'parameterSnapshotHash' | 'canonicalPayloadHash'>,
 ): ConfigurationVersion {
+  const { parameterSnapshotHash: ignoredParameter, canonicalPayloadHash: ignoredHash, ...domainDraft } = draft as ConfigurationVersion;
+  void ignoredParameter; void ignoredHash;
   for (const key of required)
-    if (!draft.policyVersions[key]) throw new Error('incomplete_ifp_policy_snapshot');
-  const parameterSnapshotHash = canonicalHash(draft.parameterSnapshot),
-    body = { ...draft, parameterSnapshotHash };
+    if (!domainDraft.policyVersions[key]) throw new Error('incomplete_ifp_policy_snapshot');
+  const parameterSnapshotHash = canonicalHash(domainDraft.parameterSnapshot),
+    body = { ...domainDraft, parameterSnapshotHash };
   return Object.freeze({ ...body, canonicalPayloadHash: canonicalHash(body) });
 }
 export function createTrial(
   draft: Omit<CalibrationTrial, 'canonicalPayloadHash'>,
 ): CalibrationTrial {
-  return Object.freeze({ ...draft, canonicalPayloadHash: canonicalHash(draft) });
+  const { canonicalPayloadHash: ignoredHash, ...domainDraft } = draft as CalibrationTrial;
+  void ignoredHash;
+  return Object.freeze({ ...domainDraft, canonicalPayloadHash: canonicalHash(domainDraft) });
 }
 export function createHoldoutLifecycle(
   draft: Omit<
@@ -26,8 +30,10 @@ export function createHoldoutLifecycle(
     'state' | 'openedAt' | 'completedAt' | 'failureReason' | 'canonicalPayloadHash'
   >,
 ): HoldoutLifecycle {
+  const { state: ignoredState, openedAt: ignoredOpened, completedAt: ignoredCompleted, failureReason: ignoredFailure, canonicalPayloadHash: ignoredHash, ...domainDraft } = draft as HoldoutLifecycle;
+  void ignoredState; void ignoredOpened; void ignoredCompleted; void ignoredFailure; void ignoredHash;
   const body = {
-    ...draft,
+    ...domainDraft,
     state: 'selected' as const,
     openedAt: null,
     completedAt: null,
@@ -41,17 +47,19 @@ export function createRollbackEvidence(
     'rollbackEvidenceId' | 'reproductionMatch' | 'canonicalPayloadHash'
   >,
 ): RollbackEvidence {
-  if (!draft.reproductions.length) throw new Error('rollback_replay_evidence_empty');
-  if (new Set(draft.reproductions.map((row) => row.caseId)).size !== draft.reproductions.length)
+  const { rollbackEvidenceId: ignoredId, reproductionMatch: ignoredMatch, canonicalPayloadHash: ignoredHash, ...domainDraft } = draft as RollbackEvidence;
+  void ignoredId; void ignoredMatch; void ignoredHash;
+  if (!domainDraft.reproductions.length) throw new Error('rollback_replay_evidence_empty');
+  if (new Set(domainDraft.reproductions.map((row) => row.caseId)).size !== domainDraft.reproductions.length)
     throw new Error('rollback_replay_case_duplicate');
-  const reproductions = [...draft.reproductions]
+  const reproductions = [...domainDraft.reproductions]
     .sort((a, b) => a.caseId.localeCompare(b.caseId))
     .map((row) => ({
       ...row,
       match: row.previousCanonicalOutputHash === row.restoredCanonicalOutputHash,
     }));
   const body = {
-    ...draft,
+    ...domainDraft,
     reproductions,
     reproductionMatch: reproductions.every((row) => row.match),
   };

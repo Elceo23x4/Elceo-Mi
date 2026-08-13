@@ -36,12 +36,21 @@ export function finalizeCertification(
     'certificationId' | 'certificationPolicyVersion' | 'canonicalPayloadHash'
   >,
 ): DatasetCertification {
+  const {
+    certificationId: ignoredId,
+    certificationPolicyVersion: ignoredPolicy,
+    canonicalPayloadHash: ignoredHash,
+    ...domainDraft
+  } = draft as DatasetCertification;
+  void ignoredId;
+  void ignoredPolicy;
+  void ignoredHash;
   const body = {
-    ...draft,
-    rawArtifactHashes: sorted(draft.rawArtifactHashes),
-    captureReplayProvenance: sorted(draft.captureReplayProvenance),
-    sourceIds: sorted(draft.sourceIds),
-    certificationEvidenceReferences: sorted(draft.certificationEvidenceReferences),
+    ...domainDraft,
+    rawArtifactHashes: sorted(domainDraft.rawArtifactHashes),
+    captureReplayProvenance: sorted(domainDraft.captureReplayProvenance),
+    sourceIds: sorted(domainDraft.sourceIds),
+    certificationEvidenceReferences: sorted(domainDraft.certificationEvidenceReferences),
     certificationPolicyVersion: DATASET_CERTIFICATION_POLICY_VERSION,
   };
   const hash = canonicalHash(body);

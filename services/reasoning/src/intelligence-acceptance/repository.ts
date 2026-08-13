@@ -78,6 +78,8 @@ export class MemoryIntelligenceAcceptanceRepository implements IntelligenceAccep
       throw new Error(
         prior.state === 'opened' ? 'holdout_already_open' : 'holdout_already_consumed',
       );
+    if (!Number.isFinite(Date.parse(openedAt)) || Date.parse(openedAt) < Date.parse(prior.selectedAt))
+      throw new Error('holdout_lifecycle_time_order_invalid');
     const reused = [...this.rows.values()]
       .filter(
         (row): row is HoldoutLifecycle =>
@@ -120,6 +122,12 @@ export class MemoryIntelligenceAcceptanceRepository implements IntelligenceAccep
   ) {
     const prior = await this.get('holdout_lifecycle', id);
     if (!prior || prior.state !== 'opened') throw new Error('holdout_not_opened');
+    if (
+      !prior.openedAt ||
+      !Number.isFinite(Date.parse(completedAt)) ||
+      Date.parse(completedAt) < Date.parse(prior.openedAt)
+    )
+      throw new Error('holdout_lifecycle_time_order_invalid');
     const body = { ...prior, state, completedAt, failureReason };
     const canonical = Object.fromEntries(
       Object.entries(body).filter(([key]) => key !== 'canonicalPayloadHash'),
@@ -138,11 +146,17 @@ export class MemoryIntelligenceAcceptanceRepository implements IntelligenceAccep
     injectFailureAfter = Number.POSITIVE_INFINITY,
   ) {
     await validateAcceptanceBundleCoherence(runFamilyId, bundle, this.get.bind(this));
+    const completed = Date.parse(completedAt),
+      runCreated = Date.parse(bundle.run.createdAt);
+    if (!Number.isFinite(completed) || !Number.isFinite(runCreated) || completed < runCreated)
+      throw new Error('acceptance_bundle_temporal_mismatch');
     const snapshot = new Map(this.rows),
       priorLinks = new Map(this.links);
     try {
       const lifecycle = await this.get('holdout_lifecycle', runFamilyId);
       if (!lifecycle || lifecycle.state !== 'opened') throw new Error('holdout_not_opened');
+      if (!lifecycle.openedAt || Date.parse(lifecycle.openedAt) > runCreated)
+        throw new Error('acceptance_bundle_temporal_mismatch');
       if (lifecycle.datasetId !== bundle.run.datasetId) throw new Error('acceptance_bundle_coherence_mismatch');
       let count = 0;
       for (const c of bundle.cases) {

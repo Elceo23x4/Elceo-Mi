@@ -147,6 +147,8 @@ export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptan
         throw new Error(
           prior.state === 'opened' ? 'holdout_already_open' : 'holdout_already_consumed',
         );
+      if (!Number.isFinite(Date.parse(openedAt)) || Date.parse(openedAt) < Date.parse(prior.selectedAt))
+        throw new Error('holdout_lifecycle_time_order_invalid');
       await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
         `${prior.datasetId}:${prior.holdoutPartitionHash}`,
       ]);
@@ -195,6 +197,12 @@ export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptan
       if (!q.rows[0]) throw new Error('holdout_missing');
       const prior = payload<'holdout_lifecycle'>(q.rows[0]);
       if (prior.state !== 'opened') throw new Error('holdout_not_opened');
+      if (
+        !prior.openedAt ||
+        !Number.isFinite(Date.parse(completedAt)) ||
+        Date.parse(completedAt) < Date.parse(prior.openedAt)
+      )
+        throw new Error('holdout_lifecycle_time_order_invalid');
       const { canonicalPayloadHash: ignored, ...base } = prior;
       void ignored;
       const body = { ...base, state, completedAt, failureReason },
@@ -219,6 +227,10 @@ export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptan
     injectFailureAfter = Number.POSITIVE_INFINITY,
   ) {
     await validateAcceptanceBundleCoherence(runFamilyId, bundle, this.get.bind(this));
+    const completed = Date.parse(completedAt),
+      runCreated = Date.parse(bundle.run.createdAt);
+    if (!Number.isFinite(completed) || !Number.isFinite(runCreated) || completed < runCreated)
+      throw new Error('acceptance_bundle_temporal_mismatch');
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
@@ -229,6 +241,8 @@ export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptan
       if (!lifecycleQuery.rows[0]) throw new Error('holdout_missing');
       const lifecycle = payload<'holdout_lifecycle'>(lifecycleQuery.rows[0]);
       if (lifecycle.state !== 'opened') throw new Error('holdout_not_opened');
+      if (!lifecycle.openedAt || Date.parse(lifecycle.openedAt) > runCreated)
+        throw new Error('acceptance_bundle_temporal_mismatch');
       if (lifecycle.datasetId !== bundle.run.datasetId)
         throw new Error('acceptance_bundle_coherence_mismatch');
       let count = 0;

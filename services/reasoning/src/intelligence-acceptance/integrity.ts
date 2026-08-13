@@ -113,7 +113,14 @@ export function validateAcceptanceEntity<K extends AcceptanceRecordKind>(
   }
   if (kind === 'holdout_lifecycle') {
     const row = value as AcceptanceEntityMap['holdout_lifecycle'];
+    const selectedAt = Date.parse(row.selectedAt),
+      openedAt = row.openedAt ? Date.parse(row.openedAt) : null,
+      completedAt = row.completedAt ? Date.parse(row.completedAt) : null;
     if (
+      !Number.isFinite(selectedAt) ||
+      (openedAt !== null && (!Number.isFinite(openedAt) || openedAt < selectedAt)) ||
+      (completedAt !== null &&
+        (!Number.isFinite(completedAt) || openedAt === null || completedAt < openedAt)) ||
       (row.state === 'selected' && (row.openedAt || row.completedAt || row.failureReason)) ||
       (row.state === 'opened' && (!row.openedAt || row.completedAt)) ||
       (['completed', 'failed'].includes(row.state) && (!row.openedAt || !row.completedAt)) ||

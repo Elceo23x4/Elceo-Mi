@@ -42,6 +42,19 @@ export interface AcceptancePolicyAuthority {
   resolveOutcomePolicy(): Promise<OutcomePolicyAuthorityRecord | null>;
   resolveEmpiricalPolicy(): Promise<EmpiricalAcceptancePolicy | null>;
 }
+export function assertOutcomeAvailableAtAcceptance(
+  outcomeAvailableAtValue: string,
+  acceptanceCreatedAtValue: string,
+): void {
+  const outcomeAvailableAt = Date.parse(outcomeAvailableAtValue),
+    acceptanceAt = Date.parse(acceptanceCreatedAtValue);
+  if (
+    !Number.isFinite(outcomeAvailableAt) ||
+    !Number.isFinite(acceptanceAt) ||
+    outcomeAvailableAt > acceptanceAt
+  )
+    throw new Error('outcome_not_available_at_acceptance_time');
+}
 export class IntelligenceAcceptanceService {
   constructor(
     private readonly repository: IntelligenceAcceptanceRepository,
@@ -167,6 +180,7 @@ export class IntelligenceAcceptanceService {
         }
         const outcome = calculateOutcome(item, draft);
         validateOutcomeBinding(item, outcome);
+        assertOutcomeAvailableAtAcceptance(outcome.outcomeAvailableAt, input.createdAt);
         const body = {
           caseId: item.caseId,
           eventInstanceId: item.eventInstanceId,

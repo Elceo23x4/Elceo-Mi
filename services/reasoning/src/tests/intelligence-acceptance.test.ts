@@ -15,6 +15,7 @@ import {
   verifyRollback,
   validateDecisionTimeEvidence,
   IntelligenceAcceptanceService,
+  assertOutcomeAvailableAtAcceptance,
   CANONICAL_RUNTIME_BASELINE,
   CanonicalRuntimeBaselineAuthority,
   assertRuntimeBaseline,
@@ -74,6 +75,17 @@ const policies = {
   ifp7: 'fragility-score-v1',
 };
 export async function runIntelligenceAcceptanceTests() {
+  assert.throws(
+    () =>
+      assertOutcomeAvailableAtAcceptance(
+        '2026-01-01T03:00:00Z',
+        '2026-01-01T02:59:59Z',
+      ),
+    /outcome_not_available_at_acceptance_time/,
+  );
+  assert.doesNotThrow(() =>
+    assertOutcomeAvailableAtAcceptance('2026-01-01T03:00:00Z', '2026-01-01T03:00:00Z'),
+  );
   const fixture = manifest('fixture'),
     relabeled = manifest('certified_replay');
   const fixtureCertification = finalizeCertification({
@@ -545,7 +557,7 @@ export async function runIntelligenceAcceptanceTests() {
         horizon: 'follow_through',
         measurementStartAt: at,
         measurementEndAt: '2026-01-01T01:00:00.000Z',
-        outcomeAvailableAt: '2026-01-01T02:00:00.000Z',
+        outcomeAvailableAt: at,
         asset,
         calculationPolicyVersion: 'ifp8-outcome-observation-v1' as const,
         sourceReferences: [],
@@ -676,6 +688,34 @@ export async function runIntelligenceAcceptanceTests() {
       validateAcceptanceBundleCoherence(
         'wrong-family',
         coherentBundle,
+        resolveBundle as never,
+      ),
+    /coherence_mismatch/,
+  );
+  await assert.rejects(
+    () =>
+      validateAcceptanceBundleCoherence(
+        scopedDecision.acceptanceRunFamilyId,
+        {
+          ...coherentBundle,
+          cases: coherentBundle.cases.map((row, index) =>
+            index === 0
+              ? { ...row, frozenAt: '2025-12-31T23:59:59Z', outcome: { ...row.outcome, outcomeAvailableAt: at } }
+              : row,
+          ),
+        },
+        resolveBundle as never,
+      ),
+    /coherence_mismatch/,
+  );
+  await assert.rejects(
+    () =>
+      validateAcceptanceBundleCoherence(
+        scopedDecision.acceptanceRunFamilyId,
+        {
+          ...coherentBundle,
+          run: { ...coherentBundle.run, createdAt: '2025-12-31T23:59:59Z' },
+        },
         resolveBundle as never,
       ),
     /coherence_mismatch/,
@@ -861,6 +901,27 @@ export async function runIntelligenceAcceptanceTests() {
   assert.equal((await repo.get('holdout_lifecycle', 'family'))?.state, 'opened');
   await repo.completeHoldout('family', '2026-01-03');
   assert.equal((await repo.get('holdout_lifecycle', 'family'))?.state, 'completed');
+  const earlyOpenRepo = new MemoryIntelligenceAcceptanceRepository();
+  await earlyOpenRepo.freezeCandidate(
+    createHoldoutLifecycle({
+      ...lifecycle,
+      acceptanceRunFamilyId: 'early-open-family',
+      selectedAt: '2026-01-02T00:00:00Z',
+    }),
+  );
+  await assert.rejects(
+    () => earlyOpenRepo.openHoldout('early-open-family', '2026-01-01T00:00:00Z'),
+    /time_order_invalid/,
+  );
+  await earlyOpenRepo.openHoldout('early-open-family', '2026-01-03T00:00:00Z');
+  await assert.rejects(
+    () => earlyOpenRepo.completeHoldout('early-open-family', '2026-01-02T00:00:00Z'),
+    /time_order_invalid/,
+  );
+  await assert.rejects(
+    () => earlyOpenRepo.failHoldout('early-open-family', '2026-01-02T00:00:00Z', 'early'),
+    /time_order_invalid/,
+  );
   const reuse = createHoldoutLifecycle({ ...lifecycle, acceptanceRunFamilyId: 'other-family' });
   await assert.rejects(() => repo.freezeCandidate(reuse), /reserved/);
   const preflightRepo = new MemoryIntelligenceAcceptanceRepository();

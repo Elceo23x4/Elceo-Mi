@@ -21,6 +21,20 @@ export async function validateAcceptanceBundleCoherence(
   const fail = (): never => {
     throw new Error('acceptance_bundle_coherence_mismatch');
   };
+  const time = (value: string) => {
+    const parsed = Date.parse(value);
+    if (!Number.isFinite(parsed)) fail();
+    return parsed;
+  };
+  const runCreatedAt = time(bundle.run.createdAt);
+  if (
+    bundle.cases.some((row) => {
+      const outcomeAvailableAt = time(row.outcome.outcomeAvailableAt),
+        frozenAt = time(row.frozenAt);
+      return frozenAt < outcomeAvailableAt || runCreatedAt < frozenAt;
+    })
+  )
+    fail();
   if (
     !bundle.run.splitId ||
     bundle.run.acceptanceRunFamilyId !== runFamilyId ||

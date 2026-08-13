@@ -91,6 +91,7 @@ try {
   }
   const split = api.finalizeSplit({
     datasetId: fixture.datasetId,
+    createdAt: at,
     calibrationEventIds: ['cal'],
     embargoEventIds: ['emb'],
     holdoutEventIds: ['hold'],
@@ -101,6 +102,143 @@ try {
   });
   await sql.save('split_manifest', fixture.datasetId, split);
   assert.deepEqual(await sql.get('split_manifest', fixture.datasetId), split);
+  await sql.save(
+    'configuration_version',
+    api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+    api.CANONICAL_RUNTIME_BASELINE,
+  );
+  const preflightFamily = 'ifp8-sql-public-preflight';
+  const preflightRollback = api.createRollbackEvidence({
+    datasetId: fixture.datasetId,
+    splitId: split.splitId,
+    acceptanceRunFamilyId: preflightFamily,
+    fromConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+    restoredConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+    expectedPreviousParameterSnapshotHash: api.CANONICAL_RUNTIME_BASELINE.parameterSnapshotHash,
+    restoredParameterSnapshotHash: api.CANONICAL_RUNTIME_BASELINE.parameterSnapshotHash,
+    reproductions: [
+      {
+        caseId: 'fixture-case',
+        decisionTimeEvidenceHash: 'd'.repeat(64),
+        previousCanonicalOutputHash: 'e'.repeat(64),
+        restoredCanonicalOutputHash: 'e'.repeat(64),
+        match: true,
+      },
+    ],
+    createdAt: at,
+  });
+  await sql.save('rollback_evidence', preflightRollback.rollbackEvidenceId, preflightRollback);
+  await sql.freezeCandidate(
+    api.createHoldoutLifecycle({
+      acceptanceRunFamilyId: preflightFamily,
+      datasetId: fixture.datasetId,
+      holdoutPartitionHash: split.holdoutPartitionHash,
+      selectedConfigurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+      selectedAt: at,
+    }),
+  );
+  let publicSourceCalls = 0;
+  const service = new api.IntelligenceAcceptanceService(
+    sql,
+    {
+      validateConfiguration: async (configuration) => {
+        api.assertRuntimeBaseline(configuration, new api.CanonicalRuntimeBaselineAuthority());
+        return api.CANONICAL_RUNTIME_BASELINE;
+      },
+    },
+    {
+      list: async () => {
+        publicSourceCalls++;
+        return [];
+      },
+      outcomeObservations: async () => null,
+    },
+    { verify: async () => true },
+    { resolve: async () => null },
+    { resolveOutcomePolicy: async () => null, resolveEmpiricalPolicy: async () => null },
+  );
+  await assert.rejects(
+    () =>
+      service.run({
+        runFamilyId: preflightFamily,
+        datasetId: fixture.datasetId,
+        configurationVersionId: api.CANONICAL_RUNTIME_BASELINE.configurationVersionId,
+        rollbackEvidenceId: preflightRollback.rollbackEvidenceId,
+        createdAt: at,
+      }),
+    /preflight_blocked_missing_certified_evidence/,
+  );
+  assert.equal(publicSourceCalls, 0);
+  assert.equal((await sql.get('holdout_lifecycle', preflightFamily)).state, 'selected');
+  const testCoverageBody = {
+    coveragePolicyId: 'TEST-ONLY-NOT-PRODUCTION',
+    status: 'approved',
+    cells: [
+      {
+        cellId: 'test-xau-cpi-follow-through',
+        asset: 'xau_usd',
+        eventClass: 'cpi',
+        horizon: 'follow_through',
+        requiredEvidenceFamilies: [],
+        minimumUniqueEvents: 1,
+        structuralDecisionId: null,
+        policyVersion: 'ifp8-launch-coverage-v1',
+      },
+    ],
+    diagnosticAssets: ['dxy', 'vix'],
+    approvalReference: 'TEST-ONLY-NOT-PRODUCTION',
+  };
+  const [coverageDecision] = api.evaluateCoverage(
+    { ...testCoverageBody, canonicalPayloadHash: api.canonicalHash(testCoverageBody) },
+    [
+      {
+        caseId: 'fixture-case',
+        eventInstanceId: 'hold',
+        eventFamilyId: 'c',
+        evidenceCutoffAt: at,
+        asset: 'xau_usd',
+        eventClass: 'cpi',
+        horizon: 'follow_through',
+        qualifiedEvidenceFamilies: [],
+        references: [],
+        productionInput: { eventEvaluationId: 'fixture-event', evidenceCutoffAt: at },
+      },
+    ],
+    new Set(),
+    {
+      datasetId: fixture.datasetId,
+      splitId: split.splitId,
+      acceptanceRunFamilyId: preflightFamily,
+      createdAt: at,
+    },
+  );
+  await sql.save('coverage_decision', coverageDecision.coverageDecisionId, coverageDecision);
+  assert.deepEqual(
+    await sql.get('coverage_decision', coverageDecision.coverageDecisionId),
+    coverageDecision,
+  );
+  await assert.rejects(
+    () =>
+      sql.save('coverage_decision', `${coverageDecision.coverageDecisionId}-tampered`, coverageDecision),
+    /derived_id/,
+  );
+  const riskBody = {
+    riskId: 'ifp8-test-risk',
+    scope: 'test-only',
+    severity: 'low',
+    evidence: ['fixture'],
+    affectedAssets: ['xau_usd'],
+    eventClasses: ['cpi'],
+    horizons: ['follow_through'],
+    classification: 'empirical_limitation',
+    resolutionState: 'open',
+    blocksAcceptance: true,
+    owner: 'test',
+    createdAt: at,
+  };
+  const risk = { ...riskBody, canonicalPayloadHash: api.canonicalHash(riskBody) };
+  await sql.save('residual_risk', risk.riskId, risk);
+  assert.deepEqual(await sql.get('residual_risk', risk.riskId), risk);
   await pool.query(
     "INSERT INTO intelligence_acceptance_records(record_kind,record_id,canonical_payload,canonical_payload_hash,created_at) VALUES('acceptance_run','link-proof','{}',$1,$2)",
     ['c'.repeat(64), at],

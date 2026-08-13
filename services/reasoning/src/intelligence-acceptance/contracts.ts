@@ -131,6 +131,7 @@ export type SplitManifest = Readonly<{
   eventTimes: Readonly<Record<string, string>>;
   outcomeWindowEnds: Readonly<Record<string, string>>;
   maximumOutcomeHorizonMs: number;
+  createdAt: string;
   calibrationPartitionHash: string;
   embargoPartitionHash: string;
   holdoutPartitionHash: string;
@@ -230,6 +231,8 @@ export type CoverageDecision = CoverageCell &
     observedUniqueEventCount: number;
     missingEvidenceFamilies: readonly string[];
     state: 'sufficient' | 'insufficient_data' | 'structurally_unavailable';
+    createdAt: string;
+    canonicalPayloadHash: string;
   }>;
 export type ConfidenceAnatomy = Readonly<{
   caseId: string;
@@ -349,7 +352,15 @@ export type ResidualRisk = Readonly<{
   resolutionState: string;
   blocksAcceptance: boolean;
   owner: string;
+  createdAt: string;
   canonicalPayloadHash: string;
+}>;
+export type EmpiricalCriterionResult = Readonly<{
+  criterionId: string;
+  matchedSampleN: number;
+  metricValue: number | boolean | null;
+  state: EmpiricalEngineState;
+  reason: string;
 }>;
 export type AcceptanceRecord = Readonly<{
   acceptanceRunId: string;
@@ -371,6 +382,7 @@ export type AcceptanceRecord = Readonly<{
   caseResultHashes: readonly string[];
   coverageDecisions: readonly CoverageDecision[];
   engineDiagnostics: Readonly<Record<string, unknown>>;
+  empiricalCriterionResults: readonly EmpiricalCriterionResult[];
   crossEngineViolations: readonly string[];
   unexplainedZeroCount: number;
   rollbackEvidenceId: string | null;

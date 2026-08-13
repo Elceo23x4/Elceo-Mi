@@ -18,8 +18,15 @@ import {
   CANONICAL_RUNTIME_BASELINE,
   CanonicalRuntimeBaselineAuthority,
   assertRuntimeBaseline,
+  evaluateCoverage,
+  canonicalHash,
 } from '../intelligence-acceptance/index.js';
+import { caseMatchesEmpiricalScope } from '../intelligence-acceptance/acceptance-gate.js';
 import type { ProductionIfpChainAdapter } from '../intelligence-acceptance/production-chain.js';
+import type {
+  EmpiricalAcceptancePolicy,
+  FrozenCaseResult,
+} from '../intelligence-acceptance/contracts.js';
 const at = '2026-01-01T00:00:00.000Z';
 const manifest = (datasetClass: 'fixture' | 'certified_replay') =>
   finalizeDatasetManifest({
@@ -85,6 +92,7 @@ export async function runIntelligenceAcceptanceTests() {
   );
   const split = finalizeSplit({
     datasetId: 'dataset',
+    createdAt: at,
     calibrationEventIds: ['cal'],
     embargoEventIds: ['emb'],
     holdoutEventIds: ['hold'],
@@ -94,6 +102,84 @@ export async function runIntelligenceAcceptanceTests() {
     maximumOutcomeHorizonMs: 86400000,
   });
   verifyManifestSplit(relabeled, split);
+  const coveragePolicyBody = {
+    coveragePolicyId: 'test-only-coverage-policy',
+    status: 'approved' as const,
+    cells: [
+      {
+        cellId: 'xau-cpi-follow-through',
+        asset: 'xau_usd',
+        eventClass: 'cpi',
+        horizon: 'follow_through',
+        requiredEvidenceFamilies: [],
+        minimumUniqueEvents: 1,
+        structuralDecisionId: null,
+        policyVersion: 'ifp8-launch-coverage-v1' as const,
+      },
+    ],
+    diagnosticAssets: ['dxy', 'vix'],
+    approvalReference: 'TEST-ONLY-NOT-PRODUCTION',
+  };
+  const coverage = evaluateCoverage(
+    { ...coveragePolicyBody, canonicalPayloadHash: canonicalHash(coveragePolicyBody) },
+    [
+      {
+        caseId: 'case',
+        eventInstanceId: 'hold',
+        eventFamilyId: 'c',
+        evidenceCutoffAt: at,
+        asset: 'xau_usd',
+        eventClass: 'cpi',
+        horizon: 'follow_through',
+        qualifiedEvidenceFamilies: [],
+        references: [],
+        productionInput: { eventEvaluationId: 'event', evidenceCutoffAt: at },
+      },
+    ],
+    new Set(),
+    { datasetId: 'dataset', splitId: split.splitId, acceptanceRunFamilyId: 'family', createdAt: at },
+  );
+  assert.equal(coverage.length, 1);
+  await new MemoryIntelligenceAcceptanceRepository().save(
+    'coverage_decision',
+    coverage[0]!.coverageDecisionId,
+    coverage[0]!,
+  );
+  await assert.rejects(
+    () =>
+      new MemoryIntelligenceAcceptanceRepository().save(
+        'coverage_decision',
+        `${coverage[0]!.coverageDecisionId}-tampered`,
+        coverage[0]!,
+      ),
+    /derived_id/,
+  );
+  const criterion = {
+    criterionId: 'scoped-xau-cpi',
+    engine: 'ifp1' as const,
+    metric: 'releaseAlignmentAgreement',
+    scope: {
+      assets: ['xau_usd'],
+      eventClasses: ['cpi'],
+      horizons: ['follow_through'],
+      segments: ['qualified'],
+    },
+    rule: 'gte' as const,
+    threshold: 1,
+    upperThreshold: null,
+    minimumSampleSize: 2,
+    required: true,
+    structuralTreatment: 'must_evaluate' as const,
+    rationale: 'test-only scoped selection',
+  } satisfies EmpiricalAcceptancePolicy['criteria'][number];
+  const scopedCase = (asset: string, eventClass: string, horizon: string, regime: string) =>
+    ({ outputs: { confidence: { asset, eventClass, horizon, regime, evidenceSufficiency: 'sufficient', sourceClass: 'qualified' } } }) as unknown as FrozenCaseResult;
+  assert.equal(caseMatchesEmpiricalScope(scopedCase('xau_usd', 'cpi', 'follow_through', 'calm'), criterion), true);
+  assert.equal(caseMatchesEmpiricalScope(scopedCase('eur_usd', 'cpi', 'follow_through', 'calm'), criterion), false);
+  assert.equal(caseMatchesEmpiricalScope(scopedCase('xau_usd', 'nfp', 'follow_through', 'calm'), criterion), false);
+  assert.equal(caseMatchesEmpiricalScope(scopedCase('xau_usd', 'cpi', 'initial', 'calm'), criterion), false);
+  const wildcard = { ...criterion, scope: { assets: [], eventClasses: [], horizons: [], segments: [] } };
+  assert.equal(caseMatchesEmpiricalScope(scopedCase('eur_usd', 'nfp', 'initial', 'tense'), wildcard), true);
   assert.throws(() => finalizeSplit({ ...split, holdoutEventIds: ['cal'] }), /overlap/);
   const baseline = createConfiguration({
     configurationVersionId: 'baseline',

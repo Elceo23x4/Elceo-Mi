@@ -228,6 +228,7 @@ export class IntelligenceAcceptanceService {
           datasetId: dataset.datasetId,
           splitId: split.splitId,
           acceptanceRunFamilyId: input.runFamilyId,
+          createdAt: input.createdAt,
         },
       );
       const risks = input.residualRisks ?? [];

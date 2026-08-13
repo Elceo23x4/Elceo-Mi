@@ -9,6 +9,7 @@ import type {
   ResidualRisk,
   RollbackEvidence,
   SplitManifest,
+  EmpiricalCriterionResult,
 } from './contracts';
 import { INTELLIGENCE_ACCEPTANCE_POLICY_VERSION } from './contracts';
 import { verifyDatasetCertification } from './dataset-policy';
@@ -17,6 +18,79 @@ import { segmentedEngineDiagnostics } from './metrics';
 import { crossEngineViolations } from './reports';
 import { deriveCalibrationDecision } from './configuration-registry';
 import type { EmpiricalEngineState, EmpiricalAcceptancePolicy } from './contracts';
+type EmpiricalCriterion = EmpiricalAcceptancePolicy['criteria'][number];
+
+/** Empty scope arrays are explicit wildcards. Segments match persisted confidence segmentation. */
+export function caseMatchesEmpiricalScope(row: FrozenCaseResult, criterion: EmpiricalCriterion) {
+  const { scope } = criterion,
+    confidence = row.outputs.confidence,
+    matches = (allowed: readonly string[], value: string) =>
+      allowed.length === 0 || allowed.includes(value),
+    segments = [confidence.regime, confidence.evidenceSufficiency, confidence.sourceClass];
+  return (
+    matches(scope.assets, confidence.asset) &&
+    matches(scope.eventClasses, confidence.eventClass) &&
+    matches(scope.horizons, confidence.horizon) &&
+    (scope.segments.length === 0 || scope.segments.some((segment) => segments.includes(segment)))
+  );
+}
+
+function criterionResults(
+  policy: EmpiricalAcceptancePolicy,
+  cases: readonly FrozenCaseResult[],
+): EmpiricalCriterionResult[] {
+  return policy.criteria.map((criterion) => {
+    const scoped = cases.filter((row) => caseMatchesEmpiricalScope(row, criterion));
+    if (scoped.length < criterion.minimumSampleSize)
+      return {
+        criterionId: criterion.criterionId,
+        matchedSampleN: scoped.length,
+        metricValue: null,
+        state: 'insufficient_evidence',
+        reason: 'scoped_minimum_sample_not_met',
+      };
+    const diagnostics = segmentedEngineDiagnostics(scoped),
+      value = `${criterion.engine}.${criterion.metric}`
+        .split('.')
+        .reduce<unknown>(
+          (current, key) =>
+            typeof current === 'object' && current !== null
+              ? (current as Record<string, unknown>)[key]
+              : undefined,
+          diagnostics,
+        ),
+      violations = scoped.flatMap((row) => crossEngineViolations(row.outputs));
+    let passed: boolean | null = null;
+    if (criterion.rule === 'no_correctness_violation')
+      passed = !violations.some((item) => item.includes(criterion.metric));
+    else if (typeof value === 'number') {
+      if (criterion.rule === 'gte' && criterion.threshold !== null)
+        passed = value >= criterion.threshold;
+      else if (criterion.rule === 'lte' && criterion.threshold !== null)
+        passed = value <= criterion.threshold;
+      else if (
+        criterion.rule === 'between' &&
+        criterion.threshold !== null &&
+        criterion.upperThreshold !== null
+      )
+        passed = value >= criterion.threshold && value <= criterion.upperThreshold;
+      else if (criterion.rule === 'zero_required') passed = value === 0;
+    } else if (criterion.rule === 'monotonic_order_required' && typeof value === 'boolean')
+      passed = value;
+    return {
+      criterionId: criterion.criterionId,
+      matchedSampleN: scoped.length,
+      metricValue: typeof value === 'number' || typeof value === 'boolean' ? value : null,
+      state: passed === null ? 'insufficient_evidence' : passed ? 'pass' : 'fail',
+      reason:
+        passed === null
+          ? 'scoped_metric_unavailable'
+          : passed
+            ? 'scoped_criterion_satisfied'
+            : 'scoped_criterion_failed',
+    };
+  });
+}
 function empiricalStates(
   cases: readonly FrozenCaseResult[],
   violations: readonly string[] = [],
@@ -102,44 +176,15 @@ export function decideValidatedAcceptance(input: ValidatedAcceptanceState): Acce
           'insufficient_evidence',
         ]),
       ) as ReturnType<typeof empiricalStates>);
-  if (input.empiricalAcceptancePolicy) {
-    const metric = (path: string) =>
-      path
-        .split('.')
-        .reduce<unknown>(
-          (value, key) =>
-            typeof value === 'object' && value !== null
-              ? (value as Record<string, unknown>)[key]
-              : undefined,
-          diagnostics,
-        );
-    for (const criterion of input.empiricalAcceptancePolicy.criteria) {
-      if (input.cases.length < criterion.minimumSampleSize) {
-        if (criterion.required) engineStates[criterion.engine] = 'insufficient_evidence';
-        continue;
-      }
-      const value = metric(`${criterion.engine}.${criterion.metric}`);
-      let passed = false;
-      if (criterion.rule === 'no_correctness_violation')
-        passed = !violations.some((item) => item.includes(criterion.metric));
-      else if (typeof value === 'number')
-        passed =
-          criterion.rule === 'gte' && criterion.threshold !== null
-            ? value >= criterion.threshold
-            : criterion.rule === 'lte' && criterion.threshold !== null
-              ? value <= criterion.threshold
-              : criterion.rule === 'between' &&
-                  criterion.threshold !== null &&
-                  criterion.upperThreshold !== null
-                ? value >= criterion.threshold && value <= criterion.upperThreshold
-                : criterion.rule === 'zero_required'
-                  ? value === 0
-                  : false;
-      else if (criterion.rule === 'monotonic_order_required') passed = value === true;
-      if (!passed)
-        engineStates[criterion.engine] = value === undefined ? 'insufficient_evidence' : 'fail';
-    }
-  }
+  const evaluatedCriteria = input.empiricalAcceptancePolicy
+    ? criterionResults(input.empiricalAcceptancePolicy, input.cases)
+    : [];
+  if (input.empiricalAcceptancePolicy)
+    input.empiricalAcceptancePolicy.criteria.forEach((criterion, index) => {
+      const result = evaluatedCriteria[index];
+      if (criterion.required && result && result.state !== 'pass')
+        engineStates[criterion.engine] = result.state;
+    });
   if (
     Object.values(engineStates).some(
       (state) => state === 'fail' || state === 'insufficient_evidence',
@@ -188,6 +233,7 @@ export function decideValidatedAcceptance(input: ValidatedAcceptanceState): Acce
     caseResultHashes: input.cases.map((c) => c.canonicalPayloadHash).sort(),
     coverageDecisions: input.coverage,
     engineDiagnostics: diagnostics,
+    empiricalCriterionResults: evaluatedCriteria,
     crossEngineViolations: violations,
     unexplainedZeroCount,
     rollbackEvidenceId: input.rollback?.rollbackEvidenceId ?? null,

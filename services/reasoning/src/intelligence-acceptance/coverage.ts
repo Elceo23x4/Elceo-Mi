@@ -27,7 +27,12 @@ export function evaluateCoverage(
   policy: CoveragePolicy,
   cases: readonly DecisionTimeEvidence[],
   approvedStructuralDecisions: ReadonlySet<string>,
-  identity: { datasetId: string; splitId: string; acceptanceRunFamilyId: string },
+  identity: {
+    datasetId: string;
+    splitId: string;
+    acceptanceRunFamilyId: string;
+    createdAt: string;
+  },
 ): CoverageDecision[] {
   if (policy.status !== 'approved') return [];
   const { canonicalPayloadHash, ...policyBody } = policy;
@@ -73,7 +78,12 @@ export function evaluateCoverage(
           missingEvidenceFamilies: cell.structuralDecisionId ? [] : missing,
           state,
         };
-      return { ...base, coverageDecisionId: `ifp8-coverage-${canonicalHash(base).slice(0, 32)}` };
+      const hash = canonicalHash(base);
+      return {
+        ...base,
+        coverageDecisionId: `ifp8-coverage-${hash.slice(0, 32)}`,
+        canonicalPayloadHash: hash,
+      };
     })
     .sort((a, b) => a.cellId.localeCompare(b.cellId));
 }

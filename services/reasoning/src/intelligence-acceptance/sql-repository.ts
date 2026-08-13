@@ -13,6 +13,22 @@ const payload = <K extends AcceptanceRecordKind>(row: { canonical_payload: unkno
   (typeof row.canonical_payload === 'string'
     ? JSON.parse(row.canonical_payload)
     : row.canonical_payload) as AcceptanceEntityMap[K];
+const immutableTimestamp = <K extends AcceptanceRecordKind>(kind: K, value: AcceptanceEntityMap[K]) => {
+  const fields: Record<AcceptanceRecordKind, string> = {
+    dataset_manifest: 'generatedAt',
+    dataset_certification: 'certifiedAt',
+    split_manifest: 'createdAt',
+    configuration_version: 'createdAt',
+    calibration_trial: 'createdAt',
+    holdout_lifecycle: 'selectedAt',
+    case_result: 'frozenAt',
+    coverage_decision: 'createdAt',
+    residual_risk: 'createdAt',
+    rollback_evidence: 'createdAt',
+    acceptance_run: 'createdAt',
+  };
+  return String((value as unknown as Record<string, unknown>)[fields[kind]]);
+};
 export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptanceRepository {
   constructor(private readonly pool: SqlPool) {}
   async save<K extends AcceptanceRecordKind>(kind: K, id: string, value: AcceptanceEntityMap[K]) {
@@ -61,17 +77,7 @@ export class SqlIntelligenceAcceptanceRepository implements IntelligenceAcceptan
         id,
         JSON.stringify(value),
         (value as { canonicalPayloadHash: string }).canonicalPayloadHash,
-        (
-          value as {
-            createdAt?: string;
-            generatedAt?: string;
-            certifiedAt?: string;
-            selectedAt?: string;
-          }
-        ).createdAt ??
-          (value as { generatedAt?: string }).generatedAt ??
-          (value as { certifiedAt?: string }).certifiedAt ??
-          (value as { selectedAt?: string }).selectedAt,
+        immutableTimestamp(kind, value),
       ],
     );
     return value;

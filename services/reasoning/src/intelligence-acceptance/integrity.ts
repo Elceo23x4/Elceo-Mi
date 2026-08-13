@@ -10,6 +10,21 @@ export function validateAcceptanceEntity<K extends AcceptanceRecordKind>(
   const record = value as unknown as Record<string, unknown>,
     hash = String(record.canonicalPayloadHash),
     body = without(record, 'canonicalPayloadHash');
+  const timestampFields: Record<AcceptanceRecordKind, string> = {
+    dataset_manifest: 'generatedAt',
+    dataset_certification: 'certifiedAt',
+    split_manifest: 'createdAt',
+    configuration_version: 'createdAt',
+    calibration_trial: 'createdAt',
+    holdout_lifecycle: 'selectedAt',
+    case_result: 'frozenAt',
+    coverage_decision: 'createdAt',
+    residual_risk: 'createdAt',
+    rollback_evidence: 'createdAt',
+    acceptance_run: 'createdAt',
+  };
+  if (!Number.isFinite(Date.parse(String(record[timestampFields[kind]] ?? ''))))
+    throw new Error(`invalid_${kind}_persistence_timestamp`);
   let hashBody = body;
   if (kind === 'dataset_certification') hashBody = without(body, 'certificationId');
   if (kind === 'split_manifest') hashBody = without(body, 'splitId');
@@ -63,7 +78,10 @@ export function validateAcceptanceEntity<K extends AcceptanceRecordKind>(
   }
   if (kind === 'coverage_decision') {
     const row = value as AcceptanceEntityMap['coverage_decision'];
-    if (id !== row.coverageDecisionId || !row.coverageDecisionId.startsWith('ifp8-coverage-'))
+    if (
+      id !== row.coverageDecisionId ||
+      row.coverageDecisionId !== `ifp8-coverage-${hash.slice(0, 32)}`
+    )
       throw new Error('invalid_coverage_decision_derived_id');
   }
   if (kind === 'acceptance_run') {

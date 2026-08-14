@@ -45,3 +45,9 @@ Admission and execution authority are separate. A reservation begins `RESERVED`;
 Staging-live adapters must expose the managed `fetchManaged` contract and honor its `AbortSignal`. The trusted policy's `providerTimeoutMs` is enforced by the gate, and the canonical 250 ms settlement safety margin must keep `providerTimeoutMs + margin < leaseDurationMs`. Tiingo uses the gate signal for live HTTP instead of creating an independent timeout. After transmission, timeout/abort is conservatively settled as `COMMIT_REQUIRED_UNKNOWN_OUTCOME`, and concurrency is released only after the managed adapter promise terminates.
 
 Settlement requires the execution token, so a follower cannot settle or release another executor's state. A pre-execution release refunds rate only when the complete rate hash still exists; it cannot resurrect an expired partial token-bucket hash. No result waiting, sharing, coalescing, or cache behavior is included—those remain PGS-2 scope.
+
+## PGS-1C execution lease horizon
+
+The atomic execution claim now renews the existing concurrency occupant from Redis `TIME` to `TIME + leaseDurationMs` without increasing the semaphore count. Its authoritative result carries `claimedAt`, `executionToken`, and `executionLeaseExpiresAt`; the gate uses this claimed reservation rather than the admission-time lease snapshot.
+
+If and only if a `RESERVED` admission's original lease is already absent or expired, the same claim script terminally releases it: current rate state is capacity-capped without recreating an expired key, matching-window quota and cost reservations are released, the stale lease member is removed, and the admission becomes a bounded `RELEASED` tombstone. Newer accounting windows are never decremented. `EXECUTING` admissions remain conservative and are never auto-refunded after lease expiry. Followers see `provider_control_admission_in_progress` and do not renew, execute, settle, or refund.

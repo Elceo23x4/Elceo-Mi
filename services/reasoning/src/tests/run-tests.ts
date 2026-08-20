@@ -61,6 +61,8 @@ import { runMarketReasoningReadinessTests } from './market-reasoning-readiness.t
 import { runFrontendContractSchemaTests } from './frontend-contracts.test.js';
 import { runRcAFormulaRegressionTests } from './rc-a-formula-regression.test.js';
 import { runProviderApiGateTests } from './provider-api-gate.test.js';
+import { runProviderControlTests } from './provider-control.test.js';
+import { runProviderControlRedisIntegrationTests } from './provider-control-redis.test.js';
 import { runProviderUnmanagedCallInventoryTests } from './provider-unmanaged-call-inventory.test.js';
 import { runProviderLivePayloadValidationTests } from './provider-live-payload-validation.test.js';
 import { runExpectationRealityTests } from './expectation-reality.test.js';
@@ -138,6 +140,8 @@ async function run(): Promise<void> {
   runMarketReasoningReadinessTests();
   runFrontendContractSchemaTests();
   await runProviderApiGateTests();
+  await runProviderControlTests();
+  await runProviderControlRedisIntegrationTests();
   runProviderUnmanagedCallInventoryTests();
   await runProviderLivePayloadValidationTests();
   await runExpectationRealityTests();

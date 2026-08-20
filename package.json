@@ -14,6 +14,7 @@
     "lint": "npm run --workspaces --if-present lint",
     "typecheck": "npm run --workspaces --if-present typecheck",
     "test": "npm run --workspaces --if-present test && node scripts/security-rc-j-self-test.mjs",
+    "test:provider-control-redis": "PROVIDER_CONTROL_REDIS_INTEGRATION=1 npm run -w services/reasoning test",
     "check:runtime": "node scripts/check-runtime-contract.mjs",
     "check:dependency-compatibility": "node scripts/check-dependency-compatibility.mjs",
     "check:sharp-exception-upstream": "node scripts/check-sharp-exception-upstream.mjs",

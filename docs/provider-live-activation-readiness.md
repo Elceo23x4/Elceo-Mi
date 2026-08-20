@@ -1,5 +1,7 @@
 # Provider Live Activation Readiness (C5-A21)
 
+> PGS-1 adds the fail-closed distributed admission foundation described in [Provider API Gate scale hardening](./provider-api-gate-scale-hardening.md). It does not activate providers or establish live/production scale readiness; PGS-2 through PGS-5 remain required.
+
 C5-A21 introduces staging-only live provider activation planning gates.
 
 - Canonical contracts added for activation policy, readiness status, readiness snapshot, quota policy, and smoke plan.

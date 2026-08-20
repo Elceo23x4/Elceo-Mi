@@ -1,4 +1,4 @@
-import type { MarketEvidenceProviderAdapter } from '../normalization-contracts';
+import type { MarketEvidenceProviderAdapter, ProviderManagedExecution } from '../normalization-contracts';
 import type { ProviderSourceRequest, ProviderSourceResponse } from '@elceo/types';
 import type { TiingoFixtureResponse, TiingoPriceBar, TiingoPriceHistoryRequest } from './tiingo-contracts';
 import { TIINGO_FIXTURES } from './fixtures';
@@ -30,7 +30,9 @@ export class TiingoMarketDataAdapter implements MarketEvidenceProviderAdapter {
   public readonly descriptor = getProviderDescriptor(TIINGO_PROVIDER_ID) ?? (() => { throw new Error('missing_tiingo_descriptor'); })();
   constructor(private readonly config: TiingoRuntimeConfig = {}) {}
 
-  async fetch(request: ProviderSourceRequest): Promise<ProviderSourceResponse> {
+  async fetch(request: ProviderSourceRequest): Promise<ProviderSourceResponse> { return this.fetchInternal(request); }
+  async fetchManaged(request:ProviderSourceRequest,execution:ProviderManagedExecution):Promise<ProviderSourceResponse>{return this.fetchInternal(request,execution);}
+  private async fetchInternal(request:ProviderSourceRequest,execution?:ProviderManagedExecution):Promise<ProviderSourceResponse> {
     const cfg = resolveTiingoConfig(this.config);
     if (!SUPPORTED_CAPABILITIES.has(request.capability)) return { ...baseResponse(request), status: 'unsupported', rawPayloadJson: null, errorCode: 'unsupported_capability', errorMessage: `Unsupported capability: ${request.capability}` };
     if (request.asset === null) return { ...baseResponse(request), status: 'failed', rawPayloadJson: null, errorCode: 'missing_asset', errorMessage: 'Asset is required for tiingo fetch' };
@@ -41,7 +43,7 @@ export class TiingoMarketDataAdapter implements MarketEvidenceProviderAdapter {
     }
     if (cfg.mode === 'live_disabled' || !cfg.liveEnabled) return { ...baseResponse(request), status: 'failed', rawPayloadJson: null, errorCode: 'tiingo_live_disabled', errorMessage: 'Live Tiingo fetch is disabled' };
     if (!cfg.apiKey) return { ...baseResponse(request), status: 'failed', rawPayloadJson: null, errorCode: 'missing_api_key', errorMessage: 'TIINGO_API_KEY required for live mode' };
-    const live = await fetchLiveTiingoBars(buildTiingoRequest(request), cfg);
+    const live = await fetchLiveTiingoBars(buildTiingoRequest(request), cfg, execution);
     if (live.ok) return { ...baseResponse(request), status: 'success', rawPayloadJson: JSON.stringify(live.payload), sourceUrl: live.sourceUrl, errorCode: null, errorMessage: null };
     const failed = live as { ok: false; errorCode: string; errorMessage: string };
     return { ...baseResponse(request), status: 'failed', rawPayloadJson: null, errorCode: failed.errorCode, errorMessage: failed.errorMessage };
@@ -49,12 +51,12 @@ export class TiingoMarketDataAdapter implements MarketEvidenceProviderAdapter {
 
   async normalize(response: ProviderSourceResponse) { if (response.rawPayloadJson === null || response.rawPayloadJson.trim()==='') return []; const parsed = JSON.parse(response.rawPayloadJson) as TiingoFixtureResponse; if (!parsed || !parsed.request || !Array.isArray(parsed.bars)) throw new Error('tiingo_malformed_payload'); return normalizeTiingoPriceBars(parsed.request, parsed.bars as TiingoPriceBar[], response.providerId).payloads; }
 }
-async function fetchLiveTiingoBars(request: TiingoPriceHistoryRequest, cfg: ReturnType<typeof resolveTiingoConfig>): Promise<{ok:true;payload:TiingoFixtureResponse;sourceUrl:string}|{ok:false;errorCode:string;errorMessage:string}> {
+async function fetchLiveTiingoBars(request: TiingoPriceHistoryRequest, cfg: ReturnType<typeof resolveTiingoConfig>, managed?:ProviderManagedExecution): Promise<{ok:true;payload:TiingoFixtureResponse;sourceUrl:string}|{ok:false;errorCode:string;errorMessage:string}> {
   const url = `${cfg.baseUrl.replace(/\/$/, '')}/tiingo/daily/${encodeURIComponent(request.ticker)}/prices?token=${encodeURIComponent(cfg.apiKey ?? '')}`;
-  const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
-  try { const response = await cfg.fetchImpl(url, { signal: controller.signal }); if (!response.ok) return { ok:false, errorCode:'tiingo_http_error', errorMessage:`HTTP ${response.status}`}; const json = await response.json() as unknown; if (!Array.isArray(json)) return { ok:false, errorCode:'tiingo_malformed_live_payload', errorMessage:'Expected array payload'}; return { ok:true, payload:{ request, bars: json as TiingoPriceBar[] }, sourceUrl:url }; }
+  const controller=managed?null:new AbortController();const timer=managed?null:setTimeout(()=>controller!.abort(),cfg.timeoutMs);const signal=managed?.signal??controller!.signal;
+  try { const response = await cfg.fetchImpl(url, { signal }); if (!response.ok) return { ok:false, errorCode:'tiingo_http_error', errorMessage:`HTTP ${response.status}`}; const json = await response.json() as unknown; if (!Array.isArray(json)) return { ok:false, errorCode:'tiingo_malformed_live_payload', errorMessage:'Expected array payload'}; return { ok:true, payload:{ request, bars: json as TiingoPriceBar[] }, sourceUrl:url }; }
   catch (error) { if (error instanceof Error && error.name === 'AbortError') return { ok:false, errorCode:'tiingo_timeout', errorMessage:'Tiingo request timed out' }; return { ok:false, errorCode:'tiingo_fetch_error', errorMessage:error instanceof Error ? error.message : 'unknown_error' }; }
-  finally { clearTimeout(timer); }
+  finally { if(timer)clearTimeout(timer); }
 }
 function buildTiingoRequest(request: ProviderSourceRequest): TiingoPriceHistoryRequest { return { asset: request.asset ?? 'unknown', ticker: mapAssetToTiingoTicker(request.asset ?? 'unknown'), startDate: null, endDate: null, frequency: 'daily', requestedAt: request.requestedAt }; }
 function baseResponse(request: ProviderSourceRequest): ProviderSourceResponse { return { requestId: request.requestId, providerId: request.providerId, capability: request.capability, status: 'failed', fetchedAt: request.requestedAt, sourceUrl: null, rawPayloadJson: null, errorCode: null, errorMessage: null }; }

@@ -51,3 +51,10 @@ Settlement requires the execution token, so a follower cannot settle or release 
 The atomic execution claim now renews the existing concurrency occupant from Redis `TIME` to `TIME + leaseDurationMs` without increasing the semaphore count. Its authoritative result carries `claimedAt`, `executionToken`, and `executionLeaseExpiresAt`; the gate uses this claimed reservation rather than the admission-time lease snapshot.
 
 If and only if a `RESERVED` admission's original lease is already absent or expired, the same claim script terminally releases it: current rate state is capacity-capped without recreating an expired key, matching-window quota and cost reservations are released, the stale lease member is removed, and the admission becomes a bounded `RELEASED` tombstone. Newer accounting windows are never decremented. `EXECUTING` admissions remain conservative and are never auto-refunded after lease expiry. Followers see `provider_control_admission_in_progress` and do not renew, execute, settle, or refund.
+
+
+## PGS-1D claim reconciliation
+
+Execution claims are idempotent for the caller's execution token. If a bounded Redis command has an ambiguous outcome, the store makes exactly one reconciliation claim with the same token. An already-`EXECUTING` reservation is returned only to that token; a different-token follower receives `provider_control_admission_in_progress` without lease renewal or accounting mutation. The gate executes an adapter only after positive ownership confirmation, and two unconfirmed attempts fail closed.
+
+Abandoned-reservation rate refunds require a complete canonical token bucket: both `tokens` and `last` fields and a positive TTL. Missing fields or TTL prevent mutation, so cleanup cannot convert partial or immortal Redis state into a valid-looking bucket. This remains PGS-1 distributed-control closure only; PGS-2 caching, waiting, and result coalescing have not started.

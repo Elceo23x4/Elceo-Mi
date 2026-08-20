@@ -206,7 +206,14 @@ export class ProviderCacheCoordinator {
       }
     }
     if (role === 'follower') {
-      return this.failureOrStale(identity, policy, role, 'provider_singleflight_wait_timeout', hadStaleCandidate);
+      // A follower deadline is not evidence that the owner failed. In
+      // particular, do not turn a slow, healthy refresh into stale-if-error.
+      return {
+        failureReason: 'provider_singleflight_wait_timeout',
+        layer: 'none',
+        freshness: 'miss',
+        role,
+      };
     }
     const abort = new AbortController();
     let lost = false;

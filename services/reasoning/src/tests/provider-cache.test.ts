@@ -4,6 +4,7 @@ import {
   assertProviderCachePolicyAuthority,
   buildProviderCacheIdentity,
   hashProviderCachePolicy,
+  hashProviderCachedMaterial,
   ProviderCacheCoordinator,
   ProviderL1Cache,
   responseFromMaterial,
@@ -19,7 +20,7 @@ import {
   type ProviderSharedFailureReason,
 } from '../provider-sources/provider-cache/index.js';
 import { executeProviderApiGateRequest, type ProviderRuntimeRequest, type ProviderRuntimeResponse } from '../provider-sources/provider-api-gate.js';
-import { MemoryProviderControlStore, type ProviderControlStore } from '../provider-sources/provider-control/index.js';
+import { buildProviderRequestFingerprint, MemoryProviderControlStore, type ProviderControlStore } from '../provider-sources/provider-control/index.js';
 import { buildTestProviderControlPolicy } from './provider-control.test.js';
 
 export function buildTestProviderCachePolicy(
@@ -187,11 +188,27 @@ export async function runProviderCacheTests(): Promise<void> {
   const context = { cacheCoordinator: coordinator, cachePolicyResolver: { resolve: async () => policy }, providerControlStore: controlStore, policyResolver: { resolve: async () => controlPolicy }, credentialPoolId: 'primary' };
   const poisoned = liveRequest('caller-0', { cacheHitPayload: compatibilityResponse('caller-0', 'poison'), stalePayload: compatibilityResponse('caller-0', 'stale-poison'), fallbackMode: 'stale_if_error' });
   const poisonedResult = await executeProviderApiGateRequest(poisoned, adapter, context);
+  assert.equal(poisonedResult.decision.providerCallMode, 'live_staging_call', 'publishing owner remains a truthful live call');
+  assert.equal(poisonedResult.settlementState, 'settled_committed');
+  assert.ok(poisonedResult.providerControlSnapshot);
+  assert.equal(poisonedResult.cacheSnapshot?.singleFlightRole, 'owner');
+  assert.equal(poisonedResult.cacheSnapshot?.singleFlightOutcome, 'published');
   assert.equal(JSON.stringify(poisonedResult.response?.payload).includes('poison'), false);
   assert.ok(cacheStore.entry, `real provider success must publish cache: ${poisonedResult.decision.reason}/${poisonedResult.settlementState}/attempts=${cacheStore.publishAttempts}/bytes=${cacheStore.publishedBytes}/completion=${cacheStore.completion?.reason}`);
   const cachedResult = await executeProviderApiGateRequest(liveRequest('caller-cache-check'), adapter, context);
   assert.equal(JSON.stringify(cachedResult.response?.payload).includes('poison'), false);
   assert.equal(adapterCalls, 1, 'live compatibility payload must not cause a second adapter call');
+  assert.equal(cachedResult.decision.providerCallMode, 'cache_response');
+  assert.equal(cachedResult.settlementState, 'not_required');
+  assert.equal(cachedResult.providerControlSnapshot, undefined);
+
+  const resolverSecret = 'Bearer sk_live_resolver_secret';
+  const resolverFailure = await executeProviderApiGateRequest(liveRequest('resolver-error'), adapter, {
+    ...context,
+    cachePolicyResolver: { resolve: async () => { throw new Error(resolverSecret); } },
+  });
+  assert.equal(resolverFailure.decision.reason, 'provider_cache_policy_missing');
+  assert.equal(JSON.stringify(resolverFailure).includes(resolverSecret), false);
 
   const responses = await Promise.all(Array.from({ length: 1_000 }, (_, index) => executeProviderApiGateRequest(liveRequest(`wave-${index}`), adapter, context)));
   assert.equal(adapterCalls, 1, 'same-process wave adapter count');
@@ -208,6 +225,42 @@ export async function runProviderCacheTests(): Promise<void> {
   assert.equal(rematerialized.revision, material.revision);
   assert.deepEqual(rematerialized.duplicateProviderIds, material.duplicateProviderIds);
   assert.deepEqual(rematerialized.duplicateRecordKeys, material.duplicateRecordKeys);
+
+  // Cached material is revalidated for each caller rather than inheriting the
+  // leader's validation choices.
+  const validationRequest = { ...liveRequest('validation-reader', { allowUnknownFields: true, allowedNullableFields: ['optional'], dedupeRecordKey: 'id' }), region: 'validation' };
+  const validationIdentity = buildProviderCacheIdentity(validationRequest, policy, 'primary', buildProviderRequestFingerprint(validationRequest));
+  const baseValidationMaterial = Object.fromEntries(Object.entries(material).filter(([key]) => key !== 'materialIntegrityHash')) as Omit<ProviderCachedMaterial, 'materialIntegrityHash'>;
+  const validationUnsigned = { ...baseValidationMaterial, fingerprint: validationIdentity.fingerprint, payload: { records: [{ id: 'same' }, { id: 'same' }] }, payloadSizeBytes: 41, recordCount: 2, unknownFields: ['test-field'], nullableFields: ['optional'], duplicateRecordKeys: [] };
+  const validationMaterial = { ...validationUnsigned, materialIntegrityHash: hashProviderCachedMaterial(validationUnsigned) } as ProviderCachedMaterial;
+  const validationNow = Date.now();
+  const validationStore = new TestCacheStore();
+  validationStore.entry = { entrySchemaVersion: 'provider_cache_entry_v1', publishedAt: validationNow, freshUntil: validationNow + 5_000, staleUntil: validationNow + 10_000, material: validationMaterial };
+  const validationContext = { ...context, cacheCoordinator: new ProviderCacheCoordinator(validationStore) };
+  const compatible = await executeProviderApiGateRequest(validationRequest, adapter, validationContext);
+  assert.deepEqual(compatible.response?.duplicateRecordKeys, ['same']);
+  await assert.rejects(
+    () => executeProviderApiGateRequest({ ...validationRequest, requestId: 'validation-strict', policy: { ...validationRequest.policy, allowUnknownFields: false } }, adapter, validationContext),
+    /unknown_response_fields/,
+  );
+  await assert.rejects(
+    () => executeProviderApiGateRequest({ ...validationRequest, requestId: 'validation-nullable', policy: { ...validationRequest.policy, allowedNullableFields: [] } }, adapter, validationContext),
+    /nullable_field_not_allowed/,
+  );
+
+  const timeoutStore = new TestCacheStore();
+  timeoutStore.entry = { ...cacheStore.entry!, freshUntil: Date.now() - 1, staleUntil: Date.now() + 5_000 };
+  timeoutStore.token = 'healthy-owner';
+  let timeoutOwnerCalls = 0;
+  const timeoutOutcome = await new ProviderCacheCoordinator(timeoutStore).execute(
+    liveRequest('follower-timeout'),
+    identity,
+    buildTestProviderCachePolicy({ followerWaitTimeoutMs: 100, completionTtlMs: 50 }),
+    async () => { timeoutOwnerCalls += 1; throw new Error('must_not_execute'); },
+  );
+  assert.equal(timeoutOutcome.failureReason, 'provider_singleflight_wait_timeout');
+  assert.equal(timeoutOutcome.material, undefined, 'active-owner timeout must not serve stale');
+  assert.equal(timeoutOwnerCalls, 0);
 
   const runNonCacheableCase = async (
     name: string,

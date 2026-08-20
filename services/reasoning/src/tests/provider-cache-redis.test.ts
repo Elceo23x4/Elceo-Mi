@@ -82,6 +82,16 @@ export async function runProviderCacheRedisIntegrationTests(): Promise<void> {
     assert.equal(admits, 1, '1,000 same-process gate requests must admit PGS-1 once');
     assert.equal(claims, 1, '1,000 same-process gate requests must claim PGS-1 once');
     assert.equal(localCoordinator.localInflightSize, 0);
+    const owners = localWave.filter((result) => result.cacheSnapshot?.singleFlightRole === 'owner');
+    assert.equal(owners.length, 1, 'exactly one caller must report distributed ownership');
+    assert.equal(owners[0]!.decision.providerCallMode, 'live_staging_call');
+    assert.equal(owners[0]!.settlementState, 'settled_committed');
+    assert.ok(owners[0]!.providerControlSnapshot);
+    const followers = localWave.filter((result) => result.cacheSnapshot?.singleFlightRole !== 'owner');
+    assert.equal(followers.length, 999);
+    assert.ok(followers.every((result) => result.decision.providerCallMode === 'cache_response'));
+    assert.ok(followers.every((result) => result.settlementState === 'not_required'));
+    assert.ok(followers.every((result) => result.providerControlSnapshot === undefined));
     for (let index = 0; index < localWave.length; index += 1) {
       assert.equal(localWave[index]!.response?.requestId, `local-${index}`);
       assert.equal(localWave[index]!.response?.provenance.requestId, `local-${index}`);
@@ -104,6 +114,51 @@ export async function runProviderCacheRedisIntegrationTests(): Promise<void> {
     assert.equal(claims - before.claims, 1);
     const badCrossIndex = crossWave.findIndex((result, index) => result.response?.requestId !== `cross-${index}` || result.response.provenance.requestId !== `cross-${index}`);
     assert.equal(badCrossIndex, -1, `cross caller identity: index=${badCrossIndex} result=${badCrossIndex >= 0 ? JSON.stringify(crossWave[badCrossIndex]) : 'none'}`);
+
+    // Preserve PGS-1's ambiguous/lost CLAIM acceptance proofs through the
+    // mandatory PGS-2 owner boundary.
+    const recoveryCachePolicy = buildTestProviderCachePolicy({ policyVersion: 'claim-recovery-cache', flightLeaseMs: 2_000, followerWaitTimeoutMs: 4_000 });
+    const recoveryControlPolicy = buildTestProviderControlPolicy({ policyVersion: 'claim-recovery-control', rate: { capacity: 2, refillAmount: 2, refillIntervalMs: 60_000, requestTokens: 1 }, quota: { kind: 'fixed_duration', limit: 2, windowMs: 60_000 }, cost: { kind: 'fixed_duration', budgetUnits: 2, windowMs: 60_000, requestCostUnits: 1 }, concurrency: { maxConcurrent: 1, leaseDurationMs: 700, providerTimeoutMs: 100 } });
+    let lostClaim = true;
+    const ambiguousControl = new RedisProviderControlStore(controlClients[0]!, `${namespace}:ambiguous`, 3_000, 60_000, async (_attempt, command) => {
+      const result = await command;
+      if (lostClaim) { lostClaim = false; throw new Error('simulated_lost_claim_response'); }
+      return result;
+    });
+    let recoveryAdapterCalls = 0;
+    const recoveryAdapter = { ...adapter, fetchManaged: async (request: never) => { recoveryAdapterCalls += 1; return fixture.fetch(request); } };
+    const recoveryResult = await executeProviderApiGateRequest({ ...liveRequest('ambiguous-claim'), region: 'ambiguous-claim' }, recoveryAdapter, { cacheCoordinator: new ProviderCacheCoordinator(cacheStores[0]!), cachePolicyResolver: { resolve: async () => recoveryCachePolicy }, providerControlStore: ambiguousControl, policyResolver: { resolve: async () => recoveryControlPolicy }, credentialPoolId: 'primary' });
+    assert.equal(recoveryResult.settlementState, 'settled_committed');
+    assert.equal(recoveryAdapterCalls, 1, 'ambiguous CLAIM reconciliation invokes provider once');
+
+    let lateClaim = true;
+    const lateControl = new RedisProviderControlStore(controlClients[1]!, `${namespace}:late`, 3_000, 60_000, async (_attempt, command) => {
+      const result = await command;
+      if (lateClaim) { lateClaim = false; Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 720); throw new Error('late_lost_claim_response'); }
+      return result;
+    });
+    let lateAdapterCalls = 0;
+    const lateResult = await executeProviderApiGateRequest({ ...liveRequest('late-claim'), region: 'late-claim' }, { ...adapter, fetchManaged: async (request: never) => { lateAdapterCalls += 1; return fixture.fetch(request); } }, { cacheCoordinator: new ProviderCacheCoordinator(cacheStores[1]!), cachePolicyResolver: { resolve: async () => recoveryCachePolicy }, providerControlStore: lateControl, policyResolver: { resolve: async () => recoveryControlPolicy }, credentialPoolId: 'primary' });
+    assert.equal(lateResult.settlementState, 'settled_committed');
+    assert.equal(lateAdapterCalls, 1, 'late same-token reacquisition invokes provider once');
+
+    let timeoutAborted = false;
+    const timeoutResult = await executeProviderApiGateRequest({ ...liveRequest('managed-timeout'), region: 'managed-timeout' }, { ...adapter, fetchManaged: async (_request: never, execution: { signal: AbortSignal }) => new Promise<never>((_resolve, reject) => execution.signal.addEventListener('abort', () => { timeoutAborted = true; reject(execution.signal.reason); }, { once: true })) }, { cacheCoordinator: new ProviderCacheCoordinator(cacheStores[0]!), cachePolicyResolver: { resolve: async () => recoveryCachePolicy }, providerControlStore: controlStores[0]!, policyResolver: { resolve: async () => recoveryControlPolicy }, credentialPoolId: 'primary' });
+    assert.equal(timeoutAborted, true, 'managed timeout terminates adapter');
+    assert.equal(timeoutResult.response, null);
+
+    let unmanagedCalls = 0;
+    const unmanagedResult = await executeProviderApiGateRequest({ ...liveRequest('unmanaged'), region: 'unmanaged' }, { descriptor: fixture.descriptor, fetch: async (request: never) => { unmanagedCalls += 1; return fixture.fetch(request); }, normalize: async () => [] }, { cacheCoordinator: new ProviderCacheCoordinator(cacheStores[0]!), cachePolicyResolver: { resolve: async () => recoveryCachePolicy }, providerControlStore: controlStores[0]!, policyResolver: { resolve: async () => recoveryControlPolicy }, credentialPoolId: 'primary' });
+    assert.equal(unmanagedCalls, 0);
+    assert.equal(unmanagedResult.decision.reason, 'provider_control_managed_adapter_required');
+
+    const outageClient = createProviderControlRedisClient({ url: 'redis://127.0.0.1:1', connectTimeoutMs: 30 });
+    const outageControl = new RedisProviderControlStore(outageClient, `${namespace}:control-outage`, 50);
+    const callsBeforeOutage = adapterCalls;
+    const outageResult = await executeProviderApiGateRequest({ ...liveRequest('control-outage'), region: 'control-outage' }, adapter, { cacheCoordinator: new ProviderCacheCoordinator(cacheStores[0]!), cachePolicyResolver: { resolve: async () => recoveryCachePolicy }, providerControlStore: outageControl, policyResolver: { resolve: async () => recoveryControlPolicy }, credentialPoolId: 'primary' });
+    assert.equal(outageResult.decision.reason, 'provider_control_unavailable');
+    assert.equal(adapterCalls, callsBeforeOutage, 'PGS-1 Redis outage is before adapter');
+    await outageControl.close();
 
     const boundaryPolicy = buildTestProviderCachePolicy({ policyVersion: 'freshness-boundary', freshTtlMs: 80, staleIfErrorTtlMs: 80, flightLeaseMs: 700, followerWaitTimeoutMs: 1_000, completionTtlMs: 100, maxEntryBytes: 1_048_576 });
     const boundaryRequest = liveRequest('boundary', 'aud_usd');

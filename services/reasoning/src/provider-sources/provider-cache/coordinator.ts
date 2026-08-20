@@ -81,7 +81,17 @@ export function sanitizeProviderSharedFailureReason(value: unknown): ProviderSha
   if (reason === 'provider_singleflight_wait_timeout') return reason;
   if (reason === 'settlement_unconfirmed') return 'provider_settlement_unconfirmed';
   if (reason === 'rate_limited' || reason.includes('rate_limit')) return 'provider_rate_limited';
-  if (reason.includes('validation') || reason.includes('schema')) return 'provider_validation_failed';
+  if (
+    reason.includes('validation') ||
+    reason.includes('schema') ||
+    reason.includes('response_provenance') ||
+    reason.includes('response_identity') ||
+    reason === 'oversized_response' ||
+    reason === 'unknown_response_fields' ||
+    reason.startsWith('nullable_field_not_allowed')
+  ) {
+    return 'provider_validation_failed';
+  }
   if (reason.startsWith('provider_control_')) return 'provider_control_denied';
   return 'provider_error';
 }

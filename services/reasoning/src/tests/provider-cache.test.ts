@@ -209,6 +209,112 @@ export async function runProviderCacheTests(): Promise<void> {
   assert.deepEqual(rematerialized.duplicateProviderIds, material.duplicateProviderIds);
   assert.deepEqual(rematerialized.duplicateRecordKeys, material.duplicateRecordKeys);
 
+  const runNonCacheableCase = async (
+    name: string,
+    fetchManaged: typeof adapter.fetchManaged,
+    settleConfirmed = true,
+  ) => {
+    const caseCache = new TestCacheStore();
+    const caseControl = new MemoryProviderControlStore();
+    const caseStore: ProviderControlStore = {
+      kind: 'redis',
+      isReady: () => true,
+      admit: (admission) => caseControl.admit(admission),
+      claimExecution: (reservation, token) => caseControl.claimExecution(reservation, token),
+      settle: async (reservation, status) =>
+        settleConfirmed ? caseControl.settle(reservation, status) : false,
+      close: () => caseControl.close(),
+    };
+    const result = await executeProviderApiGateRequest(
+      { ...liveRequest(`non-cacheable-${name}`), region: name },
+      { ...adapter, fetchManaged },
+      {
+        cacheCoordinator: new ProviderCacheCoordinator(caseCache),
+        cachePolicyResolver: { resolve: async () => policy },
+        providerControlStore: caseStore,
+        policyResolver: { resolve: async () => controlPolicy },
+        credentialPoolId: 'primary',
+      },
+    );
+    assert.equal(caseCache.entry, undefined, `${name} must not publish healthy cache`);
+    assert.equal(caseCache.publishAttempts, 0, `${name} must not attempt success publication`);
+    return { result, caseCache };
+  };
+
+  const invalid = await runNonCacheableCase('invalid-response', async (sourceRequest: never) => {
+    const providerResponse = await fixture.fetch(sourceRequest);
+    return { ...providerResponse, rawPayloadJson: JSON.stringify({ value: 'x'.repeat(1_048_577) }) };
+  });
+  assert.equal(invalid.result.decision.reason, 'provider_validation_failed');
+
+  const providerError = await runNonCacheableCase('provider-error', async (sourceRequest: never) => {
+    const providerResponse = await fixture.fetch(sourceRequest);
+    return { ...providerResponse, status: 'failed' as const, errorCode: 'provider_error', errorMessage: 'temporary provider failure', rawPayloadJson: null };
+  });
+  assert.equal(providerError.caseCache.completion?.reason, 'provider_error');
+
+  const rateLimited = await runNonCacheableCase('rate-limited', async (sourceRequest: never) => {
+    const providerResponse = await fixture.fetch(sourceRequest);
+    return { ...providerResponse, status: 'failed' as const, errorCode: 'rate_limited', errorMessage: 'rate limited', rawPayloadJson: null };
+  });
+  assert.equal(rateLimited.caseCache.completion?.reason, 'provider_rate_limited');
+
+  const unconfirmed = await runNonCacheableCase(
+    'settlement-unconfirmed',
+    async (sourceRequest: never) => fixture.fetch(sourceRequest),
+    false,
+  );
+  assert.equal(unconfirmed.caseCache.completion?.reason, 'provider_settlement_unconfirmed');
+
+  const secretFailureStore = new TestCacheStore();
+  const secretFailureIdentity = buildProviderCacheIdentity(
+    { ...liveRequest('secret-failure'), region: 'secret-failure' },
+    policy,
+    'primary',
+    'v1:sha256:secret-failure',
+  );
+  const secretFailure = await new ProviderCacheCoordinator(secretFailureStore).execute(
+    { ...liveRequest('secret-failure'), region: 'secret-failure' },
+    secretFailureIdentity,
+    policy,
+    async () => {
+      throw new Error('Bearer sk_live_forbidden_completion');
+    },
+  );
+  assert.equal(secretFailure.failureReason, 'provider_error');
+  assert.equal(secretFailureStore.completion?.reason, 'provider_error');
+
+  const outageStore = new TestCacheStore();
+  const outageCoordinator = new ProviderCacheCoordinator(outageStore);
+  const outageIdentity = { ...identity, fingerprint: cacheStore.entry!.material.fingerprint };
+  outageCoordinator.l1.set(outageIdentity, cacheStore.entry!, policy);
+  outageStore.read = async () => {
+    throw new Error('redis unavailable');
+  };
+  let outageOwnerCalls = 0;
+  const l1DuringOutage = await outageCoordinator.execute(
+    liveRequest('outage-l1'),
+    outageIdentity,
+    policy,
+    async () => {
+      outageOwnerCalls += 1;
+      throw new Error('must not execute');
+    },
+  );
+  assert.ok(l1DuringOutage.material, 'validated fresh L1 may serve during Redis outage');
+  assert.equal(outageOwnerCalls, 0);
+  const l1MissDuringOutage = await outageCoordinator.execute(
+    { ...liveRequest('outage-miss'), region: 'outage-miss' },
+    { ...outageIdentity, hash: `${outageIdentity.hash}-miss`, fingerprint: 'v1:sha256:outage-miss' },
+    policy,
+    async () => {
+      outageOwnerCalls += 1;
+      throw new Error('must not execute');
+    },
+  );
+  assert.equal(l1MissDuringOutage.failureReason, 'provider_cache_control_unavailable');
+  assert.equal(outageOwnerCalls, 0);
+
   const staleStore = new TestCacheStore();
   staleStore.entry = { ...cacheStore.entry!, freshUntil: Date.now() - 1, staleUntil: Date.now() + 20 };
   const staleCoordinator = new ProviderCacheCoordinator(staleStore);

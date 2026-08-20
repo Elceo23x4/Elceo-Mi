@@ -58,3 +58,10 @@ If and only if a `RESERVED` admission's original lease is already absent or expi
 Execution claims are idempotent for the caller's execution token. If a bounded Redis command has an ambiguous outcome, the store makes exactly one reconciliation claim with the same token. An already-`EXECUTING` reservation is returned only to that token; a different-token follower receives `provider_control_admission_in_progress` without lease renewal or accounting mutation. The gate executes an adapter only after positive ownership confirmation, and two unconfirmed attempts fail closed.
 
 Abandoned-reservation rate refunds require a complete canonical token bucket: both `tokens` and `last` fields and a positive TTL. Missing fields or TTL prevent mutation, so cleanup cannot convert partial or immortal Redis state into a valid-looking bucket. This remains PGS-1 distributed-control closure only; PGS-2 caching, waiting, and result coalescing have not started.
+
+
+## PGS-1E reconciliation lease validity
+
+Same-token recovery consults Redis `TIME` and the owner semaphore member before returning execution authority. A sufficient lease is reused unchanged; an insufficient but live lease is renewed in place; and an expired lease is reacquired only after expired-member cleanup proves the trusted policy's `maxConcurrent` capacity is available. A full semaphore returns `provider_control_execution_lease_unavailable` without accounting or follower mutation.
+
+Reservations persist the approved policy's provider timeout, lease duration, settlement safety margin, and concurrency maximum for the atomic reconciliation decision. Each of the two bounded claim attempts is capped at half of the policy slack `leaseDurationMs - providerTimeoutMs - settlementSafetyMarginMs`. No caching, follower waiting, result sharing, or other PGS-2 behavior is included.

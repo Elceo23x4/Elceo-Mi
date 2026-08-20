@@ -88,3 +88,13 @@ Cross-instance followers use bounded exponential backoff with jitter and an abso
 Stale data is retained only as a synchronous stale-if-error candidate. It is returned truthfully as stale after a refresh/control failure and only inside the trusted policy's stale window. There are no background refresh jobs and no stale-while-revalidate behavior.
 
 PGS-2 does not assert production-live readiness, provider freshness calibration, or 100k-user readiness. PGS-3 and later scale-hardening work have not started.
+
+## PGS-2A acceptance closure
+
+Staging-live execution now requires both the trusted cache-policy resolver and Redis cache coordinator; neither dependency is optional and absence blocks before PGS-1 admission. Request-carried compatibility cache and stale payloads are ignored for live resolution, execution, settlement, and publication. They remain available only on deterministic non-live paths.
+
+The elected owner resolves the trusted PGS-1 policy before admission and validates `flightLeaseMs > providerTimeoutMs + settlement safety + cache-publication safety`. The heartbeat interval is derived below the flight lease. An already-aborted ownership signal is checked both before and immediately after listener registration, before the adapter is marked invoked. Pre-transmission ownership loss therefore releases PGS-1, while post-transmission loss retains conservative unknown-outcome settlement.
+
+Every stale fallback is reread from L2 immediately before serving. A candidate that expires during owner execution or follower waiting is not served, and Redis loss during final verification fails closed. Success publication measures the exact serialized Redis cache entry inside the owner-token-checked Lua operation; oversized entries atomically become a short completion outcome instead of cache data. Flight acquisition atomically clears obsolete completion state, and shared failure reasons are selected from a finite caller-independent allowlist rather than raw adapter errors.
+
+Caller-independent material now retains validated revision, duplicate-provider, duplicate-record, nullable-field, and unknown-field metadata. Redis reads and writes preserve the original JSON material bytes so empty arrays and other JSON semantics cannot be altered by Lua table round-tripping before integrity verification.

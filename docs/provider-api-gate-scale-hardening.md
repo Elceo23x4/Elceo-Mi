@@ -65,3 +65,26 @@ Abandoned-reservation rate refunds require a complete canonical token bucket: bo
 Same-token recovery consults Redis `TIME` and the owner semaphore member before returning execution authority. A sufficient lease is reused unchanged; an insufficient but live lease is renewed in place; and an expired lease is reacquired only after expired-member cleanup proves the trusted policy's `maxConcurrent` capacity is available. A full semaphore returns `provider_control_execution_lease_unavailable` without accounting or follower mutation.
 
 Reservations persist the approved policy's provider timeout, lease duration, settlement safety margin, and concurrency maximum for the atomic reconciliation decision. Each of the two bounded claim attempts is capped at half of the policy slack `leaseDurationMs - providerTimeoutMs - settlementSafetyMarginMs`. No caching, follower waiting, result sharing, or other PGS-2 behavior is included.
+# PGS-2 — distributed single-flight and multi-layer provider cache
+
+PGS-2 places trusted cache orchestration before PGS-1 admission for external staging-live requests. Static gate eligibility is followed by trusted `ProviderCachePolicy` resolution, canonical request fingerprinting, L0/L1 lookup, an atomic L2 lookup, and distributed flight coordination. Only the flight owner enters the unchanged PGS-1 admission, claim, managed adapter, validation, and settlement sequence. Production-live remains blocked.
+
+Cache authority is server-side. An approved, effective, hash-verified policy must exactly match source, capability (or its explicit wildcard), and trusted credential pool. Request-carried `cacheHitPayload` and `stalePayload` remain non-live compatibility fields and are not consulted as staging-live cache authority. Policy versions naturally isolate entries without Redis scans; no provider-specific production freshness values are embedded in code.
+
+The layers have deliberately separate responsibilities:
+
+* **L0** is a bounded process-local map of caller-independent orchestration promises. One representative polls Redis, and deterministic `finally` cleanup prevents completed flights from accumulating.
+* **L1** is a bounded count/byte LRU, serves fresh entries only, and never extends authoritative expiry on access.
+* **L2** is Redis distributed truth. Redis `TIME` establishes publication, fresh, and stale deadlines; total TTL removes expired data naturally. Reads distinguish fresh, stale-eligible, miss, and invalid data.
+
+The cache identity hashes source, capability, trusted credential pool, cache-policy version, cache-contract version, and the canonical provider request fingerprint. Fingerprint-specific Redis hash tags co-locate cache, flight, and completion keys while distributing different requests across cluster slots. It excludes request IDs, users, actors, credentials, and secrets.
+
+Stored `ProviderCachedMaterial` is caller-independent and integrity hashed. It contains validated provider payload facts and truthful original `receivedAt`, but no request ID, response ID, caller provenance, or credential metadata. Every hit creates a new response ID and rematerializes both request identity fields for the current caller. Only a valid provider success whose PGS-1 settlement is confirmed committed can be atomically published, subject to payload and policy byte limits.
+
+Flights use `SET NX PX` owner leases. Token-comparison Lua renews and releases ownership, so an old owner cannot delete a successor. A bounded heartbeat runs below the lease interval and composes ownership loss with the managed provider abort signal; it is always cleared. Successful completion atomically verifies ownership, publishes cache using Redis time, and removes flight state, eliminating release-before-visibility. Failures publish only a short sanitized completion signal, not a general negative cache.
+
+Cross-instance followers use bounded exponential backoff with jitter and an absolute deadline. They observe fresh publication or sanitized terminal completion, and may contend for takeover only after the lease is genuinely absent. A deadline while an owner remains produces `provider_singleflight_wait_timeout`, never an independent provider call. A Redis failure after an L1 miss fails closed as `provider_cache_control_unavailable`; a previously validated fresh L1 hit remains safe to serve.
+
+Stale data is retained only as a synchronous stale-if-error candidate. It is returned truthfully as stale after a refresh/control failure and only inside the trusted policy's stale window. There are no background refresh jobs and no stale-while-revalidate behavior.
+
+PGS-2 does not assert production-live readiness, provider freshness calibration, or 100k-user readiness. PGS-3 and later scale-hardening work have not started.

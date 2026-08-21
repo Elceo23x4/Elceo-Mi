@@ -166,6 +166,7 @@ export async function runProviderCacheRedisIntegrationTests(): Promise<void> {
     assert.equal(timeoutAdapterCalls, 1);
     assert.equal(timeoutAborted, true, 'managed timeout terminates adapter');
     assert.equal(timeoutResult.response, null);
+    assert.equal(timeoutResult.decision.providerCallMode,'live_staging_call');
     assert.equal(timeoutResult.settlementState, 'settled_unknown_outcome');
     assert.ok(timeoutResult.providerControlSnapshot);
     const timeoutKeys=providerControlKeys(recoveryControlPolicy,`${namespace}:control`);

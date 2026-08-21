@@ -208,6 +208,8 @@ export async function runProviderCacheTests(): Promise<void> {
     cachePolicyResolver: { resolve: async () => { throw new Error(resolverSecret); } },
   });
   assert.equal(resolverFailure.decision.reason, 'provider_cache_policy_missing');
+  assert.equal(resolverFailure.decision.providerCallMode, 'blocked_live');
+  assert.equal(resolverFailure.settlementState, 'not_required');
   assert.equal(JSON.stringify(resolverFailure).includes(resolverSecret), false);
 
   const responses = await Promise.all(Array.from({ length: 1_000 }, (_, index) => executeProviderApiGateRequest(liveRequest(`wave-${index}`), adapter, context)));
@@ -383,6 +385,8 @@ export async function runProviderCacheTests(): Promise<void> {
   const ownerStaleControl: ProviderControlStore = { kind:'redis',isReady:()=>true,admit:(admission)=>ownerStaleMemory.admit(admission),claimExecution:(reservation,token)=>ownerStaleMemory.claimExecution(reservation,token),settle:(reservation,status)=>ownerStaleMemory.settle(reservation,status),close:()=>ownerStaleMemory.close() };
   const ownerStaleResult = await executeProviderApiGateRequest({ ...liveRequest('owner-stale'), region:'owner-stale' }, { ...adapter, fetchManaged:async()=>{throw new Error('secret provider failure');} }, { ...context,cacheCoordinator:new ProviderCacheCoordinator(ownerStaleStore),providerControlStore:ownerStaleControl });
   assert.equal(ownerStaleResult.cacheSnapshot?.freshness,'stale');
+  assert.equal(ownerStaleResult.decision.providerCallMode,'live_staging_call');
+  assert.equal(ownerStaleResult.decision.reason,'stale_if_error');
   assert.equal(ownerStaleResult.settlementState,'settled_unknown_outcome');
   assert.ok(ownerStaleResult.providerControlSnapshot);
   assert.ok(ownerStaleResult.response,'eligible stale payload is returned without erasing owner evidence');
@@ -408,6 +412,7 @@ export async function runProviderCacheTests(): Promise<void> {
   assert.equal(preLossAdapterCalls, 0, 'already-aborted ownership signal must block adapter invocation');
   assert.deepEqual(preLossSettlements, ['RELEASED']);
   assert.equal(preLossResult.decision.reason, 'provider_singleflight_ownership_lost', 'pre-adapter ownership-loss result');
+  assert.equal(preLossResult.decision.providerCallMode, 'live_staging_call');
   assert.equal(preLossResult.settlementState, 'settled_released');
   assert.ok(preLossResult.providerControlSnapshot);
   assert.equal(preLossStore.entry, undefined);
@@ -434,6 +439,7 @@ export async function runProviderCacheTests(): Promise<void> {
   assert.equal(duringAdapterAborted, true);
   assert.deepEqual(duringLossSettlements, ['COMMIT_REQUIRED_UNKNOWN_OUTCOME']);
   assert.equal(duringResult.decision.reason, 'provider_singleflight_ownership_lost', 'in-adapter ownership-loss result');
+  assert.equal(duringResult.decision.providerCallMode, 'live_staging_call');
   assert.equal(duringResult.settlementState, 'settled_unknown_outcome');
   assert.ok(duringResult.providerControlSnapshot);
   assert.equal(duringLossStore.entry, undefined);

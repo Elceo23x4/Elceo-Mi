@@ -207,7 +207,7 @@ export class ProviderCacheCoordinator {
     }
     if (role === 'follower') {
       // A follower deadline is not evidence that the owner failed. In
-      // particular, do not turn a slow, healthy refresh into stale-if-error.
+      // particular, a slow, healthy refresh does not authorize stale-if-error.
       return {
         failureReason: 'provider_singleflight_wait_timeout',
         layer: 'none',

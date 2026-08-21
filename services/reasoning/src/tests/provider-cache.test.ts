@@ -377,6 +377,16 @@ export async function runProviderCacheTests(): Promise<void> {
   });
   assert.equal(staleOutcome.material, undefined, 'stale candidate expiring during refresh must not be served');
 
+  const ownerStaleStore = new TestCacheStore();
+  ownerStaleStore.entry = { ...cacheStore.entry!, freshUntil: Date.now() - 1, staleUntil: Date.now() + 5_000 };
+  const ownerStaleMemory = new MemoryProviderControlStore();
+  const ownerStaleControl: ProviderControlStore = { kind:'redis',isReady:()=>true,admit:(admission)=>ownerStaleMemory.admit(admission),claimExecution:(reservation,token)=>ownerStaleMemory.claimExecution(reservation,token),settle:(reservation,status)=>ownerStaleMemory.settle(reservation,status),close:()=>ownerStaleMemory.close() };
+  const ownerStaleResult = await executeProviderApiGateRequest({ ...liveRequest('owner-stale'), region:'owner-stale' }, { ...adapter, fetchManaged:async()=>{throw new Error('secret provider failure');} }, { ...context,cacheCoordinator:new ProviderCacheCoordinator(ownerStaleStore),providerControlStore:ownerStaleControl });
+  assert.equal(ownerStaleResult.cacheSnapshot?.freshness,'stale');
+  assert.equal(ownerStaleResult.settlementState,'settled_unknown_outcome');
+  assert.ok(ownerStaleResult.providerControlSnapshot);
+  assert.ok(ownerStaleResult.response,'eligible stale payload is returned without erasing owner evidence');
+
   const ownershipPolicy = buildTestProviderCachePolicy({ policyVersion: 'ownership-loss', flightLeaseMs: 1_100, followerWaitTimeoutMs: 2_000 });
   const ownershipControlPolicy = buildTestProviderControlPolicy({ policyVersion: 'ownership-loss', concurrency: { maxConcurrent: 2, leaseDurationMs: 1_000, providerTimeoutMs: 500 } });
   const makeOwnershipContext = (store: TestCacheStore, control: ProviderControlStore) => ({ cacheCoordinator: new ProviderCacheCoordinator(store), cachePolicyResolver: { resolve: async () => ownershipPolicy }, providerControlStore: control, policyResolver: { resolve: async () => ownershipControlPolicy }, credentialPoolId: 'primary' });
@@ -398,6 +408,9 @@ export async function runProviderCacheTests(): Promise<void> {
   assert.equal(preLossAdapterCalls, 0, 'already-aborted ownership signal must block adapter invocation');
   assert.deepEqual(preLossSettlements, ['RELEASED']);
   assert.equal(preLossResult.decision.reason, 'provider_singleflight_ownership_lost', 'pre-adapter ownership-loss result');
+  assert.equal(preLossResult.settlementState, 'settled_released');
+  assert.ok(preLossResult.providerControlSnapshot);
+  assert.equal(preLossStore.entry, undefined);
 
   const duringLossStore = new TestCacheStore();
   duringLossStore.renewFlight = async () => false;
@@ -421,5 +434,8 @@ export async function runProviderCacheTests(): Promise<void> {
   assert.equal(duringAdapterAborted, true);
   assert.deepEqual(duringLossSettlements, ['COMMIT_REQUIRED_UNKNOWN_OUTCOME']);
   assert.equal(duringResult.decision.reason, 'provider_singleflight_ownership_lost', 'in-adapter ownership-loss result');
+  assert.equal(duringResult.settlementState, 'settled_unknown_outcome');
+  assert.ok(duringResult.providerControlSnapshot);
+  assert.equal(duringLossStore.entry, undefined);
   console.log('provider cache unit acceptance passed: gate_requests=1000 adapter_calls=1 admits=1 claims=1');
 }

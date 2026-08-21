@@ -74,6 +74,10 @@ jobs:
         env:
           REDIS_URL: redis://127.0.0.1:6379
         run: npm run test:provider-control-redis
+      - name: Provider Cache and Single-Flight Redis integration
+        env:
+          REDIS_URL: redis://127.0.0.1:6379
+        run: npm run test:provider-cache-redis
       - name: IFP-3 PostgreSQL integration
         env:
           DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3

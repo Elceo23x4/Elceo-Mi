@@ -63,6 +63,8 @@ import { runRcAFormulaRegressionTests } from './rc-a-formula-regression.test.js'
 import { runProviderApiGateTests } from './provider-api-gate.test.js';
 import { runProviderControlTests } from './provider-control.test.js';
 import { runProviderControlRedisIntegrationTests } from './provider-control-redis.test.js';
+import { runProviderCacheTests } from './provider-cache.test.js';
+import { runProviderCacheRedisIntegrationTests } from './provider-cache-redis.test.js';
 import { runProviderUnmanagedCallInventoryTests } from './provider-unmanaged-call-inventory.test.js';
 import { runProviderLivePayloadValidationTests } from './provider-live-payload-validation.test.js';
 import { runExpectationRealityTests } from './expectation-reality.test.js';
@@ -142,6 +144,8 @@ async function run(): Promise<void> {
   await runProviderApiGateTests();
   await runProviderControlTests();
   await runProviderControlRedisIntegrationTests();
+  await runProviderCacheTests();
+  await runProviderCacheRedisIntegrationTests();
   runProviderUnmanagedCallInventoryTests();
   await runProviderLivePayloadValidationTests();
   await runExpectationRealityTests();

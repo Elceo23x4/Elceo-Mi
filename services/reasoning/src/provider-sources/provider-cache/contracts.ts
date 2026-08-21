@@ -120,6 +120,8 @@ export type ProviderSharedFailureReason =
   | 'provider_control_denied'
   | 'provider_error'
   | 'provider_rate_limited'
+  | 'provider_resilience_open'
+  | 'provider_resilience_unavailable'
   | 'provider_settlement_unconfirmed'
   | 'provider_singleflight_ownership_lost'
   | 'provider_singleflight_wait_timeout'
@@ -137,4 +139,5 @@ export type ProviderCacheOwnerExecution = (signal: AbortSignal) => Promise<{
   settlementState: string;
   result: unknown;
 }>;
+export type ProviderCacheStaleFailureAuthorizer = (reason: ProviderSharedFailureReason) => boolean;
 export type ProviderCacheRequest = Pick<ProviderRuntimeRequest, 'requestId' | 'sourceId' | 'capabilityId'>;

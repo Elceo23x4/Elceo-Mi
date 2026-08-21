@@ -7,6 +7,7 @@ import type {
   ProviderCachePolicy,
   ProviderCacheSharedOutcome,
   ProviderCacheStore,
+  ProviderCacheStaleFailureAuthorizer,
   ProviderSharedFailureReason,
 } from './contracts';
 import { materialFromResponse, validateCachedMaterial } from './material';
@@ -79,6 +80,7 @@ export function sanitizeProviderSharedFailureReason(value: unknown): ProviderSha
   if (reason === 'provider_cache_local_capacity_exceeded') return reason;
   if (reason === 'provider_singleflight_ownership_lost') return reason;
   if (reason === 'provider_singleflight_wait_timeout') return reason;
+  if (reason === 'provider_resilience_open' || reason === 'provider_resilience_unavailable') return reason;
   if (reason === 'settlement_unconfirmed') return 'provider_settlement_unconfirmed';
   if (reason === 'rate_limited' || reason.includes('rate_limit')) return 'provider_rate_limited';
   if (
@@ -111,6 +113,7 @@ export class ProviderCacheCoordinator {
     identity: ProviderCacheIdentity,
     policy: ProviderCachePolicy,
     owner: ProviderCacheOwnerExecution,
+    staleFailureAuthorizer: ProviderCacheStaleFailureAuthorizer = () => true,
   ): Promise<ProviderCacheSharedOutcome> {
     const hit = this.l1.get(identity, policy);
     if (hit) return { material: hit.material, layer: 'l1', freshness: 'fresh', role: 'none', entry: hit };
@@ -119,7 +122,7 @@ export class ProviderCacheCoordinator {
     if (this.inflight.size >= this.maxInflight) {
       return { failureReason: 'provider_cache_local_capacity_exceeded', layer: 'none', freshness: 'miss', role: 'none' };
     }
-    const promise = this.distributed(request, identity, policy, owner);
+    const promise = this.distributed(request, identity, policy, owner, staleFailureAuthorizer);
     this.inflight.set(identity.hash, promise);
     try {
       return await promise;
@@ -146,13 +149,15 @@ export class ProviderCacheCoordinator {
     role: 'owner' | 'follower',
     reason: unknown,
     hadStaleCandidate: boolean,
+    staleFailureAuthorizer: ProviderCacheStaleFailureAuthorizer,
   ): Promise<ProviderCacheSharedOutcome> {
-    if (hadStaleCandidate) {
+    const safeReason = sanitizeProviderSharedFailureReason(reason);
+    if (hadStaleCandidate && staleFailureAuthorizer(safeReason)) {
       const stale = await this.verifiedStale(identity, policy, role);
       if (stale) return stale;
     }
     return {
-      failureReason: sanitizeProviderSharedFailureReason(reason),
+      failureReason: safeReason,
       layer: 'none',
       freshness: 'miss',
       role,
@@ -163,6 +168,7 @@ export class ProviderCacheCoordinator {
     identity: ProviderCacheIdentity,
     policy: ProviderCachePolicy,
     owner: ProviderCacheOwnerExecution,
+    staleFailureAuthorizer: ProviderCacheStaleFailureAuthorizer,
   ): Promise<ProviderCacheSharedOutcome> {
     let hadStaleCandidate = false;
     try {
@@ -185,7 +191,7 @@ export class ProviderCacheCoordinator {
           break;
         }
       } catch {
-        return this.failureOrStale(identity, policy, 'follower', 'provider_cache_control_unavailable', hadStaleCandidate);
+        return this.failureOrStale(identity, policy, 'follower', 'provider_cache_control_unavailable', hadStaleCandidate, staleFailureAuthorizer);
       }
       const elapsed = policy.followerWaitTimeoutMs - Math.max(0, deadline - Date.now());
       const backoff = Math.min(250, 25 * 2 ** Math.min(4, Math.floor(elapsed / 100)));
@@ -199,10 +205,10 @@ export class ProviderCacheCoordinator {
         hadStaleCandidate = read.state === 'STALE_BUT_ELIGIBLE';
         const state = await this.store.readFlightState(identity);
         if (state.completion) {
-          return this.failureOrStale(identity, policy, 'follower', state.completion.reason, hadStaleCandidate);
+          return this.failureOrStale(identity, policy, 'follower', state.completion.reason, hadStaleCandidate, staleFailureAuthorizer);
         }
       } catch {
-        return this.failureOrStale(identity, policy, 'follower', 'provider_cache_control_unavailable', hadStaleCandidate);
+        return this.failureOrStale(identity, policy, 'follower', 'provider_cache_control_unavailable', hadStaleCandidate, staleFailureAuthorizer);
       }
     }
     if (role === 'follower') {
@@ -244,17 +250,17 @@ export class ProviderCacheCoordinator {
           policy,
           'owner',
           'reason' in publication ? publication.reason : 'provider_error',
-          hadStaleCandidate,
+          hadStaleCandidate, staleFailureAuthorizer,
         );
       }
       const reason = lost ? 'provider_singleflight_ownership_lost' : response?.error?.category ?? executed.settlementState;
       const safeReason = sanitizeProviderSharedFailureReason(reason);
       if (!lost) await this.store.publishFailureAndComplete(identity, token, safeReason, policy.completionTtlMs);
-      return this.failureOrStale(identity, policy, 'owner', safeReason, hadStaleCandidate);
+      return this.failureOrStale(identity, policy, 'owner', safeReason, hadStaleCandidate, staleFailureAuthorizer);
     } catch (error) {
       const reason = lost ? 'provider_singleflight_ownership_lost' : sanitizeProviderSharedFailureReason(error instanceof Error ? error.message : error);
       if (!lost) await this.store.publishFailureAndComplete(identity, token, reason, policy.completionTtlMs).catch(() => false);
-      return this.failureOrStale(identity, policy, 'owner', reason, hadStaleCandidate);
+      return this.failureOrStale(identity, policy, 'owner', reason, hadStaleCandidate, staleFailureAuthorizer);
     } finally {
       clearInterval(heartbeat);
     }

@@ -116,3 +116,29 @@ Pre-transmission ownership loss therefore reports `settled_released`; timeout, o
 ## PGS-2D runtime call-mode truth
 
 A failure after PGS-1 has successfully claimed execution is historical live-execution evidence, not a static admission denial. The structured owner failure result therefore remains `live_staging_call` while setting `allowed=false` and a finite sanitized reason. Static failures before a reservation is claimed continue to use `blocked_live`. Stale-if-error preserves the live call mode, owner settlement, and provider-control snapshot while truthfully marking the returned material as a stale cache hit.
+
+# PGS-3 — shared provider backpressure and resilience core
+
+PGS-3 adds a third, deliberately separate control plane. PGS-1 continues to own rate, quota, cost, execution concurrency, claims, and settlement; PGS-2 continues to own cache material and request coalescing; PGS-3 owns shared provider health, failure pressure, backoff, and recovery probes. A fresh PGS-2 result bypasses both provider control planes. Only the elected PGS-2 owner evaluates PGS-3, and only an owner that PGS-3 permits may proceed through the complete PGS-1 lifecycle.
+
+## Trusted policy and shared scope
+
+Staging-live candidates require an approved, effective, canonically hashed `ProviderResiliencePolicy` resolved by trusted source/capability/pool scope. The contract includes policy identity/version, status, effective interval, provenance, fixed failure-window semantics, failure and sample thresholds, open duration, half-open concurrency, probe lease duration, structured Retry-After bounds, eligible classifications, explicit stale-while-open permission, and bounded state TTL. Values in tests are fixture values only; this batch contains no empirical provider calibration and does not activate production live.
+
+Redis keys use `elceo:provider-resilience:v1:{prs:<sha256(scope)>}:state` and `:probes`. The digest covers only canonical non-secret source, capability, logical credential-pool scope, and policy identity/version. The shared hash tag places both keys in one Redis Cluster slot without storing credentials, authorization headers, or request payloads. State is a bounded hash plus a concurrency-bounded sorted set; TTLs remove abandoned scopes and expired probe leases are cleaned atomically.
+
+## State machine, time, and generations
+
+`CLOSED` admits an execution candidate to normal PGS-1. Atomic qualifying observations use Redis `TIME`, a bounded fixed window, and trusted minimum/threshold values to transition to `OPEN`. `OPEN` blocks before PGS-1 with `provider_resilience_open`, `blocked_live`, and `not_required`; it invokes neither admission nor adapter. When authoritative `openUntil` expires, the acquire script changes to `HALF_OPEN` and grants at most the trusted distributed probe concurrency.
+
+Each probe has an unguessable owner token, Redis-time expiry, and resilience generation. Result scripts atomically verify state, generation, token metadata, and exact lease expiry. A current successful probe closes the circuit and advances the generation; a current qualifying failure reopens it, advances the generation, establishes a new Redis-time deadline, and clears obsolete leases. Delayed older-generation results are rejected without changing state, deadlines, counters, or current ownership.
+
+## Classification, throttling, and failure behavior
+
+Eligible policy classifications are finite: provider network/connectivity, provider timeout, provider 5xx, provider-originated throttling, and an explicitly configured other-provider category. Success and qualifying failures are recorded at most once by the actual provider-calling owner. Validation failures, cache misses, follower timeouts, PGS-2 ownership loss, PGS-1 denials, either Redis control outage, caller validation/cancellation, and other ELCEO-local failures are `not_eligible`. PGS-1 `settled_unknown_outcome` remains accounting evidence and is never itself a PGS-3 classification.
+
+Provider throttling accepts only a structured numeric millisecond field supplied by the adapter contract. It rejects strings, negatives, non-safe integers, and overflow; finite values are clamped to the approved minimum/maximum and converted to shared `openUntil` by Redis `TIME`. Error-message text and secret-bearing headers are never parsed or persisted.
+
+An open circuit does not itself authorize stale data. PGS-2 must still verify stale-window and material integrity, and the resilience policy must explicitly allow open-state fallback. Allowed fallback reports `provider_resilience_stale_fallback`, stays `blocked_live`/`not_required`, and consumes no PGS-1 budget; prohibited fallback fails closed.
+
+Redis is authoritative for staging live. Missing policy, a memory store, unreadable state, or an unsafe mutation never assumes `CLOSED` and never invokes PGS-1 or the adapter. The memory implementation exists solely for deterministic state-machine parity tests. Production live remains prohibited, and neither PGS-4 adaptive materialization nor PGS-5 inbound abuse limiting was started.

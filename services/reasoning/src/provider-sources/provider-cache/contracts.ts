@@ -121,6 +121,7 @@ export type ProviderSharedFailureReason =
   | 'provider_error'
   | 'provider_rate_limited'
   | 'provider_resilience_open'
+  | 'provider_resilience_probe_limit'
   | 'provider_resilience_unavailable'
   | 'provider_settlement_unconfirmed'
   | 'provider_singleflight_ownership_lost'

@@ -337,6 +337,27 @@ export async function runProviderCacheRedisIntegrationTests(): Promise<void> {
     await runHalfOpenGate('success');
     await runHalfOpenGate('failure');
 
+    const ownershipLossPolicy = buildTestProviderResiliencePolicy({ policyVersion: 'post-transmission-excluded', failureThreshold: 1, minimumObservations: 1, openDurationMs: 30, halfOpenMaxConcurrent: 1, probeLeaseMs: 2_000 });
+    const ownershipLossCachePolicy = buildTestProviderCachePolicy({ policyVersion: 'post-transmission-excluded', flightLeaseMs: 1_100, followerWaitTimeoutMs: 2_000 });
+    const ownershipLossControlPolicy = buildTestProviderControlPolicy({ policyVersion: 'post-transmission-excluded', rate: { capacity: 2, refillAmount: 2, refillIntervalMs: 60_000, requestTokens: 1 }, quota: { kind: 'fixed_duration', limit: 2, windowMs: 60_000 }, cost: { kind: 'fixed_duration', budgetUnits: 2, windowMs: 60_000, requestCostUnits: 1 }, concurrency: { maxConcurrent: 1, leaseDurationMs: 1_000, providerTimeoutMs: 500 } });
+    await resilienceStores[0]!.observe(ownershipLossPolicy, { classification: 'provider_5xx' });
+    await new Promise((resolve) => setTimeout(resolve, 35));
+    const ownershipLossKeys = providerResilienceKeys(ownershipLossPolicy, `${namespace}:resilience`);
+    const ownershipLossRequest = { ...liveRequest('post-transmission-excluded'), region: 'post-transmission-excluded' };
+    const ownershipLossIdentity = buildProviderCacheIdentity(ownershipLossRequest, ownershipLossCachePolicy, 'primary', buildProviderRequestFingerprint(ownershipLossRequest));
+    let ownershipLossCalls = 0;
+    let ownershipLossApplied: boolean | undefined;
+    let beforeOwnershipLossHealth: Record<string,string> | undefined;
+    const ownershipLossResilience = { kind: 'redis' as const, isReady: () => resilienceStores[0]!.isReady(), acquire: async (policy: typeof ownershipLossPolicy, token: string) => { const permission=await resilienceStores[0]!.acquire(policy, token); beforeOwnershipLossHealth=await resilienceClients[0]!.hGetAll(ownershipLossKeys.state); return permission; }, observe: async (policy: typeof ownershipLossPolicy, outcome: ProviderResilienceOutcome, probe?: ProviderProbeLease) => { const result = await resilienceStores[0]!.observe(policy, outcome, probe); ownershipLossApplied = result.applied; return result; }, releaseProbe: (policy: typeof ownershipLossPolicy, probe: ProviderProbeLease) => resilienceStores[0]!.releaseProbe(policy, probe), close: () => Promise.resolve() };
+    const ownershipLossResult = await executeProviderApiGateRequest(ownershipLossRequest, { ...adapter, fetchManaged: async (_request: never, execution: { signal: AbortSignal }) => { ownershipLossCalls += 1; await cacheClients[0]!.del(`${namespace}:{${ownershipLossIdentity.hash}}:flight`); return new Promise<never>((_resolve, reject) => execution.signal.addEventListener('abort', () => reject(execution.signal.reason), { once: true })); } }, { cacheCoordinator: new ProviderCacheCoordinator(cacheStores[0]!), cachePolicyResolver: { resolve: async () => ownershipLossCachePolicy }, providerControlStore: controlStores[0]!, policyResolver: { resolve: async () => ownershipLossControlPolicy }, resilienceStore: ownershipLossResilience, resiliencePolicyResolver: { resolve: async () => ownershipLossPolicy }, credentialPoolId: 'primary' });
+    assert.equal(ownershipLossCalls, 1);
+    assert.equal(ownershipLossApplied, false);
+    assert.equal(ownershipLossResult.settlementState, 'settled_unknown_outcome');
+    assert.equal(ownershipLossResult.decision.providerCallMode, 'live_staging_call');
+    assert.deepEqual(await resilienceClients[1]!.hGetAll(ownershipLossKeys.state), beforeOwnershipLossHealth);
+    assert.equal(await resilienceClients[1]!.zCard(ownershipLossKeys.probes), 0);
+    assert.equal((await resilienceStores[1]!.acquire(ownershipLossPolicy, 'post-transmission-successor')).reason, 'provider_resilience_probe');
+
     const runRetryAfterGate = async (label: string, retryAfterMs: unknown, expectedMinimum: number | null, expectedMaximum: number | null) => {
       const retryPolicy = buildTestProviderResiliencePolicy({ policyVersion: `retry-${label}`, failureThreshold: 5, minimumObservations: 5, openDurationMs: 20, retryAfter: { minimumMs: 40, maximumMs: 120 } });
       const retryCachePolicy = buildTestProviderCachePolicy({ policyVersion: `retry-${label}`, flightLeaseMs: 700 });
@@ -351,6 +372,7 @@ export async function runProviderCacheRedisIntegrationTests(): Promise<void> {
       const redisNow = Number(redisTime[0]) * 1_000 + Math.floor(Number(redisTime[1]) / 1_000);
       const remaining = Number(await resilienceClients[1]!.hGet(retryKeys.state, 'openUntil')) - redisNow;
       assert.ok(remaining >= expectedMinimum && remaining <= expectedMaximum, `${label} bounded shared Retry-After: ${remaining}`);
+      assert.ok(await resilienceClients[1]!.pTTL(retryKeys.state) >= remaining, `${label} state TTL must cover shared backoff`);
       assert.equal((await resilienceStores[1]!.acquire(retryPolicy, `retry-observer-${label}`)).reason, 'provider_resilience_open');
     };
     await runRetryAfterGate('valid', 60, 35, 65);
@@ -386,6 +408,38 @@ export async function runProviderCacheRedisIntegrationTests(): Promise<void> {
     };
     await runStaleOpenGate(true);
     await runStaleOpenGate(false);
+
+    const runBlockedStaleGate = async (mode: 'probe-limit' | 'outage', allowed: boolean) => {
+      const version = `stale-${mode}-${allowed ? 'allowed' : 'prohibited'}`;
+      const blockedPolicy = buildTestProviderResiliencePolicy({ policyVersion: version, failureThreshold: 1, minimumObservations: 1, openDurationMs: 30, probeLeaseMs: 2_000, halfOpenMaxConcurrent: 1, allowStaleWhileOpen: allowed });
+      const blockedCachePolicy = buildTestProviderCachePolicy({ policyVersion: version, freshTtlMs: 20, staleIfErrorTtlMs: 500, flightLeaseMs: 700 });
+      const blockedControlPolicy = buildTestProviderControlPolicy({ policyVersion: version, rate: { capacity: 2, refillAmount: 2, refillIntervalMs: 60_000, requestTokens: 1 }, quota: { kind: 'fixed_duration', limit: 2, windowMs: 60_000 }, cost: { kind: 'fixed_duration', budgetUnits: 2, windowMs: 60_000, requestCostUnits: 1 }, concurrency: { maxConcurrent: 1, leaseDurationMs: 700, providerTimeoutMs: 100 } });
+      const blockedRequest = { ...liveRequest(version), region: version };
+      const blockedIdentity = buildProviderCacheIdentity(blockedRequest, blockedCachePolicy, 'primary', buildProviderRequestFingerprint(blockedRequest));
+      const token = `${version}-cache-owner`;
+      assert.equal(await cacheStores[0]!.tryAcquireFlight(blockedIdentity, token, blockedCachePolicy.flightLeaseMs), true);
+      const blockedUnsigned = { ...unsigned, fingerprint: blockedIdentity.fingerprint, cachePolicyVersion: blockedCachePolicy.policyVersion, cachePolicyHash: blockedCachePolicy.canonicalPolicyHash };
+      assert.equal((await cacheStores[0]!.publishSuccessAndComplete(blockedIdentity, token, { ...blockedUnsigned, materialIntegrityHash: hashProviderCachedMaterial(blockedUnsigned) }, blockedCachePolicy)).published, true);
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      let blockedStore: RedisProviderResilienceStore = resilienceStores[0]!;
+      let outageStore: RedisProviderResilienceStore | undefined;
+      if (mode === 'probe-limit') { await resilienceStores[0]!.observe(blockedPolicy, { classification: 'provider_5xx' }); await new Promise((resolve) => setTimeout(resolve, 35)); assert.equal((await resilienceStores[1]!.acquire(blockedPolicy, `${version}-occupied`)).reason, 'provider_resilience_probe'); }
+      else { const outageClient = createProviderResilienceRedisClient({ url: 'redis://127.0.0.1:1', connectTimeoutMs: 30 }); outageStore = new RedisProviderResilienceStore(outageClient, `${namespace}:${version}:outage`, 50); blockedStore = outageStore; }
+      let blockedAdmits = 0;
+      let blockedClaims = 0;
+      let blockedCalls = 0;
+      const blockedControl: ProviderControlStore = { kind: 'redis', isReady: () => true, admit: async (request) => { blockedAdmits += 1; return controlStores[0]!.admit(request); }, claimExecution: async (reservation, executionToken) => { blockedClaims += 1; return controlStores[0]!.claimExecution(reservation, executionToken); }, settle: (reservation, status) => controlStores[0]!.settle(reservation, status), close: () => Promise.resolve() };
+      const result = await executeProviderApiGateRequest(blockedRequest, { ...adapter, fetchManaged: async (request: never) => { blockedCalls += 1; return fixture.fetch(request); } }, { cacheCoordinator: new ProviderCacheCoordinator(cacheStores[0]!), cachePolicyResolver: { resolve: async () => blockedCachePolicy }, providerControlStore: blockedControl, policyResolver: { resolve: async () => blockedControlPolicy }, resilienceStore: blockedStore, resiliencePolicyResolver: { resolve: async () => blockedPolicy }, credentialPoolId: 'primary' });
+      assert.deepEqual({ blockedCalls, blockedAdmits, blockedClaims }, { blockedCalls: 0, blockedAdmits: 0, blockedClaims: 0 });
+      assert.equal(result.decision.providerCallMode, 'blocked_live');
+      assert.equal(result.settlementState, 'not_required');
+      if (mode === 'probe-limit' && allowed) { assert.ok(result.response); assert.equal(result.cacheSnapshot?.freshness, 'stale'); assert.equal(result.decision.reason, 'provider_resilience_stale_fallback'); }
+      else { assert.equal(result.response, null); assert.equal(result.decision.reason, mode === 'probe-limit' ? 'provider_resilience_probe_limit' : 'provider_resilience_unavailable'); }
+      await outageStore?.close();
+    };
+    await runBlockedStaleGate('probe-limit', false);
+    await runBlockedStaleGate('probe-limit', true);
+    await runBlockedStaleGate('outage', true);
 
     console.log(`provider cache Redis integration passed: local_requests=1000 cross_requests=200 adapter_calls=${adapterCalls} admits=${admits} claims=${claims} freshness=FRESH>STALE>MISS byte_limit=exact completion=sanitized generation=clean`);
   } finally {

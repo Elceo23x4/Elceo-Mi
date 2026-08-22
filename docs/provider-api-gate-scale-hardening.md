@@ -151,6 +151,12 @@ PGS-3 also exposes token-, generation-, and expiry-bound probe release. The gate
 
 ## PGS-3B excluded-observation purity
 
-PGS-3 now rejects `not_eligible` and policy-ineligible classifications before any authoritative health or probe mutation. Redis returns `provider_resilience_observation_excluded` without changing classification, state, generation, counters, window, backoff, or probe membership; memory parity applies the same ordering. Provider-resilience denial is also propagated explicitly through PGS-2 owner completion so stale material remains prohibited unless `allowStaleWhileOpen` is approved.
+PGS-3 now rejects `not_eligible` and policy-ineligible classifications before any authoritative health or probe mutation. Redis returns `provider_resilience_observation_excluded` without changing classification, state, generation, counters, window, or backoff; observations without a probe do not change probe membership, while PGS-3C below completes an exact valid executed probe. Memory parity applies the same ordering. Provider-resilience denial is also propagated explicitly through PGS-2 owner completion so stale material remains prohibited unless `allowStaleWhileOpen` is approved.
 
 Real-Redis cross-layer acceptance covers OPEN and resilience-outage zero-consumption behavior, one observation for a coalesced failing owner, full-gate HALF_OPEN success and failure, structured bounded Retry-After, and both stale-while-open policy outcomes. These are explicit test policies only and do not enable or calibrate production live.
+
+## PGS-3C completion and policy closure
+
+A valid current HALF_OPEN probe is now consumed even when its transmitted provider outcome is `not_eligible` or policy-ineligible; this completes only probe ownership and does not create health evidence. Wrong, stale, superseded, or expired ownership retains the PGS-3A protections. Probe-limit is a finite shared denial, and stale fallback authority treats OPEN and exhausted HALF_OPEN probe capacity identically while always failing closed on resilience Redis unavailability.
+
+Trusted runtime policy validation now enforces the fixed-window discriminator, boolean stale authority, a unique finite eligible-failure list, and a state TTL covering the failure window, open interval, probe lease, and maximum Retry-After. Resolver failures are reduced through a finite allowlist. CI runs the dedicated real-Redis PGS-3 suite without replacing either preceding provider-control or provider-cache integration step. Production live remains prohibited; PGS-4 and PGS-5 were not started.

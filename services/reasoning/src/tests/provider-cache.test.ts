@@ -224,6 +224,15 @@ export async function runProviderCacheTests(): Promise<void> {
   assert.equal(resolverFailure.decision.providerCallMode, 'blocked_live');
   assert.equal(resolverFailure.settlementState, 'not_required');
   assert.equal(JSON.stringify(resolverFailure).includes(resolverSecret), false);
+  const resilienceResolverSecret = 'provider_resilience_policy_Bearer sk_live_should_not_escape';
+  const resilienceResolverFailure = await executeProviderApiGateRequest({ ...liveRequest('resilience-resolver-error'), region: 'resilience-resolver-error' }, adapter, {
+    ...context,
+    resiliencePolicyResolver: { resolve: async () => { throw new Error(resilienceResolverSecret); } },
+  });
+  assert.equal(resilienceResolverFailure.decision.reason, 'provider_resilience_policy_missing');
+  assert.equal(resilienceResolverFailure.decision.providerCallMode, 'blocked_live');
+  assert.equal(resilienceResolverFailure.settlementState, 'not_required');
+  assert.equal(JSON.stringify(resilienceResolverFailure).includes('sk_live_should_not_escape'), false);
 
   const responses = await Promise.all(Array.from({ length: 1_000 }, (_, index) => executeProviderApiGateRequest(liveRequest(`wave-${index}`), adapter, context)));
   assert.equal(adapterCalls, 1, 'same-process wave adapter count');

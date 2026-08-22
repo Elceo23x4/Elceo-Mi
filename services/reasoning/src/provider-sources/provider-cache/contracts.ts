@@ -138,6 +138,7 @@ export type ProviderCacheOwnerExecution = (signal: AbortSignal) => Promise<{
   response: ProviderRuntimeResponse | null;
   settlementState: string;
   result: unknown;
+  failureReason?: ProviderSharedFailureReason;
 }>;
 export type ProviderCacheStaleFailureAuthorizer = (reason: ProviderSharedFailureReason) => boolean;
 export type ProviderCacheRequest = Pick<ProviderRuntimeRequest, 'requestId' | 'sourceId' | 'capabilityId'>;

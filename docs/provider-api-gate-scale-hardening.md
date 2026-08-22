@@ -148,3 +148,9 @@ Redis is authoritative for staging live. Missing policy, a memory store, unreada
 A HALF_OPEN observation is authoritative only while its exact Redis probe member remains live. The atomic observation compares state, generation, owner token, expected score, and requires the stored expiry to be strictly greater than Redis `TIME`; an expired member may remove only itself and cannot alter generation, open deadlines, classifications, or counters. The deterministic memory store applies the same `expiry > clock()` rule.
 
 PGS-3 also exposes token-, generation-, and expiry-bound probe release. The gate releases a granted probe whenever PGS-1 denial, claim failure, ownership cancellation, or another pre-adapter outcome means no provider transmission occurred. Once the adapter is invoked, observation owns probe cleanup instead, preventing double release. Release never records provider health and cannot remove another owner or newer generation's probe.
+
+## PGS-3B excluded-observation purity
+
+PGS-3 now rejects `not_eligible` and policy-ineligible classifications before any authoritative health or probe mutation. Redis returns `provider_resilience_observation_excluded` without changing classification, state, generation, counters, window, backoff, or probe membership; memory parity applies the same ordering. Provider-resilience denial is also propagated explicitly through PGS-2 owner completion so stale material remains prohibited unless `allowStaleWhileOpen` is approved.
+
+Real-Redis cross-layer acceptance covers OPEN and resilience-outage zero-consumption behavior, one observation for a coalesced failing owner, full-gate HALF_OPEN success and failure, structured bounded Retry-After, and both stale-while-open policy outcomes. These are explicit test policies only and do not enable or calibrate production live.

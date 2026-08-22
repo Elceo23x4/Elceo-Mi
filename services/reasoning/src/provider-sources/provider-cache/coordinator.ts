@@ -253,7 +253,7 @@ export class ProviderCacheCoordinator {
           hadStaleCandidate, staleFailureAuthorizer,
         );
       }
-      const reason = lost ? 'provider_singleflight_ownership_lost' : response?.error?.category ?? executed.settlementState;
+      const reason = lost ? 'provider_singleflight_ownership_lost' : executed.failureReason ?? response?.error?.category ?? executed.settlementState;
       const safeReason = sanitizeProviderSharedFailureReason(reason);
       if (!lost) await this.store.publishFailureAndComplete(identity, token, safeReason, policy.completionTtlMs);
       return this.failureOrStale(identity, policy, 'owner', safeReason, hadStaleCandidate, staleFailureAuthorizer);

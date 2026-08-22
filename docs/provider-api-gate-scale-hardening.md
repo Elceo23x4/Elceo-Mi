@@ -142,3 +142,9 @@ Provider throttling accepts only a structured numeric millisecond field supplied
 An open circuit does not itself authorize stale data. PGS-2 must still verify stale-window and material integrity, and the resilience policy must explicitly allow open-state fallback. Allowed fallback reports `provider_resilience_stale_fallback`, stays `blocked_live`/`not_required`, and consumes no PGS-1 budget; prohibited fallback fails closed.
 
 Redis is authoritative for staging live. Missing policy, a memory store, unreadable state, or an unsafe mutation never assumes `CLOSED` and never invokes PGS-1 or the adapter. The memory implementation exists solely for deterministic state-machine parity tests. Production live remains prohibited, and neither PGS-4 adaptive materialization nor PGS-5 inbound abuse limiting was started.
+
+## PGS-3A probe lifecycle closure
+
+A HALF_OPEN observation is authoritative only while its exact Redis probe member remains live. The atomic observation compares state, generation, owner token, expected score, and requires the stored expiry to be strictly greater than Redis `TIME`; an expired member may remove only itself and cannot alter generation, open deadlines, classifications, or counters. The deterministic memory store applies the same `expiry > clock()` rule.
+
+PGS-3 also exposes token-, generation-, and expiry-bound probe release. The gate releases a granted probe whenever PGS-1 denial, claim failure, ownership cancellation, or another pre-adapter outcome means no provider transmission occurred. Once the adapter is invoked, observation owns probe cleanup instead, preventing double release. Release never records provider health and cannot remove another owner or newer generation's probe.

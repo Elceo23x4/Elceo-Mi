@@ -22,6 +22,18 @@ import {
 import { executeProviderApiGateRequest, type ProviderRuntimeRequest, type ProviderRuntimeResponse } from '../provider-sources/provider-api-gate.js';
 import { buildProviderRequestFingerprint, MemoryProviderControlStore, type ProviderControlStore } from '../provider-sources/provider-control/index.js';
 import { buildTestProviderControlPolicy } from './provider-control.test.js';
+import { MemoryProviderResilienceStore, type ProviderProbeLease, type ProviderResilienceOutcome, type ProviderResiliencePolicy, type ProviderResilienceStore } from '../provider-sources/provider-resilience/index.js';
+import { buildTestProviderResiliencePolicy } from './provider-resilience.test.js';
+
+class TestRedisResilienceStore implements ProviderResilienceStore {
+  readonly kind = 'redis' as const;
+  private readonly delegate = new MemoryProviderResilienceStore();
+  isReady(): boolean { return true; }
+  acquire(policy: ProviderResiliencePolicy, ownerToken: string) { return this.delegate.acquire(policy, ownerToken); }
+  observe(policy: ProviderResiliencePolicy, outcome: ProviderResilienceOutcome, probe?: ProviderProbeLease) { return this.delegate.observe(policy, outcome, probe); }
+  releaseProbe(policy: ProviderResiliencePolicy, probe: ProviderProbeLease) { return this.delegate.releaseProbe(policy, probe); }
+  close(): Promise<void> { return Promise.resolve(); }
+}
 
 export function buildTestProviderCachePolicy(
   overrides: Partial<ProviderCachePolicy> = {},
@@ -185,7 +197,8 @@ export async function runProviderCacheTests(): Promise<void> {
     fetchManaged: async (sourceRequest: never) => { adapterCalls += 1; await new Promise((resolve) => setTimeout(resolve, 20)); return fixture.fetch(sourceRequest); },
     normalize: async () => [],
   };
-  const context = { cacheCoordinator: coordinator, cachePolicyResolver: { resolve: async () => policy }, providerControlStore: controlStore, policyResolver: { resolve: async () => controlPolicy }, credentialPoolId: 'primary' };
+  const resiliencePolicy = buildTestProviderResiliencePolicy();
+  const context = { cacheCoordinator: coordinator, cachePolicyResolver: { resolve: async () => policy }, providerControlStore: controlStore, policyResolver: { resolve: async () => controlPolicy }, resilienceStore: new TestRedisResilienceStore(), resiliencePolicyResolver: { resolve: async () => resiliencePolicy }, credentialPoolId: 'primary' };
   const poisoned = liveRequest('caller-0', { cacheHitPayload: compatibilityResponse('caller-0', 'poison'), stalePayload: compatibilityResponse('caller-0', 'stale-poison'), fallbackMode: 'stale_if_error' });
   const poisonedResult = await executeProviderApiGateRequest(poisoned, adapter, context);
   assert.equal(poisonedResult.decision.providerCallMode, 'live_staging_call', 'publishing owner remains a truthful live call');
@@ -288,6 +301,8 @@ export async function runProviderCacheTests(): Promise<void> {
         cachePolicyResolver: { resolve: async () => policy },
         providerControlStore: caseStore,
         policyResolver: { resolve: async () => controlPolicy },
+        resilienceStore: new TestRedisResilienceStore(),
+        resiliencePolicyResolver: { resolve: async () => resiliencePolicy },
         credentialPoolId: 'primary',
       },
     );
@@ -393,7 +408,7 @@ export async function runProviderCacheTests(): Promise<void> {
 
   const ownershipPolicy = buildTestProviderCachePolicy({ policyVersion: 'ownership-loss', flightLeaseMs: 1_100, followerWaitTimeoutMs: 2_000 });
   const ownershipControlPolicy = buildTestProviderControlPolicy({ policyVersion: 'ownership-loss', concurrency: { maxConcurrent: 2, leaseDurationMs: 1_000, providerTimeoutMs: 500 } });
-  const makeOwnershipContext = (store: TestCacheStore, control: ProviderControlStore) => ({ cacheCoordinator: new ProviderCacheCoordinator(store), cachePolicyResolver: { resolve: async () => ownershipPolicy }, providerControlStore: control, policyResolver: { resolve: async () => ownershipControlPolicy }, credentialPoolId: 'primary' });
+  const makeOwnershipContext = (store: TestCacheStore, control: ProviderControlStore) => ({ cacheCoordinator: new ProviderCacheCoordinator(store), cachePolicyResolver: { resolve: async () => ownershipPolicy }, providerControlStore: control, policyResolver: { resolve: async () => ownershipControlPolicy }, resilienceStore: new TestRedisResilienceStore(), resiliencePolicyResolver: { resolve: async () => resiliencePolicy }, credentialPoolId: 'primary' });
 
   const preLossStore = new TestCacheStore();
   preLossStore.renewFlight = async () => false;

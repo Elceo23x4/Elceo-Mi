@@ -160,3 +160,9 @@ Real-Redis cross-layer acceptance covers OPEN and resilience-outage zero-consump
 A valid current HALF_OPEN probe is now consumed even when its transmitted provider outcome is `not_eligible` or policy-ineligible; this completes only probe ownership and does not create health evidence. Wrong, stale, superseded, or expired ownership retains the PGS-3A protections. Probe-limit is a finite shared denial, and stale fallback authority treats OPEN and exhausted HALF_OPEN probe capacity identically while always failing closed on resilience Redis unavailability.
 
 Trusted runtime policy validation now enforces the fixed-window discriminator, boolean stale authority, a unique finite eligible-failure list, and a state TTL covering the failure window, open interval, probe lease, and maximum Retry-After. Resolver failures are reduced through a finite allowlist. CI runs the dedicated real-Redis PGS-3 suite without replacing either preceding provider-control or provider-cache integration step. Production live remains prohibited; PGS-4 and PGS-5 were not started.
+
+## PGS-3D cache boundary and sample truth
+
+Fresh PGS-2 L1/L2 material now returns before resilience policy resolution or store acquisition. On a miss, only the elected owner lazily resolves PGS-3, which still gates before PGS-1. Shared stale results retain their finite resilience cause so followers preserve blocked-live stale-fallback truth.
+
+Health classification now uses finite structured adapter categories rather than arbitrary error-message substrings. CLOSED successes and eligible failures are samples; every included sample advances the fixed-window observation count, only eligible failures advance failure count, and both trusted thresholds are required to open (except explicit bounded Retry-After). HALF_OPEN transition clears the expired active deadline, while denial snapshots are retained.

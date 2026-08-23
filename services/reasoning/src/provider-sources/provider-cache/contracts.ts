@@ -141,5 +141,5 @@ export type ProviderCacheOwnerExecution = (signal: AbortSignal) => Promise<{
   result: unknown;
   failureReason?: ProviderSharedFailureReason;
 }>;
-export type ProviderCacheStaleFailureAuthorizer = (reason: ProviderSharedFailureReason) => boolean;
+export type ProviderCacheStaleFailureAuthorizer = (reason: ProviderSharedFailureReason) => boolean | Promise<boolean>;
 export type ProviderCacheRequest = Pick<ProviderRuntimeRequest, 'requestId' | 'sourceId' | 'capabilityId'>;

@@ -152,9 +152,9 @@ export class ProviderCacheCoordinator {
     staleFailureAuthorizer: ProviderCacheStaleFailureAuthorizer,
   ): Promise<ProviderCacheSharedOutcome> {
     const safeReason = sanitizeProviderSharedFailureReason(reason);
-    if (hadStaleCandidate && staleFailureAuthorizer(safeReason)) {
+    if (hadStaleCandidate && await staleFailureAuthorizer(safeReason)) {
       const stale = await this.verifiedStale(identity, policy, role);
-      if (stale) return stale;
+      if (stale) return { ...stale, failureReason: safeReason };
     }
     return {
       failureReason: safeReason,

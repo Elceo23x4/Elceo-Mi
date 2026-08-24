@@ -6,3 +6,4 @@ export * from './redis-store';
 export * from './repository';
 export * from './service';
 export * from './scheduler';
+export * from './evidence';

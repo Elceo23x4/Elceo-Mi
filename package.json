@@ -17,6 +17,7 @@
     "test:provider-control-redis": "PROVIDER_CONTROL_REDIS_INTEGRATION=1 npm run -w services/reasoning test",
     "test:provider-cache-redis": "PROVIDER_CACHE_REDIS_INTEGRATION=1 npm run -w services/reasoning test",
     "test:provider-resilience-redis": "PROVIDER_RESILIENCE_REDIS_INTEGRATION=1 npm run -w services/reasoning test",
+    "test:adaptive-materialization-redis": "ADAPTIVE_MATERIALIZATION_REDIS_INTEGRATION=1 npm run -w services/reasoning test",
     "check:runtime": "node scripts/check-runtime-contract.mjs",
     "check:dependency-compatibility": "node scripts/check-dependency-compatibility.mjs",
     "check:sharp-exception-upstream": "node scripts/check-sharp-exception-upstream.mjs",

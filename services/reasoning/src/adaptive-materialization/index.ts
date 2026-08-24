@@ -8,3 +8,4 @@ export * from './service';
 export * from './scheduler';
 export * from './evidence';
 export * from './orchestrator';
+export * from './production-cognition';

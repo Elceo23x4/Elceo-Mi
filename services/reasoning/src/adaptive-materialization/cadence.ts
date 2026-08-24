@@ -12,3 +12,4 @@ export function calculateNextDueAt(policy: AdaptiveMaterializationPolicy, signal
   return clamp(due,minDue,maxDue);
 }
 export const evaluationEpoch = (evaluatedAt:number, epochMs:number): number => Math.floor(evaluatedAt/epochMs)*epochMs;
+export function expectedReleaseAt(policy:AdaptiveMaterializationPolicy,evaluatedAt:number):number|null{if(policy.expectedReleaseMinuteUtc===null)return null;const day=86_400_000,start=Math.floor(evaluatedAt/day)*day,candidate=start+policy.expectedReleaseMinuteUtc*60_000;return candidate>=evaluatedAt?candidate:candidate+day}

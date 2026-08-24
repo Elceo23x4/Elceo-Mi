@@ -80,6 +80,7 @@ export function sanitizeProviderSharedFailureReason(value: unknown): ProviderSha
   if (reason === 'provider_cache_local_capacity_exceeded') return reason;
   if (reason === 'provider_singleflight_ownership_lost') return reason;
   if (reason === 'provider_singleflight_wait_timeout') return reason;
+  if (reason === 'provider_resilience_policy_hash_mismatch' || reason === 'provider_resilience_policy_inactive' || reason === 'provider_resilience_policy_invalid_identity' || reason === 'provider_resilience_policy_invalid_integer' || reason === 'provider_resilience_policy_missing' || reason === 'provider_resilience_policy_not_approved' || reason === 'provider_resilience_policy_out_of_bounds' || reason === 'provider_resilience_policy_scope_mismatch') return reason;
   if (reason === 'provider_resilience_open' || reason === 'provider_resilience_probe_limit' || reason === 'provider_resilience_unavailable') return reason;
   if (reason === 'settlement_unconfirmed') return 'provider_settlement_unconfirmed';
   if (reason === 'rate_limited' || reason.includes('rate_limit')) return 'provider_rate_limited';

@@ -225,8 +225,9 @@ export async function runProviderCacheTests(): Promise<void> {
   assert.equal(resolverFailure.settlementState, 'not_required');
   assert.equal(JSON.stringify(resolverFailure).includes(resolverSecret), false);
   const resilienceResolverSecret = 'provider_resilience_policy_Bearer sk_live_should_not_escape';
-  const resilienceResolverFailure = await executeProviderApiGateRequest({ ...liveRequest('resilience-resolver-error'), region: 'resilience-resolver-error' }, adapter, {
+  const resilienceResolverFailure = await executeProviderApiGateRequest(liveRequest('resilience-resolver-error'), adapter, {
     ...context,
+    cacheCoordinator: new ProviderCacheCoordinator(new TestCacheStore()),
     resiliencePolicyResolver: { resolve: async () => { throw new Error(resilienceResolverSecret); } },
   });
   assert.equal(resilienceResolverFailure.decision.reason, 'provider_resilience_policy_missing');

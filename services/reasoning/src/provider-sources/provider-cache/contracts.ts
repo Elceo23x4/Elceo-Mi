@@ -120,6 +120,17 @@ export type ProviderSharedFailureReason =
   | 'provider_control_denied'
   | 'provider_error'
   | 'provider_rate_limited'
+  | 'provider_resilience_open'
+  | 'provider_resilience_policy_hash_mismatch'
+  | 'provider_resilience_policy_inactive'
+  | 'provider_resilience_policy_invalid_identity'
+  | 'provider_resilience_policy_invalid_integer'
+  | 'provider_resilience_policy_missing'
+  | 'provider_resilience_policy_not_approved'
+  | 'provider_resilience_policy_out_of_bounds'
+  | 'provider_resilience_policy_scope_mismatch'
+  | 'provider_resilience_probe_limit'
+  | 'provider_resilience_unavailable'
   | 'provider_settlement_unconfirmed'
   | 'provider_singleflight_ownership_lost'
   | 'provider_singleflight_wait_timeout'
@@ -136,5 +147,7 @@ export type ProviderCacheOwnerExecution = (signal: AbortSignal) => Promise<{
   response: ProviderRuntimeResponse | null;
   settlementState: string;
   result: unknown;
+  failureReason?: ProviderSharedFailureReason;
 }>;
+export type ProviderCacheStaleFailureAuthorizer = (reason: ProviderSharedFailureReason) => boolean | Promise<boolean>;
 export type ProviderCacheRequest = Pick<ProviderRuntimeRequest, 'requestId' | 'sourceId' | 'capabilityId'>;

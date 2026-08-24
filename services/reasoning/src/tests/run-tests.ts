@@ -65,6 +65,8 @@ import { runProviderControlTests } from './provider-control.test.js';
 import { runProviderControlRedisIntegrationTests } from './provider-control-redis.test.js';
 import { runProviderCacheTests } from './provider-cache.test.js';
 import { runProviderCacheRedisIntegrationTests } from './provider-cache-redis.test.js';
+import { runProviderResilienceTests } from './provider-resilience.test.js';
+import { runProviderResilienceRedisIntegrationTests } from './provider-resilience-redis.test.js';
 import { runProviderUnmanagedCallInventoryTests } from './provider-unmanaged-call-inventory.test.js';
 import { runProviderLivePayloadValidationTests } from './provider-live-payload-validation.test.js';
 import { runExpectationRealityTests } from './expectation-reality.test.js';
@@ -146,6 +148,8 @@ async function run(): Promise<void> {
   await runProviderControlRedisIntegrationTests();
   await runProviderCacheTests();
   await runProviderCacheRedisIntegrationTests();
+  await runProviderResilienceTests();
+  await runProviderResilienceRedisIntegrationTests();
   runProviderUnmanagedCallInventoryTests();
   await runProviderLivePayloadValidationTests();
   await runExpectationRealityTests();

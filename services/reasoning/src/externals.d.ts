@@ -22,5 +22,6 @@ declare module 'pg' {
   export class Pool {
     constructor(config: Record<string, unknown>);
     query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
+    end(): Promise<void>;
   }
 }

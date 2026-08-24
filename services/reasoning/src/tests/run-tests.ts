@@ -79,10 +79,12 @@ import { runFragilityScoreTests } from './fragility-score.test.js';
 import { runIntelligenceAcceptanceTests } from './intelligence-acceptance.test.js';
 import { runAdaptiveMaterializationTests } from './adaptive-materialization.test.js';
 import { runAdaptiveMaterializationRedisIntegrationTests } from './adaptive-materialization-redis.test.js';
+import { runAdaptiveMaterializationIntegrationTests } from './adaptive-materialization-integration.test.js';
 
 async function run(): Promise<void> {
   await runAdaptiveMaterializationTests();
   await runAdaptiveMaterializationRedisIntegrationTests();
+  await runAdaptiveMaterializationIntegrationTests();
   await runNarrativeDecayTests();
   await runPositioningStressTests();
   await runFragilityScoreTests();

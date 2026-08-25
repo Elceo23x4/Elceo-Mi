@@ -1,5 +1,6 @@
 import type { AssetEvidenceWeightPolicy, EvidenceWeightHorizon, MarketAssetCausalityAsset, TradingAssetCoverage, MarketEvidenceClass, WeightedEvidencePolicySnapshot } from '@elceo/types';
 import { EVIDENCE_WEIGHT_HORIZONS, MARKET_EVIDENCE_CLASSES, TRADING_ASSET_COVERAGE } from '@elceo/types';
+export const EVIDENCE_WEIGHT_POLICY_VERSION='asset-evidence-weight-policy-v1' as const;
 
 const HMULT:Record<EvidenceWeightHorizon,number>={intraday:0.85,short_term:1,swing:1.1,medium_term:1.2};
 const mk=(asset:MarketAssetCausalityAsset,h:EvidenceWeightHorizon,c:MarketEvidenceClass,b:number,r:string):AssetEvidenceWeightPolicy=>({asset: asset as TradingAssetCoverage,horizon:h,evidenceClass:c,baseWeight:Math.max(0,Math.min(100,Math.round(b*HMULT[h]))),role:b===0?'excluded':b>=80?'primary_driver':b>=60?'secondary_driver':b>=35?'context':'caution',rationale:r});

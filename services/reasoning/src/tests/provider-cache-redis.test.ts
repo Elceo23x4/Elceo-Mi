@@ -7,6 +7,7 @@ import {
   ProviderCacheCoordinator,
   RedisProviderCacheStore,
   type ProviderCachedMaterial,
+  type ProviderCacheStore,
 } from '../provider-sources/provider-cache/index.js';
 import { buildProviderRequestFingerprint, createProviderControlRedisClient, providerControlKeys, RedisProviderControlStore, type ProviderControlStore } from '../provider-sources/provider-control/index.js';
 import { executeProviderApiGateRequest, type ProviderRuntimeRequest, type ProviderRuntimeResponse } from '../provider-sources/provider-api-gate.js';
@@ -112,13 +113,79 @@ export async function runProviderCacheRedisIntegrationTests(): Promise<void> {
     assert.equal(JSON.stringify(persisted.entry).includes('sk_live'), false);
 
     const crossCoordinators = [new ProviderCacheCoordinator(cacheStores[0]!), new ProviderCacheCoordinator(cacheStores[1]!), new ProviderCacheCoordinator(cacheStores[0]!), new ProviderCacheCoordinator(cacheStores[1]!)];
-    const before = { adapterCalls, admits, claims };
-    const crossWave = await Promise.all(Array.from({ length: 200 }, (_, index) => executeProviderApiGateRequest({ ...liveRequest(`cross-${index}`), region: 'cross-instance' }, adapter, context(crossCoordinators[index % crossCoordinators.length]!, countedControls[index % countedControls.length]!))));
-    assert.equal(adapterCalls - before.adapterCalls, 1);
-    assert.equal(admits - before.admits, 1);
-    assert.equal(claims - before.claims, 1);
-    const badCrossIndex = crossWave.findIndex((result, index) => result.response?.requestId !== `cross-${index}` || result.response.provenance.requestId !== `cross-${index}`);
-    assert.equal(badCrossIndex, -1, `cross caller identity: index=${badCrossIndex} result=${badCrossIndex >= 0 ? JSON.stringify(crossWave[badCrossIndex]) : 'none'}`);
+    for (let iteration = 0; iteration < 3; iteration += 1) {
+      const before: { adapterCalls: number; admits: number; claims: number } = { adapterCalls, admits, claims };
+      const crossWave = await Promise.all(Array.from({ length: 200 }, (_, index) => executeProviderApiGateRequest({ ...liveRequest(`cross-${iteration}-${index}`), region: `cross-instance-${iteration}` }, adapter, context(crossCoordinators[index % crossCoordinators.length]!, countedControls[index % countedControls.length]!))));
+      assert.equal(adapterCalls - before.adapterCalls, 1);
+      assert.equal(admits - before.admits, 1);
+      assert.equal(claims - before.claims, 1);
+      const badCrossIndex = crossWave.findIndex((result, index) => result.response?.requestId !== `cross-${iteration}-${index}` || result.response.provenance.requestId !== `cross-${iteration}-${index}`);
+      assert.equal(badCrossIndex, -1, `cross caller identity: iteration=${iteration} index=${badCrossIndex} result=${badCrossIndex >= 0 ? JSON.stringify(crossWave[badCrossIndex]) : 'none'}`);
+    }
+
+    // Deterministically force the post-publication reacquisition race: B has
+    // observed MISS and lost acquisition to A; after A publishes, B's queued
+    // follower read represents its earlier MISS, then B acquires the free
+    // flight. The mandatory post-acquisition validated L2 read must suppress a
+    // second PGS-1/provider execution.
+    const raceCachePolicy = buildTestProviderCachePolicy({ policyVersion: 'post-publication-race', freshTtlMs: 2_000, staleIfErrorTtlMs: 1_000, flightLeaseMs: 700, followerWaitTimeoutMs: 3_000 });
+    const raceControlPolicy = buildTestProviderControlPolicy({ policyVersion: 'post-publication-race', rate: { capacity: 3, refillAmount: 3, refillIntervalMs: 60_000, requestTokens: 1 }, quota: { kind: 'fixed_duration', limit: 3, windowMs: 60_000 }, cost: { kind: 'fixed_duration', budgetUnits: 3, windowMs: 60_000, requestCostUnits: 1 }, concurrency: { maxConcurrent: 2, leaseDurationMs: 700, providerTimeoutMs: 100 } });
+    const raceResiliencePolicy = buildTestProviderResiliencePolicy({ policyVersion: 'post-publication-race' });
+    let raceAdmits = 0, raceClaims = 0, raceAdapterCalls = 0;
+    const raceControl = (store: RedisProviderControlStore): ProviderControlStore => ({ kind: 'redis', isReady: () => store.isReady(), admit: async value => { raceAdmits += 1; return store.admit(value); }, claimExecution: async (reservation, token) => { raceClaims += 1; return store.claimExecution(reservation, token); }, settle: (reservation, status) => store.settle(reservation, status), close: () => Promise.resolve() });
+    let ownerStartedResolve!: () => void, allowOwnerResolve!: () => void, followerMissResolve!: () => void;
+    const ownerStarted = new Promise<void>(resolve => { ownerStartedResolve = resolve; }), allowOwner = new Promise<void>(resolve => { allowOwnerResolve = resolve; }), followerMiss = new Promise<void>(resolve => { followerMissResolve = resolve; });
+    const raceAdapter = { ...adapter, fetchManaged: async (value: never) => { raceAdapterCalls += 1; ownerStartedResolve(); await allowOwner; return fixture.fetch(value); } };
+    let followerReads = 0;
+    const followerStore: ProviderCacheStore = { kind: 'redis', read: async (cacheIdentity, resolvedPolicy) => { followerReads += 1; if (followerReads === 2) return { state: 'MISS' }; return cacheStores[1]!.read(cacheIdentity, resolvedPolicy); }, tryAcquireFlight: async (cacheIdentity, token, leaseMs) => { const acquired = await cacheStores[1]!.tryAcquireFlight(cacheIdentity, token, leaseMs); if (!acquired) followerMissResolve(); return acquired; }, renewFlight: (cacheIdentity, token, leaseMs) => cacheStores[1]!.renewFlight(cacheIdentity, token, leaseMs), readFlightState: cacheIdentity => cacheStores[1]!.readFlightState(cacheIdentity), publishSuccessAndComplete: (cacheIdentity, token, material, resolvedPolicy) => cacheStores[1]!.publishSuccessAndComplete(cacheIdentity, token, material, resolvedPolicy), publishFailureAndComplete: (cacheIdentity, token, reason, ttlMs) => cacheStores[1]!.publishFailureAndComplete(cacheIdentity, token, reason, ttlMs), releaseOwnerSafely: (cacheIdentity, token) => cacheStores[1]!.releaseOwnerSafely(cacheIdentity, token) };
+    const raceContext = (coordinator: ProviderCacheCoordinator, control: ProviderControlStore, index: number) => ({ cacheCoordinator: coordinator, cachePolicyResolver: { resolve: async () => raceCachePolicy }, providerControlStore: control, policyResolver: { resolve: async () => raceControlPolicy }, resilienceStore: resilienceStores[index]!, resiliencePolicyResolver: { resolve: async () => raceResiliencePolicy }, credentialPoolId: 'primary' });
+    const ownerRace = executeProviderApiGateRequest({ ...liveRequest('post-publish-owner'), region: 'post-publication-race' }, raceAdapter, raceContext(new ProviderCacheCoordinator(cacheStores[0]!), raceControl(controlStores[0]!), 0));
+    const ownerEnteredProvider = await Promise.race([ownerStarted.then(() => true), ownerRace.then(() => false)]);
+    assert.equal(ownerEnteredProvider, true, 'the first coordinator must reach managed provider execution');
+    const followerRace = executeProviderApiGateRequest({ ...liveRequest('post-publish-follower'), region: 'post-publication-race' }, raceAdapter, raceContext(new ProviderCacheCoordinator(followerStore), raceControl(controlStores[1]!), 1));
+    await followerMiss;
+    allowOwnerResolve();
+    const [ownerRaceResult, followerRaceResult] = await Promise.all([ownerRace, followerRace]);
+    assert.deepEqual({ raceAdapterCalls, raceAdmits, raceClaims }, { raceAdapterCalls: 1, raceAdmits: 1, raceClaims: 1 });
+    assert.equal(ownerRaceResult.cacheSnapshot?.singleFlightRole, 'owner');
+    assert.equal(followerReads, 3, 'follower must validate L2 again after acquiring the released flight');
+    assert.equal(followerRaceResult.cacheSnapshot?.singleFlightRole, 'follower');
+    assert.equal(followerRaceResult.decision.providerCallMode, 'cache_response');
+    assert.equal(followerRaceResult.settlementState, 'not_required');
+    assert.equal(followerRaceResult.providerControlSnapshot, undefined);
+
+    // Hold A's mandatory post-acquisition validation beyond the authoritative
+    // Redis lease, let B become the valid owner, then prove A's pre-execution
+    // renewal fence prevents every upstream boundary and preserves B's token.
+    const expiryCachePolicy = buildTestProviderCachePolicy({ policyVersion: 'pre-execution-expiry', freshTtlMs: 2_000, staleIfErrorTtlMs: 1_000, flightLeaseMs: 700, followerWaitTimeoutMs: 3_000 });
+    const expiryControlPolicy = buildTestProviderControlPolicy({ policyVersion: 'pre-execution-expiry', rate: { capacity: 3, refillAmount: 3, refillIntervalMs: 60_000, requestTokens: 1 }, quota: { kind: 'fixed_duration', limit: 3, windowMs: 60_000 }, cost: { kind: 'fixed_duration', budgetUnits: 3, windowMs: 60_000, requestCostUnits: 1 }, concurrency: { maxConcurrent: 2, leaseDurationMs: 700, providerTimeoutMs: 100 } });
+    const expiryResiliencePolicy = buildTestProviderResiliencePolicy({ policyVersion: 'pre-execution-expiry' });
+    let staleAdmits = 0, staleClaims = 0, staleAdapterCalls = 0, validAdmits = 0, validClaims = 0, validAdapterCalls = 0;
+    const expiryControl = (store: RedisProviderControlStore, stale: boolean): ProviderControlStore => ({ kind: 'redis', isReady: () => store.isReady(), admit: async value => { if (stale) staleAdmits += 1; else validAdmits += 1; return store.admit(value); }, claimExecution: async (reservation, token) => { if (stale) staleClaims += 1; else validClaims += 1; return store.claimExecution(reservation, token); }, settle: (reservation, status) => store.settle(reservation, status), close: () => Promise.resolve() });
+    let staleAcquiredResolve!: () => void, releaseValidationResolve!: () => void, validProviderResolve!: () => void, releaseValidProviderResolve!: () => void;
+    const staleAcquired = new Promise<void>(resolve => { staleAcquiredResolve = resolve; }), releaseValidation = new Promise<void>(resolve => { releaseValidationResolve = resolve; }), validProvider = new Promise<void>(resolve => { validProviderResolve = resolve; }), releaseValidProvider = new Promise<void>(resolve => { releaseValidProviderResolve = resolve; });
+    let staleReads = 0;
+    const staleOwnerStore: ProviderCacheStore = { kind: 'redis', read: async (cacheIdentity, resolvedPolicy) => { staleReads += 1; if (staleReads === 2) { await releaseValidation; return { state: 'MISS' }; } return cacheStores[0]!.read(cacheIdentity, resolvedPolicy); }, tryAcquireFlight: async (cacheIdentity, token, leaseMs) => { const acquired = await cacheStores[0]!.tryAcquireFlight(cacheIdentity, token, leaseMs); if (acquired) staleAcquiredResolve(); return acquired; }, renewFlight: (cacheIdentity, token, leaseMs) => cacheStores[0]!.renewFlight(cacheIdentity, token, leaseMs), readFlightState: cacheIdentity => cacheStores[0]!.readFlightState(cacheIdentity), publishSuccessAndComplete: (cacheIdentity, token, material, resolvedPolicy) => cacheStores[0]!.publishSuccessAndComplete(cacheIdentity, token, material, resolvedPolicy), publishFailureAndComplete: (cacheIdentity, token, reason, ttlMs) => cacheStores[0]!.publishFailureAndComplete(cacheIdentity, token, reason, ttlMs), releaseOwnerSafely: (cacheIdentity, token) => cacheStores[0]!.releaseOwnerSafely(cacheIdentity, token) };
+    const expiryContext = (coordinator: ProviderCacheCoordinator, control: ProviderControlStore, index: number) => ({ cacheCoordinator: coordinator, cachePolicyResolver: { resolve: async () => expiryCachePolicy }, providerControlStore: control, policyResolver: { resolve: async () => expiryControlPolicy }, resilienceStore: resilienceStores[index]!, resiliencePolicyResolver: { resolve: async () => expiryResiliencePolicy }, credentialPoolId: 'primary' });
+    const staleRequest = { ...liveRequest('expired-pre-execution-owner'), region: 'pre-execution-expiry' }, validRequest = { ...liveRequest('valid-successor-owner'), region: 'pre-execution-expiry' };
+    const staleExecution = executeProviderApiGateRequest(staleRequest, { ...adapter, fetchManaged: async (value: never) => { staleAdapterCalls += 1; return fixture.fetch(value); } }, expiryContext(new ProviderCacheCoordinator(staleOwnerStore), expiryControl(controlStores[0]!, true), 0));
+    await staleAcquired;
+    const expiryIdentity = buildProviderCacheIdentity(staleRequest, expiryCachePolicy, 'primary', buildProviderRequestFingerprint(staleRequest));
+    const authoritativeRemaining = await cacheClients[0]!.pTTL(`${namespace}:{${expiryIdentity.hash}}:flight`);
+    assert.ok(authoritativeRemaining > 0);
+    await new Promise(resolve => setTimeout(resolve, authoritativeRemaining + 1));
+    const validExecution = executeProviderApiGateRequest(validRequest, { ...adapter, fetchManaged: async (value: never) => { validAdapterCalls += 1; validProviderResolve(); await releaseValidProvider; return fixture.fetch(value); } }, expiryContext(new ProviderCacheCoordinator(cacheStores[1]!), expiryControl(controlStores[1]!, false), 1));
+    await validProvider;
+    releaseValidationResolve();
+    const staleResult = await staleExecution;
+    assert.deepEqual({ staleAdapterCalls, staleAdmits, staleClaims }, { staleAdapterCalls: 0, staleAdmits: 0, staleClaims: 0 });
+    assert.equal(staleResult.decision.reason, 'provider_singleflight_ownership_lost');
+    assert.equal((await cacheStores[0]!.readFlightState(expiryIdentity)).active, true, 'stale A must preserve successor B token');
+    releaseValidProviderResolve();
+    const validResult = await validExecution;
+    assert.deepEqual({ validAdapterCalls, validAdmits, validClaims }, { validAdapterCalls: 1, validAdmits: 1, validClaims: 1 });
+    assert.equal(validResult.settlementState, 'settled_committed');
+    assert.equal((await cacheStores[0]!.read(expiryIdentity, expiryCachePolicy)).state, 'FRESH');
 
     // Preserve PGS-1's ambiguous/lost CLAIM acceptance proofs through the
     // mandatory PGS-2 owner boundary.

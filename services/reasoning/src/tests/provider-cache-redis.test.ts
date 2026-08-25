@@ -154,6 +154,39 @@ export async function runProviderCacheRedisIntegrationTests(): Promise<void> {
     assert.equal(followerRaceResult.settlementState, 'not_required');
     assert.equal(followerRaceResult.providerControlSnapshot, undefined);
 
+    // Hold A's mandatory post-acquisition validation beyond the authoritative
+    // Redis lease, let B become the valid owner, then prove A's pre-execution
+    // renewal fence prevents every upstream boundary and preserves B's token.
+    const expiryCachePolicy = buildTestProviderCachePolicy({ policyVersion: 'pre-execution-expiry', freshTtlMs: 2_000, staleIfErrorTtlMs: 1_000, flightLeaseMs: 700, followerWaitTimeoutMs: 3_000 });
+    const expiryControlPolicy = buildTestProviderControlPolicy({ policyVersion: 'pre-execution-expiry', rate: { capacity: 3, refillAmount: 3, refillIntervalMs: 60_000, requestTokens: 1 }, quota: { kind: 'fixed_duration', limit: 3, windowMs: 60_000 }, cost: { kind: 'fixed_duration', budgetUnits: 3, windowMs: 60_000, requestCostUnits: 1 }, concurrency: { maxConcurrent: 2, leaseDurationMs: 700, providerTimeoutMs: 100 } });
+    const expiryResiliencePolicy = buildTestProviderResiliencePolicy({ policyVersion: 'pre-execution-expiry' });
+    let staleAdmits = 0, staleClaims = 0, staleAdapterCalls = 0, validAdmits = 0, validClaims = 0, validAdapterCalls = 0;
+    const expiryControl = (store: RedisProviderControlStore, stale: boolean): ProviderControlStore => ({ kind: 'redis', isReady: () => store.isReady(), admit: async value => { if (stale) staleAdmits += 1; else validAdmits += 1; return store.admit(value); }, claimExecution: async (reservation, token) => { if (stale) staleClaims += 1; else validClaims += 1; return store.claimExecution(reservation, token); }, settle: (reservation, status) => store.settle(reservation, status), close: () => Promise.resolve() });
+    let staleAcquiredResolve!: () => void, releaseValidationResolve!: () => void, validProviderResolve!: () => void, releaseValidProviderResolve!: () => void;
+    const staleAcquired = new Promise<void>(resolve => { staleAcquiredResolve = resolve; }), releaseValidation = new Promise<void>(resolve => { releaseValidationResolve = resolve; }), validProvider = new Promise<void>(resolve => { validProviderResolve = resolve; }), releaseValidProvider = new Promise<void>(resolve => { releaseValidProviderResolve = resolve; });
+    let staleReads = 0;
+    const staleOwnerStore: ProviderCacheStore = { kind: 'redis', read: async (cacheIdentity, resolvedPolicy) => { staleReads += 1; if (staleReads === 2) { await releaseValidation; return { state: 'MISS' }; } return cacheStores[0]!.read(cacheIdentity, resolvedPolicy); }, tryAcquireFlight: async (cacheIdentity, token, leaseMs) => { const acquired = await cacheStores[0]!.tryAcquireFlight(cacheIdentity, token, leaseMs); if (acquired) staleAcquiredResolve(); return acquired; }, renewFlight: (cacheIdentity, token, leaseMs) => cacheStores[0]!.renewFlight(cacheIdentity, token, leaseMs), readFlightState: cacheIdentity => cacheStores[0]!.readFlightState(cacheIdentity), publishSuccessAndComplete: (cacheIdentity, token, material, resolvedPolicy) => cacheStores[0]!.publishSuccessAndComplete(cacheIdentity, token, material, resolvedPolicy), publishFailureAndComplete: (cacheIdentity, token, reason, ttlMs) => cacheStores[0]!.publishFailureAndComplete(cacheIdentity, token, reason, ttlMs), releaseOwnerSafely: (cacheIdentity, token) => cacheStores[0]!.releaseOwnerSafely(cacheIdentity, token) };
+    const expiryContext = (coordinator: ProviderCacheCoordinator, control: ProviderControlStore, index: number) => ({ cacheCoordinator: coordinator, cachePolicyResolver: { resolve: async () => expiryCachePolicy }, providerControlStore: control, policyResolver: { resolve: async () => expiryControlPolicy }, resilienceStore: resilienceStores[index]!, resiliencePolicyResolver: { resolve: async () => expiryResiliencePolicy }, credentialPoolId: 'primary' });
+    const staleRequest = { ...liveRequest('expired-pre-execution-owner'), region: 'pre-execution-expiry' }, validRequest = { ...liveRequest('valid-successor-owner'), region: 'pre-execution-expiry' };
+    const staleExecution = executeProviderApiGateRequest(staleRequest, { ...adapter, fetchManaged: async (value: never) => { staleAdapterCalls += 1; return fixture.fetch(value); } }, expiryContext(new ProviderCacheCoordinator(staleOwnerStore), expiryControl(controlStores[0]!, true), 0));
+    await staleAcquired;
+    const expiryIdentity = buildProviderCacheIdentity(staleRequest, expiryCachePolicy, 'primary', buildProviderRequestFingerprint(staleRequest));
+    const authoritativeRemaining = await cacheClients[0]!.pTTL(`${namespace}:{${expiryIdentity.hash}}:flight`);
+    assert.ok(authoritativeRemaining > 0);
+    await new Promise(resolve => setTimeout(resolve, authoritativeRemaining + 1));
+    const validExecution = executeProviderApiGateRequest(validRequest, { ...adapter, fetchManaged: async (value: never) => { validAdapterCalls += 1; validProviderResolve(); await releaseValidProvider; return fixture.fetch(value); } }, expiryContext(new ProviderCacheCoordinator(cacheStores[1]!), expiryControl(controlStores[1]!, false), 1));
+    await validProvider;
+    releaseValidationResolve();
+    const staleResult = await staleExecution;
+    assert.deepEqual({ staleAdapterCalls, staleAdmits, staleClaims }, { staleAdapterCalls: 0, staleAdmits: 0, staleClaims: 0 });
+    assert.equal(staleResult.decision.reason, 'provider_singleflight_ownership_lost');
+    assert.equal((await cacheStores[0]!.readFlightState(expiryIdentity)).active, true, 'stale A must preserve successor B token');
+    releaseValidProviderResolve();
+    const validResult = await validExecution;
+    assert.deepEqual({ validAdapterCalls, validAdmits, validClaims }, { validAdapterCalls: 1, validAdmits: 1, validClaims: 1 });
+    assert.equal(validResult.settlementState, 'settled_committed');
+    assert.equal((await cacheStores[0]!.read(expiryIdentity, expiryCachePolicy)).state, 'FRESH');
+
     // Preserve PGS-1's ambiguous/lost CLAIM acceptance proofs through the
     // mandatory PGS-2 owner boundary.
     const recoveryCachePolicy = buildTestProviderCachePolicy({ policyVersion: 'claim-recovery-cache', flightLeaseMs: 2_000, followerWaitTimeoutMs: 4_000 });

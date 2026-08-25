@@ -435,15 +435,16 @@ export async function runProviderCacheTests(): Promise<void> {
   const preLossAdapter = { ...adapter, fetchManaged: async (sourceRequest: never) => { preLossAdapterCalls += 1; return fixture.fetch(sourceRequest); } };
   const preLossResult = await executeProviderApiGateRequest({ ...liveRequest('pre-loss'), region: 'pre-loss' }, preLossAdapter, makeOwnershipContext(preLossStore, delayedControl));
   assert.equal(preLossAdapterCalls, 0, 'already-aborted ownership signal must block adapter invocation');
-  assert.deepEqual(preLossSettlements, ['RELEASED']);
+  assert.deepEqual(preLossSettlements, [], 'pre-execution ownership loss must not enter PGS-1 settlement');
   assert.equal(preLossResult.decision.reason, 'provider_singleflight_ownership_lost', 'pre-adapter ownership-loss result');
-  assert.equal(preLossResult.decision.providerCallMode, 'live_staging_call');
-  assert.equal(preLossResult.settlementState, 'settled_released');
-  assert.ok(preLossResult.providerControlSnapshot);
+  assert.equal(preLossResult.decision.providerCallMode, 'blocked_live');
+  assert.equal(preLossResult.settlementState, 'not_required');
+  assert.equal(preLossResult.providerControlSnapshot, undefined);
   assert.equal(preLossStore.entry, undefined);
 
   const duringLossStore = new TestCacheStore();
-  duringLossStore.renewFlight = async () => false;
+  let duringRenewals = 0;
+  duringLossStore.renewFlight = async () => { duringRenewals += 1; return duringRenewals === 1; };
   const duringLossMemory = new MemoryProviderControlStore();
   const duringLossSettlements: string[] = [];
   const duringControl: ProviderControlStore = {

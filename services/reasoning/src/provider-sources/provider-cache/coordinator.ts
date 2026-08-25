@@ -205,6 +205,18 @@ export class ProviderCacheCoordinator {
             return { material: postAcquire.entry.material, layer: 'l2', freshness: 'fresh', role: 'follower', entry: postAcquire.entry };
           }
           hadStaleCandidate = postAcquire.state === 'STALE_BUT_ELIGIBLE';
+          // The validated read may have outlived this token's lease. Renew the
+          // exact token before permitting any resilience, admission, or
+          // provider work. A successor token is never released or mutated.
+          let confirmed = false;
+          try {
+            confirmed = await this.store.renewFlight(identity, token, policy.flightLeaseMs);
+          } catch {
+            return this.failureOrStale(identity, policy, 'follower', 'provider_cache_control_unavailable', hadStaleCandidate, staleFailureAuthorizer);
+          }
+          if (!confirmed) {
+            return this.failureOrStale(identity, policy, 'follower', 'provider_singleflight_ownership_lost', hadStaleCandidate, staleFailureAuthorizer);
+          }
           role = 'owner';
           break;
         }

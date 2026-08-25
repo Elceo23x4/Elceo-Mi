@@ -96,6 +96,10 @@ jobs:
           REDIS_URL: redis://127.0.0.1:6379
           DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3
         run: npm run test:provider-scale-acceptance
+      - name: Canonical Candle PostgreSQL integration
+        env:
+          DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3
+        run: npm run test:canonical-candle-postgres
       - name: IFP-3 PostgreSQL integration
         env:
           DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3

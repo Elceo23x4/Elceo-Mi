@@ -2,6 +2,7 @@ import { buildCanonicalCandleContentHash, buildCanonicalCandleObservationId, ext
 import { LAUNCH_ASSET_SYMBOLS, type CanonicalAssetSymbol, type CanonicalEvent, type Timeframe } from '@elceo/types';
 import { mapCandleToCanonical } from '../bridges/shared';
 import { MemoryIngestionEventSnapshotRepository } from '../persistence/memory-ingestion-repository';
+import { createHash } from 'node:crypto';
 
 function assert(condition: boolean, message: string): asserts condition { if (!condition) throw new Error(`Assertion failed: ${message}`); }
 function candle(asset: string, timeframe = '60', provider: 'finnhub' | 'fmp' = 'finnhub') {
@@ -11,6 +12,15 @@ function mustReject(run: () => unknown, message: string): void { try { run(); } 
 async function mustRejectAsync(run: () => Promise<unknown>, message: string): Promise<void> { try { await run(); } catch { return; } throw new Error(`Assertion failed: ${message}`); }
 
 export async function runCanonicalCandleObservationTests(): Promise<void> {
+  for (const provider of ['ascii-provider', 'données-市場', 'multi-block-'.repeat(20)]) {
+    const slot = { provider, asset: 'XAU/USD', timeframe: 'H1' as const, observedAt: '2026-01-01T00:00:00.000Z' };
+    const canonicalSlot = JSON.stringify(['canonical_market_candle_v1', provider, slot.asset, slot.timeframe, slot.observedAt]);
+    const standardDigest = createHash('sha256').update(canonicalSlot).digest('hex');
+    assert(buildCanonicalCandleObservationId(slot) === `market_candle:${standardDigest}`, 'shared SHA-256 must match Node crypto for ASCII, UTF-8 and multi-block inputs');
+    const content = { ...slot, open: 100, high: 110, low: 90, close: 105, volume: 12 };
+    const standardContentDigest = createHash('sha256').update(JSON.stringify([canonicalSlot, 100, 110, 90, 105, 12])).digest('hex');
+    assert(buildCanonicalCandleContentHash(content) === `sha256:${standardContentDigest}`, 'content SHA-256 must match Node crypto');
+  }
   for (const asset of LAUNCH_ASSET_SYMBOLS) {
     const event = mapCandleToCanonical(candle(asset), asset, 'H1');
     assert(event.observation?.asset === asset, `typed mapping must preserve ${asset}`);

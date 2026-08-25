@@ -4,7 +4,7 @@ const DEFAULT_TIMEOUT_MS = 8000;
 
 const baseUrl = process.env.ELCEO_SMOKE_BASE_URL;
 const internalToken = process.env.ELCEO_INTERNAL_API_TOKEN;
-const authToken = process.env.ELCEO_SMOKE_AUTH_TOKEN;
+const sessionCookie = process.env.ELCEO_SMOKE_SESSION_COOKIE;
 const allowMutations = process.env.ELCEO_SMOKE_ALLOW_MUTATIONS === 'true';
 const verbose = process.env.ELCEO_SMOKE_VERBOSE === 'true';
 
@@ -105,15 +105,35 @@ const checks = [
     },
   },
   {
-    name: 'Internal admin read checks with token',
+    name: 'Internal token alone does not authenticate an admin',
     optional: true,
     enabled: () => Boolean(internalToken),
     skipMessage: 'ELCEO_INTERNAL_API_TOKEN not set',
     async run() {
+      const { response, json } = await requestJson('GET', '/api/admin/system-summary', {
+        headers: { 'x-elceo-internal-token': internalToken },
+      });
+      const statusOk = response.status === 401 || response.status === 403;
+      const envelopeOk = summarizeEnvelope(json) && json.ok === false;
+      if (!statusOk || !envelopeOk) {
+        return { status: 'failed', message: `Expected 401/403 + error envelope, got ${response.status}` };
+      }
+      return { status: 'passed', message: `status=${response.status}` };
+    },
+  },
+  {
+    name: 'Internal admin reads with session and token',
+    optional: true,
+    enabled: () => Boolean(internalToken && sessionCookie),
+    skipMessage: 'ELCEO_INTERNAL_API_TOKEN and ELCEO_SMOKE_SESSION_COOKIE are both required',
+    async run() {
       const endpoints = ['/api/admin/system-summary', '/api/admin/ops', '/api/admin/providers'];
       for (const endpoint of endpoints) {
         const { response, json } = await requestJson('GET', endpoint, {
-          headers: { 'x-elceo-internal-token': internalToken },
+          headers: {
+            Cookie: sessionCookie,
+            'x-elceo-internal-token': internalToken,
+          },
         });
         if (response.status !== 200 || !summarizeEnvelope(json) || json.ok !== true) {
           return { status: 'failed', message: `Endpoint ${endpoint} returned ${response.status}` };
@@ -125,13 +145,13 @@ const checks = [
   {
     name: 'Auth read checks',
     optional: true,
-    enabled: () => Boolean(authToken),
-    skipMessage: 'ELCEO_SMOKE_AUTH_TOKEN not set',
+    enabled: () => Boolean(sessionCookie),
+    skipMessage: 'ELCEO_SMOKE_SESSION_COOKIE not set',
     async run() {
       const endpoints = ['/api/refresh/latest', '/api/account/entitlements', '/api/account/usage'];
       for (const endpoint of endpoints) {
         const { response, json } = await requestJson('GET', endpoint, {
-          headers: { Authorization: `Bearer ${authToken}` },
+          headers: { Cookie: sessionCookie },
         });
         if (response.status !== 200 || !summarizeEnvelope(json) || json.ok !== true) {
           return { status: 'failed', message: `Endpoint ${endpoint} returned ${response.status}` };
@@ -173,13 +193,14 @@ if (allowMutations) {
   checks.push({
     name: 'Optional mutation check: internal billing reconcile retry envelope',
     optional: true,
-    enabled: () => Boolean(internalToken),
-    skipMessage: 'ELCEO_INTERNAL_API_TOKEN not set',
+    enabled: () => Boolean(internalToken && sessionCookie),
+    skipMessage: 'ELCEO_INTERNAL_API_TOKEN and ELCEO_SMOKE_SESSION_COOKIE are both required',
     async run() {
       const subjectId = 'smoke-test-subject';
       const { response, json } = await requestJson('POST', '/api/internal/billing/reconcile/retry', {
         headers: {
           'content-type': 'application/json',
+          Cookie: sessionCookie,
           'x-elceo-internal-token': internalToken,
           'Idempotency-Key': `smoke-mutation-${Date.now()}`,
         },

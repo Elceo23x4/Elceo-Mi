@@ -34,9 +34,9 @@
 ## C4-M8B smoke-test verification command
 - Run `npm run smoke:production` against staging before production rollout.
 - Required env: `ELCEO_SMOKE_BASE_URL`.
-- Optional env: `ELCEO_INTERNAL_API_TOKEN`, `ELCEO_SMOKE_AUTH_TOKEN`.
+- Optional env: `ELCEO_INTERNAL_API_TOKEN`, `ELCEO_SMOKE_SESSION_COOKIE` (a legitimate unexpired NextAuth cookie header value).
 - Default safe mode (`ELCEO_SMOKE_ALLOW_MUTATIONS=false`) verifies envelope/auth/internal-gate behavior without intentional mutations.
-- If `ELCEO_SMOKE_AUTH_TOKEN` is absent, authenticated checks are marked skipped and do not fail the full run.
+- If `ELCEO_SMOKE_SESSION_COOKIE` is absent, authenticated checks are marked skipped and do not fail the full run; positive admin checks require it together with `ELCEO_INTERNAL_API_TOKEN`.
 - Any failed required smoke check is release-blocking.
 
 ## C4-M8C release execution linkage

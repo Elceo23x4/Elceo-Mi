@@ -13,7 +13,7 @@
     "dev": "npm run dev -w apps/web",
     "lint": "npm run --workspaces --if-present lint",
     "typecheck": "npm run --workspaces --if-present typecheck",
-    "test": "npm run --workspaces --if-present test && node scripts/security-rc-j-self-test.mjs",
+    "test": "npm run --workspaces --if-present test && node --test test/production-smoke-test.test.mjs && node scripts/security-rc-j-self-test.mjs",
     "test:provider-control-redis": "PROVIDER_CONTROL_REDIS_INTEGRATION=1 npm run -w services/reasoning test",
     "test:provider-cache-redis": "PROVIDER_CACHE_REDIS_INTEGRATION=1 npm run -w services/reasoning test",
     "test:provider-resilience-redis": "PROVIDER_RESILIENCE_REDIS_INTEGRATION=1 npm run -w services/reasoning test",

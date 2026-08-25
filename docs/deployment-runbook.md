@@ -42,11 +42,18 @@ ELCEO_SMOKE_BASE_URL=https://staging.example.com npm run smoke:production
 
 Optional env:
 - `ELCEO_INTERNAL_API_TOKEN`
-- `ELCEO_SMOKE_AUTH_TOKEN`
+- `ELCEO_SMOKE_SESSION_COOKIE`: the complete `Cookie` header value copied from a legitimate,
+  unexpired NextAuth browser session for the deployed target (for example,
+  `__Secure-authjs.session-token=...` on HTTPS). Treat it as a secret and do not commit it.
+
+Authenticated user reads require `ELCEO_SMOKE_SESSION_COOKIE`. Positive admin reads require
+both that session (whose subject has `admin.read` access) and `ELCEO_INTERNAL_API_TOKEN`.
+The internal token alone is deliberately tested for rejection. Bearer authentication is not
+implemented for application subjects, so the removed `ELCEO_SMOKE_AUTH_TOKEN` contract is not supported.
 
 Smoke behavior:
 - Read-only by default.
-- Auth checks are skipped if auth token is absent.
+- Authenticated checks are skipped if the session cookie is absent.
 - Mutation checks require `ELCEO_SMOKE_ALLOW_MUTATIONS=true` and should be staging-only.
 
 ## 5) Migration verification

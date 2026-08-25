@@ -1,5 +1,6 @@
 export * from './validation-utils';
 export * from './event.schema';
+export * from './canonical-candle.schema';
 export * from './cognition.schema';
 export * from './providers.schema';
 export * from './reasoning.schema';

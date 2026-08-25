@@ -24,6 +24,7 @@ import {
   validateRequiredFields,
   type SchemaValidationResult
 } from './validation-utils';
+import { validateCanonicalMarketCandleObservation } from './canonical-candle.schema';
 
 export const SOURCE_CATEGORIES: SourceCategory[] = ['market_data', 'macro_calendar', 'news', 'geopolitics', 'macro_context', 'internal', 'user'];
 export const EVIDENCE_KINDS: EvidenceKind[] = [
@@ -89,6 +90,10 @@ export function validateCanonicalEvent(input: unknown, pathPrefix = ''): SchemaV
   }
 
   if (!isStringArray(input.tags)) errors.push(`${pathPrefix}tags must be string[]`);
+  if (input.observation !== undefined && input.observation !== null) {
+    const observation = validateCanonicalMarketCandleObservation(input.observation);
+    if (observation.ok === false) errors.push(...observation.errors.map((error) => `${pathPrefix}observation.${error}`));
+  }
   if (!(input.rawUrl === null || isNonEmptyString(input.rawUrl))) errors.push(`${pathPrefix}rawUrl must be non-empty string or null`);
   if (!(input.revisionOfEventId === null || isNonEmptyString(input.revisionOfEventId))) errors.push(`${pathPrefix}revisionOfEventId must be non-empty string or null`);
   if (!isBoolean(input.stale)) errors.push(`${pathPrefix}stale must be boolean`);

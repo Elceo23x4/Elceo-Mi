@@ -1,4 +1,5 @@
-import { validateCanonicalEvent, type NormalizedCandle, type NormalizedGeopoliticalEvent, type NormalizedMacroEvent, type NormalizedMarketQuote, type NormalizedNewsArticle } from '@elceo/schemas';
+import { createHash } from 'node:crypto';
+import { validateCanonicalEvent, validateCanonicalMarketCandleObservation, type NormalizedCandle, type NormalizedGeopoliticalEvent, type NormalizedMacroEvent, type NormalizedMarketQuote, type NormalizedNewsArticle } from '@elceo/schemas';
 import type { CanonicalAssetSymbol, CanonicalEvent, EvidenceKind, Timeframe } from '@elceo/types';
 import { mapInternalNormalizedEventToCanonicalEvent } from '@elceo/types';
 import { normalizeEvent } from '../normalization/normalizeEvent';
@@ -59,6 +60,17 @@ export function timeframeToProviderResolution(timeframe: Timeframe): string {
     D1: 'D'
   };
   return map[timeframe];
+}
+
+const PROVIDER_RESOLUTION_TO_TIMEFRAME: Readonly<Record<string, Timeframe>> = { '5': 'M5', '15': 'M15', '60': 'H1', '240': 'H4', D: 'D1' };
+
+function canonicalTimeframeForCandle(value: string): Timeframe | null {
+  if (value === 'M5' || value === 'M15' || value === 'H1' || value === 'H4' || value === 'D1') return value;
+  return PROVIDER_RESOLUTION_TO_TIMEFRAME[value] ?? null;
+}
+
+function sha256(value: string): string {
+  return createHash('sha256').update(value).digest('hex');
 }
 
 function mapImpact(value: 'low' | 'medium' | 'high' | undefined): CanonicalEvent['impact'] {
@@ -139,8 +151,32 @@ export function mapQuoteToCanonical(quote: NormalizedMarketQuote, asset: Canonic
 }
 
 export function mapCandleToCanonical(candle: NormalizedCandle, asset: CanonicalAssetSymbol, timeframe: Timeframe): CanonicalEvent {
+  if (candle.assetCode !== asset) throw new Error(`Candle asset mismatch: expected ${asset}, received ${candle.assetCode}`);
+  const mappedTimeframe = canonicalTimeframeForCandle(candle.timeframe);
+  if (mappedTimeframe !== timeframe) throw new Error(`Candle timeframe mismatch: expected ${timeframe}, received ${candle.timeframe}`);
+  const timestampMs = Date.parse(candle.timestampUtc);
+  if (!Number.isFinite(timestampMs)) throw new Error(`Invalid candle timestamp: ${candle.timestampUtc}`);
+  const observedAt = new Date(timestampMs).toISOString();
+  const semanticInputs = [candle.provider, asset, timeframe, observedAt];
+  const observationId = `market_candle:${sha256(JSON.stringify(semanticInputs))}`;
+  const observation = {
+    kind: 'market_candle' as const,
+    observationId,
+    contentHash: sha256(JSON.stringify([...semanticInputs, candle.open, candle.high, candle.low, candle.close, candle.volume ?? null])),
+    asset,
+    timeframe,
+    open: candle.open,
+    high: candle.high,
+    low: candle.low,
+    close: candle.close,
+    volume: candle.volume ?? null,
+    observedAt,
+    provider: candle.provider
+  };
+  const observationValidation = validateCanonicalMarketCandleObservation(observation);
+  if (observationValidation.ok === false) throw new Error(`Invalid canonical candle: ${observationValidation.errors.join('; ')}`);
   const legacy = normalizeEvent(candle);
-  return mapLegacyNormalizedToCanonical({
+  const canonical = mapLegacyNormalizedToCanonical({
     legacyEvent: legacy,
     sourceCategory: 'market_data',
     eventKind: 'market_structure',
@@ -155,6 +191,7 @@ export function mapCandleToCanonical(candle: NormalizedCandle, asset: CanonicalA
     currency: asset.split('/')[1] ?? null,
     tags: ['market_candle', candle.provider]
   });
+  return { ...canonical, id: observationId, dedupeKey: observationId, sourceId: observationId, observation: observationValidation.value };
 }
 
 export function mapMacroEventToCanonical(event: NormalizedMacroEvent, status: CanonicalEvent['status']): CanonicalEvent {

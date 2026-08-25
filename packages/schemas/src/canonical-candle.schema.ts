@@ -1,5 +1,6 @@
 import { LAUNCH_ASSET_SYMBOLS, type CanonicalEvent, type CanonicalMarketCandleObservation } from '@elceo/types';
 import { isEnumValue, isIsoDateString, isNonEmptyString, isObjectRecord, type SchemaValidationResult } from './validation-utils';
+import { buildCanonicalCandleContentHash, buildCanonicalCandleObservationId } from './canonical-candle-identity';
 
 export function validateCanonicalMarketCandleObservation(input: unknown): SchemaValidationResult<CanonicalMarketCandleObservation> {
   const errors: string[] = [];
@@ -20,14 +21,22 @@ export function validateCanonicalMarketCandleObservation(input: unknown): Schema
   if (!(input.volume === null || (typeof input.volume === 'number' && Number.isFinite(input.volume) && input.volume >= 0))) errors.push('volume must be null or finite and >= 0');
   if (!isIsoDateString(input.observedAt)) errors.push('observedAt must be a valid ISO date');
   if (!isNonEmptyString(input.provider)) errors.push('provider must be nonempty');
+  if (errors.length === 0) {
+    const candle = input as CanonicalMarketCandleObservation;
+    if (candle.observationId !== buildCanonicalCandleObservationId(candle)) errors.push('observationId does not match canonical candle identity');
+    if (candle.contentHash !== buildCanonicalCandleContentHash(candle)) errors.push('contentHash does not match canonical candle content');
+  }
   return errors.length ? { ok: false, errors } : { ok: true, value: input as CanonicalMarketCandleObservation };
 }
 
 export function getCanonicalCandleObservation(event: CanonicalEvent): CanonicalMarketCandleObservation | null {
   const result = validateCanonicalMarketCandleObservation(event.observation);
   if (!result.ok) return null;
+  if (event.sourceCategory !== 'market_data' || event.eventKind !== 'market_structure' || !event.tags.includes('market_candle')) return null;
   if (!event.relatedAssets.includes(result.value.asset) || !event.relatedTimeframes.includes(result.value.timeframe)) return null;
   if (event.attribution.provider !== result.value.provider) return null;
+  if (event.id !== result.value.observationId || event.dedupeKey !== result.value.observationId) return null;
+  if (Date.parse(event.occurredAt) !== Date.parse(result.value.observedAt)) return null;
   return result.value;
 }
 

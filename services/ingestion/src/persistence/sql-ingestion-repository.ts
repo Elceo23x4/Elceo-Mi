@@ -8,6 +8,7 @@ import {
   serializeProviderCapabilities,
   serializeRunComparison
 } from './serialization';
+import { prepareCanonicalEventsForSnapshot } from './canonical-candle-persistence';
 
 function runtimeEnv(): Record<string, string | undefined> {
   return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
@@ -291,9 +292,10 @@ export class SqlIngestionRunRepository implements IngestionRunRepository {
 
 export class SqlIngestionEventSnapshotRepository implements IngestionEventSnapshotRepository {
   async saveEventSnapshots(runId: string, asset: CanonicalAssetSymbol, timeframe: Timeframe, events: CanonicalEvent[]): Promise<void> {
+    const preparedEvents = prepareCanonicalEventsForSnapshot(events);
     await this.deleteSnapshotsForRun(runId);
 
-    for (const event of events) {
+    for (const event of preparedEvents) {
       await queryDb(
         `INSERT INTO app_ingestion_event_snapshots (
           run_id, asset, timeframe, event_id, dedupe_key,
@@ -384,6 +386,7 @@ export class SqlIngestionPersistenceRepository implements IngestionPersistenceRe
   }
 
   async persistRunWithEvents(record: IngestionRunRecordInput, events: CanonicalEvent[]): Promise<void> {
+    prepareCanonicalEventsForSnapshot(events);
     await this.runRepository.saveRunRecord(record);
     await this.eventSnapshotRepository.saveEventSnapshots(record.runId, record.asset, record.timeframe, events);
   }

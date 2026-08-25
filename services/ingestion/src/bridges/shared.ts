@@ -1,5 +1,4 @@
-import { createHash } from 'node:crypto';
-import { validateCanonicalEvent, validateCanonicalMarketCandleObservation, type NormalizedCandle, type NormalizedGeopoliticalEvent, type NormalizedMacroEvent, type NormalizedMarketQuote, type NormalizedNewsArticle } from '@elceo/schemas';
+import { buildCanonicalCandleContentHash, buildCanonicalCandleObservationId, validateCanonicalEvent, validateCanonicalMarketCandleObservation, type NormalizedCandle, type NormalizedGeopoliticalEvent, type NormalizedMacroEvent, type NormalizedMarketQuote, type NormalizedNewsArticle } from '@elceo/schemas';
 import type { CanonicalAssetSymbol, CanonicalEvent, EvidenceKind, Timeframe } from '@elceo/types';
 import { mapInternalNormalizedEventToCanonicalEvent } from '@elceo/types';
 import { normalizeEvent } from '../normalization/normalizeEvent';
@@ -67,10 +66,6 @@ const PROVIDER_RESOLUTION_TO_TIMEFRAME: Readonly<Record<string, Timeframe>> = { 
 function canonicalTimeframeForCandle(value: string): Timeframe | null {
   if (value === 'M5' || value === 'M15' || value === 'H1' || value === 'H4' || value === 'D1') return value;
   return PROVIDER_RESOLUTION_TO_TIMEFRAME[value] ?? null;
-}
-
-function sha256(value: string): string {
-  return createHash('sha256').update(value).digest('hex');
 }
 
 function mapImpact(value: 'low' | 'medium' | 'high' | undefined): CanonicalEvent['impact'] {
@@ -157,12 +152,12 @@ export function mapCandleToCanonical(candle: NormalizedCandle, asset: CanonicalA
   const timestampMs = Date.parse(candle.timestampUtc);
   if (!Number.isFinite(timestampMs)) throw new Error(`Invalid candle timestamp: ${candle.timestampUtc}`);
   const observedAt = new Date(timestampMs).toISOString();
-  const semanticInputs = [candle.provider, asset, timeframe, observedAt];
-  const observationId = `market_candle:${sha256(JSON.stringify(semanticInputs))}`;
+  const identityInput = { provider: candle.provider, asset, timeframe, observedAt };
+  const observationId = buildCanonicalCandleObservationId(identityInput);
   const observation = {
     kind: 'market_candle' as const,
     observationId,
-    contentHash: sha256(JSON.stringify([...semanticInputs, candle.open, candle.high, candle.low, candle.close, candle.volume ?? null])),
+    contentHash: buildCanonicalCandleContentHash({ ...identityInput, open: candle.open, high: candle.high, low: candle.low, close: candle.close, volume: candle.volume ?? null }),
     asset,
     timeframe,
     open: candle.open,

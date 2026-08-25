@@ -63,3 +63,5 @@ export * as positioningStress from './positioning-stress/index';
 export * from './fragility-score/index';
 export * from './intelligence-acceptance/index';
 export * from './adaptive-materialization/index';
+
+export * from './inbound-read/index';

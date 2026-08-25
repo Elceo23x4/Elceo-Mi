@@ -1,0 +1,6 @@
+import { createInboundRedisClient,DASHBOARD_READ_ROUTE_FAMILY,RedisInboundReadAdmission,type InboundReadPolicy } from '@elceo/reasoning';
+import { executeAdmittedDashboardRead,type DashboardAdmissionAuthority } from './dashboard-admission-execution';
+let authority:DashboardAdmissionAuthority|undefined;
+function productionAuthority(){if(authority)return authority;let policy:InboundReadPolicy;try{policy=JSON.parse(process.env.ELCEO_INBOUND_READ_POLICY_JSON??'') as InboundReadPolicy}catch{throw new Error('inbound_policy_unavailable')}if(policy.routeFamily!==DASHBOARD_READ_ROUTE_FAMILY)throw new Error('inbound_policy_unavailable');authority=new RedisInboundReadAdmission(createInboundRedisClient(),policy);return authority}
+export function setDashboardAdmissionAuthorityForTest(next:DashboardAdmissionAuthority|undefined){if(process.env.NODE_ENV!=='test')throw new Error('test_seam_unavailable');authority=next}
+export async function withDashboardReadAdmission<T>(authenticatedSubject:string,work:(signal:AbortSignal)=>Promise<T>,override?:DashboardAdmissionAuthority):Promise<{ok:true;value:T}|{ok:false;status:429|503;reason:string}>{let service:DashboardAdmissionAuthority;try{service=override??productionAuthority()}catch{return{ok:false,status:503,reason:'inbound_policy_unavailable'}}return executeAdmittedDashboardRead(authenticatedSubject,work,service)}

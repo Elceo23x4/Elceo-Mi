@@ -1,6 +1,5 @@
 import type { DashboardChartWorkspaceViewModel } from '@elceo/types';
 import { readPersistedState } from '../store/persistence-store';
-import { runIngestionTick } from '../worker';
 
 function defaultChartFilters() {
   return {
@@ -12,13 +11,10 @@ function defaultChartFilters() {
   } as const;
 }
 
-export async function getDashboardData(assetCode: string): Promise<DashboardChartWorkspaceViewModel | null> {
-  let snapshot = await readPersistedState();
-
-  if (!snapshot.chartViewModelByAsset[assetCode]) {
-    await runIngestionTick();
-    snapshot = await readPersistedState();
-  }
+export async function getDashboardData(assetCode: string, readState: typeof readPersistedState = readPersistedState): Promise<DashboardChartWorkspaceViewModel | null> {
+  // This function is a user-facing read boundary. Missing state is truthful
+  // unavailability; ingestion is owned exclusively by the worker/scheduler.
+  const snapshot = await readState();
 
   const dashboard = snapshot.chartViewModelByAsset[assetCode];
   if (!dashboard) return null;

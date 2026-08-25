@@ -80,8 +80,10 @@ import { runIntelligenceAcceptanceTests } from './intelligence-acceptance.test.j
 import { runAdaptiveMaterializationTests } from './adaptive-materialization.test.js';
 import { runAdaptiveMaterializationRedisIntegrationTests } from './adaptive-materialization-redis.test.js';
 import { runAdaptiveMaterializationIntegrationTests } from './adaptive-materialization-integration.test.js';
+import { runProviderScaleAcceptanceTests } from './provider-scale-acceptance.test.js';
 
 async function run(): Promise<void> {
+  await runProviderScaleAcceptanceTests();
   await runAdaptiveMaterializationTests();
   await runAdaptiveMaterializationRedisIntegrationTests();
   await runAdaptiveMaterializationIntegrationTests();

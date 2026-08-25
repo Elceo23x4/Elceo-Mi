@@ -6,6 +6,9 @@ import { clearAuthTestOverrides, setAuthTestOverrides } from '../lib/server/auth
 import { setCompositionTestOverrides } from './stubs/composition';
 import { commercialMutationCounts, expireStepUpChallengeFreshness, resetCommercialMutationCounts, setCommercialPersistenceFailureMode, setStepUpPersistenceFailureMode } from './stubs/application-state';
 
+import { createDashboardGetHandler } from '../lib/dashboard-route-handler';
+import type { withDashboardReadAdmission } from '../lib/inbound-read-admission';
+import { executeAdmittedDashboardRead } from '../lib/dashboard-admission-execution';
 import * as workspaceCurrentRoute from '../app/api/workspace/current/route';
 import * as workspaceRefreshRoute from '../app/api/workspace/refresh/route';
 import * as workspaceFreshnessRoute from '../app/api/workspace/freshness/route';
@@ -524,6 +527,18 @@ async function readJson(response: Response): Promise<{ ok: boolean; [key: string
 }
 
 export async function runRouteRuntimeTests(): Promise<void> {
+  const dashboardAuth=async()=>({session:{user:{id:'server-user'}},appState:{watchlist:{assets:['XAU/USD']}}}) as never;
+  let dashboardReads=0,admissionSubject='';
+  const deniedAdmission=(async(subject:string)=>{admissionSubject=subject;return{ok:false as const,status:429 as const,reason:'inbound_rate_limited'}}) as typeof withDashboardReadAdmission;
+  const deniedHandler=createDashboardGetHandler({authenticate:dashboardAuth,readDashboard:async()=>{dashboardReads++;return null},admit:deniedAdmission});
+  const spoofed=request('https://x/api/dashboard/XAU%2FUSD',{headers:{'x-forwarded-for':'203.0.113.1','x-real-ip':'203.0.113.2'}});
+  assert.equal((await deniedHandler(spoofed,{params:Promise.resolve({asset:'XAU%2FUSD'})})).status,429);assert.equal(dashboardReads,0);assert.equal(admissionSubject,'server-user');
+  const unavailableAdmission=(async()=>({ok:false as const,status:503 as const,reason:'inbound_control_unavailable'})) as typeof withDashboardReadAdmission;
+  assert.equal((await createDashboardGetHandler({authenticate:dashboardAuth,readDashboard:async()=>{dashboardReads++;return null},admit:unavailableAdmission})(spoofed,{params:Promise.resolve({asset:'XAU%2FUSD'})})).status,503);assert.equal(dashboardReads,0);
+  const allowedAdmission=(async(_subject:string,work:(signal:AbortSignal)=>Promise<unknown>)=>({ok:true as const,value:await work(new AbortController().signal)})) as typeof withDashboardReadAdmission;
+  assert.equal((await createDashboardGetHandler({authenticate:dashboardAuth,readDashboard:async()=>{dashboardReads++;return null},admit:allowedAdmission})(spoofed,{params:Promise.resolve({asset:'XAU%2FUSD'})})).status,503);assert.equal(dashboardReads,1);
+  let aborted=false,released=0;const lostAuthority={admit:async()=>({admitted:true as const,lease:{subjectDigest:'digest',ownerToken:'owner',expiresAt:Date.now()+10}}),renew:async()=>null,confirm:async()=>false,release:async()=>{released++;return true},heartbeatIntervalMs:()=>5};const lost=await executeAdmittedDashboardRead('server-user',signal=>new Promise<string>(resolve=>signal.addEventListener('abort',()=>{aborted=true;resolve('must-not-serve')},{once:true})),lostAuthority);assert.equal(lost.ok,false);assert.equal(aborted,true);assert.equal(released,1);
+
   assertRouteInventorySynchronized();
   assertCommercialRestrictionAndSliceEvidence();
   installMocks();

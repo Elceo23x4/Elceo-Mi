@@ -83,10 +83,8 @@ export async function runLiveDataPlumbingTests(): Promise<void> {
   assert(snapshot.normalizedEvents.length > 0, 'normalized events persisted');
   assert(snapshot.chartViewModelByAsset['XAU/USD']?.asset_code === 'XAU/USD', 'dashboard mapping persisted');
 
-  let upstreamExecutions = 0;
   const cold = await getDashboardData('XAU/USD', async () => ({ normalizedEvents: [], chartViewModelByAsset: {} }) as unknown as Awaited<ReturnType<typeof readPersistedState>>);
   assert(cold === null, 'cold dashboard reads are passively unavailable');
-  assert(upstreamExecutions === 0, 'cold dashboard reads cannot execute ingestion/provider/scheduler/cognition');
 
   const workspace = await getDashboardData('XAU/USD');
   assert(Boolean(workspace), 'workspace should resolve');

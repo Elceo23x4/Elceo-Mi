@@ -1,5 +1,6 @@
 import { access, readFile, readdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { deepStrictEqual } from 'node:assert/strict';
 import { extractCanonicalCandleObservations, getCanonicalCandleObservation } from '@elceo/schemas';
 import type { CanonicalEvent } from '@elceo/types';
 import { mapCandleToCanonical } from '../bridges/shared';
@@ -45,7 +46,7 @@ export async function runCanonicalCandlePostgresTests(): Promise<void> {
     const reloaded = await repository.getEventsByRunId(runId);
     const observations = extractCanonicalCandleObservations(reloaded);
     assert(observations.length === 2 && observations[0]?.observedAt === timestamp, 'SQL reload must preserve and order typed candles');
-    assert(JSON.stringify(getCanonicalCandleObservation(reloaded.find((event) => event.id === first.id)!)) === JSON.stringify(first.observation), 'SQL JSONB roundtrip must be lossless and revalidate');
+    deepStrictEqual(getCanonicalCandleObservation(reloaded.find((event) => event.id === first.id)!), first.observation, 'SQL JSONB roundtrip must be lossless and revalidate');
     assert(observations[0]?.observationId === first.observation?.observationId, 'SQL JSONB must preserve observation identity');
     assert(observations[0]?.contentHash === first.observation?.contentHash, 'SQL JSONB must preserve content hash');
     await repository.saveEventSnapshots(runId, 'XAU/USD', 'H1', [first, first]);
@@ -55,7 +56,7 @@ export async function runCanonicalCandlePostgresTests(): Promise<void> {
     let conflict = false;
     try { await repository.saveEventSnapshots(runId, 'XAU/USD', 'H1', [first, revised]); } catch (error) { conflict = error instanceof Error && error.message.startsWith('canonical_candle_revision_conflict:'); }
     assert(conflict, 'SQL persistence must explicitly reject same-slot conflicting content');
-    assert(JSON.stringify(await repository.getEventsByRunId(runId)) === JSON.stringify(beforeConflict), 'preflight conflict must leave prior SQL rows unchanged');
+    deepStrictEqual(await repository.getEventsByRunId(runId), beforeConflict, 'preflight conflict must leave prior SQL rows unchanged');
   } finally {
     await pool.query('DELETE FROM app_ingestion_runs WHERE run_id = $1', [runId]);
     await (pool as unknown as { end(): Promise<void> }).end();

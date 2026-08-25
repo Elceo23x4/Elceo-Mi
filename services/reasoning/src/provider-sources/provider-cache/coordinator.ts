@@ -188,6 +188,23 @@ export class ProviderCacheCoordinator {
     while (Date.now() < deadline) {
       try {
         if (await this.store.tryAcquireFlight(identity, token, policy.flightLeaseMs)) {
+          // Publication and flight release are atomic, but a follower may have
+          // observed MISS immediately before the prior owner published. Re-read
+          // through the authoritative validation path after acquisition so a
+          // newly-free flight cannot cause a duplicate upstream execution.
+          let postAcquire;
+          try {
+            postAcquire = await this.store.read(identity, policy);
+          } catch {
+            await this.store.releaseOwnerSafely(identity, token).catch(() => false);
+            return this.failureOrStale(identity, policy, 'follower', 'provider_cache_control_unavailable', hadStaleCandidate, staleFailureAuthorizer);
+          }
+          if (postAcquire.state === 'FRESH' && postAcquire.entry) {
+            await this.store.releaseOwnerSafely(identity, token).catch(() => false);
+            this.l1.set(identity, postAcquire.entry, policy);
+            return { material: postAcquire.entry.material, layer: 'l2', freshness: 'fresh', role: 'follower', entry: postAcquire.entry };
+          }
+          hadStaleCandidate = postAcquire.state === 'STALE_BUT_ELIGIBLE';
           role = 'owner';
           break;
         }

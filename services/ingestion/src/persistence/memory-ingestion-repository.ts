@@ -7,6 +7,7 @@ import {
   serializeProviderCapabilities,
   serializeRunComparison
 } from './serialization';
+import { prepareCanonicalEventsForSnapshot } from './canonical-candle-persistence';
 
 function toPersistedRun(record: IngestionRunRecordInput): PersistedIngestionRun {
   return {
@@ -79,8 +80,9 @@ export class MemoryIngestionEventSnapshotRepository implements IngestionEventSna
   private readonly runKeyByAssetTimeframe = new Map<string, string>();
 
   async saveEventSnapshots(runId: string, asset: CanonicalAssetSymbol, timeframe: Timeframe, events: CanonicalEvent[]): Promise<void> {
+    const preparedEvents = prepareCanonicalEventsForSnapshot(events);
     await this.deleteSnapshotsForRun(runId);
-    this.snapshotsByRun.set(runId, events.map((item) => serializeCanonicalEvent(item)));
+    this.snapshotsByRun.set(runId, preparedEvents.map((item) => serializeCanonicalEvent(item)));
     this.runKeyByAssetTimeframe.set(`${asset}::${timeframe}`, runId);
   }
 
@@ -113,6 +115,7 @@ export class MemoryIngestionPersistenceRepository implements IngestionPersistenc
   }
 
   async persistRunWithEvents(record: IngestionRunRecordInput, events: CanonicalEvent[]): Promise<void> {
+    prepareCanonicalEventsForSnapshot(events);
     await this.runRepository.saveRunRecord(record);
     await this.eventSnapshotRepository.saveEventSnapshots(record.runId, record.asset, record.timeframe, events);
   }

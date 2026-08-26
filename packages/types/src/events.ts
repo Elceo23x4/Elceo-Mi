@@ -43,6 +43,23 @@ export type EventStatus = 'scheduled' | 'live' | 'published' | 'revised' | 'stal
 export type SourceCategory = 'market_data' | 'macro_calendar' | 'news' | 'geopolitics' | 'macro_context' | 'internal' | 'user';
 export type JournalInfluenceFlag = 'none' | 'weak' | 'medium' | 'strong';
 
+export type CanonicalMarketCandleObservation = {
+  kind: 'market_candle';
+  observationId: string;
+  contentHash: string;
+  asset: CanonicalAssetSymbol;
+  timeframe: Timeframe;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number | null;
+  observedAt: string;
+  provider: string;
+};
+
+export type CanonicalEventObservation = CanonicalMarketCandleObservation;
+
 export type CanonicalEvent = {
   id: string;
   sourceId: string;
@@ -68,6 +85,8 @@ export type CanonicalEvent = {
   confirmationCount: number;
   tags: string[];
   rawPayload: unknown;
+  /** Additive canonical product truth. Historical events may omit this field. */
+  observation?: CanonicalEventObservation | null;
   rawUrl: string | null;
   revisionOfEventId: string | null;
   dedupeKey: string;

@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
     "format": "prettier --check src",
-    "test": "tsc -p tsconfig.test.json && node ../../scripts/run-cjs-tests.mjs dist-test dist-test/services/ingestion/src/tests/run-tests.js"
+    "test": "tsc -p tsconfig.test.json && node ../../scripts/run-cjs-tests.mjs dist-test dist-test/services/ingestion/src/tests/run-tests.js",
+    "test:canonical-candle-postgres": "CANONICAL_CANDLE_POSTGRES_INTEGRATION=1 npm test"
   },
   "dependencies": {
     "@elceo/config": "0.1.0",

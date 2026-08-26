@@ -8,12 +8,14 @@ import {
   serializeProviderCapabilities,
   serializeRunComparison
 } from './serialization';
+import { prepareCanonicalEventsForSnapshot } from './canonical-candle-persistence';
 
 function runtimeEnv(): Record<string, string | undefined> {
   return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
 }
 
 type QueryResultRow = Record<string, unknown>;
+export type IngestionSqlQuery = <T extends QueryResultRow = QueryResultRow>(sql: string, params?: unknown[]) => Promise<T[]>;
 
 type PoolLike = {
   query: (sql: string, params?: unknown[]) => Promise<{ rows: QueryResultRow[] }>;
@@ -290,11 +292,14 @@ export class SqlIngestionRunRepository implements IngestionRunRepository {
 }
 
 export class SqlIngestionEventSnapshotRepository implements IngestionEventSnapshotRepository {
+  constructor(private readonly query: IngestionSqlQuery = queryDb) {}
+
   async saveEventSnapshots(runId: string, asset: CanonicalAssetSymbol, timeframe: Timeframe, events: CanonicalEvent[]): Promise<void> {
+    const preparedEvents = prepareCanonicalEventsForSnapshot(events);
     await this.deleteSnapshotsForRun(runId);
 
-    for (const event of events) {
-      await queryDb(
+    for (const event of preparedEvents) {
+      await this.query(
         `INSERT INTO app_ingestion_event_snapshots (
           run_id, asset, timeframe, event_id, dedupe_key,
           relevance_score, impact, source_category, source_name,
@@ -340,7 +345,7 @@ export class SqlIngestionEventSnapshotRepository implements IngestionEventSnapsh
   }
 
   async getEventsByRunId(runId: string): Promise<CanonicalEvent[]> {
-    const rows = await queryDb<{ canonical_event_json: string }>(
+    const rows = await this.query<{ canonical_event_json: string }>(
       `SELECT canonical_event_json::text AS canonical_event_json
        FROM app_ingestion_event_snapshots
        WHERE run_id = $1
@@ -352,7 +357,7 @@ export class SqlIngestionEventSnapshotRepository implements IngestionEventSnapsh
   }
 
   async getLatestEventsForAssetTimeframe(asset: CanonicalAssetSymbol, timeframe: Timeframe): Promise<CanonicalEvent[]> {
-    const runRows = await queryDb<{ run_id: string }>(
+    const runRows = await this.query<{ run_id: string }>(
       `SELECT run_id
        FROM app_ingestion_runs
        WHERE asset = $1 AND timeframe = $2
@@ -367,7 +372,7 @@ export class SqlIngestionEventSnapshotRepository implements IngestionEventSnapsh
   }
 
   async deleteSnapshotsForRun(runId: string): Promise<void> {
-    await queryDb(`DELETE FROM app_ingestion_event_snapshots WHERE run_id = $1`, [runId]);
+    await this.query(`DELETE FROM app_ingestion_event_snapshots WHERE run_id = $1`, [runId]);
   }
 }
 
@@ -384,6 +389,7 @@ export class SqlIngestionPersistenceRepository implements IngestionPersistenceRe
   }
 
   async persistRunWithEvents(record: IngestionRunRecordInput, events: CanonicalEvent[]): Promise<void> {
+    prepareCanonicalEventsForSnapshot(events);
     await this.runRepository.saveRunRecord(record);
     await this.eventSnapshotRepository.saveEventSnapshots(record.runId, record.asset, record.timeframe, events);
   }

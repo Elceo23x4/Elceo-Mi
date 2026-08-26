@@ -26,8 +26,12 @@ import { runOutboxPublisherTests } from './outbox-publisher.test.js';
 import { runReplayPublishTests } from './replay-publish.test.js';
 import { runRuntimeOutboxIntegrationTests } from './runtime-outbox-integration.test.js';
 import { runPublishTransportTests } from './publish-transport.test.js';
+import { runCanonicalCandleObservationTests } from './canonical-candle-observation.test.js';
+import { runCanonicalCandlePostgresTests } from './canonical-candle-postgres.test.js';
 
 async function run(): Promise<void> {
+  await runCanonicalCandleObservationTests();
+  await runCanonicalCandlePostgresTests();
   runSourceReliabilityTests();
   runEventRecencyTests();
   runEventRelevanceTests();

@@ -2,8 +2,12 @@ import { scoreZoneSignificance } from '@elceo/domain';
 import type { NormalizedCandle } from '@elceo/schemas';
 import type { H4Zone } from '@elceo/types';
 
-export function detectH4Zones(assetCode: string, candles: NormalizedCandle[]): H4Zone[] {
-  const sorted = [...candles].sort((a, b) => a.timestampUtc.localeCompare(b.timestampUtc));
+export function detectH4ZonesDeterministic(assetCode: string, candles: NormalizedCandle[], evaluatedAt: string): H4Zone[] {
+  const evaluatedAtMs = new Date(evaluatedAt).getTime();
+  if (!Number.isFinite(evaluatedAtMs)) throw new Error('evaluatedAt must be a valid ISO timestamp');
+  const sorted = candles
+    .filter((candle) => new Date(candle.timestampUtc).getTime() <= evaluatedAtMs)
+    .sort((a, b) => a.timestampUtc.localeCompare(b.timestampUtc));
   const zones: H4Zone[] = [];
 
   for (let i = 2; i < sorted.length; i += 6) {
@@ -18,7 +22,7 @@ export function detectH4Zones(assetCode: string, candles: NormalizedCandle[]): H
     const center = (low + high) / 2;
     const touches = window.filter((c) => c.low <= center && c.high >= center).length;
     const reactionMagnitudeAtr = Math.abs(last.close - first.open) / Math.max(1, high - low);
-    const hoursSinceLastTouch = Math.max(0, (Date.now() - new Date(last.timestampUtc).getTime()) / (1000 * 60 * 60));
+    const hoursSinceLastTouch = Math.max(0, (evaluatedAtMs - new Date(last.timestampUtc).getTime()) / (1000 * 60 * 60));
 
     zones.push({
       zone_id: `${assetCode}-h4-zone-${i}`,
@@ -41,4 +45,9 @@ export function detectH4Zones(assetCode: string, candles: NormalizedCandle[]): H
   }
 
   return zones.sort((a, b) => b.significance_score - a.significance_score).slice(0, 8);
+}
+
+/** @deprecated Present-time compatibility for the legacy dashboard pipeline only. */
+export function detectH4Zones(assetCode: string, candles: NormalizedCandle[]): H4Zone[] {
+  return detectH4ZonesDeterministic(assetCode, candles, new Date().toISOString());
 }

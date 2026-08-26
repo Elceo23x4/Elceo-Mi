@@ -10,7 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
     "format": "prettier --check src",
-    "test": "tsc -p tsconfig.json --noEmit"
+    "test": "tsc -p tsconfig.test.json && node ../../scripts/run-cjs-tests.mjs dist-test dist-test/services/chart-intelligence/src/tests/run-tests.js"
   },
   "dependencies": {
     "@elceo/domain": "0.1.0",

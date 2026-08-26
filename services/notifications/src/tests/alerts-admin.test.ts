@@ -10,11 +10,12 @@ function assert(condition: boolean, message: string): void {
 
 const baseWorkspace: DashboardChartWorkspaceViewModel = {
   dashboard: {
+    contract_version: 'dashboard-display-v2',
     asset_code: 'XAU/USD',
     directional_bias: 'bullish',
     confidence_total: 70,
     confidence_anatomy: { sourceConfidence: 70 },
-    contradiction: { score: 62, state: 'transition' },
+    contradiction: { score: 62, score_availability: 'available', state: 'transition' },
     zones: [],
     annotations: [],
     evidence_notes: [],
@@ -72,7 +73,7 @@ export function runAlertsAdminTests(): void {
     dashboard: {
       ...baseWorkspace.dashboard,
       directional_bias: 'bearish',
-      contradiction: { score: 40, state: 'aligned' }
+      contradiction: { score: 40, score_availability: 'available', state: 'aligned' }
     }
   } as DashboardChartWorkspaceViewModel;
 
@@ -83,6 +84,9 @@ export function runAlertsAdminTests(): void {
   assert(filtered.every((alert) => alert.alert_class !== 'macro_event_incoming'), 'preference filter should suppress disabled classes');
 
   assert(cooldownMinutesFor('contradiction_spikes') === 30, 'cooldown contract should be deterministic');
+
+  const unavailable = { ...baseWorkspace, dashboard: { ...baseWorkspace.dashboard, contradiction: { score: null, score_availability: 'unavailable' as const, state: 'unknown' } } };
+  assert(evaluateAlertRules({ current: unavailable, userState }).every((alert) => alert.alert_class !== 'contradiction_spikes'), 'unavailable contradiction must not rank as a real score');
 
   const admin = buildAdminOperationalSnapshot({ sourceHealth: [], cognitionByAsset: {}, auditLogs: [] });
   assert(Array.isArray(admin.auditLogs), 'audit log shaping should return array');

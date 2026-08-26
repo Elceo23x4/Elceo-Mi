@@ -1,6 +1,10 @@
 import type { AssetCognitionState, ChartAnnotation, EvidenceAssembly, H4Zone } from '@elceo/types';
 
-export function buildChartAnnotations(assetCode: string, zones: H4Zone[], cognition: AssetCognitionState, evidence: EvidenceAssembly): ChartAnnotation[] {
+/**
+ * @deprecated Deterministic legacy AssetCognitionState compatibility only.
+ * This is not the future MarketCognitionSnapshot annotation projector.
+ */
+export function buildLegacyChartAnnotationsDeterministic(assetCode: string, zones: H4Zone[], cognition: AssetCognitionState, evidence: EvidenceAssembly, impulseObservedAt?: string): ChartAnnotation[] {
   const zoneAnnotations: ChartAnnotation[] = zones.map((zone) => ({
     kind: 'key_level_zone',
     annotation_id: `ann-zone-${zone.zone_id}`,
@@ -27,6 +31,7 @@ export function buildChartAnnotations(assetCode: string, zones: H4Zone[], cognit
     annotation_id: `ann-contradiction-${assetCode}`,
     asset_code: assetCode,
     contradiction_score: cognition.contradiction_score,
+    contradiction_score_availability: 'available',
     contradiction_state: cognition.contradiction_state,
     evidence_ids: evidence.supportingEventIds
   };
@@ -41,14 +46,19 @@ export function buildChartAnnotations(assetCode: string, zones: H4Zone[], cognit
     evidence_ids: [item.evidenceId]
   }));
 
-  const impulsePlaceholder: ChartAnnotation = {
+  const impulsePlaceholder: ChartAnnotation | null = impulseObservedAt ? {
     kind: 'impulse_origin_placeholder',
     annotation_id: `ann-impulse-${assetCode}`,
     asset_code: assetCode,
-    timestamp_utc: new Date().toISOString(),
+    timestamp_utc: impulseObservedAt,
     note: 'Impulse origin overlay reserved for dedicated chart-impulse slice.',
     evidence_ids: evidence.supportingEventIds.slice(0, 1)
-  };
+  } : null;
 
-  return [...zoneAnnotations, ...macroAnnotations, contradictionAnnotation, ...evidenceNotes, impulsePlaceholder];
+  return [...zoneAnnotations, ...macroAnnotations, contradictionAnnotation, ...evidenceNotes, ...(impulsePlaceholder ? [impulsePlaceholder] : [])];
+}
+
+/** @deprecated Ambient-clock placeholder retained only for the legacy dashboard pipeline. */
+export function buildChartAnnotations(assetCode: string, zones: H4Zone[], cognition: AssetCognitionState, evidence: EvidenceAssembly): ChartAnnotation[] {
+  return buildLegacyChartAnnotationsDeterministic(assetCode, zones, cognition, evidence, new Date().toISOString());
 }

@@ -9,6 +9,7 @@ import { commercialMutationCounts, expireStepUpChallengeFreshness, resetCommerci
 import { createDashboardGetHandler } from '../lib/dashboard-route-handler';
 import type { withDashboardReadAdmission } from '../lib/inbound-read-admission';
 import { executeAdmittedDashboardRead } from '../lib/dashboard-admission-execution';
+import { formatAvailableScore } from '../lib/display-intelligence';
 import * as workspaceCurrentRoute from '../app/api/workspace/current/route';
 import * as workspaceRefreshRoute from '../app/api/workspace/refresh/route';
 import * as workspaceFreshnessRoute from '../app/api/workspace/freshness/route';
@@ -527,6 +528,8 @@ async function readJson(response: Response): Promise<{ ok: boolean; [key: string
 }
 
 export async function runRouteRuntimeTests(): Promise<void> {
+  assert.equal(formatAvailableScore(null), '—');
+  assert.equal(formatAvailableScore(72.25), '72.3');
   const dashboardAuth=async()=>({session:{user:{id:'server-user'}},appState:{watchlist:{assets:['XAU/USD']}}}) as never;
   let dashboardReads=0,admissionSubject='';
   const deniedAdmission=(async(subject:string)=>{admissionSubject=subject;return{ok:false as const,status:429 as const,reason:'inbound_rate_limited'}}) as typeof withDashboardReadAdmission;

@@ -54,22 +54,41 @@ export type ChartAnnotation =
       evidence_ids: string[];
     };
 
-export type DashboardCognitionModule = {
+type DashboardCognitionModuleBase = {
   module_id: string;
   title: string;
-  rank_score: number;
   body: string;
 };
 
+export type DashboardCognitionModule = DashboardCognitionModuleBase & (
+  | { rank_score: number; rank_availability?: 'available' }
+  | { rank_score: null; rank_availability: 'unavailable' }
+);
+
+export type DashboardContradictionEvidence = {
+  severity: string;
+  source_id: string;
+  evidence_ids: string[];
+  rationale: string;
+};
+
+export type DashboardContradictionDisplay = {
+  state: string;
+  evidence_lineage?: DashboardContradictionEvidence[];
+} & (
+  | { score: number; score_availability?: 'available' }
+  | { score: null; score_availability: 'unavailable' | 'unknown' }
+);
+
 export type DashboardCognitionViewModel = {
+  /** Omitted only by explicitly retained legacy-v1 persisted fixtures. */
+  contract_version?: 'dashboard-display-v2';
   asset_code: string;
   directional_bias: string;
   confidence_total: number;
   confidence_anatomy: Record<string, number>;
-  contradiction: {
-    score: number;
-    state: string;
-  };
+  /** Canonical contradiction evidence does not imply an aggregate score. */
+  contradiction: DashboardContradictionDisplay;
   zones: H4Zone[];
   annotations: ChartAnnotation[];
   evidence_notes: ChartAnnotation[];

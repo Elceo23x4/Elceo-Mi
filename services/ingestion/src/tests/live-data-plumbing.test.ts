@@ -67,11 +67,12 @@ export async function runLiveDataPlumbingTests(): Promise<void> {
   await appendNormalizedEvents([normalized]);
 
   const vm: DashboardCognitionViewModel = {
+    contract_version: 'dashboard-display-v2',
     asset_code: 'XAU/USD',
     directional_bias: 'bullish',
     confidence_total: 70,
     confidence_anatomy: { sourceConfidence: 70 },
-    contradiction: { score: 22, state: 'aligned' },
+    contradiction: { score: 22, score_availability: 'available', state: 'aligned' },
     zones: [],
     annotations: [],
     evidence_notes: [],
@@ -91,4 +92,3 @@ export async function runLiveDataPlumbingTests(): Promise<void> {
   assert(workspace?.dashboard.asset_code === 'XAU/USD', 'workspace dashboard should map asset');
   assert(Array.isArray(workspace?.chart.annotations), 'chart annotations shape should be array');
 }
-

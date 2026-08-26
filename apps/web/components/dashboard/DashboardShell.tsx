@@ -5,6 +5,7 @@ import { Surface } from '@elceo/ui';
 import type { DashboardChartWorkspaceViewModel, ChartAnnotationFilters, DashboardCognitionModule } from '@elceo/types';
 import { CognitionChart } from './CognitionChart';
 import { applyAnnotationFilters, buildEvidenceSideNotes } from '../../lib/chart-shaping';
+import { formatAvailableScore } from '../../lib/display-intelligence';
 
 type DashboardShellProps = {
   workspace: DashboardChartWorkspaceViewModel;
@@ -21,7 +22,6 @@ const FILTER_LABELS: Array<{ key: keyof ChartAnnotationFilters; label: string }>
 ];
 
 const HORIZON = 'Intraday · H4 Framing';
-
 function classifyModule(module: DashboardCognitionModule): 'macro' | 'evidence' | 'invalidation' | 'confidence' | 'default' {
   const label = `${module.title} ${module.body}`.toLowerCase();
   if (label.includes('macro') || label.includes('event')) return 'macro';
@@ -140,7 +140,7 @@ export function DashboardShell({ workspace, dashboardModuleLimit, canAccessPremi
           <Surface className="elceo-context-panel elceo-panel-contradiction elceo-strip-module" style={{ padding: '0.85rem' }}>
             <p className="elceo-kicker">ACTIVE TENSION</p>
             <h3>{workspace.dashboard.contradiction.state}</h3>
-            <p className="elceo-muted-text">Score {workspace.dashboard.contradiction.score.toFixed(1)} · {contradictionMarkers} contradiction markers visible.</p>
+            <p className="elceo-muted-text">Score {formatAvailableScore(workspace.dashboard.contradiction.score)} · {contradictionMarkers} contradiction markers visible.</p>
           </Surface>
 
           <Surface className="elceo-context-panel elceo-panel-zones elceo-strip-module" style={{ padding: '0.85rem' }}>
@@ -183,7 +183,7 @@ export function DashboardShell({ workspace, dashboardModuleLimit, canAccessPremi
             <article key={module.module_id} className={`elceo-module-note is-${classifyModule(module)}`}>
               <header>
                 <strong>{module.title}</strong>
-                <span>rank {module.rank_score.toFixed(1)}</span>
+                <span>rank {formatAvailableScore(module.rank_score)}</span>
               </header>
               <p>{module.body}</p>
             </article>

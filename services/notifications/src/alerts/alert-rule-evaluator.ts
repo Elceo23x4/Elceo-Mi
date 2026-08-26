@@ -46,16 +46,17 @@ export function evaluateAlertRules(input: AlertEvaluationInput): InAppAlert[] {
     );
   }
 
-  if (current.dashboard.contradiction.score >= 58) {
+  const contradictionScore = current.dashboard.contradiction.score;
+  if (contradictionScore !== null && contradictionScore >= 58) {
     next.push(
       makeAlert(
         userState.profile.id,
         asset,
         'contradiction_spikes',
         `${asset} contradiction spike`,
-        `Contradiction reached ${current.dashboard.contradiction.score.toFixed(1)} (${current.dashboard.contradiction.state}).`,
+        `Contradiction reached ${contradictionScore.toFixed(1)} (${current.dashboard.contradiction.state}).`,
         `${asset}::contradiction::${current.dashboard.contradiction.state}`,
-        { contradiction_score: current.dashboard.contradiction.score }
+        { contradiction_score: contradictionScore }
       )
     );
   }

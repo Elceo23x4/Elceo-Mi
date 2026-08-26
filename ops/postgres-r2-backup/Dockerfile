@@ -1,18 +1,28 @@
-FROM postgres:18.6-bookworm
+ARG POSTGRES_IMAGE=postgres:18.6-bookworm@sha256:1c59e2c3c818eaa0f0628f695b36e7c9e362d6b219b36a54a32df645cbd7e1af
 
-ARG RCLONE_VERSION=1.70.3
-ARG RCLONE_SHA256=7d69057e69385f6514a9684c7eaa424d972096b130284bb34dd967c4ed4f9dad
+FROM ${POSTGRES_IMAGE} AS rclone-fetch
+ARG TARGETARCH
+ARG RCLONE_VERSION=1.75.0
+ARG RCLONE_SHA256_AMD64=aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa
+ARG RCLONE_SHA256_ARM64=d0ad88ba4c8e285b7c9efa591e0ab643280a91741e13c27f3a9c0957ccfa5203
 
-RUN apt-get update \
+RUN case "$TARGETARCH" in \
+      amd64) checksum="$RCLONE_SHA256_AMD64" ;; \
+      arm64) checksum="$RCLONE_SHA256_ARM64" ;; \
+      *) echo "Unsupported TARGETARCH: $TARGETARCH" >&2; exit 64 ;; \
+    esac \
+    && apt-get update \
     && apt-get install --yes --no-install-recommends ca-certificates curl unzip \
     && curl --fail --silent --show-error --location \
-      "https://github.com/rclone/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip" \
+      "https://github.com/rclone/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-${TARGETARCH}.zip" \
       --output /tmp/rclone.zip \
-    && echo "${RCLONE_SHA256}  /tmp/rclone.zip" | sha256sum --check --strict \
+    && echo "${checksum}  /tmp/rclone.zip" | sha256sum --check --strict \
     && unzip -q /tmp/rclone.zip -d /tmp/rclone \
-    && install -m 0755 "/tmp/rclone/rclone-v${RCLONE_VERSION}-linux-amd64/rclone" /usr/local/bin/rclone \
-    && rm -rf /var/lib/apt/lists/* /tmp/rclone /tmp/rclone.zip
+    && install -m 0755 "/tmp/rclone/rclone-v${RCLONE_VERSION}-linux-${TARGETARCH}/rclone" /rclone
 
+FROM ${POSTGRES_IMAGE}
+COPY --from=rclone-fetch /rclone /usr/local/bin/rclone
 COPY --chmod=0755 backup.sh /usr/local/bin/elceo-postgres-r2-backup
 
+USER postgres
 ENTRYPOINT ["/usr/local/bin/elceo-postgres-r2-backup"]

@@ -163,3 +163,33 @@ jobs:
           test -z "$(git diff --numstat "${{ github.event.pull_request.base.sha || github.event.before }}" HEAD | awk '$1 == "-" || $2 == "-"')"
           ! git diff --binary "${{ github.event.pull_request.base.sha || github.event.before }}" HEAD | grep -q 'GIT binary'' patch'
           test -z "$(git status --short)"
+
+  postgres-r2-backup-image:
+    name: PostgreSQL R2 backup image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Shell and mock validation
+        run: |
+          bash -n ops/postgres-r2-backup/backup.sh ops/postgres-r2-backup/test.sh
+          ops/postgres-r2-backup/test.sh
+          git diff --check
+      - name: Build worker image
+        run: docker build --tag elceo-postgres-r2-backup:test ops/postgres-r2-backup
+      - name: Verify runtime binaries and non-root user
+        run: |
+          test "$(docker run --rm --entrypoint pg_dump elceo-postgres-r2-backup:test --version | awk '{print $3}')" = "18.6"
+          test "$(docker run --rm --entrypoint pg_restore elceo-postgres-r2-backup:test --version | awk '{print $3}')" = "18.6"
+          docker run --rm --entrypoint rclone elceo-postgres-r2-backup:test version | grep -F 'rclone v1.75.0'
+          test "$(docker run --rm --entrypoint id elceo-postgres-r2-backup:test -u)" != "0"
+          docker run --rm --entrypoint sh elceo-postgres-r2-backup:test -c \
+            'test "$(id -u)" != 0; workdir=$(mktemp -d); test -d "$workdir"; rm -rf "$workdir"; ! command -v curl; ! command -v unzip'
+      - name: Verify worker startup contract
+        run: |
+          if docker run --rm elceo-postgres-r2-backup:test >worker.log 2>&1; then
+            echo 'worker unexpectedly accepted missing runtime variables' >&2
+            exit 1
+          fi
+          grep -F 'error=missing_required_environment variable=BACKUP_RUN_MODE' worker.log
+          ! grep -F 'Permission denied' worker.log

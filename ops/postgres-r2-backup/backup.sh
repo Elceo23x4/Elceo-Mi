@@ -5,6 +5,12 @@ umask 077
 started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 workdir=""
 stage="initialization"
+export PGCONNECT_TIMEOUT="${PGCONNECT_TIMEOUT:-15}"
+
+if ! [[ "$PGCONNECT_TIMEOUT" =~ ^[1-9][0-9]*$ ]] || (( PGCONNECT_TIMEOUT > 300 )); then
+  printf 'error=invalid_environment variable=PGCONNECT_TIMEOUT expected=integer_1_to_300\n' >&2
+  exit 64
+fi
 
 log() {
   printf 'event=backup_worker mode=%s utc=%s %s\n' "${BACKUP_RUN_MODE:-unset}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"
@@ -53,7 +59,10 @@ endpoint = $R2_ENDPOINT
 no_check_bucket = true
 acl = private
 EOF
-rclone_cmd=(rclone --config "$config" --log-level ERROR)
+rclone_cmd=(
+  rclone --config "$config" --log-level ERROR
+  --contimeout 15s --timeout 5m --retries 3 --low-level-retries 5 --retries-sleep 10s
+)
 
 log "started_at=$started_at"
 
@@ -87,12 +96,12 @@ day="${timestamp:6:2}"
 filename="elceo-${timestamp}.dump"
 object_key="backups/${year}/${month}/${day}/${filename}"
 dump_file="$workdir/$filename"
-manifest_file="$workdir/${filename}.json"
+manifest_file="$workdir/${filename}.complete.json"
 downloaded_dump="$workdir/verified-$filename"
-downloaded_manifest="$workdir/verified-${filename}.json"
+downloaded_manifest="$workdir/verified-${filename}.complete.json"
 pg_version="$(pg_dump --version)"
 log "pg_dump_version=$(printf '%s' "$pg_version" | tr ' ' '_') object_key=$object_key"
-pg_dump --format=custom --no-owner --no-acl --file="$dump_file" "$DATABASE_URL"
+pg_dump --format=custom --no-owner --no-acl --lock-wait-timeout=60s --file="$dump_file" "$DATABASE_URL"
 
 stage="archive_validation"
 pg_restore --list "$dump_file" >/dev/null
@@ -100,19 +109,26 @@ log "object_key=$object_key archive_validation=PASS"
 
 sha256="$(sha256sum "$dump_file" | awk '{print $1}')"
 byte_size="$(wc -c <"$dump_file" | tr -d ' ')"
-cat >"$manifest_file" <<EOF
-{"object_filename":"$filename","utc_timestamp":"$timestamp","sha256":"$sha256","byte_size":$byte_size,"pg_dump_version":"$pg_version"}
-EOF
 log "object_key=$object_key archive_byte_size=$byte_size"
 
-stage="upload"
+stage="dump_upload"
 "${rclone_cmd[@]}" copyto --immutable "$dump_file" "r2:${R2_BUCKET}/${object_key}"
-"${rclone_cmd[@]}" copyto --immutable "$manifest_file" "r2:${R2_BUCKET}/${object_key}.json"
 log "object_key=$object_key upload=PASS"
 
-stage="integrity_verification"
+stage="dump_integrity_verification"
 "${rclone_cmd[@]}" copyto "r2:${R2_BUCKET}/${object_key}" "$downloaded_dump"
-"${rclone_cmd[@]}" copyto "r2:${R2_BUCKET}/${object_key}.json" "$downloaded_manifest"
 printf '%s  %s\n' "$sha256" "$downloaded_dump" | sha256sum --check --strict >/dev/null
-cmp --silent "$manifest_file" "$downloaded_manifest"
 log "object_key=$object_key integrity_verification=PASS"
+
+stage="completion_manifest_upload"
+cat >"$manifest_file" <<EOF
+{"manifest_schema_version":1,"status":"complete","object_filename":"$filename","object_key":"$object_key","utc_timestamp":"$timestamp","sha256":"$sha256","byte_size":$byte_size,"pg_dump_version":"$pg_version"}
+EOF
+manifest_key="${object_key}.complete.json"
+"${rclone_cmd[@]}" copyto --immutable "$manifest_file" "r2:${R2_BUCKET}/${manifest_key}"
+log "object_key=$manifest_key completion_manifest_upload=PASS"
+
+stage="completion_manifest_verification"
+"${rclone_cmd[@]}" copyto "r2:${R2_BUCKET}/${manifest_key}" "$downloaded_manifest"
+cmp --silent "$manifest_file" "$downloaded_manifest"
+log "object_key=$manifest_key completion_manifest_verification=PASS"

@@ -5,7 +5,9 @@ import type { H4Zone } from '@elceo/types';
 export function detectH4ZonesDeterministic(assetCode: string, candles: NormalizedCandle[], evaluatedAt: string): H4Zone[] {
   const evaluatedAtMs = new Date(evaluatedAt).getTime();
   if (!Number.isFinite(evaluatedAtMs)) throw new Error('evaluatedAt must be a valid ISO timestamp');
-  const sorted = [...candles].sort((a, b) => a.timestampUtc.localeCompare(b.timestampUtc));
+  const sorted = candles
+    .filter((candle) => new Date(candle.timestampUtc).getTime() <= evaluatedAtMs)
+    .sort((a, b) => a.timestampUtc.localeCompare(b.timestampUtc));
   const zones: H4Zone[] = [];
 
   for (let i = 2; i < sorted.length; i += 6) {

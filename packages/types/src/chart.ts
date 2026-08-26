@@ -11,6 +11,18 @@ export type H4Zone = {
   significance_score: number;
 };
 
+export type ContradictionMarkerAnnotation = {
+  kind: 'contradiction_marker';
+  annotation_id: string;
+  asset_code: string;
+  contradiction_state: string;
+  evidence_ids: string[];
+  evidence_lineage?: DashboardContradictionEvidence[];
+} & (
+  | { contradiction_score: number; contradiction_score_availability?: 'available' }
+  | { contradiction_score: null; contradiction_score_availability: 'unavailable' | 'unknown' }
+);
+
 export type ChartAnnotation =
   | {
       kind: 'key_level_zone';
@@ -28,14 +40,7 @@ export type ChartAnnotation =
       timestamp_utc: string;
       evidence_ids: string[];
     }
-  | {
-      kind: 'contradiction_marker';
-      annotation_id: string;
-      asset_code: string;
-      contradiction_score: number;
-      contradiction_state: string;
-      evidence_ids: string[];
-    }
+  | ContradictionMarkerAnnotation
   | {
       kind: 'evidence_note';
       annotation_id: string;

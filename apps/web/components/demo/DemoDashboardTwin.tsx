@@ -57,6 +57,7 @@ const ANNOTATIONS: ChartAnnotation[] = [
     annotation_id: 'c1',
     asset_code: 'XAU/USD',
     contradiction_score: 34,
+    contradiction_score_availability: 'available',
     contradiction_state: 'contained tension',
     evidence_ids: ['e3', 'e5']
   },

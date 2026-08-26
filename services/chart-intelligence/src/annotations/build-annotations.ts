@@ -1,6 +1,10 @@
 import type { AssetCognitionState, ChartAnnotation, EvidenceAssembly, H4Zone } from '@elceo/types';
 
-export function buildChartAnnotationsDeterministic(assetCode: string, zones: H4Zone[], cognition: AssetCognitionState, evidence: EvidenceAssembly, impulseObservedAt?: string): ChartAnnotation[] {
+/**
+ * @deprecated Deterministic legacy AssetCognitionState compatibility only.
+ * This is not the future MarketCognitionSnapshot annotation projector.
+ */
+export function buildLegacyChartAnnotationsDeterministic(assetCode: string, zones: H4Zone[], cognition: AssetCognitionState, evidence: EvidenceAssembly, impulseObservedAt?: string): ChartAnnotation[] {
   const zoneAnnotations: ChartAnnotation[] = zones.map((zone) => ({
     kind: 'key_level_zone',
     annotation_id: `ann-zone-${zone.zone_id}`,
@@ -27,6 +31,7 @@ export function buildChartAnnotationsDeterministic(assetCode: string, zones: H4Z
     annotation_id: `ann-contradiction-${assetCode}`,
     asset_code: assetCode,
     contradiction_score: cognition.contradiction_score,
+    contradiction_score_availability: 'available',
     contradiction_state: cognition.contradiction_state,
     evidence_ids: evidence.supportingEventIds
   };
@@ -55,5 +60,5 @@ export function buildChartAnnotationsDeterministic(assetCode: string, zones: H4Z
 
 /** @deprecated Ambient-clock placeholder retained only for the legacy dashboard pipeline. */
 export function buildChartAnnotations(assetCode: string, zones: H4Zone[], cognition: AssetCognitionState, evidence: EvidenceAssembly): ChartAnnotation[] {
-  return buildChartAnnotationsDeterministic(assetCode, zones, cognition, evidence, new Date().toISOString());
+  return buildLegacyChartAnnotationsDeterministic(assetCode, zones, cognition, evidence, new Date().toISOString());
 }

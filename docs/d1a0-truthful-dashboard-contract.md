@@ -29,6 +29,8 @@ The audit introduces no contradiction aggregate, confidence, rank, directional, 
 
 The dashboard display model has no separate runtime schema validator or transforming API serializer. Persistence and dashboard API reads retain the typed object without numeric coercion. Legacy fixtures may omit the v2 marker and availability only while their historical values remain numeric. For v2-capable values, TypeScript requires `null` to be paired with `unavailable` or `unknown`; formatting renders an em dash, alert evaluation ignores unavailable contradiction, and module sorting places all null ranks after real numbers with a stable module-ID tie break.
 
+Both the dashboard contradiction display and the contradiction chart marker can retain state and evidence lineage while representing absent aggregate numerical authority as `null` with explicit availability. `buildLegacyChartAnnotationsDeterministic` consumes `AssetCognitionState` for compatibility only; it is not canonical cognition authority. The actual `MarketCognitionSnapshot` dashboard and annotation projection remains D1-A and is not implemented here.
+
 ## Program status
 
 Canonical dashboard projection and distributed dashboard materialization are not implemented. The production dashboard route is unchanged. PGS-1 through PGS-5 and accepted IFP semantics are unchanged. IFP-8 remains externally blocked, and production live remains disabled.

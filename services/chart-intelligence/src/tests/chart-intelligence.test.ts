@@ -1,7 +1,7 @@
 import type { NormalizedCandle } from '@elceo/schemas';
-import type { AssetCognitionState, DashboardCognitionModule, DashboardCognitionViewModel, EvidenceAssembly } from '@elceo/types';
+import type { AssetCognitionState, ContradictionMarkerAnnotation, DashboardCognitionModule, DashboardCognitionViewModel, EvidenceAssembly } from '@elceo/types';
 import { detectH4Zones, detectH4ZonesDeterministic } from '../zones/detect-h4-zones';
-import { buildChartAnnotations, buildChartAnnotationsDeterministic } from '../annotations/build-annotations';
+import { buildChartAnnotations, buildLegacyChartAnnotationsDeterministic } from '../annotations/build-annotations';
 import { buildLegacyDashboardViewModel, sortDashboardModules } from '../dashboard/build-legacy-dashboard-view-model';
 
 function assert(condition: boolean, message: string): void {
@@ -110,8 +110,17 @@ export function runChartIntelligenceTests(): void {
   assert(JSON.stringify(deterministicA.map(withoutRecency)) === JSON.stringify(later.map(withoutRecency)), 'later evaluation changes only recency-sensitive values');
   assert(deterministicA.some((zone, index) => zone.hours_since_last_touch !== later[index]?.hours_since_last_touch), 'later evaluation changes legitimate recency fields');
 
-  const canonicalAnnotations = buildChartAnnotationsDeterministic('XAU/USD', deterministicA, cognition, evidence);
-  assert(!canonicalAnnotations.some((item) => item.kind === 'impulse_origin_placeholder'), 'canonical-capable annotations omit an unobserved impulse');
-  const observedAnnotations = buildChartAnnotationsDeterministic('XAU/USD', deterministicA, cognition, evidence, evaluatedAt);
+  const legacyDeterministicAnnotations = buildLegacyChartAnnotationsDeterministic('XAU/USD', deterministicA, cognition, evidence);
+  assert(!legacyDeterministicAnnotations.some((item) => item.kind === 'impulse_origin_placeholder'), 'deterministic legacy annotations omit an unobserved impulse');
+  const legacyMarker = legacyDeterministicAnnotations.find((item) => item.kind === 'contradiction_marker');
+  assert(legacyMarker?.contradiction_score === 26 && legacyMarker.contradiction_score_availability === 'available', 'legacy numerical contradiction marker remains available');
+  const unavailableMarker: ContradictionMarkerAnnotation = {
+    kind: 'contradiction_marker', annotation_id: 'canonical-style-contradiction', asset_code: 'XAU/USD', contradiction_score: null,
+    contradiction_score_availability: 'unavailable', contradiction_state: 'evidence-present-no-aggregate', evidence_ids: ['ev-1'],
+    evidence_lineage: [{ severity: 'high', source_id: 'market-cognition-snapshot', evidence_ids: ['ev-1'], rationale: 'Canonical evidence retained without aggregate synthesis.' }]
+  };
+  assert(unavailableMarker.contradiction_score === null, 'unavailable marker score remains null and is never coerced to zero');
+  assert(unavailableMarker.evidence_ids[0] === 'ev-1' && unavailableMarker.evidence_lineage?.[0]?.severity === 'high', 'canonical-style contradiction lineage remains represented');
+  const observedAnnotations = buildLegacyChartAnnotationsDeterministic('XAU/USD', deterministicA, cognition, evidence, evaluatedAt);
   assert(observedAnnotations.some((item) => item.kind === 'impulse_origin_placeholder' && item.timestamp_utc === evaluatedAt), 'impulse time comes from evidence input');
 }

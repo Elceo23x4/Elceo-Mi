@@ -20,6 +20,7 @@
     "test:adaptive-materialization-redis": "ADAPTIVE_MATERIALIZATION_REDIS_INTEGRATION=1 npm run -w services/reasoning test",
     "test:adaptive-materialization-integration": "ADAPTIVE_MATERIALIZATION_INTEGRATION=1 npm run -w services/reasoning test",
     "test:dashboard-projection-materialization-integration": "ADAPTIVE_MATERIALIZATION_INTEGRATION=1 npm run -w services/reasoning test",
+    "test:d1c-passive-dashboard-consumer": "ADAPTIVE_MATERIALIZATION_INTEGRATION=1 D1C_PASSIVE_CONSUMER_INTEGRATION=1 npm run -w services/reasoning test && npm run -w apps/web test",
     "check:runtime": "node scripts/check-runtime-contract.mjs",
     "check:dependency-compatibility": "node scripts/check-dependency-compatibility.mjs",
     "check:sharp-exception-upstream": "node scripts/check-sharp-exception-upstream.mjs",

@@ -91,6 +91,11 @@ jobs:
           REDIS_URL: redis://127.0.0.1:6379
           DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3
         run: npm run test:adaptive-materialization-integration
+      - name: D1-B Dashboard Projection PostgreSQL and Redis acceptance
+        env:
+          REDIS_URL: redis://127.0.0.1:6379
+          DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3
+        run: npm run test:dashboard-projection-materialization-integration
       - name: PGS-5 scale economics acceptance
         env:
           REDIS_URL: redis://127.0.0.1:6379

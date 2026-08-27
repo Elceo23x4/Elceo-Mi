@@ -4,8 +4,9 @@ import { getCanonicalCandleObservation, validateMarketCognitionSnapshot } from '
 import type { CanonicalAssetSymbol, CanonicalEvent, CanonicalMarketCandleObservation, EvidenceWeightHorizon, MarketCognitionSnapshot } from '@elceo/types';
 import type { AdaptiveOwnershipStore, CanonicalArtifact, DashboardProjectionArtifact, EvidenceOrCognitionArtifact, MaterializationLease, MaterializationRepository } from './contracts';
 import { buildArtifactIntegrityHash, buildCanonicalPayloadHash, buildDashboardProjectionArtifactIdentity, buildDashboardProjectionCoordinationHash, buildMaterializationScopeHash } from './identity';
+import { DASHBOARD_PROJECTION_FRESHNESS_POLICY_VERSION } from './dashboard-projection-contract';
 
-export const DASHBOARD_PROJECTION_FRESHNESS_POLICY_VERSION='dashboard-parent-cognition-boundary-v1' as const;
+export { DASHBOARD_PROJECTION_FRESHNESS_POLICY_VERSION } from './dashboard-projection-contract';
 export type PersistedCanonicalCandleReader={getLatestEventsForAssetTimeframe(asset:CanonicalAssetSymbol,timeframe:'H4'):Promise<CanonicalEvent[]>};
 export type DashboardProjectionMaterializationRequest={asset:CanonicalAssetSymbol;horizon:EvidenceWeightHorizon;timeframe:'H4';parentCognitionArtifactIdentity:string;leaseDurationMs:number;retryMaximumMs:number};
 

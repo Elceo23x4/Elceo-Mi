@@ -50,7 +50,7 @@ else exit 70; fi
 MOCK
 chmod +x "$mockbin"/*
 export PATH="$mockbin:$PATH" MOCK_CALLS="$tmp/calls" MOCK_REMOTE="$tmp/remote" MOCK_SAFETY_COUNTER="$tmp/safety-counter"
-export RESTORE_DATABASE_URL='postgresql://postgres:database-secret@restore.invalid/railway'
+export RESTORE_DATABASE_URL='postgresql://restore.invalid/railway'
 export R2_ENDPOINT='https://account.r2.cloudflarestorage.com' R2_BUCKET='elceo-staging-backups'
 export R2_ACCESS_KEY_ID='r2-key-secret' R2_SECRET_ACCESS_KEY='r2-value-secret'
 export RESTORE_OBJECT_KEY='backups/2026/08/27/elceo-20260827T122725Z.dump'

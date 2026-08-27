@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { validateCanonicalMarketCandleObservation, validateMarketCognitionSnapshot, type NormalizedCandle } from '@elceo/schemas';
-import { LAUNCH_ASSET_SYMBOLS, type ChartAnnotation, type DashboardCognitionModule, type DashboardContradictionEvidence, type MarketCognitionPressureDirection, type TradingAssetCoverage } from '@elceo/types';
+import { LAUNCH_ASSET_SYMBOLS, canonicalDashboardAssetForCognitionAsset, type ChartAnnotation, type DashboardCognitionModule, type DashboardContradictionEvidence, type MarketCognitionPressureDirection } from '@elceo/types';
 import { detectH4ZonesWithLineageDeterministic } from '../zones/detect-h4-zones';
 import {
   CANONICAL_DASHBOARD_DISPLAY_VERSION,
@@ -10,11 +10,6 @@ import {
   type CanonicalDashboardProjection,
   type CanonicalDashboardProjectionInput
 } from '../contracts/chart-contract';
-
-const COGNITION_TO_CANONICAL_ASSET: Record<TradingAssetCoverage, (typeof LAUNCH_ASSET_SYMBOLS)[number]> = {
-  xau_usd: 'XAU/USD', btc_usd: 'BTC/USD', nasdaq_100: 'Nasdaq 100', sp500: 'S&P 500', de30: 'DE30',
-  eur_usd: 'EUR/USD', gbp_usd: 'GBP/USD', usd_jpy: 'USD/JPY', usd_chf: 'USD/CHF', aud_usd: 'AUD/USD', nzd_usd: 'NZD/USD', usd_cad: 'USD/CAD'
-};
 
 function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalize);
@@ -58,7 +53,7 @@ export function buildCanonicalDashboardProjection(input: CanonicalDashboardProje
   const evaluatedAtMs = requireCanonicalTimestamp(input.evaluatedAt, 'evaluatedAt');
   const cognitionValidation = validateMarketCognitionSnapshot(input.cognition);
   if (cognitionValidation.ok === false) throw new Error(`invalid canonical cognition: ${cognitionValidation.errors.join('; ')}`);
-  if (COGNITION_TO_CANONICAL_ASSET[input.cognition.asset] !== input.asset || input.cognition.horizon !== input.horizon) throw new Error('canonical cognition scope mismatch');
+  if (canonicalDashboardAssetForCognitionAsset(input.cognition.asset) !== input.asset || input.cognition.horizon !== input.horizon) throw new Error('canonical cognition scope mismatch');
   const cognitionChildren = [...input.cognition.signals, ...input.cognition.contradictions, input.cognition.confidence, input.cognition.narrative];
   if (cognitionChildren.some((item) => item.asset !== input.cognition.asset || item.horizon !== input.horizon)) throw new Error('canonical cognition child scope mismatch');
   const futureCognition = [{ kind: 'snapshot', generatedAt: input.cognition.generatedAt }, ...input.cognition.signals.map((item) => ({ kind: 'signal', generatedAt: item.generatedAt })), { kind: 'confidence', generatedAt: input.cognition.confidence.generatedAt }, ...input.cognition.contradictions.map((item) => ({ kind: 'contradiction', generatedAt: item.generatedAt })), { kind: 'narrative', generatedAt: input.cognition.narrative.generatedAt }].find((item) => requireCanonicalTimestamp(item.generatedAt, `${item.kind} generatedAt`) > evaluatedAtMs);

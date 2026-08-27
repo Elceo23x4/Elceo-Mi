@@ -116,3 +116,5 @@ export * from './market-golden-scenarios';
 
 export * from './market-reasoning-readiness';
 export * from './market-economic-context';
+
+export * from './canonical-dashboard-assets';

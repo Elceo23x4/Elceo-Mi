@@ -101,6 +101,11 @@ jobs:
           REDIS_URL: redis://127.0.0.1:6379
           DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3
         run: npm run test:d1c-passive-dashboard-consumer
+      - name: Canonical Dashboard 12-Asset End-to-End acceptance
+        env:
+          REDIS_URL: redis://127.0.0.1:6379
+          DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3
+        run: npm run test:canonical-dashboard-12-asset-acceptance
       - name: PGS-5 scale economics acceptance
         env:
           REDIS_URL: redis://127.0.0.1:6379

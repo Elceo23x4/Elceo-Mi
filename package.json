@@ -62,7 +62,8 @@
     "test:ifp8-postgres": "npm run -w services/reasoning test && node scripts/test-ifp8-postgres.mjs",
     "test:canonical-candle-postgres": "npm run -w services/ingestion test:canonical-candle-postgres",
     "test:provider-scale-acceptance": "PROVIDER_SCALE_ACCEPTANCE=1 npm run -w services/reasoning test",
-    "load:pgs5-staging": "node scripts/pgs5-staging-load.mjs"
+    "load:pgs5-staging": "node scripts/pgs5-staging-load.mjs",
+    "test:canonical-dashboard-12-asset-acceptance": "ADAPTIVE_MATERIALIZATION_INTEGRATION=1 CANONICAL_DASHBOARD_12_ASSET_ACCEPTANCE=1 npm run -w services/reasoning test"
   },
   "engines": {
     "node": "24.x",

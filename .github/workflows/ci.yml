@@ -193,3 +193,23 @@ jobs:
           fi
           grep -F 'error=missing_required_environment variable=BACKUP_RUN_MODE' worker.log
           ! grep -F 'Permission denied' worker.log
+
+  postgres-r2-restore-rehearsal-image:
+    name: PostgreSQL R2 restore rehearsal image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Shell and mock validation
+        run: |
+          bash -n ops/postgres-r2-restore-rehearsal/restore.sh ops/postgres-r2-restore-rehearsal/test.sh
+          ops/postgres-r2-restore-rehearsal/test.sh
+          git diff --check
+      - name: Build worker image
+        run: docker build --tag elceo-postgres-r2-restore-rehearsal:test ops/postgres-r2-restore-rehearsal
+      - name: Verify minimal non-root runtime
+        run: |
+          test "$(docker run --rm --entrypoint pg_restore elceo-postgres-r2-restore-rehearsal:test --version | awk '{print $3}')" = "18.6"
+          docker run --rm --entrypoint rclone elceo-postgres-r2-restore-rehearsal:test version | grep -F 'rclone v1.75.0'
+          test "$(docker run --rm --entrypoint id elceo-postgres-r2-restore-rehearsal:test -u)" != "0"
+          docker run --rm --entrypoint sh elceo-postgres-r2-restore-rehearsal:test -c 'test -s /etc/ssl/certs/ca-certificates.crt; test -r /etc/ssl/certs/ca-certificates.crt; command -v jq; ! command -v curl; ! command -v unzip'

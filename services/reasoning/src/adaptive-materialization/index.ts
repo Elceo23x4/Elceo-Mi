@@ -12,3 +12,4 @@ export * from './production-cognition';
 export * from './production-aggregate';
 export * from './production-runtime';
 export * from './production-reader';
+export * from './dashboard-projection';

@@ -51,6 +51,21 @@ const scope = (asset: CanonicalAssetSymbol) => buildMaterializationScopeHash({ a
 const coordination = (asset: CanonicalAssetSymbol) => buildDashboardProjectionCoordinationHash({ asset, horizon: 'intraday', timeframe: 'H4', ...versions });
 const delta = (after: number, before: number) => after - before;
 
+const dashboardIdentityManifest = (artifact: DashboardProjectionArtifact<CanonicalDashboardProjection>) => ({
+  projectionIdentity: artifact.projectionIdentity,
+  schemaVersion: artifact.schemaVersion,
+  parentCognitionArtifactIdentity: artifact.parentCognitionArtifactIdentity,
+  parentCognitionIntegrityHash: artifact.parentCognitionIntegrityHash,
+  orderedCandleObservationIds: artifact.orderedCandleObservationIds,
+  orderedCandleContentHashes: artifact.orderedCandleContentHashes,
+  freshnessPolicyVersion: artifact.freshnessPolicyVersion
+});
+
+const hasValidGenericIntegrity = (artifact: DashboardProjectionArtifact<CanonicalDashboardProjection>) => {
+  const { integrityHash, ...body } = artifact;
+  return integrityHash === buildArtifactIntegrityHash(body);
+};
+
 function cognitionFixture(template: MarketCognitionSnapshot, asset: TradingAssetCoverage, generatedAt: string): MarketCognitionSnapshot {
   const payload = structuredClone(template);
   payload.asset = asset;
@@ -184,16 +199,19 @@ export async function runCanonicalDashboard12AssetAcceptance(input: {
 
   const a = 'XAU/USD' as const;
   const b = 'BTC/USD' as const;
-  const contaminationResults: Record<string, string> = {};
+  const contaminationResults: Record<string, { genericIntegrityValid: boolean | 'not_applicable'; canonicalIdentityValid: boolean | 'not_applicable'; violatedInvariant: string; result: string; storedIdentity?: string; reconstructedIdentity?: string; identityManifest?: ReturnType<typeof dashboardIdentityManifest> }> = {};
   await assert.rejects(() => producer.materialize({ asset: a, horizon: 'intraday', timeframe: 'H4', parentCognitionArtifactIdentity: parents.get(b)!.identity, leaseDurationMs: 500, retryMaximumMs: 5000 }), /dashboard_projection_parent_scope_mismatch/);
-  contaminationResults.cognitionParent = 'producer rejected dashboard_projection_parent_scope_mismatch';
+  contaminationResults.cognitionParent = { genericIntegrityValid: 'not_applicable', canonicalIdentityValid: 'not_applicable', violatedInvariant: 'requested dashboard asset does not own persisted cognition parent asset', result: 'producer rejected dashboard_projection_parent_scope_mismatch' };
   const wrongCandles = new CanonicalDashboardProjectionMaterializationService(repository, ownership, new PersistedCanonicalCandleObservationReader({ getLatestEventsForAssetTimeframe: () => candleRepository.getLatestEventsForAssetTimeframe(b, 'H4') }));
   await assert.rejects(() => wrongCandles.materialize({ asset: a, horizon: 'intraday', timeframe: 'H4', parentCognitionArtifactIdentity: parents.get(a)!.identity, leaseDurationMs: 500, retryMaximumMs: 5000 }), /canonical candle scope mismatch/);
-  contaminationResults.candleMembership = 'producer rejected canonical candle scope mismatch';
+  contaminationResults.candleMembership = { genericIntegrityValid: 'not_applicable', canonicalIdentityValid: 'not_applicable', violatedInvariant: 'producer input contains another asset H4 membership', result: 'producer rejected canonical candle scope mismatch' };
 
-  const testPassiveRejection = async (name: string, artifact: DashboardProjectionArtifact<CanonicalDashboardProjection>, targetCoordination: CanonicalAssetSymbol, intendedAsset: CanonicalAssetSymbol) => {
+  const testPassiveRejection = async (name: string, artifact: DashboardProjectionArtifact<CanonicalDashboardProjection>, targetCoordination: CanonicalAssetSymbol, intendedAsset: CanonicalAssetSymbol, violatedInvariant: string, replaceArtifact?: DashboardProjectionArtifact<CanonicalDashboardProjection>) => {
     const namespace = `${input.namespace}:contamination:${name}:${randomUUID()}`;
     const localOwnership = new RedisAdaptiveOwnershipStore(input.client, namespace);
+    assert.equal(hasValidGenericIntegrity(artifact), true, `${name} generic integrity fixture precondition`);
+    const reconstructedIdentity = buildDashboardProjectionArtifactIdentity(dashboardIdentityManifest(artifact));
+    if (replaceArtifact) await input.sqlPool.query('DELETE FROM app_canonical_materializations WHERE identity=$1', [artifact.identity]);
     await immutable.saveImmutable(artifact);
     const acquired = await localOwnership.acquireMaterialization(coordination(targetCoordination), `contamination:${name}:${randomUUID()}`, randomUUID(), 10_000);
     assert.ok(acquired.acquired);
@@ -206,21 +224,42 @@ export async function runCanonicalDashboard12AssetAcceptance(input: {
     const after = { counters: input.runtimeCounters(), ingestion: (await input.sqlPool.query('SELECT count(*)::text AS count FROM app_ingestion_runs')).rows[0]!.count, materializations: await identities(input.sqlPool, 'dashboard_projection'), redis: await redisSnapshot(input.client, namespace), projectionCandleLoads };
     assert.equal(result.state, 'unavailable');
     assert.deepEqual(after, before, `${name} passive rejection must not repair or produce`);
-    contaminationResults[name] = result.state;
+    contaminationResults[name] = { genericIntegrityValid: true, canonicalIdentityValid: reconstructedIdentity === artifact.identity, violatedInvariant, result: result.state, storedIdentity: artifact.identity, reconstructedIdentity, identityManifest: dashboardIdentityManifest(artifact) };
+    if (replaceArtifact) {
+      await input.sqlPool.query('DELETE FROM app_canonical_materializations WHERE identity=$1', [artifact.identity]);
+      await immutable.saveImmutable(replaceArtifact);
+    }
   };
 
   const artifactA = artifacts.get(a)!;
   const artifactB = artifacts.get(b)!;
-  await testPassiveRejection('pointerAtoArtifactB', artifactB, a, a);
-  const cognitionLineage = withIntegrity({ ...artifactA, identity: `dashboard-projection:invalid-cognition-lineage:${randomUUID()}`, parentCognitionArtifactIdentity: artifactB.parentCognitionArtifactIdentity, parentCognitionIntegrityHash: artifactB.parentCognitionIntegrityHash });
-  await testPassiveRejection('artifactAwithCognitionB', cognitionLineage, a, a);
+  await testPassiveRejection('pointerAtoArtifactB', artifactB, a, a, 'asset A coordination points to an otherwise valid asset B artifact');
+
+  const cognitionLineage = withIntegrity({
+    ...artifactA,
+    parentCognitionArtifactIdentity: artifactB.parentCognitionArtifactIdentity,
+    parentCognitionIntegrityHash: artifactB.parentCognitionIntegrityHash,
+    parentCognitionContentIdentity: artifactB.parentCognitionContentIdentity,
+    parentCognitionContractVersion: artifactB.parentCognitionContractVersion
+  });
+  const cognitionReconstructedIdentity = buildDashboardProjectionArtifactIdentity(dashboardIdentityManifest(cognitionLineage));
+  assert.equal(hasValidGenericIntegrity(cognitionLineage), true);
+  assert.equal(cognitionLineage.identity, artifactA.identity);
+  assert.notEqual(cognitionReconstructedIdentity, cognitionLineage.identity);
+  await testPassiveRejection('artifactAwithCognitionB', cognitionLineage, a, a, 'stored D1-B identity remains A while authoritative cognition lineage is changed to B', artifactA);
+
   const candleLineageBody = { ...artifactA, orderedCandleObservationIds: artifactB.orderedCandleObservationIds, orderedCandleContentHashes: artifactB.orderedCandleContentHashes };
-  const candleLineage = withIntegrity({ ...candleLineageBody, identity: buildDashboardProjectionArtifactIdentity(candleLineageBody) });
-  await testPassiveRejection('artifactAwithCandlesB', candleLineage, a, a);
-  await testPassiveRejection('wrongScope', withIntegrity({ ...artifactA, identity: `dashboard-projection:wrong-scope:${randomUUID()}`, scopeHash: scope(b) }), a, a);
-  await testPassiveRejection('wrongCoordination', artifactA, b, a);
+  const candleLineageManifest = dashboardIdentityManifest(candleLineageBody);
+  const candleReconstructedIdentity = buildDashboardProjectionArtifactIdentity(candleLineageManifest);
+  const candleLineage = withIntegrity({ ...candleLineageBody, identity: candleReconstructedIdentity });
+  assert.equal(hasValidGenericIntegrity(candleLineage), true);
+  assert.equal(candleLineage.identity, buildDashboardProjectionArtifactIdentity(candleLineageManifest));
+  await testPassiveRejection('artifactAwithCandlesB', candleLineage, a, a, 'canonical artifact candle lineage disagrees with the D1-A projection payload manifest');
+
+  await testPassiveRejection('wrongScope', withIntegrity({ ...artifactA, identity: `dashboard-projection:wrong-scope:${randomUUID()}`, scopeHash: scope(b) }), a, a, 'artifact scope does not equal asset A canonical dashboard scope');
+  await testPassiveRejection('wrongCoordination', artifactA, b, a, 'artifact is published under asset B coordination instead of intended asset A coordination');
   const semanticCrossAsset = withIntegrity({ ...artifactB });
-  await testPassiveRejection('validIntegrityCrossAsset', semanticCrossAsset, a, a);
+  await testPassiveRejection('validIntegrityCrossAsset', semanticCrossAsset, a, a, 'generic integrity and D1-B identity are valid for B but semantic ownership is requested as A');
 
   const before = {
     counters: input.runtimeCounters(),

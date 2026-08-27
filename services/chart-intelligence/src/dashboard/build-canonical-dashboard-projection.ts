@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { validateCanonicalMarketCandleObservation, validateMarketCognitionSnapshot, type NormalizedCandle } from '@elceo/schemas';
 import { LAUNCH_ASSET_SYMBOLS, type ChartAnnotation, type DashboardCognitionModule, type DashboardContradictionEvidence, type MarketCognitionPressureDirection, type TradingAssetCoverage } from '@elceo/types';
-import { detectH4ZonesDeterministic } from '../zones/detect-h4-zones';
+import { detectH4ZonesWithLineageDeterministic } from '../zones/detect-h4-zones';
 import {
   CANONICAL_DASHBOARD_DISPLAY_VERSION,
   CANONICAL_DASHBOARD_POLICY_VERSION,
@@ -33,6 +33,16 @@ function projectionIdentity(material: unknown): string {
   return `${CANONICAL_DASHBOARD_PROJECTION_VERSION}:sha256:${hash}`;
 }
 
+function normalizeCognitionIdentity(input: CanonicalDashboardProjectionInput['cognition']): unknown {
+  return {
+    ...input,
+    signals: [...input.signals].map((signal) => ({ ...signal, evidenceItemIds: [...signal.evidenceItemIds].sort(), warnings: [...signal.warnings].sort() })).sort((a, b) => a.signalId.localeCompare(b.signalId)),
+    contradictions: [...input.contradictions].map((flag) => ({ ...flag, conflictingSignalKinds: [...flag.conflictingSignalKinds].sort(), evidenceItemIds: [...flag.evidenceItemIds].sort() })).sort((a, b) => a.flagId.localeCompare(b.flagId)),
+    narrative: { ...input.narrative, evidenceItemIds: [...input.narrative.evidenceItemIds].sort() },
+    warnings: [...input.warnings].sort()
+  };
+}
+
 function resolveDirection(directions: MarketCognitionPressureDirection[]): string {
   const qualified = new Set(directions.filter((direction) => direction === 'bullish' || direction === 'bearish'));
   if (directions.includes('mixed') || qualified.size > 1) return 'mixed';
@@ -51,7 +61,9 @@ export function buildCanonicalDashboardProjection(input: CanonicalDashboardProje
   if (COGNITION_TO_CANONICAL_ASSET[input.cognition.asset] !== input.asset || input.cognition.horizon !== input.horizon) throw new Error('canonical cognition scope mismatch');
   const cognitionChildren = [...input.cognition.signals, ...input.cognition.contradictions, input.cognition.confidence, input.cognition.narrative];
   if (cognitionChildren.some((item) => item.asset !== input.cognition.asset || item.horizon !== input.horizon)) throw new Error('canonical cognition child scope mismatch');
-  if (![input.cognitionArtifact.identity, input.cognitionArtifact.contentHash, input.cognitionArtifact.contractVersion, ...input.cognitionArtifact.provenance].every((value) => value.trim().length > 0)) throw new Error('cognition artifact identity/provenance is required');
+  const futureCognition = [{ kind: 'snapshot', generatedAt: input.cognition.generatedAt }, ...input.cognition.signals.map((item) => ({ kind: 'signal', generatedAt: item.generatedAt })), { kind: 'confidence', generatedAt: input.cognition.confidence.generatedAt }, ...input.cognition.contradictions.map((item) => ({ kind: 'contradiction', generatedAt: item.generatedAt })), { kind: 'narrative', generatedAt: input.cognition.narrative.generatedAt }].find((item) => requireCanonicalTimestamp(item.generatedAt, `${item.kind} generatedAt`) > evaluatedAtMs);
+  if (futureCognition) throw new Error(`future canonical cognition is not eligible: ${futureCognition.kind}`);
+  if (input.cognitionArtifact.provenance.length === 0 || ![input.cognitionArtifact.identity, input.cognitionArtifact.contentHash, input.cognitionArtifact.contractVersion, ...input.cognitionArtifact.provenance].every((value) => value.trim().length > 0)) throw new Error('cognition artifact identity/provenance is required');
 
   const seen = new Set<string>();
   const semanticSlots = new Set<string>();
@@ -75,9 +87,10 @@ export function buildCanonicalDashboardProjection(input: CanonicalDashboardProje
     type: 'market_candle', provider: candle.provider as NormalizedCandle['provider'], assetCode: candle.asset, timeframe: candle.timeframe,
     open: candle.open, high: candle.high, low: candle.low, close: candle.close, ...(candle.volume === null ? {} : { volume: candle.volume }), timestampUtc: candle.observedAt
   }));
-  const zones = detectH4ZonesDeterministic(input.asset, normalized, input.evaluatedAt);
+  const zonesWithLineage = detectH4ZonesWithLineageDeterministic(input.asset, normalized, input.evaluatedAt);
+  const zones = zonesWithLineage.map(({ zone }) => zone);
   const contradictionLineage: DashboardContradictionEvidence[] = [...input.cognition.contradictions].sort((a, b) => a.flagId.localeCompare(b.flagId)).map((flag) => ({ severity: flag.severity, source_id: flag.flagId, evidence_ids: [...flag.evidenceItemIds].sort(), rationale: flag.rationale }));
-  const zoneAnnotations: ChartAnnotation[] = zones.map((zone) => ({ kind: 'key_level_zone', annotation_id: `ann-zone-${zone.zone_id}`, asset_code: input.asset, zone_id: zone.zone_id, significance_score: zone.significance_score, evidence_ids: orderedIds }));
+  const zoneAnnotations: ChartAnnotation[] = zonesWithLineage.map(({ zone, sourceCandleIndexes }) => ({ kind: 'key_level_zone', annotation_id: `ann-zone-${zone.zone_id}`, asset_code: input.asset, zone_id: zone.zone_id, significance_score: zone.significance_score, evidence_ids: sourceCandleIndexes.map((index) => orderedIds[index]!).filter(Boolean) }));
   const contradictionAnnotations: ChartAnnotation[] = contradictionLineage.length ? [{ kind: 'contradiction_marker', annotation_id: `ann-contradiction-${input.cognition.snapshotId}`, asset_code: input.asset, contradiction_score: null, contradiction_score_availability: 'unavailable', contradiction_state: 'evidence-present-no-aggregate', evidence_ids: [...new Set(contradictionLineage.flatMap((item) => item.evidence_ids))].sort(), evidence_lineage: contradictionLineage }] : [];
   const evidenceNotes: ChartAnnotation[] = [...input.cognition.signals].sort((a, b) => a.signalId.localeCompare(b.signalId)).map((signal) => ({ kind: 'evidence_note', annotation_id: `ann-note-${signal.signalId}`, asset_code: input.asset, title: signal.kind.replaceAll('_', ' ').toUpperCase(), body: signal.rationale, timestamp_utc: signal.generatedAt, evidence_ids: [...signal.evidenceItemIds].sort() }));
   const annotations = [...zoneAnnotations, ...contradictionAnnotations, ...evidenceNotes];
@@ -97,6 +110,6 @@ export function buildCanonicalDashboardProjection(input: CanonicalDashboardProje
     zones, annotations, evidence_notes: evidenceNotes,
     modules
   };
-  const identityMaterial = { asset: input.asset, timeframe: input.timeframe, horizon: input.horizon, cognition: input.cognition, cognitionArtifact: input.cognitionArtifact, candles, orderedCandleObservationIds: orderedIds, orderedCandleContentHashes: orderedHashes, evaluatedAt: input.evaluatedAt, chartZoneRuleVersion: input.chartZoneRuleVersion, dashboardDisplayContractVersion: input.dashboardDisplayContractVersion, projectionVersion: input.projectionVersion, productPolicyVersion: input.productPolicyVersion };
+  const identityMaterial = { asset: input.asset, timeframe: input.timeframe, horizon: input.horizon, cognition: normalizeCognitionIdentity(input.cognition), cognitionArtifact: { ...input.cognitionArtifact, provenance: [...input.cognitionArtifact.provenance].sort() }, candles, orderedCandleObservationIds: orderedIds, orderedCandleContentHashes: orderedHashes, evaluatedAt: input.evaluatedAt, chartZoneRuleVersion: input.chartZoneRuleVersion, dashboardDisplayContractVersion: input.dashboardDisplayContractVersion, projectionVersion: input.projectionVersion, productPolicyVersion: input.productPolicyVersion };
   return { projection_version: CANONICAL_DASHBOARD_PROJECTION_VERSION, projection_identity: projectionIdentity(identityMaterial), evaluated_at: input.evaluatedAt, ordered_candle_observation_ids: orderedIds, ordered_candle_content_hashes: orderedHashes, workspace: { dashboard, chart: { candles: candles.map((candle) => ({ timestamp_utc: candle.observedAt, open: candle.open, high: candle.high, low: candle.low, close: candle.close, ...(candle.volume === null ? {} : { volume: candle.volume }) })), zones, annotations, default_filters: { keyLevelZones: true, macroEvents: true, contradiction: true, evidenceNotes: true, impulseOrigins: false }, annotation_density_target: 'moderate' } } };
 }

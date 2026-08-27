@@ -1,6 +1,6 @@
 import type { NormalizedCandle } from '@elceo/schemas';
 import type { AssetCognitionState, ContradictionMarkerAnnotation, DashboardCognitionModule, DashboardCognitionViewModel, EvidenceAssembly } from '@elceo/types';
-import { detectH4Zones, detectH4ZonesDeterministic } from '../zones/detect-h4-zones';
+import { detectH4Zones, detectH4ZonesDeterministic, detectH4ZonesWithLineageDeterministic } from '../zones/detect-h4-zones';
 import { buildChartAnnotations, buildLegacyChartAnnotationsDeterministic } from '../annotations/build-annotations';
 import { buildLegacyDashboardViewModel, sortDashboardModules } from '../dashboard/build-legacy-dashboard-view-model';
 
@@ -102,6 +102,7 @@ export function runChartIntelligenceTests(): void {
   const deterministicB = detectH4ZonesDeterministic('XAU/USD', candles, evaluatedAt);
   Date.now = originalDateNow;
   assert(JSON.stringify(deterministicA) === JSON.stringify(deterministicB), 'same candles and evaluation time are deep-equal');
+  assert(JSON.stringify(detectH4ZonesWithLineageDeterministic('XAU/USD', candles, evaluatedAt).map(({ zone }) => zone)) === JSON.stringify(deterministicA), 'lineage companion preserves accepted H4 zone numerical output exactly');
   const futureCandle: NormalizedCandle = { ...candles[0]!, timestampUtc: '2026-04-21T04:00:00.000Z', open: 9999, high: 10001, low: 9998, close: 10000 };
   const withoutLookAhead = detectH4ZonesDeterministic('XAU/USD', [...candles, futureCandle], evaluatedAt);
   assert(JSON.stringify(deterministicA) === JSON.stringify(withoutLookAhead), 'candles after evaluatedAt cannot leak into historical zone evaluation');

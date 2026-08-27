@@ -22,7 +22,6 @@ const aliasTargets = {
   '@elceo/analytics': 'services/analytics/src/index.cjs',
   '@elceo/billing': 'services/billing/src/index.cjs',
   '@elceo/chart-intelligence': 'services/chart-intelligence/src/index.cjs',
-  '@elceo/ingestion': 'services/ingestion/src/index.cjs',
   '@/lib/server/api': 'lib/server/api/index.cjs',
   '@/lib/server/auth': 'lib/server/auth/index.cjs',
   '@/lib/server/composition': 'tests/stubs/composition.cjs',

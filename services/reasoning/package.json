@@ -16,7 +16,6 @@
     "@elceo/config": "0.1.0",
     "@elceo/chart-intelligence": "0.1.0",
     "@elceo/domain": "0.1.0",
-    "@elceo/ingestion": "0.1.0",
     "@elceo/schemas": "0.1.0",
     "@elceo/types": "0.1.0",
     "redis": "6.2.1"

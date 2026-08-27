@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { buildCanonicalDashboardProjection, CANONICAL_DASHBOARD_DISPLAY_VERSION, CANONICAL_DASHBOARD_POLICY_VERSION, CANONICAL_DASHBOARD_PROJECTION_VERSION, CANONICAL_DASHBOARD_ZONE_RULE_VERSION, type CanonicalDashboardProjection } from '@elceo/chart-intelligence';
 import { getCanonicalCandleObservation, validateMarketCognitionSnapshot } from '@elceo/schemas';
-import type { CanonicalAssetSymbol, CanonicalEvent, CanonicalMarketCandleObservation, EvidenceWeightHorizon, MarketCognitionSnapshot } from '@elceo/types';
+import { cognitionAssetForCanonicalDashboardAsset, type CanonicalAssetSymbol, type CanonicalEvent, type CanonicalMarketCandleObservation, type EvidenceWeightHorizon, type MarketCognitionSnapshot } from '@elceo/types';
 import type { AdaptiveOwnershipStore, CanonicalArtifact, DashboardProjectionArtifact, EvidenceOrCognitionArtifact, MaterializationLease, MaterializationRepository } from './contracts';
 import { buildArtifactIntegrityHash, buildCanonicalPayloadHash, buildDashboardProjectionArtifactIdentity, buildDashboardProjectionCoordinationHash, buildMaterializationScopeHash } from './identity';
 import { DASHBOARD_PROJECTION_FRESHNESS_POLICY_VERSION } from './dashboard-projection-contract';
@@ -9,8 +9,6 @@ import { DASHBOARD_PROJECTION_FRESHNESS_POLICY_VERSION } from './dashboard-proje
 export { DASHBOARD_PROJECTION_FRESHNESS_POLICY_VERSION } from './dashboard-projection-contract';
 export type PersistedCanonicalCandleReader={getLatestEventsForAssetTimeframe(asset:CanonicalAssetSymbol,timeframe:'H4'):Promise<CanonicalEvent[]>};
 export type DashboardProjectionMaterializationRequest={asset:CanonicalAssetSymbol;horizon:EvidenceWeightHorizon;timeframe:'H4';parentCognitionArtifactIdentity:string;leaseDurationMs:number;retryMaximumMs:number};
-
-const CANONICAL_TO_COGNITION_ASSET:Record<CanonicalAssetSymbol,MarketCognitionSnapshot['asset']>={'XAU/USD':'xau_usd','Nasdaq 100':'nasdaq_100','S&P 500':'sp500','DE30':'de30','BTC/USD':'btc_usd','EUR/USD':'eur_usd','GBP/USD':'gbp_usd','USD/JPY':'usd_jpy','USD/CHF':'usd_chf','AUD/USD':'aud_usd','NZD/USD':'nzd_usd','USD/CAD':'usd_cad'};
 
 /** Adapter over persisted ingestion snapshots. It never parses rawPayload. */
 export class PersistedCanonicalCandleObservationReader {
@@ -39,5 +37,5 @@ export class CanonicalDashboardProjectionMaterializationService {
     if(lost||!await this.ownership.isCurrent(lease))throw new Error('dashboard_projection_ownership_lost');
     if(!await this.repository.publish(lease,artifact))throw new Error('dashboard_projection_stale_owner_publish_denied');return artifact
     }finally{clearInterval(heartbeat);await this.ownership.release(lease)}}
-  private validateParent(parent:CanonicalArtifact<MarketCognitionSnapshot>|null,r:DashboardProjectionMaterializationRequest):asserts parent is EvidenceOrCognitionArtifact<MarketCognitionSnapshot>&{kind:'cognition'}{if(!parent||parent.kind!=='cognition'||parent.identity!==r.parentCognitionArtifactIdentity)throw new Error('dashboard_projection_parent_cognition_required');const{integrityHash,...body}=parent;if(integrityHash!==buildArtifactIntegrityHash(body))throw new Error('dashboard_projection_parent_integrity_invalid');if(!validateMarketCognitionSnapshot(parent.payload).ok||parent.payload.horizon!==r.horizon||parent.payload.asset!==CANONICAL_TO_COGNITION_ASSET[r.asset])throw new Error('dashboard_projection_parent_scope_mismatch');if(Date.parse(parent.payload.generatedAt)>Date.parse(parent.evaluatedAt))throw new Error('dashboard_projection_parent_future_boundary')}
+  private validateParent(parent:CanonicalArtifact<MarketCognitionSnapshot>|null,r:DashboardProjectionMaterializationRequest):asserts parent is EvidenceOrCognitionArtifact<MarketCognitionSnapshot>&{kind:'cognition'}{if(!parent||parent.kind!=='cognition'||parent.identity!==r.parentCognitionArtifactIdentity)throw new Error('dashboard_projection_parent_cognition_required');const{integrityHash,...body}=parent;if(integrityHash!==buildArtifactIntegrityHash(body))throw new Error('dashboard_projection_parent_integrity_invalid');if(!validateMarketCognitionSnapshot(parent.payload).ok||parent.payload.horizon!==r.horizon||parent.payload.asset!==cognitionAssetForCanonicalDashboardAsset(r.asset))throw new Error('dashboard_projection_parent_scope_mismatch');if(Date.parse(parent.payload.generatedAt)>Date.parse(parent.evaluatedAt))throw new Error('dashboard_projection_parent_future_boundary')}
 }

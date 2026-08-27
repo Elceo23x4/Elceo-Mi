@@ -41,11 +41,15 @@ if [[ "$query" == *"SELECT 'postgresql_version='"* ]]; then
     'ledger_total=51' 'ledger_applied=51' 'ledger_failed=0' 'ledger_first=0001_init.sql' 'ledger_last=0050_adaptive_materialization.sql'
 elif [[ "$query" == 'SHOW server_version_num' ]]; then echo "${MOCK_SERVER_VERSION:-180600}"
 elif [[ "$query" == *'current_database(), current_user'* ]]; then echo 'railway|postgres'
-elif [[ "$query" == *"count(*) FILTER"* ]]; then echo "${MOCK_COUNTS:-0|0|0|0}"
+elif [[ "$query" == *"object_kind = 'materialized_view'"* ]]; then
+  count=0; [[ ! -f "$MOCK_SAFETY_COUNTER" ]] || count=$(cat "$MOCK_SAFETY_COUNTER")
+  count=$((count + 1)); printf '%s' "$count" >"$MOCK_SAFETY_COUNTER"
+  if (( count == 1 )); then echo "${MOCK_COUNTS_FIRST:-0|0|0|0|0|0|0|0}"
+  else echo "${MOCK_COUNTS_SECOND:-0|0|0|0|0|0|0|0}"; fi
 else exit 70; fi
 MOCK
 chmod +x "$mockbin"/*
-export PATH="$mockbin:$PATH" MOCK_CALLS="$tmp/calls" MOCK_REMOTE="$tmp/remote"
+export PATH="$mockbin:$PATH" MOCK_CALLS="$tmp/calls" MOCK_REMOTE="$tmp/remote" MOCK_SAFETY_COUNTER="$tmp/safety-counter"
 export RESTORE_DATABASE_URL='postgresql://postgres:database-secret@restore.invalid/railway'
 export R2_ENDPOINT='https://account.r2.cloudflarestorage.com' R2_BUCKET='elceo-staging-backups'
 export R2_ACCESS_KEY_ID='r2-key-secret' R2_SECRET_ACCESS_KEY='r2-value-secret'
@@ -55,7 +59,7 @@ export RESTORE_CONFIRMATION='RESTORE_EMPTY_DISPOSABLE_TARGET'
 assert_clean() { [[ -z "$(find "$TMPDIR" -mindepth 1 -print -quit)" ]]; }
 assert_secret_free() { ! grep -Eq 'database-secret|r2-key-secret|r2-value-secret|postgresql://' "$1"; }
 make_remote() {
-  rm -rf "$MOCK_REMOTE"; mkdir "$MOCK_REMOTE"; : >"$MOCK_CALLS"
+  rm -rf "$MOCK_REMOTE"; mkdir "$MOCK_REMOTE"; : >"$MOCK_CALLS"; rm -f "$MOCK_SAFETY_COUNTER"
   printf 'valid custom archive fixture' >"$MOCK_REMOTE/archive.dump"
   size=$(wc -c <"$MOCK_REMOTE/archive.dump" | tr -d ' ')
   sha=$(sha256sum "$MOCK_REMOTE/archive.dump" | awk '{print $1}')
@@ -92,8 +96,20 @@ expect_failure size_mismatch "$subject"
 make_remote; printf x >>"$MOCK_REMOTE/archive.dump"; size=$(wc -c <"$MOCK_REMOTE/archive.dump"); jq --argjson s "$size" '.byte_size=$s' "$MOCK_REMOTE/manifest.json" >"$tmp/m"; mv "$tmp/m" "$MOCK_REMOTE/manifest.json"
 expect_failure corrupt_sha "$subject"
 make_remote; expect_failure archive_list_failure env MOCK_LIST_STATUS=7 "$subject"
-make_remote; expect_failure dirty_destination env MOCK_COUNTS='1|0|0|0' "$subject"
-! grep -q 'pg_restore --exit-on-error' "$MOCK_CALLS"
+make_remote; expect_failure dirty_preflight env MOCK_COUNTS_FIRST='1|0|0|0|0|0|0|0' "$subject"
+! grep -q ' copyto ' "$MOCK_CALLS"
+for dirty_case in \
+  'materialized_view:0|0|1|0|0|0|0|0' \
+  'foreign_table:0|0|0|1|0|0|0|0' \
+  'public_routine:0|0|0|0|0|1|0|0' \
+  'public_type:0|0|0|0|0|0|1|0'; do
+  name=${dirty_case%%:*}; counts=${dirty_case#*:}
+  make_remote; expect_failure "dirty_$name" env MOCK_COUNTS_FIRST="$counts" "$subject"
+  ! grep -q ' copyto ' "$MOCK_CALLS"
+done
+make_remote; expect_failure dirty_recheck env MOCK_COUNTS_SECOND='0|0|1|0|0|0|0|0' "$subject"
+test "$(grep -c ' copyto ' "$MOCK_CALLS")" = 2
+! grep -q 'pg_restore --single-transaction' "$MOCK_CALLS"
 make_remote; expect_failure restore_failure env MOCK_RESTORE_STATUS=8 "$subject"
 grep -q 'stage=restore_execution status=FAIL' "$tmp/restore_failure.log"
 
@@ -101,22 +117,31 @@ make_remote
 "$subject" >"$tmp/success.log" 2>&1
 grep -q 'manifest_validation=PASS' "$tmp/success.log"
 grep -q 'archive_sha256_verification=PASS' "$tmp/success.log"
-grep -q 'destination_empty_check=PASS' "$tmp/success.log"
+grep -q 'destination_preflight=PASS' "$tmp/success.log"
+grep -q 'destination_pre_restore_recheck=PASS' "$tmp/success.log"
 grep -q 'restore_execution=PASS' "$tmp/success.log"
 grep -q 'post_restore_fingerprint=public_tables=106' "$tmp/success.log"
 grep -q 'overall=PASS' "$tmp/success.log"
 assert_secret_free "$tmp/success.log"; assert_clean
+preflight_line=$(grep -n 'destination_preflight=PASS' "$tmp/success.log" | cut -d: -f1)
 manifest_line=$(grep -n 'manifest_validation=PASS' "$tmp/success.log" | cut -d: -f1)
 archive_line=$(grep -n 'archive_validation=PASS' "$tmp/success.log" | cut -d: -f1)
-empty_line=$(grep -n 'destination_empty_check=PASS' "$tmp/success.log" | cut -d: -f1)
+recheck_line=$(grep -n 'destination_pre_restore_recheck=PASS' "$tmp/success.log" | cut -d: -f1)
 restore_line=$(grep -n 'restore_execution=PASS' "$tmp/success.log" | cut -d: -f1)
 fingerprint_line=$(grep -n 'post_restore_fingerprint=' "$tmp/success.log" | head -1 | cut -d: -f1)
-(( manifest_line < archive_line && archive_line < empty_line && empty_line < restore_line && restore_line < fingerprint_line ))
+(( preflight_line < manifest_line && manifest_line < archive_line && archive_line < recheck_line && recheck_line < restore_line && restore_line < fingerprint_line ))
+test "$(grep -c 'object_kind = .materialized_view.' "$MOCK_CALLS")" = 2
+grep -q 'pg_restore --single-transaction --no-owner --no-acl --dbname=' "$MOCK_CALLS"
 
 # Static command-surface assertions prevent an R2 mutating operation from being constructed.
 ! grep -Eq '(^|[[:space:]])(delete|deletefile|purge|move|moveto|copy|sync)([[:space:]]|$)' "$subject"
 grep -Fq 'rclone_cmd[@]}" copyto "r2:' "$subject"
 ! grep -Eq -- '--clean|--create' "$subject"
-grep -Fq 'pg_restore --exit-on-error --no-owner --no-acl --dbname="$RESTORE_DATABASE_URL"' "$subject"
+grep -Fq 'pg_restore --single-transaction --no-owner --no-acl --dbname="$RESTORE_DATABASE_URL"' "$subject"
+grep -Fq "FROM pg_tables WHERE schemaname='public'" "$subject"
+grep -Fq "FROM pg_views WHERE schemaname='public'" "$subject"
+grep -Fq "FROM pg_sequences WHERE schemaname='public'" "$subject"
+grep -Fq "min(filename),'') FROM public.elceo_migration_rehearsal_ledger WHERE status='applied'" "$subject"
+grep -Fq "max(filename),'') FROM public.elceo_migration_rehearsal_ledger WHERE status='applied'" "$subject"
 
 echo 'restore rehearsal worker tests: PASS'

@@ -20,6 +20,45 @@ require_var() {
   [[ -n "${!1:-}" ]] || { printf 'error=missing_required_environment variable=%s\n' "$1" >&2; return 1; }
 }
 
+check_destination_empty() {
+  marker="$1"
+  server_version_num="$(psql "$RESTORE_DATABASE_URL" -XAtqc 'SHOW server_version_num')"
+  [[ "$server_version_num" =~ ^18[0-9]{4}$ ]]
+  identity="$(psql "$RESTORE_DATABASE_URL" -XAtF '|' -c "SELECT current_database(), current_user")"
+  [[ "$identity" == *'|'* && -n "$identity" ]]
+  IFS='|' read -r database_name database_user <<<"$identity"
+  counts="$(psql "$RESTORE_DATABASE_URL" -XAtF '|' -c "
+    SELECT
+      count(*) FILTER (WHERE object_kind = 'table'),
+      count(*) FILTER (WHERE object_kind = 'view'),
+      count(*) FILTER (WHERE object_kind = 'materialized_view'),
+      count(*) FILTER (WHERE object_kind = 'foreign_table'),
+      count(*) FILTER (WHERE object_kind = 'sequence'),
+      count(*) FILTER (WHERE object_kind = 'routine'),
+      count(*) FILTER (WHERE object_kind = 'type'),
+      count(*) FILTER (WHERE object_kind = 'migration_ledger')
+    FROM (
+      SELECT CASE c.relkind
+        WHEN 'r' THEN 'table' WHEN 'p' THEN 'table' WHEN 'v' THEN 'view'
+        WHEN 'm' THEN 'materialized_view' WHEN 'f' THEN 'foreign_table' WHEN 'S' THEN 'sequence'
+        WHEN 'c' THEN 'type'
+      END AS object_kind
+      FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind IN ('r','p','v','m','f','S','c')
+      UNION ALL
+      SELECT 'routine' FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public'
+      UNION ALL
+      SELECT 'type' FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+      WHERE n.nspname = 'public' AND t.typisdefined AND t.typrelid = 0 AND t.typelem = 0
+      UNION ALL
+      SELECT 'migration_ledger' FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relname = 'elceo_migration_rehearsal_ledger'
+    ) user_objects")"
+  [[ "$counts" == "0|0|0|0|0|0|0|0" ]]
+  log "postgresql_version_num=$server_version_num destination_database=$database_name destination_user=$database_user ${marker}=PASS"
+}
+
 # This gate intentionally precedes all other validation and all network/database access.
 if [[ "${RESTORE_CONFIRMATION:-}" != RESTORE_EMPTY_DISPOSABLE_TARGET ]]; then
   printf 'error=restore_confirmation_required expected=RESTORE_EMPTY_DISPOSABLE_TARGET\n' >&2
@@ -33,6 +72,9 @@ if ! [[ "$PGCONNECT_TIMEOUT" =~ ^[1-9][0-9]*$ ]] || (( PGCONNECT_TIMEOUT > 300 )
 fi
 
 log "restore_started=$started_at"
+stage="destination_preflight"
+check_destination_empty destination_preflight
+
 workdir="$(mktemp -d)"
 config="$workdir/rclone.conf"
 manifest="$workdir/manifest.json"
@@ -83,36 +125,29 @@ stage="archive_validation"
 pg_restore --list "$archive" >/dev/null
 log "archive_validation=PASS"
 
-stage="destination_safety"
-server_version_num="$(psql "$RESTORE_DATABASE_URL" -XAtqc 'SHOW server_version_num')"
-[[ "$server_version_num" =~ ^18[0-9]{4}$ ]]
-identity="$(psql "$RESTORE_DATABASE_URL" -XAtF '|' -c "SELECT current_database(), current_user")"
-[[ "$identity" == *'|'* && -n "$identity" ]]
-IFS='|' read -r database_name database_user <<<"$identity"
-counts="$(psql "$RESTORE_DATABASE_URL" -XAtF '|' -c "SELECT count(*) FILTER (WHERE c.relkind IN ('r','p')), count(*) FILTER (WHERE c.relkind = 'v'), count(*) FILTER (WHERE c.relkind = 'S'), count(*) FILTER (WHERE c.relname = 'elceo_migration_rehearsal_ledger') FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public'")"
-[[ "$counts" == "0|0|0|0" ]]
-log "postgresql_version_num=$server_version_num destination_database=$database_name destination_user=$database_user destination_empty_check=PASS"
+stage="destination_pre_restore_recheck"
+check_destination_empty destination_pre_restore_recheck
 
 stage="restore_execution"
-pg_restore --exit-on-error --no-owner --no-acl --dbname="$RESTORE_DATABASE_URL" "$archive"
+pg_restore --single-transaction --no-owner --no-acl --dbname="$RESTORE_DATABASE_URL" "$archive"
 log "restore_execution=PASS"
 
 stage="post_restore_fingerprint"
 fingerprint_sql=$(cat <<'SQL'
 SELECT 'postgresql_version=' || current_setting('server_version');
 SELECT 'database_identity=' || current_database() || ':' || current_user;
-SELECT 'public_tables=' || count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p');
-SELECT 'public_table_names_md5=' || md5(coalesce(string_agg(c.relname, ',' ORDER BY c.relname),'')) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p');
-SELECT 'public_views=' || count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='v';
-SELECT 'public_view_names_md5=' || md5(coalesce(string_agg(c.relname, ',' ORDER BY c.relname),'')) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='v';
-SELECT 'public_sequences=' || count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='S';
-SELECT 'public_sequence_names_md5=' || md5(coalesce(string_agg(c.relname, ',' ORDER BY c.relname),'')) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='S';
+SELECT 'public_tables=' || count(*) FROM pg_tables WHERE schemaname='public';
+SELECT 'public_table_names_md5=' || md5(COALESCE(string_agg(tablename, ',' ORDER BY tablename),'')) FROM pg_tables WHERE schemaname='public';
+SELECT 'public_views=' || count(*) FROM pg_views WHERE schemaname='public';
+SELECT 'public_view_names_md5=' || md5(COALESCE(string_agg(viewname, ',' ORDER BY viewname),'')) FROM pg_views WHERE schemaname='public';
+SELECT 'public_sequences=' || count(*) FROM pg_sequences WHERE schemaname='public';
+SELECT 'public_sequence_names_md5=' || md5(COALESCE(string_agg(sequencename, ',' ORDER BY sequencename),'')) FROM pg_sequences WHERE schemaname='public';
 SELECT 'extensions=' || coalesce(string_agg(extname || ':' || extversion, ',' ORDER BY extname),'') FROM pg_extension;
 SELECT 'ledger_total=' || count(*) FROM public.elceo_migration_rehearsal_ledger;
 SELECT 'ledger_applied=' || count(*) FROM public.elceo_migration_rehearsal_ledger WHERE status='applied';
 SELECT 'ledger_failed=' || count(*) FROM public.elceo_migration_rehearsal_ledger WHERE status='failed';
-SELECT 'ledger_first=' || coalesce(min(filename),'') FROM public.elceo_migration_rehearsal_ledger;
-SELECT 'ledger_last=' || coalesce(max(filename),'') FROM public.elceo_migration_rehearsal_ledger;
+SELECT 'ledger_first=' || coalesce(min(filename),'') FROM public.elceo_migration_rehearsal_ledger WHERE status='applied';
+SELECT 'ledger_last=' || coalesce(max(filename),'') FROM public.elceo_migration_rehearsal_ledger WHERE status='applied';
 SQL
 )
 fingerprint_output="$(psql "$RESTORE_DATABASE_URL" -XAt -c "$fingerprint_sql")"

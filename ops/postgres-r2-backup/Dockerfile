@@ -21,6 +21,10 @@ RUN case "$TARGETARCH" in \
     && install -m 0755 "/tmp/rclone/rclone-v${RCLONE_VERSION}-linux-${TARGETARCH}/rclone" /rclone
 
 FROM ${POSTGRES_IMAGE}
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=rclone-fetch /rclone /usr/local/bin/rclone
 COPY --chmod=0755 backup.sh /usr/local/bin/elceo-postgres-r2-backup
 

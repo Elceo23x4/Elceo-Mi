@@ -184,7 +184,7 @@ jobs:
           docker run --rm --entrypoint rclone elceo-postgres-r2-backup:test version | grep -F 'rclone v1.75.0'
           test "$(docker run --rm --entrypoint id elceo-postgres-r2-backup:test -u)" != "0"
           docker run --rm --entrypoint sh elceo-postgres-r2-backup:test -c \
-            'test "$(id -u)" != 0; workdir=$(mktemp -d); test -d "$workdir"; rm -rf "$workdir"; ! command -v curl; ! command -v unzip'
+            'test -s /etc/ssl/certs/ca-certificates.crt; test -r /etc/ssl/certs/ca-certificates.crt; ! command -v curl; ! command -v unzip; test "$(id -u)" != 0; workdir=$(mktemp -d); test -d "$workdir"; rm -rf "$workdir"'
       - name: Verify worker startup contract
         run: |
           if docker run --rm elceo-postgres-r2-backup:test >worker.log 2>&1; then

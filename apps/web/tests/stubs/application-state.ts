@@ -144,3 +144,6 @@ export async function getSuperAdminStepUpPersistenceReadiness() {
 }
 
 export async function getSuperAdminStepUpCoverageReport() { const readiness = await getSuperAdminStepUpPersistenceReadiness(); return buildSuperAdminStepUpCoverageReport(readiness.persistenceStatus); }
+export async function resolveUserCommercialEntitlementSnapshot(userId:string){return {userId,nowIso:new Date().toISOString(),trialStartedAt:null,activePlanCode:'focus_plan' as const,subscriptionActive:true,socialIdentifiers:[{kind:'x_username' as const,value:'@fixture'}],userRestrictionStatus:'none' as const};}
+export function evaluateCommercialFeatureAccess(){return {decision:'allow' as const,status:'active' as const,reason:'feature_allowed' as const,subscriptionWall:null};}
+export function getCommercialPlanCatalog(){return {plans:[{planCode:'focus_plan' as const,displayName:'Focus Plan',billingIntervals:['monthly','quarterly','yearly'],monthlyPrice:{amount:70,currency:'USD'},quarterlyPrice:{status:'pending_price_config'},yearlyPrice:{status:'pending_price_config'}}]};}

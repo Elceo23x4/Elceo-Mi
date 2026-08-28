@@ -31,3 +31,6 @@ Every canonical output explicitly emits `dashboard-display-v2`. Unsupported nume
 ## Deliberate boundary
 
 D1-B distributed Redis/PostgreSQL materialization and ownership/fencing remains unimplemented. D1-C passive production consumption remains unimplemented, and `GET /api/dashboard/[asset]` remains on its accepted legacy/passive path. Production-live activation remains disabled. IFP-8 remains externally blocked; this projection neither changes IFP/PGS semantics nor fabricates intelligence to bypass that dependency.
+
+## Product consumer authority
+Both `/api/dashboard/[asset]` and the rendered `/dashboard` server page call `readCanonicalDashboardWorkspace` directly. No internal HTTP hop or ingestion dashboard reconstruction is used. Commercial authorization occurs before release. Focus Plan receives the accepted passive workspace; Kick Off is denied until an architect-approved field mapping exists rather than receiving a client-hidden premium payload.

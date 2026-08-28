@@ -51,3 +51,6 @@
 - Notification preference foundation remains shell-only (no live email/WhatsApp sends) and owner boundary is enforced for subscription mutation routes.
 - Account/profile routes remain authenticated-basic where present; profile/social identifier CRUD route now exists at /api/account/profile/social-identifiers (GET/PATCH), authenticated + owner-scoped; persistence is durable when APP_STATE_REPOSITORY=sql with DATABASE_URL; otherwise explicit memory_fallback persists only for test/local runtime.
 - No live KoraPay/Stripe checkout created; no live provider activation.
+
+## Canonical persisted resolver (authority closure)
+Product requests resolve `kick_off` / `focus_plan` on the server from durable billing subscriptions, the three-day trial timestamps, super-admin gifts/restrictions, and persisted social identifiers. Precedence is restriction, active gift, active Focus Plan subscription, active unexpired Kick Off trial, then `subscription_required`. `free` / `premium` / `admin_internal` is a one-way compatibility projection and is never read as paid product truth. Caller headers are not commercial inputs in deployed environments.

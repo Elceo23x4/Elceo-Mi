@@ -34,3 +34,6 @@ Real provider sandbox validation remains RC-I2. Notification delivery remains RC
 - Reconciliation inspects unknown/reconciliation_required operations with the existing provider idempotency key/reference and never creates a new provider charge.
 - Notification delivery remains mandatory RC-I3; RC-J, the Intelligence Feature Program, and RC-K remain mandatory pre-launch dependency work and not in this RC-I2 scope.
 - No launch workflow item is labeled outside the approved language; remaining launch work is a mandatory subsequent launch batch or mandatory pre-launch dependency.
+
+## Authority closure
+Canonical modes are `disabled`, `local_fake_provider`, `replay_provider_event`, and credential-gated `sandbox_provider`; production-provider activation remains blocked. Focus Plan sandbox checkout uses Stripe subscription mode and `STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY`. Monthly is the only configured interval; quarterly/yearly fail with `billing_interval_not_configured`. Billing interval and provider references are explicit operation fields. The production portal does not fall back to the legacy billing service and fails closed until the canonical customer reference is available.

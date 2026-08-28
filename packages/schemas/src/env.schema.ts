@@ -1,5 +1,7 @@
 export type ProviderEnv = {
-  APP_ENV?: 'development' | 'staging' | 'production';
+  APP_ENV?: 'development' | 'test' | 'staging' | 'production';
+  NODE_ENV?: string;
+  DATABASE_URL?: string;
   FINNHUB_API_KEY?: string;
   ALPHAVANTAGE_API_KEY?: string;
   FMP_API_KEY?: string;
@@ -15,13 +17,15 @@ export type ProviderEnv = {
   AUTH_SECRET?: string;
   AUTH_GOOGLE_CLIENT_ID?: string;
   AUTH_GOOGLE_CLIENT_SECRET?: string;
-  APP_STATE_REPOSITORY?: 'postgres' | 'memory';
+  APP_STATE_REPOSITORY?: 'sql' | 'memory';
+  NOTIFICATIONS_PERSISTENCE_BACKEND?: 'sql' | 'memory';
+  ANALYTICS_PERSISTENCE_BACKEND?: 'sql' | 'memory';
   NEXT_PUBLIC_APP_BASE_URL?: string;
   BILLING_PROVIDER?: 'mock' | 'stripe';
   BILLING_WEBHOOK_SECRET?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
-  STRIPE_PRICE_ID_PREMIUM?: string;
+  STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY?: string;
   ELCEO_INTERNAL_API_TOKEN?: string;
   SENTRY_DSN?: string;
   LOG_LEVEL?: 'debug' | 'info' | 'warn' | 'error';
@@ -47,7 +51,9 @@ function isValidAbsoluteHttpUrl(input: string): boolean {
 
 export function readProviderEnv(env: Record<string, string | undefined> = {}): ProviderEnv {
   const out: ProviderEnv = {};
-  if (env.APP_ENV === 'development' || env.APP_ENV === 'staging' || env.APP_ENV === 'production') out.APP_ENV = env.APP_ENV;
+  if (env.APP_ENV === 'development' || env.APP_ENV === 'test' || env.APP_ENV === 'staging' || env.APP_ENV === 'production') out.APP_ENV = env.APP_ENV;
+  if (env.NODE_ENV) out.NODE_ENV=env.NODE_ENV;
+  if (env.DATABASE_URL) out.DATABASE_URL=env.DATABASE_URL;
   if (env.FINNHUB_API_KEY) out.FINNHUB_API_KEY = env.FINNHUB_API_KEY;
   if (env.ALPHAVANTAGE_API_KEY) out.ALPHAVANTAGE_API_KEY = env.ALPHAVANTAGE_API_KEY;
   if (env.FMP_API_KEY) out.FMP_API_KEY = env.FMP_API_KEY;
@@ -63,13 +69,15 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   if (env.AUTH_SECRET) out.AUTH_SECRET = env.AUTH_SECRET;
   if (env.AUTH_GOOGLE_CLIENT_ID) out.AUTH_GOOGLE_CLIENT_ID = env.AUTH_GOOGLE_CLIENT_ID;
   if (env.AUTH_GOOGLE_CLIENT_SECRET) out.AUTH_GOOGLE_CLIENT_SECRET = env.AUTH_GOOGLE_CLIENT_SECRET;
-  if (env.APP_STATE_REPOSITORY === 'postgres' || env.APP_STATE_REPOSITORY === 'memory') out.APP_STATE_REPOSITORY = env.APP_STATE_REPOSITORY;
+  if (env.APP_STATE_REPOSITORY === 'sql' || env.APP_STATE_REPOSITORY === 'memory') out.APP_STATE_REPOSITORY = env.APP_STATE_REPOSITORY;
+  if (env.NOTIFICATIONS_PERSISTENCE_BACKEND === 'sql' || env.NOTIFICATIONS_PERSISTENCE_BACKEND === 'memory') out.NOTIFICATIONS_PERSISTENCE_BACKEND=env.NOTIFICATIONS_PERSISTENCE_BACKEND;
+  if (env.ANALYTICS_PERSISTENCE_BACKEND === 'sql' || env.ANALYTICS_PERSISTENCE_BACKEND === 'memory') out.ANALYTICS_PERSISTENCE_BACKEND=env.ANALYTICS_PERSISTENCE_BACKEND;
   if (env.NEXT_PUBLIC_APP_BASE_URL) out.NEXT_PUBLIC_APP_BASE_URL = env.NEXT_PUBLIC_APP_BASE_URL;
   if (env.BILLING_PROVIDER === 'mock' || env.BILLING_PROVIDER === 'stripe') out.BILLING_PROVIDER = env.BILLING_PROVIDER;
   if (env.BILLING_WEBHOOK_SECRET) out.BILLING_WEBHOOK_SECRET = env.BILLING_WEBHOOK_SECRET;
   if (env.STRIPE_SECRET_KEY) out.STRIPE_SECRET_KEY = env.STRIPE_SECRET_KEY;
   if (env.STRIPE_WEBHOOK_SECRET) out.STRIPE_WEBHOOK_SECRET = env.STRIPE_WEBHOOK_SECRET;
-  if (env.STRIPE_PRICE_ID_PREMIUM) out.STRIPE_PRICE_ID_PREMIUM = env.STRIPE_PRICE_ID_PREMIUM;
+  if (env.STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY) out.STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY = env.STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY;
   if (env.ELCEO_INTERNAL_API_TOKEN) out.ELCEO_INTERNAL_API_TOKEN = env.ELCEO_INTERNAL_API_TOKEN;
   if (env.SENTRY_DSN) out.SENTRY_DSN = env.SENTRY_DSN;
   if (env.LOG_LEVEL === 'debug' || env.LOG_LEVEL === 'info' || env.LOG_LEVEL === 'warn' || env.LOG_LEVEL === 'error') out.LOG_LEVEL = env.LOG_LEVEL;
@@ -82,7 +90,14 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
 
 export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
   const errors: string[] = [];
-  const appEnv = env.APP_ENV ?? 'development';
+  const appEnv = env.APP_ENV;
+  const deployed = appEnv === 'production' || appEnv === 'staging';
+  if (!appEnv) errors.push('APP_ENV is required');
+  if (env.NODE_ENV === 'production' && !deployed) errors.push('NODE_ENV=production requires APP_ENV=staging or production');
+  if (deployed && env.NODE_ENV !== 'production') errors.push('deployed APP_ENV requires NODE_ENV=production');
+  if (deployed && (env.APP_STATE_REPOSITORY !== 'sql' || !env.DATABASE_URL)) errors.push('deployed APP_STATE_REPOSITORY=sql and DATABASE_URL are required');
+  if (deployed && env.NOTIFICATIONS_PERSISTENCE_BACKEND !== 'sql') errors.push('deployed NOTIFICATIONS_PERSISTENCE_BACKEND=sql is required');
+  if (deployed && env.ANALYTICS_PERSISTENCE_BACKEND !== 'sql') errors.push('deployed ANALYTICS_PERSISTENCE_BACKEND=sql is required');
 
   if (!env.NEXT_PUBLIC_APP_BASE_URL) {
     errors.push('NEXT_PUBLIC_APP_BASE_URL is required');
@@ -90,18 +105,18 @@ export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
     errors.push('NEXT_PUBLIC_APP_BASE_URL must be an absolute http(s) URL');
   }
 
-  if (appEnv === 'production' && !env.AUTH_SECRET) {
+  if (deployed && !env.AUTH_SECRET) {
     errors.push('AUTH_SECRET is required in production');
   }
 
-  if (appEnv === 'production' && !env.ELCEO_INTERNAL_API_TOKEN) {
+  if (deployed && !env.ELCEO_INTERNAL_API_TOKEN) {
     errors.push('ELCEO_INTERNAL_API_TOKEN is required in production');
   }
 
   if (env.BILLING_PROVIDER === 'stripe') {
     if (!env.STRIPE_SECRET_KEY) errors.push('STRIPE_SECRET_KEY is required when BILLING_PROVIDER=stripe');
     if (!env.STRIPE_WEBHOOK_SECRET) errors.push('STRIPE_WEBHOOK_SECRET is required when BILLING_PROVIDER=stripe');
-    if (!env.STRIPE_PRICE_ID_PREMIUM) errors.push('STRIPE_PRICE_ID_PREMIUM is required when BILLING_PROVIDER=stripe');
+    if (!env.STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY) errors.push('STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY is required when BILLING_PROVIDER=stripe');
   }
 
   if (env.ENABLE_KAFKA === 'true' && !env.KAFKA_BROKERS) {

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { DashboardShell } from '../../../components/dashboard/DashboardShell';
-import { buildDashboardViewModelFromAppData } from '../../../lib/dashboard-data';
+import { readCanonicalDashboardWorkspace } from '../../../lib/server/composition/dashboard-projection-runtime';
+import { evaluateCommercialFeatureAccess, resolveUserCommercialEntitlementSnapshot } from '@elceo/application-state';
 import { getOnboardedUserState } from '../../../lib/app-user-state';
 import { evaluateAndPersistAlerts } from '@elceo/notifications';
 
@@ -8,7 +9,9 @@ export default async function DashboardPage() {
   try {
     const { appState } = await getOnboardedUserState();
     const preferredAsset = appState.watchlist.assets[0] ?? 'XAU/USD';
-    const workspace = await buildDashboardViewModelFromAppData(preferredAsset);
+    const commercial = await resolveUserCommercialEntitlementSnapshot(appState.profile.id);
+    if (evaluateCommercialFeatureAccess({ snapshot: commercial, featureKey: 'premium.full_access' }).decision !== 'allow') redirect('/subscription');
+    const workspace = await readCanonicalDashboardWorkspace(preferredAsset, new AbortController().signal);
 
     if (!workspace) {
       return <div style={{ padding: '1rem' }}>Dashboard data is warming up. Please refresh shortly.</div>;

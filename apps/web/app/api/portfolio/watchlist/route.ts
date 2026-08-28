@@ -2,22 +2,15 @@ import { parseJsonBody, parsePositiveInt, parseSearchParams, unwrapValidation, w
 import { requireFeatureAccess } from '@/lib/server/access';
 import { guardRouteCommercialEntitlement } from '@/lib/server/access';
 import { getApplicationStateRuntime } from '@/lib/server/composition';
-import type { UserCommercialEntitlementSnapshot } from '@elceo/types';
+import { resolveUserCommercialEntitlementSnapshot } from '@elceo/application-state';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 import { validateWatchlistCreateRequest } from '@elceo/schemas';
-
-
-function resolveCommercialSnapshot(request: Request, userId: string): UserCommercialEntitlementSnapshot {
-  const fromHeader = request.headers.get('x-elceo-commercial-snapshot');
-  if (process.env.ELCEO_ALLOW_TEST_COMMERCIAL_SNAPSHOT === '1' && fromHeader) return JSON.parse(fromHeader) as UserCommercialEntitlementSnapshot;
-  return { userId, nowIso: new Date().toISOString(), trialStartedAt: null, activePlanCode: null, subscriptionActive: false, socialIdentifiers: [], userRestrictionStatus: 'none' };
-}
 
 export const GET = withApiErrorBoundary(async (request: Request) => {
   const access = await requireFeatureAccess('portfolio.read', { request });
   if (!access.ok) return access.response;
   const subject = access.subject;
-  const commercial = guardRouteCommercialEntitlement({ routePath: '/api/portfolio/watchlist', method: 'GET', featureKey: 'premium.full_access', snapshot: resolveCommercialSnapshot(request, subject.userId) });
+  const commercial = guardRouteCommercialEntitlement({ routePath: '/api/portfolio/watchlist', method: 'GET', featureKey: 'premium.full_access', snapshot: await resolveUserCommercialEntitlementSnapshot(subject.userId) });
   if (!commercial.allowed) return commercial.response;
   const params = parseSearchParams(request.url);
   const entries = await getApplicationStateRuntime().portfolio.listCurrentWatchlist(subject.subjectKind, subject.subjectId, parsePositiveInt(params.get('limit'), 50, 200));
@@ -28,7 +21,7 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   const access = await requireFeatureAccess('portfolio.write', { request });
   if (!access.ok) return access.response;
   const subject = access.subject;
-  const commercial = guardRouteCommercialEntitlement({ routePath: '/api/portfolio/watchlist', method: 'POST', featureKey: 'premium.full_access', snapshot: resolveCommercialSnapshot(request, subject.userId) });
+  const commercial = guardRouteCommercialEntitlement({ routePath: '/api/portfolio/watchlist', method: 'POST', featureKey: 'premium.full_access', snapshot: await resolveUserCommercialEntitlementSnapshot(subject.userId) });
   if (!commercial.allowed) return commercial.response;
   const body = unwrapValidation(validateWatchlistCreateRequest(await parseJsonBody(request)));
   const actor = { actorKind: 'user' as const, actorId: subject.userId, subjectId: subject.subjectId };

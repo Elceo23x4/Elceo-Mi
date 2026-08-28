@@ -47,3 +47,4 @@ export const getCommercialEntitlementCoverageReport=():CommercialEntitlementCove
 export const guardCommercialFeatureAccess=evaluateCommercialFeatureAccess;
 
 export * from './user-social-identifiers';
+export * from './resolver';

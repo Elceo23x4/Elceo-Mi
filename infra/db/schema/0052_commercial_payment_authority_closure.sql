@@ -8,7 +8,16 @@ ALTER TABLE payment_operations ADD COLUMN IF NOT EXISTS cancel_at_period_end BOO
 ALTER TABLE payment_operations ADD COLUMN IF NOT EXISTS last_provider_event_created_at TIMESTAMPTZ;
 ALTER TABLE app_billing_subscriptions ADD COLUMN IF NOT EXISTS last_provider_event_created_at TIMESTAMPTZ;
 ALTER TABLE payment_operations DROP CONSTRAINT IF EXISTS payment_operations_billing_interval_check;
-ALTER TABLE payment_operations ADD CONSTRAINT payment_operations_billing_interval_check CHECK (billing_interval IN ('monthly','quarterly','yearly'));
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM payment_operations WHERE state IN ('created','pending_provider','processing','unknown','reconciliation_required') AND billing_interval IS NULL) THEN
+    RAISE EXCEPTION 'payment_operations_unresolved_billing_interval_reconciliation_required';
+  END IF;
+END $$;
+ALTER TABLE payment_operations ADD CONSTRAINT payment_operations_billing_interval_check CHECK (
+  state NOT IN ('created','pending_provider','processing','unknown','reconciliation_required')
+  OR billing_interval IN ('monthly','quarterly','yearly')
+);
 CREATE INDEX IF NOT EXISTS payment_operations_provider_customer_idx ON payment_operations(provider_customer_reference) WHERE provider_customer_reference IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS payment_operations_provider_subscription_uidx ON payment_operations(provider_subscription_reference) WHERE provider_subscription_reference IS NOT NULL;
 

@@ -5,6 +5,8 @@ import('./route-runtime.test.js').then(({ runRouteRuntimeTests }) => runRouteRun
   .then(({ runD1cRouteConsumerAcceptance }) => runD1cRouteConsumerAcceptance())
   .then(() => import('./backend-authority-closure.test.js'))
   .then(({ runBackendAuthorityClosureAcceptance }) => runBackendAuthorityClosureAcceptance())
+  .then(() => import('./billing-http-contract.test.js'))
+  .then(({ runBillingHttpContractAcceptance }) => runBillingHttpContractAcceptance())
   .then(() => {
     console.log('web route runtime tests passed');
   })

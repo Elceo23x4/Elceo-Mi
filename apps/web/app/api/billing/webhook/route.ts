@@ -1,24 +1,5 @@
-import { NextResponse } from 'next/server';
-import { applyCanonicalSubscriptionLifecycleEvent, internalPaymentRuntime, parseStripeWebhookEvent, type CanonicalSubscriptionLifecycleKind, type CanonicalSubscriptionState, type FakeProviderOutcome } from '@elceo/application-state';
-import { captureError } from '../../../../lib/monitoring';
-import { getRequestId, logRequest } from '../../../../lib/request-context';
-const publicError=(code:string,status:number,requestId:string)=>NextResponse.json({error:{code,message:code}},{status,headers:{'x-request-id':requestId,'cache-control':'no-store'}});
-const lifecycleKind=(type:string):CanonicalSubscriptionLifecycleKind|null=>type==='customer.subscription.created'?'subscription_created':type==='customer.subscription.updated'?'subscription_updated':type==='customer.subscription.deleted'?'subscription_deleted':type==='invoice.payment_succeeded'||type==='invoice.paid'?'renewal_succeeded':type==='invoice.payment_failed'?'renewal_failed':null;
-export async function POST(request:Request){const requestId=getRequestId(request);try{
- const providerMode=process.env.PAYMENT_PROVIDER_MODE;
- if(providerMode==='sandbox_provider'){
-  if(process.env.PAYMENT_PROVIDER_KIND!=='stripe')return publicError('provider_unavailable',503,requestId);
-  const raw=await request.text();const n=parseStripeWebhookEvent(raw,request.headers.get('stripe-signature'),process.env.STRIPE_WEBHOOK_SECRET??'');const lk=lifecycleKind(n.providerEventType);
-  if(lk){if((lk==='renewal_succeeded'||lk==='renewal_failed')&&(!n.currentPeriodStart||!n.currentPeriodEnd))throw new Error('subscription_reconciliation_required');const result=await applyCanonicalSubscriptionLifecycleEvent({providerEventId:n.providerEventId??n.safeRedactedPayloadChecksum,kind:lk,operationId:n.metadataOperationId,providerPaymentReference:n.providerPaymentReference,providerSessionReference:n.providerSessionReference,providerCustomerReference:n.providerCustomerReference,providerSubscriptionReference:n.providerSubscriptionReference,subjectUserId:n.metadataSubjectUserId,targetPlan:n.metadataTargetPlan,billingInterval:n.metadataBillingInterval,subscriptionState:n.subscriptionState as CanonicalSubscriptionState|null,currentPeriodStart:n.currentPeriodStart,currentPeriodEnd:n.currentPeriodEnd,cancelAtPeriodEnd:n.cancelAtPeriodEnd,occurredAt:n.createdAt??new Date().toISOString()});if(result.status==='orphan')return publicError('orphan_provider_event',422,requestId);return NextResponse.json({ok:true,...result},{headers:{'x-request-id':requestId,'cache-control':'no-store'}});}
-  const kind:narrow= n.refundOrReversalOrChargeback==='refund'?'refund':n.refundOrReversalOrChargeback==='partial_refund'?'partial_refund':n.refundOrReversalOrChargeback==='reversal'?'reversal':n.refundOrReversalOrChargeback==='chargeback'?'chargeback':n.status==='succeeded'?'success':n.status==='failed'?'provider_500_before_accepting':'unknown_result';
-  const result=await internalPaymentRuntime.webhook({eventId:n.providerEventId??n.safeRedactedPayloadChecksum,kind,operationId:n.metadataOperationId,providerPaymentReference:n.providerPaymentReference,providerCheckoutSessionReference:n.providerSessionReference,payload:{providerSubscriptionReference:n.providerSubscriptionReference,providerCustomerReference:n.providerCustomerReference,subscriptionState:n.subscriptionState,currentPeriodStart:n.currentPeriodStart,currentPeriodEnd:n.currentPeriodEnd,cancelAtPeriodEnd:n.cancelAtPeriodEnd}});return NextResponse.json({ok:true,duplicate:result.duplicate,operationId:result.operation?.internalPaymentOperationId??null},{headers:{'x-request-id':requestId,'cache-control':'no-store'}});
- }
- if(process.env.APP_ENV==='staging'||process.env.APP_ENV==='production')return publicError('provider_unavailable',503,requestId);
- if(process.env.ELCEO_PAYMENT_LOCAL_WEBHOOK_REPLAY!=='1'||request.headers.get('x-elceo-local-webhook-signature')!==process.env.ELCEO_PAYMENT_LOCAL_WEBHOOK_SECRET)return publicError('invalid_webhook',400,requestId);
- const body=await request.json() as {eventId:string;kind:'success'|FakeProviderOutcome;operationId?:string};const result=await internalPaymentRuntime.webhook(body);logRequest('api.billing.webhook',requestId,'webhook processed',{eventId:body.eventId,duplicate:result.duplicate});return NextResponse.json({ok:true,duplicate:result.duplicate,operationId:result.operation?.internalPaymentOperationId??null},{headers:{'x-request-id':requestId,'cache-control':'no-store'}});
-}catch(error){captureError('api.billing.webhook',error,{requestId});const code=error instanceof Error?error.message:'';
- if(['missing_provider_webhook_signature','invalid_provider_webhook_signature_format','invalid_provider_webhook_signature'].includes(code))return publicError('invalid_webhook_signature',400,requestId);
- if(code==='sandbox_webhook_secret_required'||(code==='payment_persistence_unavailable'||code==='subscription_reconciliation_required')||code.includes('ECONN')||code.includes('database'))return publicError('webhook_processing_unavailable',503,requestId);
- if(error instanceof SyntaxError||code==='unsupported_provider_event')return publicError('invalid_webhook',400,requestId);
- return publicError('webhook_processing_failed',500,requestId)}}
-type narrow='success'|FakeProviderOutcome;
+import {applyCanonicalSubscriptionLifecycleEvent,internalPaymentRuntime,parseStripeWebhookEvent} from '@elceo/application-state';
+import {captureError} from '../../../../lib/monitoring';
+import {logRequest} from '../../../../lib/request-context';
+import {createBillingWebhookPost} from '../../../../lib/billing-webhook-handler';
+export const POST=createBillingWebhookPost({parse:parseStripeWebhookEvent,applyLifecycle:applyCanonicalSubscriptionLifecycleEvent,runtime:internalPaymentRuntime,capture:(error,requestId)=>captureError('api.billing.webhook',error,{requestId}),log:(data)=>logRequest('api.billing.webhook','runtime','webhook processed',data)});

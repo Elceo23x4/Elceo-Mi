@@ -175,8 +175,8 @@ export class PostgresUserStateRepository implements UserStateRepository {
         user_id, provider, status, plan_tier, cancel_at_period_end,
         subscription_id, subject_kind, subject_id, provider_kind, plan_kind,
         subscription_state, interval, updated_at
-      ) VALUES ($1, 'internal', 'inactive', 'free', false,
-        $1::text, 'user', $1::text, 'internal', 'kick_off', 'inactive', 'monthly', now())
+      ) VALUES ($1::uuid, 'internal', 'inactive', 'free', false,
+        $1::uuid::text, 'user', $1::uuid::text, 'internal', 'kick_off', 'inactive', 'monthly', now())
       ON CONFLICT (user_id) DO NOTHING`,
       [profile.id]
     );

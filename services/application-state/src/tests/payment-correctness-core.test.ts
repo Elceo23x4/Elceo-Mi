@@ -140,7 +140,11 @@ export async function runPaymentCorrectnessCoreTests(): Promise<void> {
   assert.equal(a.operation.providerIdempotencyKey,b.operation.providerIdempotencyKey,'retry reuses provider idempotency key');
   assert.equal((await rt.counts()).operations,1,'one durable operation per intention');
   assert.equal(rt.providerChargeAttempts,1,'one provider charge attempt per intention');
-  await rt.webhook({eventId:'evt_success_1',kind:'success',operationId:a.operation.internalPaymentOperationId,providerPaymentReference:a.operation.providerPaymentReference});
+  await rt.webhook({eventId:'evt_success_1',kind:'success',operationId:a.operation.internalPaymentOperationId,providerPaymentReference:a.operation.providerPaymentReference,payload:{providerCustomerReference:'cus_initial',providerSubscriptionReference:'sub_initial',subscriptionState:'active',currentPeriodStart:'2026-08-01T00:00:00.000Z',currentPeriodEnd:'2026-09-01T00:00:00.000Z',cancelAtPeriodEnd:false}});
+  const persistedInitial=await repo.getOperation(a.operation.internalPaymentOperationId);
+  assert.equal(persistedInitial?.providerCustomerReference,'cus_initial','initial webhook persists customer lifecycle field');
+  assert.equal(persistedInitial?.providerSubscriptionReference,'sub_initial','initial webhook persists subscription lifecycle field');
+  assert.equal(persistedInitial?.currentPeriodEnd,'2026-09-01T00:00:00.000Z','initial webhook persists subscription period');
   await rt.webhook({eventId:'evt_success_1',kind:'success',operationId:a.operation.internalPaymentOperationId,providerPaymentReference:a.operation.providerPaymentReference});
   assert.equal((await rt.counts()).ledger,1,'duplicate webhook does not duplicate ledger');
   assert.equal((await rt.counts()).entitlements,1,'duplicate webhook does not duplicate entitlement');

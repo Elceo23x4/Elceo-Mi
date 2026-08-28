@@ -16,5 +16,9 @@ export async function POST(request:Request){const requestId=getRequestId(request
  if(process.env.APP_ENV==='staging'||process.env.APP_ENV==='production')return publicError('provider_unavailable',503,requestId);
  if(process.env.ELCEO_PAYMENT_LOCAL_WEBHOOK_REPLAY!=='1'||request.headers.get('x-elceo-local-webhook-signature')!==process.env.ELCEO_PAYMENT_LOCAL_WEBHOOK_SECRET)return publicError('invalid_webhook',400,requestId);
  const body=await request.json() as {eventId:string;kind:'success'|FakeProviderOutcome;operationId?:string};const result=await internalPaymentRuntime.webhook(body);logRequest('api.billing.webhook',requestId,'webhook processed',{eventId:body.eventId,duplicate:result.duplicate});return NextResponse.json({ok:true,duplicate:result.duplicate,operationId:result.operation?.internalPaymentOperationId??null},{headers:{'x-request-id':requestId,'cache-control':'no-store'}});
-}catch(error){captureError('api.billing.webhook',error,{requestId});return publicError('invalid_webhook',400,requestId)}}
+}catch(error){captureError('api.billing.webhook',error,{requestId});const code=error instanceof Error?error.message:'';
+ if(['missing_provider_webhook_signature','invalid_provider_webhook_signature_format','invalid_provider_webhook_signature'].includes(code))return publicError('invalid_webhook_signature',400,requestId);
+ if(code==='sandbox_webhook_secret_required'||code==='payment_persistence_unavailable'||code.includes('ECONN')||code.includes('database'))return publicError('webhook_processing_unavailable',503,requestId);
+ if(error instanceof SyntaxError||code==='unsupported_provider_event')return publicError('invalid_webhook',400,requestId);
+ return publicError('webhook_processing_failed',500,requestId)}}
 type narrow='success'|FakeProviderOutcome;

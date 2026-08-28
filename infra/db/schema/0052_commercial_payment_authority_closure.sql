@@ -5,6 +5,8 @@ ALTER TABLE payment_operations ADD COLUMN IF NOT EXISTS subscription_state TEXT;
 ALTER TABLE payment_operations ADD COLUMN IF NOT EXISTS current_period_start TIMESTAMPTZ;
 ALTER TABLE payment_operations ADD COLUMN IF NOT EXISTS current_period_end TIMESTAMPTZ;
 ALTER TABLE payment_operations ADD COLUMN IF NOT EXISTS cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE payment_operations ADD COLUMN IF NOT EXISTS last_provider_event_created_at TIMESTAMPTZ;
+ALTER TABLE app_billing_subscriptions ADD COLUMN IF NOT EXISTS last_provider_event_created_at TIMESTAMPTZ;
 ALTER TABLE payment_operations DROP CONSTRAINT IF EXISTS payment_operations_billing_interval_check;
 ALTER TABLE payment_operations ADD CONSTRAINT payment_operations_billing_interval_check CHECK (billing_interval IN ('monthly','quarterly','yearly'));
 CREATE INDEX IF NOT EXISTS payment_operations_provider_customer_idx ON payment_operations(provider_customer_reference) WHERE provider_customer_reference IS NOT NULL;

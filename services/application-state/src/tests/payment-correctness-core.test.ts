@@ -83,6 +83,16 @@ export async function runPaymentCorrectnessCoreTests(): Promise<void> {
   assert.equal(normalizedFixture.providerSessionReference, 'cs_rc_i2', 'webhook event normalization carries session reference');
   assert.equal(normalizedFixture.providerPaymentReference, 'pi_rc_i2', 'webhook event normalization carries payment reference');
   assert.equal(normalizedFixture.status, 'succeeded', 'webhook event normalization maps success');
+  const legacySubscription=normalizeStripeProviderPayload({id:'evt_legacy',api_version:'2024-06-20',type:'customer.subscription.updated',data:{object:{id:'sub_legacy',status:'active',current_period_start:1700000000,current_period_end:1702592000}}},null);
+  assert.equal(legacySubscription.providerApiVersion,'2024-06-20');
+  assert.equal(legacySubscription.currentPeriodEnd,'2023-12-14T22:13:20.000Z');
+  const basilSubscription=normalizeStripeProviderPayload({id:'evt_basil',api_version:'2025-03-31.basil',type:'customer.subscription.updated',data:{object:{id:'sub_basil',status:'active',items:{data:[{current_period_start:1700000000,current_period_end:1702592000}]}}}},null);
+  assert.equal(basilSubscription.currentPeriodEnd,'2023-12-14T22:13:20.000Z');
+  assert.throws(()=>normalizeStripeProviderPayload({id:'evt_ambiguous',type:'customer.subscription.updated',data:{object:{id:'sub_multi',status:'active',items:{data:[{current_period_start:1,current_period_end:2},{current_period_start:3,current_period_end:4}]}}}},null),/ambiguous_subscription_period/);
+  const invoice=normalizeStripeProviderPayload({id:'evt_invoice',type:'invoice.paid',data:{object:{id:'in_1',subscription:'sub_1',current_period_start:1700000000,current_period_end:1702592000}}},null);
+  assert.equal(invoice.currentPeriodEnd,null,'invoice fields are not treated as authoritative subscription periods');
+  const invoiceLine=normalizeStripeProviderPayload({id:'evt_invoice_line',type:'invoice.paid',data:{object:{id:'in_2',subscription:'sub_1',lines:{data:[{period:{start:1700000000,end:1702592000}}]}}}},null);
+  assert.equal(invoiceLine.currentPeriodEnd,'2023-12-14T22:13:20.000Z','single invoice subscription line supplies service-period truth');
   assert.throws(()=>resolvePaymentProviderMode({APP_ENV:'staging'}),/payment_provider_mode_invalid/);
   const saved={APP_ENV:process.env.APP_ENV,APP_STATE_REPOSITORY:process.env.APP_STATE_REPOSITORY,DATABASE_URL:process.env.DATABASE_URL};process.env.APP_ENV='staging';process.env.APP_STATE_REPOSITORY='memory';delete process.env.DATABASE_URL;assert.throws(()=>createInternalPaymentRepository(),/payment_persistence_unavailable/);Object.assign(process.env,saved);
   assert.equal(resolvePaymentProviderMode({ PAYMENT_PROVIDER_MODE:'production_provider' }), 'production_provider_blocked', 'production provider mode blocked');

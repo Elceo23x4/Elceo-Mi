@@ -16,21 +16,26 @@ function runtimeEnv(): Record<string, string | undefined> {
   return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
 }
 
+function assertPersistence(env:Record<string,string|undefined>){const deployed=env.APP_ENV==='staging'||env.APP_ENV==='production'||env.NODE_ENV==='production';if(deployed&&(env.ANALYTICS_PERSISTENCE_BACKEND!=='sql'||!env.DATABASE_URL))throw new Error('analytics_persistence_unavailable');}
+
 let coachingSnapshotRepositorySingleton: CoachingSnapshotRepository | null = null;
 let analyticsSnapshotLookupRepositorySingleton: AnalyticsSnapshotLookupRepository | null = null;
 let journalInfluenceLookupRepositorySingleton: JournalInfluenceSnapshotLookupRepository | null = null;
 
 export function createCoachingSnapshotRepository(env: Record<string, string | undefined>): CoachingSnapshotRepository {
+  assertPersistence(env);
   if (env.ANALYTICS_PERSISTENCE_BACKEND === 'sql') return new SqlCoachingSnapshotRepository();
   return new MemoryCoachingSnapshotRepository();
 }
 
 export function createAnalyticsSnapshotLookupRepository(env: Record<string, string | undefined>): AnalyticsSnapshotLookupRepository {
+  assertPersistence(env);
   if (env.ANALYTICS_PERSISTENCE_BACKEND === 'sql') return new SqlAnalyticsSnapshotLookupRepository();
   return new MemoryAnalyticsSnapshotLookupRepository();
 }
 
 export function createJournalInfluenceSnapshotLookupRepository(env: Record<string, string | undefined>): JournalInfluenceSnapshotLookupRepository {
+  assertPersistence(env);
   if (env.ANALYTICS_PERSISTENCE_BACKEND === 'sql') return new SqlJournalInfluenceSnapshotLookupRepository();
   return new MemoryJournalInfluenceSnapshotLookupRepository();
 }

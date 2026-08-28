@@ -1,17 +1,6 @@
 import { NextResponse } from 'next/server';
+import { StripeSandboxPaymentProviderAdapter, getCanonicalProviderCustomerReference, resolvePaymentProviderMode } from '@elceo/application-state';
 import { requireAppUserState } from '../../../../lib/auth/session';
 import { captureError } from '../../../../lib/monitoring';
 import { getRequestId } from '../../../../lib/request-context';
-
-/** Portal remains fail-closed until the canonical provider boundary persists a verified customer reference. */
-export async function POST(request: Request) {
-  const requestId = getRequestId(request);
-  try {
-    await requireAppUserState();
-    return NextResponse.json({ error: 'portal_unavailable' }, { status: 503, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
-  } catch (error) {
-    captureError('api.billing.portal', error, { requestId });
-    const unauthorized = error instanceof Error && error.message === 'UNAUTHORIZED';
-    return NextResponse.json({ error: unauthorized ? 'unauthorized' : 'portal_unavailable' }, { status: unauthorized ? 401 : 503, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
-  }
-}
+export async function POST(request:Request){const requestId=getRequestId(request);try{const{session}=await requireAppUserState();if(resolvePaymentProviderMode()!=='sandbox_provider')throw new Error('portal_unavailable');const customerReference=await getCanonicalProviderCustomerReference(session.user.id);if(!customerReference)throw new Error('portal_unavailable');const origin=process.env.NEXT_PUBLIC_APP_BASE_URL??new URL(request.url).origin;const portal=await new StripeSandboxPaymentProviderAdapter().createPortalSession({customerReference,returnUrl:`${origin}/settings`});return NextResponse.json(portal,{headers:{'x-request-id':requestId,'cache-control':'no-store'}})}catch(error){captureError('api.billing.portal',error,{requestId});const unauthorized=error instanceof Error&&error.message==='UNAUTHORIZED';return NextResponse.json({error:unauthorized?'unauthorized':'portal_unavailable'},{status:unauthorized?401:503,headers:{'x-request-id':requestId,'cache-control':'no-store'}})}}

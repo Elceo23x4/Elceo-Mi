@@ -16,7 +16,7 @@ export async function resolveUserCommercialEntitlementSnapshot(userId: string, a
   if (env.APP_STATE_REPOSITORY === 'sql') [subscription] = await queryDb(`SELECT plan_kind, subscription_state, trial_started_at, trial_ends_at FROM app_billing_subscriptions WHERE subject_kind='user' AND subject_id=$1 ORDER BY updated_at DESC NULLS LAST LIMIT 1`, [userId]);
   const restricted = controls.activeRestriction;
   const gift = controls.activeGift;
-  const focusActive = !restricted && ['active', 'trialing'].includes(subscription?.subscription_state ?? '') && ['focus_plan', 'premium'].includes(subscription?.plan_kind ?? '');
+  const focusActive = !restricted && ['active', 'trialing'].includes(subscription?.subscription_state ?? '') && subscription?.plan_kind === 'focus_plan';
   const trialStartedAt = subscription?.trial_started_at ?? null;
   const trialActive = !restricted && !focusActive && Boolean(trialStartedAt && subscription?.trial_ends_at && Date.parse(subscription.trial_ends_at) > Date.parse(asOfIso));
   const socialIdentifiers: CommercialProfileSocialIdentifier[] = identifiers?.socialIdentifiers ?? [];

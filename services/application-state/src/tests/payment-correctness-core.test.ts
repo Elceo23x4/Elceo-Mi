@@ -107,14 +107,17 @@ export async function runPaymentCorrectnessCoreTests(): Promise<void> {
 
   const originalFetch = globalThis.fetch;
   const observedIdempotencyKeys:string[] = [];
+  const observedCheckoutBodies:string[]=[];
   globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
-    observedIdempotencyKeys.push(String((init?.headers as Record<string,string>)['Idempotency-Key']));
+    observedIdempotencyKeys.push(String((init?.headers as Record<string,string>)['Idempotency-Key'])); observedCheckoutBodies.push(String(init?.body));
     return new Response(JSON.stringify({ id:'cs_sandbox_test', object:'checkout.session', payment_intent:'pi_sandbox_test', amount_total:2000, currency:'usd', payment_status:'unpaid', metadata:{ operationId:'ipo_sandbox_test', providerIdempotencyKey:'pik_sandbox_test', subjectUserId:'sandbox_user' }, url:'https://checkout.stripe.test/session' }), { status:200, headers:{ 'request-id':'req_sandbox_test', 'content-type':'application/json' } });
   }) as typeof fetch;
   try {
     const adapter = new StripeSandboxPaymentProviderAdapter({ providerKind:'stripe', secretKey:'sk_test_unit_safe', publicKey:'pk_test_unit_safe', webhookSecret:'whsec_unit_safe', priceId:'price_unit_safe' });
     const session = await adapter.createCheckoutOrPaymentSession({ subjectUserId:'sandbox_user', targetPlan:'focus_plan', amount:2000, currency:'USD', providerIdempotencyKey:'pik_sandbox_test', operationId:'ipo_sandbox_test' });
     assert.equal(observedIdempotencyKeys[0], 'pik_sandbox_test', 'sandbox checkout uses provider idempotency key as Stripe Idempotency-Key');
+    assert.match(observedCheckoutBodies[0]!,/mode=subscription/);
+    assert.match(observedCheckoutBodies[0]!,/subscription_data%5Bmetadata%5D%5BtargetPlan%5D=focus_plan/);
     assert.equal(session.providerSessionReference, 'cs_sandbox_test', 'sandbox checkout adapter returns session reference');
     assert.notEqual(session.status, 'succeeded', 'unpaid sandbox checkout session is not success');
   } finally { globalThis.fetch = originalFetch; }

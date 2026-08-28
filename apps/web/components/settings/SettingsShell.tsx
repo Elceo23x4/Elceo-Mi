@@ -57,7 +57,7 @@ export function SettingsShell({ initialState, billing }: SettingsShellProps) {
     const response = await fetch('/api/billing/checkout', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ targetPlan: 'premium' })
+      body: JSON.stringify({ targetPlan: 'focus_plan', billingInterval: 'monthly', idempotencyKey: (()=>{const key='elceo:payment-intention:focus_plan:monthly';const existing=localStorage.getItem(key);if(existing)return existing;const created=crypto.randomUUID();localStorage.setItem(key,created);return created;})() })
     });
 
     if (!response.ok) {

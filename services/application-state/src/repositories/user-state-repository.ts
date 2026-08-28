@@ -172,8 +172,11 @@ export class PostgresUserStateRepository implements UserStateRepository {
 
     await queryDb(
       `INSERT INTO app_billing_subscriptions (
-        user_id, provider, status, plan_tier, cancel_at_period_end
-      ) VALUES ($1, 'mock', 'inactive', 'free', false)
+        user_id, provider, status, plan_tier, cancel_at_period_end,
+        subscription_id, subject_kind, subject_id, provider_kind, plan_kind,
+        subscription_state, interval, updated_at
+      ) VALUES ($1, 'internal', 'inactive', 'free', false,
+        $1::text, 'user', $1::text, 'internal', 'kick_off', 'inactive', 'monthly', now())
       ON CONFLICT (user_id) DO NOTHING`,
       [profile.id]
     );
@@ -221,6 +224,17 @@ export class PostgresUserStateRepository implements UserStateRepository {
 
     const profile = rows[0] ? mapProfile(rows[0]) : null;
     if (!profile) throw new Error('User not found during onboarding update');
+
+    // First successful onboarding is the immutable Kick Off trial boundary.
+    await queryDb(
+      `UPDATE app_billing_subscriptions
+       SET trial_started_at = COALESCE(trial_started_at, now()),
+           trial_ends_at = COALESCE(trial_ends_at, now() + interval '3 days'),
+           plan_kind = CASE WHEN subscription_state IN ('active','trialing') AND plan_kind='focus_plan' THEN plan_kind ELSE 'kick_off' END,
+           updated_at = now()
+       WHERE user_id = $1`,
+      [userId]
+    );
 
     await this.setWatchlist(userId, input.selectedAssets);
     return profile;

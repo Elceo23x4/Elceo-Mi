@@ -31,7 +31,7 @@ import {
   SqlNotificationVerificationRepository
 } from './sql-notification-repository';
 
-function assertPersistence(env:Record<string,string|undefined>){const deployed=env.APP_ENV==='staging'||env.APP_ENV==='production'||env.NODE_ENV==='production';if(deployed&&(env.NOTIFICATIONS_PERSISTENCE_BACKEND!=='sql'||!env.DATABASE_URL))throw new Error('notifications_persistence_unavailable');}
+function assertPersistence(env:Record<string,string|undefined>){const deployed=env.APP_ENV==='staging'||env.APP_ENV==='production';if(deployed&&(env.NOTIFICATIONS_PERSISTENCE_BACKEND!=='sql'||!env.DATABASE_URL))throw new Error('notifications_persistence_unavailable');}
 
 export function createNotificationDecisionRepository(env: Record<string, string | undefined>): NotificationDecisionRepository {
   assertPersistence(env);

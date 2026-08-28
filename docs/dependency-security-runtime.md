@@ -6,7 +6,7 @@ ELCEO builds and releases only on the exact Node patch recorded in `.node-versio
 
 Normal npm resolution keeps each `minimatch` consumer on its declared major. Consumers of `minimatch@^3` resolve the patched 3.x line with a compatible patched `brace-expansion@1.x`; consumers of `minimatch@^10` resolve the patched 10.x line with its compatible `brace-expansion@5.x`. There is deliberately no global override for either package.
 
-The previously approved Next-to-Sharp exception was automatically retired when stable Next 16.3.0 published a supported Sharp contract. Remaining overrides are in-range security resolutions:
+The previously approved Next-to-Sharp exception was automatically retired when stable Next 16.3.3 published a supported Sharp contract. Remaining overrides are in-range security resolutions:
 
 | Package | Selected | Vulnerable path / parent | Parent range | Reason and compatibility proof |
 | --- | --- | --- | --- | --- |

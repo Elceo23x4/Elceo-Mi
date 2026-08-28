@@ -25,6 +25,24 @@ WHERE user_id IS NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS app_billing_subscriptions_canonical_subject_uidx
   ON app_billing_subscriptions(subject_kind,subject_id) WHERE subject_kind IS NOT NULL AND subject_id IS NOT NULL;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM payment_operations WHERE state IN ('created','pending_provider','processing','unknown','reconciliation_required') GROUP BY subject_user_id,target_plan,billing_interval HAVING count(*) > 1) THEN
+    RAISE EXCEPTION 'payment_operations_unresolved_intention_reconciliation_required';
+  END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS payment_subscription_lifecycle_events (
+  provider_event_id TEXT PRIMARY KEY,
+  internal_payment_operation_id TEXT NOT NULL REFERENCES payment_operations(internal_payment_operation_id),
+  lifecycle_kind TEXT NOT NULL,
+  provider_subscription_reference TEXT NOT NULL,
+  subscription_state TEXT NULL,
+  occurred_at TIMESTAMPTZ NOT NULL,
+  applied_at TIMESTAMPTZ NOT NULL
+);
+CREATE INDEX IF NOT EXISTS payment_subscription_lifecycle_operation_idx ON payment_subscription_lifecycle_events(internal_payment_operation_id,occurred_at DESC);
+
 CREATE UNIQUE INDEX IF NOT EXISTS payment_operations_one_unresolved_intention_uidx
   ON payment_operations(subject_user_id,target_plan,billing_interval)
   WHERE state IN ('created','pending_provider','processing','unknown','reconciliation_required');

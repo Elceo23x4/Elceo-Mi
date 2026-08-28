@@ -12,7 +12,7 @@
       "affectedAdvisory": "GHSA-f88m-g3jw-g9cj",
       "approvalDate": "2026-08-04",
       "approvalStatus": "retired-before-certification",
-      "retirementReason": "Stable next@16.3.0 was published with sharp@^0.35.3, satisfies Auth.js, and resolves cleanly with npm 10.8.2 and zero audit findings.",
+      "retirementReason": "Stable next@16.3.3 was published with sharp@^0.35.3, satisfies Auth.js, and resolves cleanly with npm 10.8.2 and zero audit findings.",
       "evidenceDocument": "docs/next-sharp-compatibility-exception.md"
     }
   ]

@@ -20,6 +20,7 @@ export type ProviderEnv = {
   APP_STATE_REPOSITORY?: 'sql' | 'memory';
   NOTIFICATIONS_PERSISTENCE_BACKEND?: 'sql' | 'memory';
   ANALYTICS_PERSISTENCE_BACKEND?: 'sql' | 'memory';
+  PAYMENT_PROVIDER_MODE?: 'disabled' | 'local_fake_provider' | 'replay_provider_event' | 'sandbox_provider' | 'production_provider';
   NEXT_PUBLIC_APP_BASE_URL?: string;
   BILLING_PROVIDER?: 'mock' | 'stripe';
   BILLING_WEBHOOK_SECRET?: string;
@@ -72,6 +73,7 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   if (env.APP_STATE_REPOSITORY === 'sql' || env.APP_STATE_REPOSITORY === 'memory') out.APP_STATE_REPOSITORY = env.APP_STATE_REPOSITORY;
   if (env.NOTIFICATIONS_PERSISTENCE_BACKEND === 'sql' || env.NOTIFICATIONS_PERSISTENCE_BACKEND === 'memory') out.NOTIFICATIONS_PERSISTENCE_BACKEND=env.NOTIFICATIONS_PERSISTENCE_BACKEND;
   if (env.ANALYTICS_PERSISTENCE_BACKEND === 'sql' || env.ANALYTICS_PERSISTENCE_BACKEND === 'memory') out.ANALYTICS_PERSISTENCE_BACKEND=env.ANALYTICS_PERSISTENCE_BACKEND;
+  if (env.PAYMENT_PROVIDER_MODE === 'disabled' || env.PAYMENT_PROVIDER_MODE === 'local_fake_provider' || env.PAYMENT_PROVIDER_MODE === 'replay_provider_event' || env.PAYMENT_PROVIDER_MODE === 'sandbox_provider' || env.PAYMENT_PROVIDER_MODE === 'production_provider') out.PAYMENT_PROVIDER_MODE=env.PAYMENT_PROVIDER_MODE;
   if (env.NEXT_PUBLIC_APP_BASE_URL) out.NEXT_PUBLIC_APP_BASE_URL = env.NEXT_PUBLIC_APP_BASE_URL;
   if (env.BILLING_PROVIDER === 'mock' || env.BILLING_PROVIDER === 'stripe') out.BILLING_PROVIDER = env.BILLING_PROVIDER;
   if (env.BILLING_WEBHOOK_SECRET) out.BILLING_WEBHOOK_SECRET = env.BILLING_WEBHOOK_SECRET;
@@ -92,12 +94,13 @@ export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
   const errors: string[] = [];
   const appEnv = env.APP_ENV;
   const deployed = appEnv === 'production' || appEnv === 'staging';
-  if (!appEnv) errors.push('APP_ENV is required');
-  if (env.NODE_ENV === 'production' && !deployed) errors.push('NODE_ENV=production requires APP_ENV=staging or production');
+  // APP_ENV may be absent during compilation; NODE_ENV alone is not deployed identity.
   if (deployed && env.NODE_ENV !== 'production') errors.push('deployed APP_ENV requires NODE_ENV=production');
   if (deployed && (env.APP_STATE_REPOSITORY !== 'sql' || !env.DATABASE_URL)) errors.push('deployed APP_STATE_REPOSITORY=sql and DATABASE_URL are required');
   if (deployed && env.NOTIFICATIONS_PERSISTENCE_BACKEND !== 'sql') errors.push('deployed NOTIFICATIONS_PERSISTENCE_BACKEND=sql is required');
   if (deployed && env.ANALYTICS_PERSISTENCE_BACKEND !== 'sql') errors.push('deployed ANALYTICS_PERSISTENCE_BACKEND=sql is required');
+  if (deployed && !env.PAYMENT_PROVIDER_MODE) errors.push('deployed PAYMENT_PROVIDER_MODE is required');
+  if (deployed && ['local_fake_provider','replay_provider_event','production_provider'].includes(env.PAYMENT_PROVIDER_MODE ?? '')) errors.push('deployed PAYMENT_PROVIDER_MODE must be disabled or sandbox_provider');
 
   if (!env.NEXT_PUBLIC_APP_BASE_URL) {
     errors.push('NEXT_PUBLIC_APP_BASE_URL is required');

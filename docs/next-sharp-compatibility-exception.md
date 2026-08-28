@@ -2,7 +2,7 @@
 
 ## Inspected implementation
 
-`node_modules/next/dist/server/image-optimizer.js` lines 814–847 constructs `sharp(buffer, { limitInputPixels, sequentialRead })`, calls `.rotate()`, `.resize(width, height)` or `.resize(width, undefined, { withoutEnlargement: true })`, and encodes with `.avif()`, `.webp()`, `.png()` or `.jpeg({ mozjpeg: true })`. Metadata probing calls `sharp(buffer).metadata()`. The stable Next package declares `sharp@^0.34.3`; ELCEO tested 0.35.3 under the approved decision, but retired the exception before certification when stable Next 16.3.0 adopted `sharp@^0.35.3`.
+`node_modules/next/dist/server/image-optimizer.js` lines 814–847 constructs `sharp(buffer, { limitInputPixels, sequentialRead })`, calls `.rotate()`, `.resize(width, height)` or `.resize(width, undefined, { withoutEnlargement: true })`, and encodes with `.avif()`, `.webp()`, `.png()` or `.jpeg({ mozjpeg: true })`. Metadata probing calls `sharp(buffer).metadata()`. The stable Next package declares `sharp@^0.34.3`; ELCEO tested 0.35.3 under the approved decision, but retired the exception before certification when stable Next 16.3.3 adopted `sharp@^0.35.3`.
 
 ## Coverage and behavior
 

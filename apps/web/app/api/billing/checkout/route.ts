@@ -55,6 +55,6 @@ export async function POST(request: Request) {
   } catch (error) {
     captureError('api.billing.checkout', error, { requestId });
     if (error && typeof error === 'object' && (error as { code?: unknown }).code === 'commercial_persistence_unavailable') return NextResponse.json({ ok: false, error: { code: 'service_unavailable', message: 'Commercial persistence unavailable', details: ['commercial_persistence_unavailable'] } }, { status: 503, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unable to initiate checkout' }, { status: resolveStatus(error), headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
+    const code=error instanceof Error&&error.message==='billing_interval_not_configured'?'billing_interval_not_configured':error instanceof Error&&error.message==='UNAUTHORIZED'?'unauthorized':'checkout_unavailable'; return NextResponse.json({ error: {code,message:code==='checkout_unavailable'?'Unable to initiate checkout':code} }, { status: code==='checkout_unavailable'?503:resolveStatus(error), headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
   }
 }

@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { InternalPaymentRuntime, MemoryInternalPaymentRepository, SQLInternalPaymentRepository, createMemoryPaymentStore, type FakeProviderOutcome, type InternalPaymentRepository, type InternalPaymentOperation } from '../billing/internal-payment';
+import { InternalPaymentRuntime, MemoryInternalPaymentRepository, SQLInternalPaymentRepository, createInternalPaymentRepository, createMemoryPaymentStore, type FakeProviderOutcome, type InternalPaymentRepository, type InternalPaymentOperation } from '../billing/internal-payment';
 import { StripeSandboxPaymentProviderAdapter, parseStripeWebhookEvent, verifyStripeWebhookSignature, normalizeStripeProviderPayload, redactProviderPayload, secretLikeValuesFound, resolvePaymentProviderMode } from '../payment-providers/sandbox-adapter';
 import { __setDbPoolFactoryForTests, closeDbPool } from '../db/client';
 
@@ -83,6 +83,8 @@ export async function runPaymentCorrectnessCoreTests(): Promise<void> {
   assert.equal(normalizedFixture.providerSessionReference, 'cs_rc_i2', 'webhook event normalization carries session reference');
   assert.equal(normalizedFixture.providerPaymentReference, 'pi_rc_i2', 'webhook event normalization carries payment reference');
   assert.equal(normalizedFixture.status, 'succeeded', 'webhook event normalization maps success');
+  assert.throws(()=>resolvePaymentProviderMode({APP_ENV:'staging'}),/payment_provider_mode_invalid/);
+  const saved={APP_ENV:process.env.APP_ENV,APP_STATE_REPOSITORY:process.env.APP_STATE_REPOSITORY,DATABASE_URL:process.env.DATABASE_URL};process.env.APP_ENV='staging';process.env.APP_STATE_REPOSITORY='memory';delete process.env.DATABASE_URL;assert.throws(()=>createInternalPaymentRepository(),/payment_persistence_unavailable/);Object.assign(process.env,saved);
   assert.equal(resolvePaymentProviderMode({ PAYMENT_PROVIDER_MODE:'production_provider' }), 'production_provider_blocked', 'production provider mode blocked');
   const redacted = redactProviderPayload({ tokenHeader:'Bearer example_redacted_value', nested:{ hookValue:'example_redacted_hook_value' } });
   assert.equal(secretLikeValuesFound(redacted), false, 'redacted provider payload contains no secret-like values');
@@ -130,6 +132,7 @@ export async function runPaymentCorrectnessCoreTests(): Promise<void> {
   assert.equal(sandboxRetry.operation.providerIdempotencyKey, sandboxCreated.operation.providerIdempotencyKey, 'sandbox checkout retry reuses same provider idempotency key');
 
   const repo = new MemoryInternalPaymentRepository(createMemoryPaymentStore());
+  const idRepo=new MemoryInternalPaymentRepository(createMemoryPaymentStore());const idA=await idRepo.createOrReuseOperation({subjectUserId:'id_user',targetPlan:'focus_plan',billingInterval:'monthly',amount:1,currency:'USD',businessIdempotencyKey:'id_a',provider:'test'});const idB=await idRepo.createOrReuseOperation({subjectUserId:'id_user',targetPlan:'focus_plan',billingInterval:'yearly',amount:1,currency:'USD',businessIdempotencyKey:'id_b',provider:'test'});assert.notEqual(idA.operation.internalPaymentOperationId,idB.operation.internalPaymentOperationId);assert.match(idA.operation.internalPaymentOperationId,/^ipo_[0-9a-f-]{36}$/);
   const rt = new InternalPaymentRuntime('local_fake_provider', repo);
   const base={subjectUserId:'user_1',targetPlan:'focus_plan',amount:2000,currency:'USD',businessIdempotencyKey:'intent_1'};
   const [a,b]=await Promise.all([rt.checkout(base),rt.checkout(base)]);

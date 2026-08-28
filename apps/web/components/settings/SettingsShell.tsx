@@ -53,21 +53,15 @@ export function SettingsShell({ initialState, billing }: SettingsShellProps) {
   };
 
   async function runUpgradeFlow(): Promise<void> {
-    setBillingStatus('Preparing premium checkout...');
-    const response = await fetch('/api/billing/checkout', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ targetPlan: 'focus_plan', billingInterval: 'monthly', idempotencyKey: (()=>{const key='elceo:payment-intention:focus_plan:monthly';const existing=localStorage.getItem(key);if(existing)return existing;const created=crypto.randomUUID();localStorage.setItem(key,created);return created;})() })
-    });
-
-    if (!response.ok) {
-      const failure = (await response.json().catch(() => ({ error: 'Unable to prepare checkout' }))) as { error?: string };
-      setBillingStatus(failure.error ?? 'Unable to prepare checkout');
-      return;
-    }
-
-    const payload = (await response.json()) as { checkoutUrl: string };
-    window.location.href = payload.checkoutUrl;
+    setBillingStatus('Recovering payment intention...');
+    const key='elceo:payment-intention:focus_plan:monthly';
+    const recovery=await fetch('/api/billing/intention',{cache:'no-store'});
+    if(recovery.ok){const data=await recovery.json() as {intention?:{state:string;succeeded:boolean;newIntentionAllowed:boolean;checkoutUrl:string|null}};if(data.intention?.succeeded){localStorage.removeItem(key);setBillingStatus('Focus Plan is active.');return;}if(data.intention?.checkoutUrl){window.location.href=data.intention.checkoutUrl;return;}if(data.intention&&!data.intention.newIntentionAllowed){setBillingStatus(data.intention.state==='unknown'||data.intention.state==='reconciliation_required'?'Payment reconciliation is required.':'Payment is still processing.');return;}if(data.intention?.newIntentionAllowed)localStorage.removeItem(key);}
+    const existing=localStorage.getItem(key);const idempotencyKey=existing??crypto.randomUUID();if(!existing)localStorage.setItem(key,idempotencyKey);
+    setBillingStatus('Preparing Focus Plan checkout...');
+    const response=await fetch('/api/billing/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({targetPlan:'focus_plan',billingInterval:'monthly',idempotencyKey})});
+    if(!response.ok){const failure=await response.json().catch(()=>({error:{message:'Unable to prepare checkout'}})) as {error?:string|{message?:string}};setBillingStatus(typeof failure.error==='string'?failure.error:failure.error?.message??'Unable to prepare checkout');return;}
+    const payload=await response.json() as {checkoutUrl:string|null;operation?:{state?:string}};if(payload.operation?.state==='succeeded'){localStorage.removeItem(key);setBillingStatus('Focus Plan is active.');return;}if(payload.checkoutUrl)window.location.href=payload.checkoutUrl;else setBillingStatus('Payment intention recorded.');
   }
 
   async function openBillingPortal(): Promise<void> {

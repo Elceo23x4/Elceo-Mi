@@ -1,36 +1,20 @@
 import { NextResponse } from 'next/server';
-import { internalPaymentRuntime, parseStripeWebhookEvent, type FakeProviderOutcome } from '@elceo/application-state';
+import { applyCanonicalSubscriptionLifecycleEvent, internalPaymentRuntime, parseStripeWebhookEvent, type CanonicalSubscriptionLifecycleKind, type CanonicalSubscriptionState, type FakeProviderOutcome } from '@elceo/application-state';
 import { captureError } from '../../../../lib/monitoring';
 import { getRequestId, logRequest } from '../../../../lib/request-context';
-
-function resolveStatus(error: unknown): number { if (error instanceof Error && error.message === 'UNAUTHORIZED') return 401; return 400; }
-const allowed = new Set(['success','accepted','refund','partial_refund','reversal','chargeback','provider_500_before_accepting','unknown_result']);
-
-export async function POST(request: Request) {
-  const requestId = getRequestId(request);
-  try {
-    const providerMode = process.env.PAYMENT_PROVIDER_MODE ?? process.env.ELCEO_PAYMENT_PROVIDER_MODE;
-    let body: { eventId: string; kind: 'success' | FakeProviderOutcome; providerPaymentReference?: string; providerCheckoutSessionReference?: string; operationId?: string; payload?: Record<string, unknown> };
-    if (providerMode === 'sandbox_provider') {
-      if (process.env.PAYMENT_PROVIDER_KIND !== 'stripe') throw new Error('unsupported_sandbox_payment_provider');
-      const rawBody = await request.text();
-      const normalized = parseStripeWebhookEvent(rawBody, request.headers.get('stripe-signature'), process.env.STRIPE_WEBHOOK_SECRET ?? process.env.PAYMENT_PROVIDER_WEBHOOK_SECRET ?? '');
-      const kind = normalized.refundOrReversalOrChargeback === 'refund' ? 'refund' : normalized.refundOrReversalOrChargeback === 'partial_refund' ? 'partial_refund' : normalized.refundOrReversalOrChargeback === 'reversal' ? 'reversal' : normalized.refundOrReversalOrChargeback === 'chargeback' ? 'chargeback' : normalized.status === 'succeeded' ? 'success' : normalized.status === 'failed' ? 'provider_500_before_accepting' : 'unknown_result';
-      body = { eventId: normalized.providerEventId ?? normalized.safeRedactedPayloadChecksum, kind, operationId: normalized.metadataOperationId ?? undefined, providerPaymentReference: normalized.providerPaymentReference, providerCheckoutSessionReference: normalized.providerSessionReference, payload: { providerSubscriptionReference: normalized.providerSubscriptionReference, providerCustomerReference: normalized.providerCustomerReference, subscriptionState: normalized.subscriptionState, currentPeriodStart: normalized.currentPeriodStart, currentPeriodEnd: normalized.currentPeriodEnd, cancelAtPeriodEnd: normalized.cancelAtPeriodEnd, normalized, orphaned: !normalized.metadataOperationId && !normalized.providerPaymentReference && !normalized.providerSessionReference && !normalized.metadataProviderIdempotencyKey } };
-    } else {
-      if (process.env.ELCEO_PAYMENT_LOCAL_WEBHOOK_REPLAY !== '1') throw new Error('local_webhook_replay_disabled_not_live_provider_verification');
-      const configuredSignature = process.env.ELCEO_PAYMENT_LOCAL_WEBHOOK_SECRET;
-      if (!configuredSignature) throw new Error('local_webhook_signature_config_required_not_live_provider_verification');
-      const signature = request.headers.get('x-elceo-local-webhook-signature');
-      if (signature !== configuredSignature) throw new Error('local_webhook_signature_invalid_not_live_provider_verification');
-      body = (await request.json()) as { eventId: string; kind: 'success' | FakeProviderOutcome; providerPaymentReference?: string; providerCheckoutSessionReference?: string; operationId?: string; payload?: Record<string, unknown> };
-    }
-    if (!body.eventId || !allowed.has(body.kind)) throw new Error('invalid_payment_event');
-    const result = await internalPaymentRuntime.webhook(body);
-    logRequest('api.billing.webhook', requestId, 'RC-I1 local webhook processed', { eventId: body.eventId, duplicate: result.duplicate, operationId: result.operation?.internalPaymentOperationId });
-    return NextResponse.json({ ok: true, duplicate: result.duplicate, operation: result.operation, localSignatureBoundary: 'rc-i1-not-live-provider-verification' }, { headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
-  } catch (error) {
-    captureError('api.billing.webhook', error, { requestId });
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid webhook' }, { status: resolveStatus(error), headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
-  }
-}
+const publicError=(code:string,status:number,requestId:string)=>NextResponse.json({error:{code,message:code}},{status,headers:{'x-request-id':requestId,'cache-control':'no-store'}});
+const lifecycleKind=(type:string):CanonicalSubscriptionLifecycleKind|null=>type==='customer.subscription.created'?'subscription_created':type==='customer.subscription.updated'?'subscription_updated':type==='customer.subscription.deleted'?'subscription_deleted':type==='invoice.payment_succeeded'||type==='invoice.paid'?'renewal_succeeded':type==='invoice.payment_failed'?'renewal_failed':null;
+export async function POST(request:Request){const requestId=getRequestId(request);try{
+ const providerMode=process.env.PAYMENT_PROVIDER_MODE;
+ if(providerMode==='sandbox_provider'){
+  if(process.env.PAYMENT_PROVIDER_KIND!=='stripe')return publicError('provider_unavailable',503,requestId);
+  const raw=await request.text();const n=parseStripeWebhookEvent(raw,request.headers.get('stripe-signature'),process.env.STRIPE_WEBHOOK_SECRET??'');const lk=lifecycleKind(n.providerEventType);
+  if(lk){const result=await applyCanonicalSubscriptionLifecycleEvent({providerEventId:n.providerEventId??n.safeRedactedPayloadChecksum,kind:lk,operationId:n.metadataOperationId,providerPaymentReference:n.providerPaymentReference,providerSessionReference:n.providerSessionReference,providerCustomerReference:n.providerCustomerReference,providerSubscriptionReference:n.providerSubscriptionReference,subjectUserId:n.metadataSubjectUserId,targetPlan:n.metadataTargetPlan,billingInterval:n.metadataBillingInterval,subscriptionState:n.subscriptionState as CanonicalSubscriptionState|null,currentPeriodStart:n.currentPeriodStart,currentPeriodEnd:n.currentPeriodEnd,cancelAtPeriodEnd:n.cancelAtPeriodEnd,occurredAt:n.createdAt??new Date().toISOString()});if(result.status==='orphan')return publicError('orphan_provider_event',422,requestId);return NextResponse.json({ok:true,...result},{headers:{'x-request-id':requestId,'cache-control':'no-store'}});}
+  const kind:narrow= n.refundOrReversalOrChargeback==='refund'?'refund':n.refundOrReversalOrChargeback==='partial_refund'?'partial_refund':n.refundOrReversalOrChargeback==='reversal'?'reversal':n.refundOrReversalOrChargeback==='chargeback'?'chargeback':n.status==='succeeded'?'success':n.status==='failed'?'provider_500_before_accepting':'unknown_result';
+  const result=await internalPaymentRuntime.webhook({eventId:n.providerEventId??n.safeRedactedPayloadChecksum,kind,operationId:n.metadataOperationId,providerPaymentReference:n.providerPaymentReference,providerCheckoutSessionReference:n.providerSessionReference,payload:{providerSubscriptionReference:n.providerSubscriptionReference,providerCustomerReference:n.providerCustomerReference,subscriptionState:n.subscriptionState,currentPeriodStart:n.currentPeriodStart,currentPeriodEnd:n.currentPeriodEnd,cancelAtPeriodEnd:n.cancelAtPeriodEnd}});return NextResponse.json({ok:true,duplicate:result.duplicate,operationId:result.operation?.internalPaymentOperationId??null},{headers:{'x-request-id':requestId,'cache-control':'no-store'}});
+ }
+ if(process.env.APP_ENV==='staging'||process.env.APP_ENV==='production')return publicError('provider_unavailable',503,requestId);
+ if(process.env.ELCEO_PAYMENT_LOCAL_WEBHOOK_REPLAY!=='1'||request.headers.get('x-elceo-local-webhook-signature')!==process.env.ELCEO_PAYMENT_LOCAL_WEBHOOK_SECRET)return publicError('invalid_webhook',400,requestId);
+ const body=await request.json() as {eventId:string;kind:'success'|FakeProviderOutcome;operationId?:string};const result=await internalPaymentRuntime.webhook(body);logRequest('api.billing.webhook',requestId,'webhook processed',{eventId:body.eventId,duplicate:result.duplicate});return NextResponse.json({ok:true,duplicate:result.duplicate,operationId:result.operation?.internalPaymentOperationId??null},{headers:{'x-request-id':requestId,'cache-control':'no-store'}});
+}catch(error){captureError('api.billing.webhook',error,{requestId});return publicError('invalid_webhook',400,requestId)}}
+type narrow='success'|FakeProviderOutcome;

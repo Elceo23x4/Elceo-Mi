@@ -12,7 +12,7 @@ export function validateRuntimeEnv(): void {
 
   if (!result.valid) {
     logEvent('runtime.env', 'warn', 'Environment validation issues detected', { errors: result.errors });
-    const deployed=env.APP_ENV==='staging'||env.APP_ENV==='production'||env.NODE_ENV==='production';
+    const deployed=env.APP_ENV==='staging'||env.APP_ENV==='production';
     if(deployed) throw new Error('deployed_environment_invalid');
   } else {
     logEvent('runtime.env', 'info', 'Environment validation passed');

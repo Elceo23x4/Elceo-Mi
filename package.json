@@ -63,7 +63,8 @@
     "test:canonical-candle-postgres": "npm run -w services/ingestion test:canonical-candle-postgres",
     "test:provider-scale-acceptance": "PROVIDER_SCALE_ACCEPTANCE=1 npm run -w services/reasoning test",
     "load:pgs5-staging": "node scripts/pgs5-staging-load.mjs",
-    "test:canonical-dashboard-12-asset-acceptance": "ADAPTIVE_MATERIALIZATION_INTEGRATION=1 CANONICAL_DASHBOARD_12_ASSET_ACCEPTANCE=1 npm run -w services/reasoning test"
+    "test:canonical-dashboard-12-asset-acceptance": "ADAPTIVE_MATERIALIZATION_INTEGRATION=1 CANONICAL_DASHBOARD_12_ASSET_ACCEPTANCE=1 npm run -w services/reasoning test",
+    "test:backend-authority-postgres": "npm run -w services/application-state test && node scripts/test-backend-authority-postgres.mjs"
   },
   "engines": {
     "node": "24.x",
@@ -98,7 +99,7 @@
     "@svgr/plugin-jsx": "8.1.0",
     "@svgr/plugin-svgo": "8.1.0",
     "@svgr/webpack": "^8.1.0",
-    "next": "16.3.0",
+    "next": "16.3.3",
     "pg": "^8.22.0",
     "playwright": "^1.59.1",
     "sharp": "0.35.3",

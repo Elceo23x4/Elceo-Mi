@@ -11,7 +11,7 @@ const manifest = JSON.parse(readFileSync(new URL('./dependency-compatibility-exc
 function pkg(name, entry = name) { let directory = dirname(require.resolve(entry)); while (directory !== dirname(directory)) { try { const value = JSON.parse(readFileSync(join(directory, 'package.json'))); if (value.name === name) return value; } catch {} directory = dirname(directory); } throw new Error(`missing ${name} metadata`); }
 assert.equal(manifest.schemaVersion, 1); assert.equal(manifest.exceptions.length, 0, 'supported graph must have no active exception');
 const next = pkg('next', 'next/dist/server/next-server'); const sharp = pkg('sharp');
-assert.equal(next.version, '16.3.0'); assert.equal(sharp.version, '0.35.3'); assert.equal(next.optionalDependencies.sharp, '^0.35.3');
+assert.equal(next.version, '16.3.3'); assert.equal(sharp.version, '0.35.3'); assert.equal(next.optionalDependencies.sharp, '^0.35.3');
 assert.ok(semver.satisfies(sharp.version, next.optionalDependencies.sharp));
 assert.equal(root.overrides?.sharp, undefined); assert.equal(root.overrides?.next?.sharp, undefined);
 for (const flag of ['--force', '--legacy-peer-deps']) for (const path of ['package.json', '.github/workflows/ci.yml', 'scripts/release-gate.mjs']) assert.ok(!readFileSync(new URL(`../${path}`, import.meta.url), 'utf8').includes(flag));

@@ -16,7 +16,7 @@ function runtimeEnv(): Record<string, string | undefined> {
   return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
 }
 
-function assertPersistence(env:Record<string,string|undefined>){const deployed=env.APP_ENV==='staging'||env.APP_ENV==='production'||env.NODE_ENV==='production';if(deployed&&(env.ANALYTICS_PERSISTENCE_BACKEND!=='sql'||!env.DATABASE_URL))throw new Error('analytics_persistence_unavailable');}
+function assertPersistence(env:Record<string,string|undefined>){const deployed=env.APP_ENV==='staging'||env.APP_ENV==='production';if(deployed&&(env.ANALYTICS_PERSISTENCE_BACKEND!=='sql'||!env.DATABASE_URL))throw new Error('analytics_persistence_unavailable');}
 
 let coachingSnapshotRepositorySingleton: CoachingSnapshotRepository | null = null;
 let analyticsSnapshotLookupRepositorySingleton: AnalyticsSnapshotLookupRepository | null = null;

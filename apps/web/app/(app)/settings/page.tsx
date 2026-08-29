@@ -1,25 +1,14 @@
 import { redirect } from 'next/navigation';
 import { SettingsShell } from '../../../components/settings/SettingsShell';
 import { getOnboardedUserState } from '../../../lib/app-user-state';
+import { commercialCompatibilityPlan, evaluateUserCommercialEntitlement, resolveUserCommercialEntitlementSnapshot } from '@elceo/application-state';
 
 export default async function SettingsPage() {
-  try {
-    const { uiState, appState } = await getOnboardedUserState();
-    return (
-      <SettingsShell
-        initialState={uiState}
-        billing={{
-          status: appState.subscription.status,
-          provider: appState.subscription.provider,
-          subscriptionEligibleForPremium: appState.entitlement.subscriptionEligibleForPremium,
-          canAccessPremiumDepth: appState.entitlement.canAccessPremiumDepth
-        }}
-      />
-    );
-  } catch (error) {
-    if (error instanceof Error && error.message === 'ONBOARDING_REQUIRED') {
-      redirect('/onboarding');
-    }
-    redirect('/login?callbackUrl=/settings');
-  }
+  let state;
+  try { state = await getOnboardedUserState(); }
+  catch (error) { redirect(error instanceof Error && error.message === 'ONBOARDING_REQUIRED' ? '/onboarding' : '/login?callbackUrl=/settings'); }
+  const commercial=await resolveUserCommercialEntitlementSnapshot(state.appState.profile.id);
+  const status=evaluateUserCommercialEntitlement(commercial);
+  const compatibility=commercialCompatibilityPlan(commercial);
+  return <SettingsShell initialState={state.uiState} billing={{status,provider:'canonical',subscriptionEligibleForPremium:status==='active',canAccessPremiumDepth:compatibility==='premium'}} />;
 }

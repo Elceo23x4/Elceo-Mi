@@ -2,7 +2,7 @@
 
 Generated inventory timestamp: 2026-07-07T00:00:00.000Z (deterministic RC-E documentation marker; live filesystem remains source of truth in `buildRouteInventory`).
 
-RC-E generated live route count: 145.
+RC-E generated live route count: 146.
 
 ## Classification legend
 

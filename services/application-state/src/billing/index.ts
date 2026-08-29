@@ -9,3 +9,4 @@ export * from './serialization';
 export * from './replay';
 
 export * from './internal-payment';
+export * from './subscription-lifecycle';

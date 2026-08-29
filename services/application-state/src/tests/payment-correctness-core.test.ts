@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { InternalPaymentRuntime, MemoryInternalPaymentRepository, SQLInternalPaymentRepository, createMemoryPaymentStore, type FakeProviderOutcome, type InternalPaymentRepository, type InternalPaymentOperation } from '../billing/internal-payment';
+import { InternalPaymentRuntime, MemoryInternalPaymentRepository, SQLInternalPaymentRepository, createInternalPaymentRepository, createMemoryPaymentStore, type FakeProviderOutcome, type InternalPaymentRepository, type InternalPaymentOperation } from '../billing/internal-payment';
 import { StripeSandboxPaymentProviderAdapter, parseStripeWebhookEvent, verifyStripeWebhookSignature, normalizeStripeProviderPayload, redactProviderPayload, secretLikeValuesFound, resolvePaymentProviderMode } from '../payment-providers/sandbox-adapter';
 import { __setDbPoolFactoryForTests, closeDbPool } from '../db/client';
 
@@ -83,6 +83,18 @@ export async function runPaymentCorrectnessCoreTests(): Promise<void> {
   assert.equal(normalizedFixture.providerSessionReference, 'cs_rc_i2', 'webhook event normalization carries session reference');
   assert.equal(normalizedFixture.providerPaymentReference, 'pi_rc_i2', 'webhook event normalization carries payment reference');
   assert.equal(normalizedFixture.status, 'succeeded', 'webhook event normalization maps success');
+  const legacySubscription=normalizeStripeProviderPayload({id:'evt_legacy',api_version:'2024-06-20',type:'customer.subscription.updated',data:{object:{id:'sub_legacy',status:'active',current_period_start:1700000000,current_period_end:1702592000}}},null);
+  assert.equal(legacySubscription.providerApiVersion,'2024-06-20');
+  assert.equal(legacySubscription.currentPeriodEnd,'2023-12-14T22:13:20.000Z');
+  const basilSubscription=normalizeStripeProviderPayload({id:'evt_basil',api_version:'2025-03-31.basil',type:'customer.subscription.updated',data:{object:{id:'sub_basil',status:'active',items:{data:[{current_period_start:1700000000,current_period_end:1702592000}]}}}},null);
+  assert.equal(basilSubscription.currentPeriodEnd,'2023-12-14T22:13:20.000Z');
+  assert.throws(()=>normalizeStripeProviderPayload({id:'evt_ambiguous',type:'customer.subscription.updated',data:{object:{id:'sub_multi',status:'active',items:{data:[{current_period_start:1,current_period_end:2},{current_period_start:3,current_period_end:4}]}}}},null),/ambiguous_subscription_period/);
+  const invoice=normalizeStripeProviderPayload({id:'evt_invoice',type:'invoice.paid',data:{object:{id:'in_1',subscription:'sub_1',current_period_start:1700000000,current_period_end:1702592000}}},null);
+  assert.equal(invoice.currentPeriodEnd,null,'invoice fields are not treated as authoritative subscription periods');
+  const invoiceLine=normalizeStripeProviderPayload({id:'evt_invoice_line',type:'invoice.paid',data:{object:{id:'in_2',subscription:'sub_1',lines:{data:[{period:{start:1700000000,end:1702592000}}]}}}},null);
+  assert.equal(invoiceLine.currentPeriodEnd,'2023-12-14T22:13:20.000Z','single invoice subscription line supplies service-period truth');
+  assert.throws(()=>resolvePaymentProviderMode({APP_ENV:'staging'}),/payment_provider_mode_invalid/);
+  const saved={APP_ENV:process.env.APP_ENV,APP_STATE_REPOSITORY:process.env.APP_STATE_REPOSITORY,DATABASE_URL:process.env.DATABASE_URL};process.env.APP_ENV='staging';process.env.APP_STATE_REPOSITORY='memory';delete process.env.DATABASE_URL;assert.throws(()=>createInternalPaymentRepository(),/payment_persistence_unavailable/);Object.assign(process.env,saved);
   assert.equal(resolvePaymentProviderMode({ PAYMENT_PROVIDER_MODE:'production_provider' }), 'production_provider_blocked', 'production provider mode blocked');
   const redacted = redactProviderPayload({ tokenHeader:'Bearer example_redacted_value', nested:{ hookValue:'example_redacted_hook_value' } });
   assert.equal(secretLikeValuesFound(redacted), false, 'redacted provider payload contains no secret-like values');
@@ -107,14 +119,17 @@ export async function runPaymentCorrectnessCoreTests(): Promise<void> {
 
   const originalFetch = globalThis.fetch;
   const observedIdempotencyKeys:string[] = [];
+  const observedCheckoutBodies:string[]=[];
   globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
-    observedIdempotencyKeys.push(String((init?.headers as Record<string,string>)['Idempotency-Key']));
+    observedIdempotencyKeys.push(String((init?.headers as Record<string,string>)['Idempotency-Key'])); observedCheckoutBodies.push(String(init?.body));
     return new Response(JSON.stringify({ id:'cs_sandbox_test', object:'checkout.session', payment_intent:'pi_sandbox_test', amount_total:2000, currency:'usd', payment_status:'unpaid', metadata:{ operationId:'ipo_sandbox_test', providerIdempotencyKey:'pik_sandbox_test', subjectUserId:'sandbox_user' }, url:'https://checkout.stripe.test/session' }), { status:200, headers:{ 'request-id':'req_sandbox_test', 'content-type':'application/json' } });
   }) as typeof fetch;
   try {
     const adapter = new StripeSandboxPaymentProviderAdapter({ providerKind:'stripe', secretKey:'sk_test_unit_safe', publicKey:'pk_test_unit_safe', webhookSecret:'whsec_unit_safe', priceId:'price_unit_safe' });
     const session = await adapter.createCheckoutOrPaymentSession({ subjectUserId:'sandbox_user', targetPlan:'focus_plan', amount:2000, currency:'USD', providerIdempotencyKey:'pik_sandbox_test', operationId:'ipo_sandbox_test' });
     assert.equal(observedIdempotencyKeys[0], 'pik_sandbox_test', 'sandbox checkout uses provider idempotency key as Stripe Idempotency-Key');
+    assert.match(observedCheckoutBodies[0]!,/mode=subscription/);
+    assert.match(observedCheckoutBodies[0]!,/subscription_data%5Bmetadata%5D%5BtargetPlan%5D=focus_plan/);
     assert.equal(session.providerSessionReference, 'cs_sandbox_test', 'sandbox checkout adapter returns session reference');
     assert.notEqual(session.status, 'succeeded', 'unpaid sandbox checkout session is not success');
   } finally { globalThis.fetch = originalFetch; }
@@ -127,6 +142,7 @@ export async function runPaymentCorrectnessCoreTests(): Promise<void> {
   assert.equal(sandboxRetry.operation.providerIdempotencyKey, sandboxCreated.operation.providerIdempotencyKey, 'sandbox checkout retry reuses same provider idempotency key');
 
   const repo = new MemoryInternalPaymentRepository(createMemoryPaymentStore());
+  const idRepo=new MemoryInternalPaymentRepository(createMemoryPaymentStore());const idA=await idRepo.createOrReuseOperation({subjectUserId:'id_user',targetPlan:'focus_plan',billingInterval:'monthly',amount:1,currency:'USD',businessIdempotencyKey:'id_a',provider:'test'});const idB=await idRepo.createOrReuseOperation({subjectUserId:'id_user',targetPlan:'focus_plan',billingInterval:'yearly',amount:1,currency:'USD',businessIdempotencyKey:'id_b',provider:'test'});assert.notEqual(idA.operation.internalPaymentOperationId,idB.operation.internalPaymentOperationId);assert.match(idA.operation.internalPaymentOperationId,/^ipo_[0-9a-f-]{36}$/);
   const rt = new InternalPaymentRuntime('local_fake_provider', repo);
   const base={subjectUserId:'user_1',targetPlan:'focus_plan',amount:2000,currency:'USD',businessIdempotencyKey:'intent_1'};
   const [a,b]=await Promise.all([rt.checkout(base),rt.checkout(base)]);
@@ -134,7 +150,11 @@ export async function runPaymentCorrectnessCoreTests(): Promise<void> {
   assert.equal(a.operation.providerIdempotencyKey,b.operation.providerIdempotencyKey,'retry reuses provider idempotency key');
   assert.equal((await rt.counts()).operations,1,'one durable operation per intention');
   assert.equal(rt.providerChargeAttempts,1,'one provider charge attempt per intention');
-  await rt.webhook({eventId:'evt_success_1',kind:'success',operationId:a.operation.internalPaymentOperationId,providerPaymentReference:a.operation.providerPaymentReference});
+  await rt.webhook({eventId:'evt_success_1',kind:'success',operationId:a.operation.internalPaymentOperationId,providerPaymentReference:a.operation.providerPaymentReference,payload:{providerCustomerReference:'cus_initial',providerSubscriptionReference:'sub_initial',subscriptionState:'active',currentPeriodStart:'2026-08-01T00:00:00.000Z',currentPeriodEnd:'2026-09-01T00:00:00.000Z',cancelAtPeriodEnd:false}});
+  const persistedInitial=await repo.getOperation(a.operation.internalPaymentOperationId);
+  assert.equal(persistedInitial?.providerCustomerReference,'cus_initial','initial webhook persists customer lifecycle field');
+  assert.equal(persistedInitial?.providerSubscriptionReference,'sub_initial','initial webhook persists subscription lifecycle field');
+  assert.equal(persistedInitial?.currentPeriodEnd,'2026-09-01T00:00:00.000Z','initial webhook persists subscription period');
   await rt.webhook({eventId:'evt_success_1',kind:'success',operationId:a.operation.internalPaymentOperationId,providerPaymentReference:a.operation.providerPaymentReference});
   assert.equal((await rt.counts()).ledger,1,'duplicate webhook does not duplicate ledger');
   assert.equal((await rt.counts()).entitlements,1,'duplicate webhook does not duplicate entitlement');

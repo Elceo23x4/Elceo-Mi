@@ -1,11 +1,5 @@
 import { NextResponse } from 'next/server';
 import { requireAppUserState } from '../../../../lib/auth/session';
-
-export async function GET() {
-  try {
-    const { appState } = await requireAppUserState();
-    return NextResponse.json({ subscription: appState.subscription, entitlement: appState.entitlement }, { headers: { 'cache-control': 'no-store' } });
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: { 'cache-control': 'no-store' } });
-  }
-}
+import { commercialCompatibilityPlan, evaluateUserCommercialEntitlement, resolveUserCommercialEntitlementSnapshot } from '@elceo/application-state';
+import {captureError} from '../../../../lib/monitoring';import{getRequestId}from '../../../../lib/request-context';
+export async function GET(request:Request){const requestId=getRequestId(request);try{const{session}=await requireAppUserState();const snapshot=await resolveUserCommercialEntitlementSnapshot(session.user.id);return NextResponse.json({commercial:{planCode:snapshot.activePlanCode,status:evaluateUserCommercialEntitlement(snapshot),trialStartedAt:snapshot.trialStartedAt},compatibility:{planKind:commercialCompatibilityPlan(snapshot)}},{headers:{'x-request-id':requestId,'cache-control':'no-store'}})}catch(error){captureError('api.billing.subscription',error,{requestId});const unauthorized=error instanceof Error&&error.message==='UNAUTHORIZED';const persistence=error&&typeof error==='object'&&(error as{code?:string}).code==='commercial_persistence_unavailable';return NextResponse.json({error:{code:persistence?'commercial_persistence_unavailable':unauthorized?'unauthorized':'subscription_unavailable',message:persistence?'Commercial persistence unavailable':unauthorized?'Unauthorized':'Subscription unavailable'}},{status:persistence?503:unauthorized?401:503,headers:{'x-request-id':requestId,'cache-control':'no-store'}})}}

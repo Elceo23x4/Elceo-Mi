@@ -4,7 +4,7 @@
 
 ELCEO certifies exact Node `24.19.0` LTS and npm `10.8.2`. Installation is deterministic via `npm ci`. `npm audit --json` blocks every severity and `npm ls --all --json` blocks invalid or peer-invalid nodes.
 
-The approved `next@15.5.22 -> sharp@0.35.3` exception was retired before certification after stable Next 16.3.0 published `sharp@^0.35.3`. The manifest records zero active exceptions and one retired decision. No broad Sharp override, force flag, legacy peer mode, preview framework, vulnerable downgrade or audit waiver is allowed.
+The approved `next@15.5.22 -> sharp@0.35.3` exception was retired before certification after stable Next 16.3.3 published `sharp@^0.35.3`. The manifest records zero active exceptions and one retired decision. No broad Sharp override, force flag, legacy peer mode, preview framework, vulnerable downgrade or audit waiver is allowed.
 
 ## Mandatory evidence
 

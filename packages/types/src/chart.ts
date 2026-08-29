@@ -127,3 +127,33 @@ export type DashboardChartWorkspaceViewModel = {
     annotation_density_target: 'moderate';
   };
 };
+
+/** Deliberately separate, positive-allowlist commercial projection. */
+export type KickOffMacroHeadline = {
+  headline_id: string;
+  title: string;
+  source_name: string | null;
+  source_url: string | null;
+  published_at: string;
+  freshness: 'fresh' | 'aging';
+};
+
+export type KickOffDashboardViewModelV1 = {
+  contract_version: 'kick-off-dashboard-v1';
+  access: 'kick_off';
+  asset_code: string;
+  timeframe: 'H4';
+  horizon: import('./market-evidence-weighting').EvidenceWeightHorizon;
+  evaluated_at: string;
+  chart: {
+    candles: ChartCandlePoint[];
+    zones: Array<{ zone_id: string; lower: number; upper: number; center: number }>;
+  };
+  evidence_score:
+    | { availability: 'available'; value: number; scale: '0_100' }
+    | { availability: 'unavailable'; value: null; scale: '0_100' };
+  macro_headlines:
+    | { availability: 'available'; items: KickOffMacroHeadline[] }
+    | { availability: 'empty'; items: [] }
+    | { availability: 'unavailable'; items: [] };
+};

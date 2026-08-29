@@ -54,3 +54,7 @@
 
 ## Canonical persisted resolver (authority closure)
 Product requests resolve `kick_off` / `focus_plan` on the server from durable billing subscriptions, the three-day trial timestamps, super-admin gifts/restrictions, and persisted social identifiers. Precedence is restriction, active gift, active Focus Plan subscription, active unexpired Kick Off trial, then `subscription_required`. `free` / `premium` / `admin_internal` is a one-way compatibility projection and is never read as paid product truth. Caller headers are not commercial inputs in deployed environments.
+
+## Implemented Kick Off dashboard features
+
+`dashboard.chart`, `dashboard.evidence_score`, and `dashboard.macro_headlines` now authorize the separate strict `kick-off-dashboard-v1` projection. They expose canonical H4 candles/stripped zones, exact weighted usable evidence, and at most three same-epoch source headlines respectively. They do not authorize `premium.full_access` or the Focus Plan D1 browser payload.

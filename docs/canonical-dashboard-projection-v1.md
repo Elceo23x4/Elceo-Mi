@@ -34,3 +34,7 @@ D1-B distributed Redis/PostgreSQL materialization and ownership/fencing remains 
 
 ## Product consumer authority
 Both `/api/dashboard/[asset]` and the rendered `/dashboard` server page call `readCanonicalDashboardWorkspace` directly. No internal HTTP hop or ingestion dashboard reconstruction is used. Commercial authorization occurs before release. Focus Plan receives the accepted passive workspace; Kick Off is denied until an architect-approved field mapping exists rather than receiving a client-hidden premium payload.
+
+## Kick Off commercial projection boundary
+
+Kick Off is implemented above D1 as the separate `kick_off_dashboard_context` / `kick-off-dashboard-v1` commercial projection. It does not add fields to D1-A or change projection, display, zone, cognition, confidence, contradiction, identity, lineage, or passive Focus Plan consumption semantics.

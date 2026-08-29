@@ -118,3 +118,4 @@ export * from './market-reasoning-readiness';
 export * from './market-economic-context';
 
 export * from './canonical-dashboard-assets';
+export * from './kick-off-dashboard';

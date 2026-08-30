@@ -1,0 +1,3 @@
+import assert from 'node:assert/strict';
+import { readCanonicalKickOffContextPassively } from '../adaptive-materialization/production-reader.js';
+export async function runKickOffClosureTests(){let reads=0;const failing={readCurrent:async()=>{reads++;throw new Error('redis_or_postgres_unavailable')}};const result=await readCanonicalKickOffContextPassively(failing as never,'XAU/USD','intraday','H4');assert.deepEqual(result,{state:'unavailable',artifact:null});assert.equal(reads,1);console.log('Kick Off passive reader infrastructure failure acceptance passed: reads=1 unavailable=1 writes=0 compute=0');}

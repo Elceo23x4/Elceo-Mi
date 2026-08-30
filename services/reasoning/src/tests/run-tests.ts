@@ -1,3 +1,5 @@
+import { runKickOffOrchestrationTests } from './kick-off-orchestration.test.js';
+import { runKickOffClosureTests } from './kick-off-closure.test.js';
 import { runKickOffDashboardContractTests } from './kick-off-dashboard-contract.test.js';
 import { runReasoningTests } from './reasoning.test.js';
 import { runEvidenceProjectionTests } from './evidence-projection.test.js';
@@ -167,6 +169,8 @@ async function run(): Promise<void> {
   await runMarketCleanlinessTests();
   runRcAFormulaRegressionTests();
   runKickOffDashboardContractTests();
+  await runKickOffClosureTests();
+  await runKickOffOrchestrationTests();
   console.log('reasoning runtime contract tests passed');
 }
 

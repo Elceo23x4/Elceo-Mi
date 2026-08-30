@@ -146,6 +146,7 @@ jobs:
       - name: Kick Off dashboard acceptance
         env:
           DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3
+          REDIS_URL: redis://127.0.0.1:6379
         run: npm run test:kick-off-acceptance
       - name: Production build
         run: npm run build

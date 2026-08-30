@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { DashboardChartWorkspaceViewModel, KickOffDashboardViewModelV1 } from '@elceo/types';
 import type { withDashboardReadAdmission } from './inbound-read-admission';
+import type { DashboardCommercialAccess } from './server/dashboard-commercial-authority';
 type AuthState={session:{user?:{id?:string|null}};appState:{watchlist:{assets:string[]}}};
-type CommercialAccess='focus_plan'|'denied'|{access:'kick_off';features:{evidenceScore:boolean;macroHeadlines:boolean}};
-export function createDashboardGetHandler(dependencies:{authenticate:()=>Promise<AuthState>;readDashboard:(asset:string,signal:AbortSignal)=>Promise<DashboardChartWorkspaceViewModel|null>;readKickOff?:(asset:string,signal:AbortSignal,features:{evidenceScore:boolean;macroHeadlines:boolean})=>Promise<KickOffDashboardViewModelV1|null>;admit:typeof withDashboardReadAdmission;authorizeCommercial?:(userId:string)=>Promise<boolean>;resolveCommercialAccess?:(userId:string)=>Promise<CommercialAccess>}){
+export function createDashboardGetHandler(dependencies:{authenticate:()=>Promise<AuthState>;readDashboard:(asset:string,signal:AbortSignal)=>Promise<DashboardChartWorkspaceViewModel|null>;readKickOff?:(asset:string,signal:AbortSignal,features:{evidenceScore:boolean;macroHeadlines:boolean})=>Promise<KickOffDashboardViewModelV1|null>;admit:typeof withDashboardReadAdmission;authorizeCommercial?:(userId:string)=>Promise<boolean>;resolveCommercialAccess?:(userId:string)=>Promise<DashboardCommercialAccess>}){
   return async function dashboardGet(_:Request,context:{params:Promise<{asset:string}>}){try{
     const{session,appState}=await dependencies.authenticate(),subject=session.user?.id;if(!subject)throw new Error('UNAUTHORIZED');
     const access=dependencies.resolveCommercialAccess?await dependencies.resolveCommercialAccess(subject):dependencies.authorizeCommercial&&!(await dependencies.authorizeCommercial(subject))?'denied':'focus_plan';

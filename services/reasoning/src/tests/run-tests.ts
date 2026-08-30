@@ -1,4 +1,5 @@
 import { runKickOffProductionIntegrationTests } from './kick-off-production-integration.test.js';
+import { runKickOff12AssetPassiveAcceptance } from './kick-off-12-asset-passive-acceptance.test.js';
 import { runKickOffOrchestrationTests } from './kick-off-orchestration.test.js';
 import { runKickOffClosureTests } from './kick-off-closure.test.js';
 import { runKickOffDashboardContractTests } from './kick-off-dashboard-contract.test.js';
@@ -92,6 +93,7 @@ async function run(): Promise<void> {
   await runAdaptiveMaterializationRedisIntegrationTests();
   await runAdaptiveMaterializationIntegrationTests();
   await runKickOffProductionIntegrationTests();
+  await runKickOff12AssetPassiveAcceptance();
   await runNarrativeDecayTests();
   await runPositioningStressTests();
   await runFragilityScoreTests();

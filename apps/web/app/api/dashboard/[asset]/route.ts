@@ -9,5 +9,5 @@ export const GET=createDashboardGetHandler({
   readDashboard:readCanonicalDashboardWorkspace,
   readKickOff:readKickOffDashboard,
   admit:withDashboardReadAdmission,
-  resolveCommercialAccess:async userId=>{const snapshot=await resolveUserCommercialEntitlementSnapshot(userId);if(evaluateCommercialFeatureAccess({snapshot,featureKey:'premium.full_access'}).decision==='allow')return 'focus_plan';if(evaluateCommercialFeatureAccess({snapshot,featureKey:'dashboard.chart'}).decision==='allow')return 'kick_off';return 'denied'}
+  resolveCommercialAccess:async userId=>{const snapshot=await resolveUserCommercialEntitlementSnapshot(userId);if(evaluateCommercialFeatureAccess({snapshot,featureKey:'premium.full_access'}).decision==='allow')return 'focus_plan';if(evaluateCommercialFeatureAccess({snapshot,featureKey:'dashboard.chart'}).decision!=='allow')return 'denied';return{access:'kick_off',features:{evidenceScore:evaluateCommercialFeatureAccess({snapshot,featureKey:'dashboard.evidence_score'}).decision==='allow',macroHeadlines:evaluateCommercialFeatureAccess({snapshot,featureKey:'dashboard.macro_headlines'}).decision==='allow'}};}
 });

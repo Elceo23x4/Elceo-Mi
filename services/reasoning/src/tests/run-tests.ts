@@ -1,3 +1,4 @@
+import { runKickOffDashboardContractTests } from './kick-off-dashboard-contract.test.js';
 import { runReasoningTests } from './reasoning.test.js';
 import { runEvidenceProjectionTests } from './evidence-projection.test.js';
 import { runSourceSelectorTests } from './source-selector.test.js';
@@ -165,6 +166,7 @@ async function run(): Promise<void> {
   await runContradictionActionProtocolTests();
   await runMarketCleanlinessTests();
   runRcAFormulaRegressionTests();
+  runKickOffDashboardContractTests();
   console.log('reasoning runtime contract tests passed');
 }
 

@@ -31,3 +31,7 @@ The context binds the D1 identity and integrity, cognition identity and integrit
 ## Premium exclusion and compatibility
 
 Kick Off never serializes directional bias, confidence, contradiction, annotations, filters, modules, evidence notes/IDs, rationale, warnings, drivers, cautions, signal values, quality weights, provider reliability, or internal materialization identities. Focus Plan API and `DashboardShell` behavior remain unchanged, including premium alert evaluation; the Kick Off renderer receives only its strict allowlisted model and executes no premium alerts.
+
+## Production derivative integration
+
+The adaptive materialization orchestrator carries its single immutable `ResolvedCanonicalReasoningInput` through cognition and invokes the configured canonical dashboard derivative before scheduler finalization. That derivative materializes D1 and then publishes `kick_off_dashboard_context`; it receives the already-resolved aggregate directly and has no aggregate resolver, provider executor, weighting builder, cognition builder, or scheduler of its own. Migration `0053_kick_off_dashboard_context_materialization.sql` additively permits the context kind in the existing canonical materialization table while preserving rejection of unknown kinds.

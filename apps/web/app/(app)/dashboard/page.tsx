@@ -15,7 +15,7 @@ export default async function DashboardPage() {
   const fullAccess=evaluateCommercialFeatureAccess({snapshot:commercial,featureKey:'premium.full_access'}).decision==='allow';
   const kickOffAccess=evaluateCommercialFeatureAccess({snapshot:commercial,featureKey:'dashboard.chart'}).decision==='allow';
   if(!fullAccess&&!kickOffAccess) redirect('/subscription');
-  if(!fullAccess){const model=await readKickOffDashboard(preferredAsset,new AbortController().signal);if(!model)return <div style={{padding:'1rem'}}>Dashboard data is warming up. Please refresh shortly.</div>;return <KickOffDashboard model={model}/>;}
+  if(!fullAccess){const features={evidenceScore:evaluateCommercialFeatureAccess({snapshot:commercial,featureKey:'dashboard.evidence_score'}).decision==='allow',macroHeadlines:evaluateCommercialFeatureAccess({snapshot:commercial,featureKey:'dashboard.macro_headlines'}).decision==='allow'};const model=await readKickOffDashboard(preferredAsset,new AbortController().signal,features);if(!model)return <div style={{padding:'1rem'}}>Dashboard data is warming up. Please refresh shortly.</div>;return <KickOffDashboard model={model}/>;}
   const workspace=await readCanonicalDashboardWorkspace(preferredAsset,new AbortController().signal);
   if(!workspace)return <div style={{padding:'1rem'}}>Dashboard data is warming up. Please refresh shortly.</div>;
   await evaluateAndPersistAlerts({userId:appState.profile.id,current:workspace});

@@ -64,21 +64,13 @@
     "test:provider-scale-acceptance": "PROVIDER_SCALE_ACCEPTANCE=1 npm run -w services/reasoning test",
     "load:pgs5-staging": "node scripts/pgs5-staging-load.mjs",
     "test:canonical-dashboard-12-asset-acceptance": "ADAPTIVE_MATERIALIZATION_INTEGRATION=1 CANONICAL_DASHBOARD_12_ASSET_ACCEPTANCE=1 npm run -w services/reasoning test",
-    "test:backend-authority-postgres": "npm run -w services/application-state test && node scripts/test-backend-authority-postgres.mjs"
+    "test:backend-authority-postgres": "npm run -w services/application-state test && node scripts/test-backend-authority-postgres.mjs",
+    "test:kick-off-migration-postgres": "node scripts/test-kick-off-migration-postgres.mjs",
+    "test:kick-off-acceptance": "npm run -w services/reasoning test && npm run -w apps/web test && npm run test:kick-off-migration-postgres"
   },
   "engines": {
     "node": "24.x",
     "npm": "10.8.2"
-  },
-  "devDependecies": {
-    "typescript": "^5.9.3",
-    "eslint": "^9.39.4",
-    "@types/node": "^20.19.39",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/parser": "^8.58.2",
-    "@typescript-eslint/eslint-plugin": "^8.58.2",
-    "eslint-config-next": "15.5.15"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
@@ -103,7 +95,16 @@
     "pg": "^8.22.0",
     "playwright": "^1.59.1",
     "sharp": "0.35.3",
-    "svgo": "4.0.2"
+    "svgo": "4.0.2",
+    "typescript": "^5.9.3",
+    "eslint": "^9.39.4",
+    "@types/node": "^20.19.39",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/parser": "^8.58.2",
+    "@typescript-eslint/eslint-plugin": "^8.58.2",
+    "eslint-config-next": "15.5.15",
+    "@eslint/js": "9.39.5"
   },
   "overrides": {
     "postcss": "8.5.25",

@@ -13,6 +13,7 @@
     "app/**/*.ts",
     "lib/**/*.ts",
     "tests/**/*.ts",
-    "types/**/*.d.ts"
+    "types/**/*.d.ts",
+    "components/**/*.ts"
   ]
 }

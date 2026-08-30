@@ -3,6 +3,8 @@ Object.assign(process.env, { ELCEO_ALLOW_TEST_COMMERCIAL_SNAPSHOT: '1' });
 import('./route-runtime.test.js').then(({ runRouteRuntimeTests }) => runRouteRuntimeTests())
   .then(() => import('./d1c-route-consumer-acceptance.test.js'))
   .then(({ runD1cRouteConsumerAcceptance }) => runD1cRouteConsumerAcceptance())
+  .then(() => import('./kick-off-dashboard-acceptance.test.js'))
+  .then(({ runKickOffDashboardAcceptance }) => runKickOffDashboardAcceptance())
   .then(() => import('./backend-authority-closure.test.js'))
   .then(({ runBackendAuthorityClosureAcceptance }) => runBackendAuthorityClosureAcceptance())
   .then(() => import('./billing-http-contract.test.js'))

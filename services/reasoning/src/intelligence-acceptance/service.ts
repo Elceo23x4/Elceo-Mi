@@ -71,73 +71,21 @@ export class IntelligenceAcceptanceService {
     rollbackEvidenceId: string;
     residualRisks?: readonly ResidualRisk[];
     createdAt: string;
+    /** Operator-only: holdout was durably opened by a separate confirmed command. */
+    holdoutAlreadyOpened?: boolean;
   }): Promise<AcceptanceRecord> {
     let holdoutExposed = false;
     try {
-      const dataset = (await this.required('dataset_manifest', input.datasetId)) as DatasetManifest;
-      const persistedCertification = await this.findCertification(dataset);
-      const certification =
-        persistedCertification &&
-        (await this.certificationAuthority.verify(persistedCertification, dataset))
-          ? persistedCertification
-          : null;
-      const split = (await this.required('split_manifest', dataset.datasetId)) as SplitManifest;
-      verifyManifestSplit(dataset, split);
-      const configuration = (await this.required(
-        'configuration_version',
-        input.configurationVersionId,
-      )) as ConfigurationVersion;
-      await this.chain.validateConfiguration(configuration);
-      const trial = configuration.sourceCalibrationRunId
-        ? await this.repository.get('calibration_trial', configuration.sourceCalibrationRunId)
-        : null;
-      if (configuration.changeClass === 'explicitly_approved_parameter_calibration' && !trial)
-        throw new Error('preflight_calibration_trial_missing');
-      const rollback = (await this.required(
-        'rollback_evidence',
-        input.rollbackEvidenceId,
-      )) as RollbackEvidence;
-      const restored = (await this.required(
-        'configuration_version',
-        rollback.restoredConfigurationVersionId,
-      )) as ConfigurationVersion;
-      const previous = (await this.required(
-        'configuration_version',
-        rollback.fromConfigurationVersionId,
-      )) as ConfigurationVersion;
-      verifyRollback(rollback, previous, restored);
-      if (
-        rollback.datasetId !== dataset.datasetId ||
-        rollback.splitId !== split.splitId ||
-        rollback.acceptanceRunFamilyId !== input.runFamilyId
-      )
-        throw new Error('rollback_acceptance_scope_mismatch');
-      const authority = await this.coverageAuthority.resolve();
-      const outcomePolicy = await this.acceptancePolicyAuthority.resolveOutcomePolicy(),
-        empiricalPolicy = await this.acceptancePolicyAuthority.resolveEmpiricalPolicy();
-      const approvedPolicy = (
-        policy: OutcomePolicyAuthorityRecord | EmpiricalAcceptancePolicy | null,
-      ) => {
-        if (!policy || policy.status !== 'approved' || !policy.approvalReference) return false;
-        const { canonicalPayloadHash, ...body } = policy;
-        return canonicalHash(body) === canonicalPayloadHash;
-      };
-      if (!certification) throw new Error('preflight_blocked_missing_certified_evidence');
-      if (!authority || authority.policy.status !== 'approved')
-        throw new Error('preflight_blocked_missing_approved_coverage_contract');
-      if (!approvedPolicy(outcomePolicy))
-        throw new Error('preflight_blocked_missing_approved_outcome_policy');
-      if (!approvedPolicy(empiricalPolicy))
-        throw new Error('preflight_blocked_missing_approved_empirical_acceptance_policy');
+      const preflight = await this.preflight(input);
+      const { dataset, certification, split, configuration, trial, rollback, authority, outcomePolicy, empiricalPolicy } = preflight;
+      const approvedPolicy = IntelligenceAcceptanceService.approvedPolicy;
       const lifecycle = await this.repository.get('holdout_lifecycle', input.runFamilyId);
-      if (
-        !lifecycle ||
-        lifecycle.selectedConfigurationVersionId !== configuration.configurationVersionId ||
-        lifecycle.holdoutPartitionHash !== split.holdoutPartitionHash
-      )
-        throw new Error('durable_holdout_selection_missing');
-      const opened = await this.repository.openHoldout(input.runFamilyId, input.createdAt);
-      if (opened.state !== 'opened') throw new Error('holdout_open_transition_failed');
+      if (input.holdoutAlreadyOpened) {
+        if (!lifecycle || lifecycle.state !== 'opened') throw new Error('holdout_not_opened');
+      } else {
+        const opened = await this.repository.openHoldout(input.runFamilyId, input.createdAt);
+        if (opened.state !== 'opened') throw new Error('holdout_open_transition_failed');
+      }
       holdoutExposed = true;
       const evidence = [...(await this.source.list(dataset.datasetId, split.holdoutEventIds))];
       if (
@@ -297,6 +245,43 @@ export class IntelligenceAcceptanceService {
         );
       throw error;
     }
+  }
+
+  async preflight(input: {
+    runFamilyId: string;
+    datasetId: string;
+    configurationVersionId: string;
+    rollbackEvidenceId: string;
+  }) {
+    const dataset = (await this.required('dataset_manifest', input.datasetId)) as DatasetManifest;
+    const persistedCertification = await this.findCertification(dataset);
+    const certification = persistedCertification && await this.certificationAuthority.verify(persistedCertification, dataset) ? persistedCertification : null;
+    const split = (await this.required('split_manifest', dataset.datasetId)) as SplitManifest;
+    verifyManifestSplit(dataset, split);
+    const configuration = (await this.required('configuration_version', input.configurationVersionId)) as ConfigurationVersion;
+    await this.chain.validateConfiguration(configuration);
+    const trial = configuration.sourceCalibrationRunId ? await this.repository.get('calibration_trial', configuration.sourceCalibrationRunId) : null;
+    if (configuration.changeClass === 'explicitly_approved_parameter_calibration' && !trial) throw new Error('preflight_calibration_trial_missing');
+    const rollback = (await this.required('rollback_evidence', input.rollbackEvidenceId)) as RollbackEvidence;
+    const restored = (await this.required('configuration_version', rollback.restoredConfigurationVersionId)) as ConfigurationVersion;
+    const previous = (await this.required('configuration_version', rollback.fromConfigurationVersionId)) as ConfigurationVersion;
+    verifyRollback(rollback, previous, restored);
+    if (rollback.datasetId !== dataset.datasetId || rollback.splitId !== split.splitId || rollback.acceptanceRunFamilyId !== input.runFamilyId) throw new Error('rollback_acceptance_scope_mismatch');
+    const authority = await this.coverageAuthority.resolve();
+    const outcomePolicy = await this.acceptancePolicyAuthority.resolveOutcomePolicy();
+    const empiricalPolicy = await this.acceptancePolicyAuthority.resolveEmpiricalPolicy();
+    if (!certification) throw new Error('preflight_blocked_missing_certified_evidence');
+    if (!authority || authority.policy.status !== 'approved') throw new Error('preflight_blocked_missing_approved_coverage_contract');
+    if (!IntelligenceAcceptanceService.approvedPolicy(outcomePolicy)) throw new Error('preflight_blocked_missing_approved_outcome_policy');
+    if (!IntelligenceAcceptanceService.approvedPolicy(empiricalPolicy)) throw new Error('preflight_blocked_missing_approved_empirical_acceptance_policy');
+    const lifecycle = await this.repository.get('holdout_lifecycle', input.runFamilyId);
+    if (!lifecycle || lifecycle.selectedConfigurationVersionId !== configuration.configurationVersionId || lifecycle.holdoutPartitionHash !== split.holdoutPartitionHash) throw new Error('durable_holdout_selection_missing');
+    return { dataset, certification, split, configuration, trial, rollback, authority, outcomePolicy, empiricalPolicy, lifecycle };
+  }
+  private static approvedPolicy(policy: OutcomePolicyAuthorityRecord | EmpiricalAcceptancePolicy | null) {
+    if (!policy || policy.status !== 'approved' || !policy.approvalReference) return false;
+    const { canonicalPayloadHash, ...body } = policy;
+    return canonicalHash(body) === canonicalPayloadHash;
   }
   private async required<K extends Parameters<IntelligenceAcceptanceRepository['get']>[0]>(
     kind: K,

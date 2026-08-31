@@ -26,6 +26,14 @@ const fail = (providerKind: string, status: number, checksum: string): Notificat
   if (status >= 500) return { success:false,outcome:'provider_unavailable',retryable:true,providerMessageId:null,errorCode:'provider_network_error',errorMessage:'provider_unavailable',responseMeta:meta };
   return { success:false,outcome:'permanent_failure',retryable:false,providerMessageId:null,errorCode:'provider_rejected',errorMessage:'provider_rejected',responseMeta:meta };
 };
+const resendFailure = (status: number, body: string): NotificationTransportResult => {
+  let name = '';
+  try { const parsed = JSON.parse(body) as { name?: unknown }; if (typeof parsed.name === 'string') name = parsed.name; } catch { /* provider body remains untrusted */ }
+  const checksum = safeNotificationChecksum(body);
+  if (status === 409 && name === 'concurrent_idempotent_requests') return { success:false,outcome:'provider_unavailable',retryable:true,providerMessageId:null,errorCode:name,errorMessage:name,responseMeta:{providerKind:'resend',httpStatus:status,responseChecksum:checksum} };
+  if ((status === 409 && name === 'invalid_idempotent_request') || (status === 400 && name === 'invalid_idempotency_key')) return { success:false,outcome:'permanent_failure',retryable:false,providerMessageId:null,errorCode:name,errorMessage:name,responseMeta:{providerKind:'resend',httpStatus:status,responseChecksum:checksum} };
+  return fail('resend', status, checksum);
+};
 abstract class JsonTransport implements ChannelDeliveryTransport {
   constructor(protected readonly providerKind: string, protected readonly timeoutMs: number, protected readonly fetcher?: Fetch) {}
   protected async request(url:string, init:RequestInit): Promise<Response> { const signal=AbortSignal.timeout(this.timeoutMs); return (this.fetcher ?? fetch)(url,{...init,signal}); }
@@ -35,7 +43,7 @@ export class ResendEmailDeliveryTransport extends JsonTransport {
   constructor(private key:string,private from:string,private name:string|null,private replyTo:string|null,timeout=10_000,fetcher?:Fetch){super('resend',timeout,fetcher)}
   async send(o:NotificationOutboxRecord,e:NotificationDeliveryEnvelope):Promise<NotificationTransportResult>{
     const to=address(e,'email'); if(!to)return fail(this.providerKind,400,hash('missing email'));
-    try { const r=await this.request(RESEND_URL,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${this.key}`,'Idempotency-Key':resendIdempotencyKey(o.outboxId)},body:JSON.stringify({from:this.name?`${this.name} <${this.from}>`:this.from,to:[to],reply_to:this.replyTo??undefined,subject:'subject'in e.payload?e.payload.subject:'ELCEO Notification',text:e.payload.body})}); const t=await r.text(); const c=safeNotificationChecksum(t); if(!r.ok)return fail(this.providerKind,r.status,c); let id:string|undefined;try{id=(JSON.parse(t) as {id?:string}).id}catch { /* malformed provider JSON is mapped below */ } return id?{success:true,outcome:'accepted',retryable:false,providerMessageId:id,errorCode:null,errorMessage:null,responseMeta:{providerKind:this.providerKind,httpStatus:r.status,idempotencyKeyChecksum:hash(resendIdempotencyKey(o.outboxId))}}:fail(this.providerKind,409,c);
+    try { const r=await this.request(RESEND_URL,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${this.key}`,'Idempotency-Key':resendIdempotencyKey(o.outboxId)},body:JSON.stringify({from:this.name?`${this.name} <${this.from}>`:this.from,to:[to],reply_to:this.replyTo??undefined,subject:'subject'in e.payload?e.payload.subject:'ELCEO Notification',text:e.payload.body})}); const t=await r.text(); const c=safeNotificationChecksum(t); if(!r.ok)return resendFailure(r.status,t); let id:string|undefined;try{id=(JSON.parse(t) as {id?:string}).id}catch { /* malformed provider JSON is mapped below */ } return id?{success:true,outcome:'accepted',retryable:false,providerMessageId:id,errorCode:null,errorMessage:null,responseMeta:{providerKind:this.providerKind,httpStatus:r.status,idempotencyKeyChecksum:hash(resendIdempotencyKey(o.outboxId))}}:fail(this.providerKind,409,c);
     } catch(error){const timeout=error instanceof Error&&(error.name==='TimeoutError'||error.name==='AbortError'||/timeout|aborted/i.test(error.message));return{success:false,outcome:timeout?'provider_timeout':'provider_unavailable',retryable:true,providerMessageId:null,errorCode:timeout?'provider_timeout':'provider_network_error',errorMessage:timeout?'provider_timeout':'provider_network_error',responseMeta:{providerKind:this.providerKind}}}
   }
 }

@@ -34,6 +34,9 @@ export type NotificationDeliveryErrorCode =
   | 'provider_rejected'
   | 'provider_network_error'
   | 'provider_timeout'
+  | 'invalid_idempotency_key'
+  | 'invalid_idempotent_request'
+  | 'concurrent_idempotent_requests'
   | 'unknown_delivery_error';
 
 export type NotificationTransportResult = { success: boolean; outcome?: NotificationDeliveryOutcome; retryable?: boolean; providerMessageId: string | null; errorCode: NotificationDeliveryErrorCode | null; errorMessage: string | null; responseMeta: Record<string, unknown> | null };

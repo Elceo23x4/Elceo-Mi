@@ -124,7 +124,12 @@ export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
   if (deployed && env.NOTIFICATION_PROVIDER_MODE === 'production_provider') errors.push('production notification provider activation remains blocked');
   if (env.NOTIFICATION_EMAIL_PROVIDER === 'resend' && (!env.RESEND_API_KEY || !env.NOTIFICATION_EMAIL_FROM_ADDRESS)) errors.push('Resend selection requires RESEND_API_KEY and NOTIFICATION_EMAIL_FROM_ADDRESS');
   if (env.NOTIFICATION_EMAIL_PROVIDER === 'postmark' && (!env.POSTMARK_SERVER_TOKEN || !env.NOTIFICATION_EMAIL_FROM_ADDRESS)) errors.push('Postmark selection requires POSTMARK_SERVER_TOKEN and NOTIFICATION_EMAIL_FROM_ADDRESS');
-  if (env.NOTIFICATION_PUSH_PROVIDER === 'onesignal_web_push' && (!env.ONESIGNAL_APP_ID || !env.ONESIGNAL_APP_API_KEY)) errors.push('OneSignal selection requires ONESIGNAL_APP_ID and ONESIGNAL_APP_API_KEY');
+  if (env.NOTIFICATION_PUSH_PROVIDER === 'onesignal_web_push') {
+    const serverAppId = env.ONESIGNAL_APP_ID?.trim();
+    const publicAppId = env.NEXT_PUBLIC_ONESIGNAL_APP_ID?.trim();
+    if (!serverAppId || !publicAppId || !env.ONESIGNAL_APP_API_KEY?.trim()) errors.push('OneSignal selection requires ONESIGNAL_APP_ID, NEXT_PUBLIC_ONESIGNAL_APP_ID, and ONESIGNAL_APP_API_KEY');
+    else if (serverAppId !== publicAppId) errors.push('OneSignal server and public App IDs must match');
+  }
 
   if (!env.NEXT_PUBLIC_APP_BASE_URL) {
     errors.push('NEXT_PUBLIC_APP_BASE_URL is required');

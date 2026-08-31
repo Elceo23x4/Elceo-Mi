@@ -18,7 +18,7 @@ export type NotificationProviderEventProcessingResult = {
   severity: NotificationReceiptSeverity;
 };
 
-export async function processProviderEvent(params: { providerKind: string; channel: NotificationChannel; rawEvent: unknown; receivedAt?: string }, repositories: { providerEventRepository: NotificationProviderEventRepository; receiptRepository: NotificationDeliveryReceiptRepository; targetHealthRepository: NotificationTargetHealthRepository; targetRepository: NotificationTargetRepository; outboxRepository: NotificationOutboxRepository; outboxAttemptRepository: NotificationOutboxAttemptRepository; decisionRepository: NotificationDecisionRepository }): Promise<NotificationProviderEventProcessingResult> {
+export async function processProviderEvent(params: { providerKind: string; channel: NotificationChannel; rawEvent: unknown; receivedAt?: string; testOnlyFailAfterClaim?: boolean }, repositories: { providerEventRepository: NotificationProviderEventRepository; receiptRepository: NotificationDeliveryReceiptRepository; targetHealthRepository: NotificationTargetHealthRepository; targetRepository: NotificationTargetRepository; outboxRepository: NotificationOutboxRepository; outboxAttemptRepository: NotificationOutboxAttemptRepository; decisionRepository: NotificationDecisionRepository }): Promise<NotificationProviderEventProcessingResult> {
   const receivedAt = params.receivedAt ?? new Date().toISOString();
   const normalized = params.channel === 'email'
     ? normalizeHttpEmailProviderEvent(params.rawEvent, params.providerKind, receivedAt)
@@ -87,6 +87,7 @@ export async function processProviderEvent(params: { providerKind: string; chann
       severity: winnerReceipt.severity
     };
   }
+  if (params.testOnlyFailAfterClaim) throw new Error('test_only_provider_event_failure_after_claim');
 
   const receipt = buildNotificationDeliveryReceipt(normalized, correlated, receivedAt);
   await repositories.receiptRepository.saveReceipt(receipt);
@@ -94,8 +95,10 @@ export async function processProviderEvent(params: { providerKind: string; chann
   let healthState: NotificationTargetHealthState | null = null;
   let targetDisabled = false;
   if (correlated.targetId) {
+    const target = repositories.targetRepository.lockTargetById
+      ? await repositories.targetRepository.lockTargetById(correlated.targetId)
+      : await repositories.targetRepository.getTargetById(correlated.targetId);
     const currentHealth = await repositories.targetHealthRepository.getTargetHealth(correlated.targetId);
-    const target = await repositories.targetRepository.getTargetById(correlated.targetId);
     const applied = applyReceiptToTargetHealth(currentHealth, receipt, target, receivedAt);
     await repositories.targetHealthRepository.saveTargetHealth(applied.healthRecord);
     healthState = applied.healthRecord.healthState;

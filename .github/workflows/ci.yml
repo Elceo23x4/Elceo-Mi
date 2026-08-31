@@ -150,6 +150,12 @@ jobs:
         run: npm run test:kick-off-acceptance
       - name: Production build
         run: npm run build
+      - name: Notification browser bundle secret boundary
+        run: npm run security:notification-client
+      - name: RC-I3 notification provider PostgreSQL integration
+        env:
+          DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3
+        run: npm run test:notification-provider-integration
       - name: Native sharp runtime
         run: npm run test:sharp
       - name: SVG transformation pipeline

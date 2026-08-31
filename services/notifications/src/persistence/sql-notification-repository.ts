@@ -40,6 +40,33 @@ export class SqlNotificationFeedbackTransactionRepository {
   }
 }
 
+export class SqlPushSubscriptionOwnershipRepository {
+  constructor(private readonly transactions = new SqlNotificationFeedbackTransactionRepository()) {}
+
+  bind(record: NotificationTargetRecord): Promise<NotificationTargetRecord> {
+    const subscriptionId = (JSON.parse(record.addressJson) as { subscriptionId: string }).subscriptionId;
+    return this.transactions.withTransaction(async () => {
+      await queryDb(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [subscriptionId]);
+      await queryDb(`UPDATE app_notification_targets SET status='disabled', updated_at=$2 WHERE channel='push' AND target_kind='push_endpoint' AND status='active' AND COALESCE(NULLIF(address_json->>'subscriptionId',''), address_json->>'value')=$1 AND NOT (subject_kind=$3 AND subject_id=$4)`, [subscriptionId, record.updatedAt, record.subjectKind, record.subjectId]);
+      const existing = await queryDb<TargetRow>(`SELECT target_id, target_key, subject_kind, subject_id, channel, target_kind, status, label, address_json::text as address_json, created_at, updated_at, verified_at FROM app_notification_targets WHERE subject_kind=$1 AND subject_id=$2 AND channel='push' AND target_kind='push_endpoint' AND COALESCE(NULLIF(address_json->>'subscriptionId',''), address_json->>'value')=$3 ORDER BY created_at ASC, target_id ASC LIMIT 1 FOR UPDATE`, [record.subjectKind, record.subjectId, subscriptionId]);
+      if (existing[0]) {
+        await queryDb(`UPDATE app_notification_targets SET status='active', address_json=$2::jsonb, target_key=$3, updated_at=$4, verified_at=COALESCE(verified_at,$4) WHERE target_id=$1`, [existing[0].target_id, record.addressJson, record.targetKey ?? null, record.updatedAt]);
+        return (await new SqlNotificationTargetRepository().getTargetById(existing[0].target_id))!;
+      }
+      await new SqlNotificationTargetRepository().saveTarget(record);
+      return record;
+    });
+  }
+
+  unbind(subjectKind: 'user', subjectId: string, subscriptionId: string, updatedAt: string): Promise<boolean> {
+    return this.transactions.withTransaction(async () => {
+      await queryDb(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [subscriptionId]);
+      const rows = await queryDb(`UPDATE app_notification_targets SET status='disabled', updated_at=$4 WHERE subject_kind=$2 AND subject_id=$3 AND channel='push' AND target_kind='push_endpoint' AND status='active' AND COALESCE(NULLIF(address_json->>'subscriptionId',''), address_json->>'value')=$1 RETURNING target_id`, [subscriptionId, subjectKind, subjectId, updatedAt]);
+      return rows.length > 0;
+    });
+  }
+}
+
 type DecisionRow = { decision_id: string; decision_key: string; asset: string; timeframe: string; rule_key: string; trigger_kind: string; reasoning_run_id: string | null; snapshot_id: string | null; drift_id: string | null; materiality_score: number; should_notify: boolean; suppression_reason: string | null; channels_json: string; cooldown_until: string | null; headline: string; body: string; created_at: string; decision_json: string };
 type OutboxRow = { outbox_id: string; outbox_key: string; decision_id: string; decision_key: string; asset: string; timeframe: string; rule_key: string; channel: string; target_id: string; subject_kind: 'user' | 'workspace' | 'ops'; subject_id: string; target_key: string; delivery_address_json: string; status: NotificationOutboxRecord['status']; available_at: string; last_attempt_at: string | null; delivered_at: string | null; dead_at: string | null; attempt_count: number; last_error_code: string | null; last_error_message: string | null; payload_json: string; created_at: string; updated_at: string };
 type OutboxAttemptRow = { attempt_id: string; outbox_id: string; channel: string; attempted_at: string; status: NotificationOutboxAttemptRecord['status']; error_code: string | null; error_message: string | null; provider_kind: string | null; provider_message_id: string | null; receipt_status: string | null; response_meta_json: string | null };
@@ -66,6 +93,7 @@ export class SqlNotificationDecisionRepository implements NotificationDecisionRe
 }
 
 export class SqlNotificationTargetRepository implements NotificationTargetRepository {
+  async lockTargetById(targetId: string): Promise<NotificationTargetRecord | null> { const rows = await queryDb<TargetRow>(`SELECT target_id, target_key, subject_kind, subject_id, channel, target_kind, status, label, address_json::text as address_json, created_at, updated_at, verified_at FROM app_notification_targets WHERE target_id=$1 FOR UPDATE`, [targetId]); return rows[0] ? mapTargetRow(rows[0]) : null; }
   async saveTarget(record: NotificationTargetRecord): Promise<void> { await queryDb(`INSERT INTO app_notification_targets (target_id, target_key, subject_kind, subject_id, channel, target_kind, status, label, address_json, created_at, updated_at, verified_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT (target_id) DO UPDATE SET target_key=EXCLUDED.target_key, subject_kind=EXCLUDED.subject_kind, subject_id=EXCLUDED.subject_id, channel=EXCLUDED.channel, target_kind=EXCLUDED.target_kind, status=EXCLUDED.status, label=EXCLUDED.label, address_json=EXCLUDED.address_json, created_at=EXCLUDED.created_at, updated_at=EXCLUDED.updated_at, verified_at=EXCLUDED.verified_at`, [record.targetId, record.targetKey ?? null, record.subjectKind, record.subjectId, record.channel, record.targetKind, record.status, record.label, record.addressJson, record.createdAt, record.updatedAt, record.verifiedAt]); }
   async getTargetById(targetId: string): Promise<NotificationTargetRecord | null> { const rows = await queryDb<TargetRow>(`SELECT target_id, target_key, subject_kind, subject_id, channel, target_kind, status, label, address_json::text as address_json, created_at, updated_at, verified_at FROM app_notification_targets WHERE target_id=$1`, [targetId]); return rows[0] ? mapTargetRow(rows[0]) : null; }
   async getTargetByKey(targetKey: string): Promise<NotificationTargetRecord | null> { const rows = await queryDb<TargetRow>(`SELECT target_id, target_key, subject_kind, subject_id, channel, target_kind, status, label, address_json::text as address_json, created_at, updated_at, verified_at FROM app_notification_targets WHERE target_key=$1`, [targetKey]); return rows[0] ? mapTargetRow(rows[0]) : null; }

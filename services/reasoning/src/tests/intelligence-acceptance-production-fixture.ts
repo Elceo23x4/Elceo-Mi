@@ -9,18 +9,39 @@ import {
 } from '../intelligence-acceptance/index.js';
 import type { FrozenCaseResult } from '../intelligence-acceptance/contracts.js';
 import { MemoryReasoningPersistenceRepository } from '../persistence/memory-reasoning-repository.js';
+import type { ReasoningPersistenceRepository } from '../persistence/contracts.js';
 import { serializeCanonicalCognitionState } from '../persistence/serialization.js';
 import { buildCleanlinessEventFixture } from './market-cleanliness-fixtures.js';
 
 /** Test-only production-chain fixture. It invokes the real IFP services; it is not certified evidence. */
-export async function buildContractValidAcceptanceCaseContext(suffix: string) {
-  const persistence = new MemoryReasoningPersistenceRepository();
+export async function buildContractValidAcceptanceCaseContext(
+  suffix: string,
+  persistence: ReasoningPersistenceRepository = new MemoryReasoningPersistenceRepository(),
+) {
   const interpretedAt = '2026-01-01T01:00:00.000Z';
   const event = buildCleanlinessEventFixture({
     expectationId: `ifp8-pg-expectation-${suffix}`,
     eventEvaluationId: `ifp8-pg-event-${suffix}`,
     interpretedAt,
   });
+  for (const [snapshotId, reasoningRunId, evaluatedAt] of [
+    ['pre', `ifp8-pg-pre-run-${suffix}`, '2025-12-30T23:59:00.000Z'],
+    ['post', `ifp8-pg-post-run-${suffix}`, '2026-01-01T00:30:00.000Z'],
+  ] as const) {
+    const cognition = buildCanonicalCognitionStateFixture({
+      asset: event.asset, evaluatedAt, evaluationWindowStart: evaluatedAt,
+      evaluationWindowEnd: evaluatedAt, audit: { dataCutoffAt: evaluatedAt },
+    } as never);
+    await persistence.snapshotRepository.saveCognitionSnapshot({
+      snapshotId, reasoningRunId, asset: event.asset, timeframe: 'H1', evaluatedAt,
+      bias: cognition.bias, confidenceScore: cognition.confidence.score,
+      contradictionScore: cognition.contradiction.score,
+      freshnessScore: cognition.freshness.freshnessScore, sourceIngestionRunId: null,
+      sourceIngestionRequestKey: null, reasoningVersion: cognition.audit.reasoningVersion,
+      scoringVersion: cognition.audit.scoringVersion,
+      cognitionJson: serializeCanonicalCognitionState(cognition), createdAt: evaluatedAt,
+    });
+  }
   await persistence.eventExpectationRepository.saveEventExpectation(event.expectation);
   await persistence.eventRealityRepository.saveEventEvaluation(event);
   const contradictionInput = {
@@ -47,24 +68,6 @@ export async function buildContractValidAcceptanceCaseContext(suffix: string) {
       createdAt: interpretedAt, canonicalPayloadHash: '',
     }),
   );
-  for (const [snapshotId, reasoningRunId, evaluatedAt] of [
-    ['pre', `ifp8-pg-pre-run-${suffix}`, '2025-12-30T23:59:00.000Z'],
-    ['post', `ifp8-pg-post-run-${suffix}`, '2026-01-01T00:30:00.000Z'],
-  ] as const) {
-    const cognition = buildCanonicalCognitionStateFixture({
-      asset: event.asset, evaluatedAt, evaluationWindowStart: evaluatedAt,
-      evaluationWindowEnd: evaluatedAt, audit: { dataCutoffAt: evaluatedAt },
-    } as never);
-    await persistence.snapshotRepository.saveCognitionSnapshot({
-      snapshotId, reasoningRunId, asset: event.asset, timeframe: 'H1', evaluatedAt,
-      bias: cognition.bias, confidenceScore: cognition.confidence.score,
-      contradictionScore: cognition.contradiction.score,
-      freshnessScore: cognition.freshness.freshnessScore, sourceIngestionRunId: null,
-      sourceIngestionRequestKey: null, reasoningVersion: cognition.audit.reasoningVersion,
-      scoringVersion: cognition.audit.scoringVersion,
-      cognitionJson: serializeCanonicalCognitionState(cognition), createdAt: evaluatedAt,
-    });
-  }
   const evidence = {
     caseId: `case-${suffix}`, eventInstanceId: `hold-${suffix}`,
     eventFamilyId: `c-${suffix}`, evidenceCutoffAt: interpretedAt, asset: event.asset,

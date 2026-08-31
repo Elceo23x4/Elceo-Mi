@@ -34,12 +34,12 @@ export async function runVerificationProviderTests(): Promise<void> {
   const latest = await verificationRepository.getLatestActiveVerificationForTarget('push-target', 'push_verification');
   assert(latest === null, 'stale verification should expire and no longer be active');
 
-  const cfgSmtp = getNotificationDeliveryProviderConfig({ NOTIFICATION_SMTP_HOST: 'smtp.local', NOTIFICATION_SMTP_USER: 'user', NOTIFICATION_SMTP_PASSWORD: 'pw' });
-  assert(cfgSmtp.emailProvider === 'smtp_email', 'smtp should auto-detect');
-  const cfgHttp = getNotificationDeliveryProviderConfig({ NOTIFICATION_HTTP_EMAIL_ENDPOINT: 'https://email.local/send', NOTIFICATION_HTTP_EMAIL_API_KEY: 'k', NOTIFICATION_EMAIL_FROM_ADDRESS: 'ops@x.test' });
-  assert(cfgHttp.emailProvider === 'http_email', 'http email should auto-detect');
-  const cfgPush = getNotificationDeliveryProviderConfig({ NOTIFICATION_WEB_PUSH_ENDPOINT: 'https://push.local/send', NOTIFICATION_WEB_PUSH_API_KEY: 'k' });
-  assert(cfgPush.pushProvider === 'web_push', 'push should auto-detect');
-  const caps = getNotificationProviderCapabilities(cfgHttp);
+  const cfgResend = getNotificationDeliveryProviderConfig({ NOTIFICATION_EMAIL_PROVIDER: 'resend', RESEND_API_KEY: 're_test', NOTIFICATION_EMAIL_FROM_ADDRESS: 'ops@x.test' });
+  assert(cfgResend.emailProvider === 'resend', 'Resend should be selected explicitly');
+  const cfgPostmark = getNotificationDeliveryProviderConfig({ NOTIFICATION_EMAIL_PROVIDER: 'postmark', POSTMARK_SERVER_TOKEN: 'pm_test', NOTIFICATION_EMAIL_FROM_ADDRESS: 'ops@x.test' });
+  assert(cfgPostmark.emailProvider === 'postmark', 'Postmark should be selected explicitly');
+  const cfgPush = getNotificationDeliveryProviderConfig({ NOTIFICATION_PUSH_PROVIDER: 'onesignal_web_push', ONESIGNAL_APP_ID: 'app', ONESIGNAL_APP_API_KEY: 'key' });
+  assert(cfgPush.pushProvider === 'onesignal_web_push', 'OneSignal should be selected explicitly');
+  const caps = getNotificationProviderCapabilities(cfgResend);
   assert(caps.inApp.enabled && caps.email.enabled && !caps.push.enabled, 'capabilities should reflect provider readiness');
 }

@@ -20,7 +20,16 @@ const classifySeverity = (eventKind: NotificationProviderEventKind): Notificatio
   return 'warning';
 };
 
-const toJson = (input: unknown): string => JSON.stringify(input ?? {});
+const safeString = (value: unknown, max = 500): string | undefined => typeof value === 'string' ? value.slice(0, max) : undefined;
+/** Provider payloads are untrusted and frequently contain recipient PII. Persist an allowlisted evidence envelope only. */
+const toRedactedJson = (event: Record<string, unknown>): string => JSON.stringify({
+  eventId: safeString(event.eventId),
+  messageId: safeString(event.messageId),
+  status: safeString(event.status),
+  occurredAt: safeString(event.occurredAt),
+  reasonCode: safeString(event.reasonCode),
+  reason: safeString(event.reason)
+});
 const normalizeOccurredAt = (candidate: unknown, fallbackIso: string): string => {
   if (typeof candidate !== 'string') return fallbackIso;
   const asMs = Date.parse(candidate);
@@ -55,8 +64,8 @@ export function normalizeHttpEmailProviderEvent(rawEvent: unknown, providerKind:
     occurredAt: normalizeOccurredAt(event.occurredAt, receivedAt),
     reasonCode,
     reasonMessage,
-    rawEventJson: toJson(rawEvent),
-    normalizedMetaJson: JSON.stringify({ source: 'http_email', status, outboxId: typeof event.outboxId === 'string' ? event.outboxId : undefined, attemptId: typeof event.attemptId === 'string' ? event.attemptId : undefined })
+    rawEventJson: toRedactedJson(event),
+    normalizedMetaJson: JSON.stringify({ source: providerKind, status })
   };
 }
 
@@ -74,7 +83,7 @@ export function normalizePushProviderEvent(rawEvent: unknown, providerKind: stri
     occurredAt: normalizeOccurredAt(event.occurredAt, receivedAt),
     reasonCode: typeof event.code === 'string' ? event.code : null,
     reasonMessage: typeof event.message === 'string' ? event.message : null,
-    rawEventJson: toJson(rawEvent),
+    rawEventJson: toRedactedJson(event),
     normalizedMetaJson: JSON.stringify({ source: 'push', code, outboxId: typeof event.outboxId === 'string' ? event.outboxId : undefined, attemptId: typeof event.attemptId === 'string' ? event.attemptId : undefined })
   };
 }
@@ -91,7 +100,7 @@ export function normalizeProviderFailureEvent(rawEvent: unknown, providerKind: s
     occurredAt: normalizeOccurredAt(event.occurredAt, receivedAt),
     reasonCode: typeof event.errorCode === 'string' ? event.errorCode : 'provider_failed',
     reasonMessage: typeof event.errorMessage === 'string' ? event.errorMessage : null,
-    rawEventJson: toJson(rawEvent),
+    rawEventJson: toRedactedJson(event),
     normalizedMetaJson: JSON.stringify({ source: 'provider_failure', outboxId: typeof event.outboxId === 'string' ? event.outboxId : undefined, attemptId: typeof event.attemptId === 'string' ? event.attemptId : undefined })
   };
 }
@@ -107,7 +116,7 @@ export function normalizeUnknownProviderEvent(rawEvent: unknown, providerKind: s
     occurredAt: receivedAt,
     reasonCode: 'unmapped_payload',
     reasonMessage: 'Provider payload could not be mapped deterministically.',
-    rawEventJson: toJson(rawEvent),
+    rawEventJson: '{}',
     normalizedMetaJson: null
   };
 }

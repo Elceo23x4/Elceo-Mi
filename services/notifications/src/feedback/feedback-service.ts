@@ -28,6 +28,24 @@ export async function processProviderEvent(params: { providerKind: string; chann
         ? normalizeProviderFailureEvent(params.rawEvent, params.providerKind, params.channel, receivedAt)
         : normalizeUnknownProviderEvent(params.rawEvent, params.providerKind, params.channel, receivedAt);
 
+  // At-least-once callbacks must be a no-op before receipt/health side effects.
+  const existingEvent = await repositories.providerEventRepository.getProviderEventById(normalized.providerEventId);
+  if (existingEvent) {
+    const receipt = await repositories.receiptRepository.getReceiptById(`receipt|${existingEvent.providerKind}|${existingEvent.providerEventId}`);
+    return {
+      providerEventId: existingEvent.providerEventId,
+      receiptId: receipt?.receiptId ?? `receipt|${existingEvent.providerKind}|${existingEvent.providerEventId}`,
+      correlated: existingEvent.targetId !== null || existingEvent.outboxId !== null || existingEvent.decisionId !== null,
+      targetId: existingEvent.targetId,
+      outboxId: existingEvent.outboxId,
+      decisionId: existingEvent.decisionId,
+      healthState: existingEvent.targetId ? (await repositories.targetHealthRepository.getTargetHealth(existingEvent.targetId))?.healthState ?? null : null,
+      targetDisabled: false,
+      eventKind: existingEvent.eventKind,
+      severity: receipt?.severity ?? normalized.severity
+    };
+  }
+
   const correlated = await correlateProviderEvent(normalized, repositories);
 
   await repositories.providerEventRepository.saveProviderEvent({

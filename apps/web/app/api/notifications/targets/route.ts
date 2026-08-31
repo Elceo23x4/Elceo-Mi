@@ -25,7 +25,11 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
       channel: body.channel,
       targetKind: targetKindByChannel[body.channel],
       label: body.label ?? null,
-      addressJson: JSON.stringify({ value: body.value })
+      addressJson: body.channel === 'email'
+        ? JSON.stringify({ email: body.email })
+        : body.channel === 'push'
+          ? JSON.stringify({ subscriptionId: body.subscriptionId })
+          : JSON.stringify({ subjectId: subject.subjectId })
     });
     const envelope = { ok: true as const, data: { target } };
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { target }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });

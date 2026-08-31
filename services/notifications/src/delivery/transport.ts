@@ -6,7 +6,7 @@ import type { NotificationOutboxRecord } from './outbox-contracts';
 import { getNotificationProviderCapabilities } from '../providers/capabilities';
 import { getNotificationDeliveryProviderConfig } from '../providers/config';
 import { assertNotificationProviderModeAllowed, getNotificationProviderMode } from '../providers/modes';
-import { safeNotificationChecksum } from '../management/redaction';
+import { OneSignalWebPushDeliveryTransport, PostmarkEmailDeliveryTransport, ResendEmailDeliveryTransport } from '../providers/production-transports';
 
 export type NotificationDeliveryOutcome =
   | 'accepted'
@@ -63,37 +63,6 @@ class UnsupportedTransport implements ChannelDeliveryTransport {
   async send(): Promise<NotificationTransportResult> { return { success: false, outcome: 'provider_unavailable', retryable: true, providerMessageId: null, errorCode: this.code, errorMessage: this.message, responseMeta: null }; }
 }
 
-class HttpEmailDeliveryTransport implements ChannelDeliveryTransport {
-  constructor(private readonly endpoint: string, private readonly apiKey: string, private readonly fromAddress: string, private readonly fromName: string | null) {}
-
-  async send(_outbox: NotificationOutboxRecord, envelope: NotificationDeliveryEnvelope): Promise<NotificationTransportResult> {
-    try {
-      const address = JSON.parse(envelope.addressJson) as { email?: string };
-      if (!address.email) return { success: false, outcome: 'invalid_target', retryable: false, providerMessageId: null, errorCode: 'invalid_target', errorMessage: 'missing_recipient_email', responseMeta: null };
-      const payload = {
-        from: { email: this.fromAddress, name: this.fromName },
-        to: [{ email: address.email }],
-        subject: 'subject' in envelope.payload ? envelope.payload.subject : 'ELCEO Notification',
-        text: envelope.payload.body,
-        metadata: { decisionId: envelope.payload.decisionId, ruleKey: envelope.payload.ruleKey }
-      };
-      const response = await fetch(this.endpoint, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${this.apiKey}` }, body: JSON.stringify(payload) });
-      const bodyText = await response.text();
-      const redactedMeta = { status: response.status, providerKind: 'http_email', redactedResponseChecksum: safeNotificationChecksum(bodyText) };
-      if (response.status === 401 || response.status === 403) return { success: false, outcome: 'permanent_failure', retryable: false, providerMessageId: null, errorCode: 'provider_auth_failed', errorMessage: `http_${response.status}`, responseMeta: redactedMeta };
-      if (response.status === 429) return { success: false, outcome: 'rate_limited', retryable: true, providerMessageId: null, errorCode: 'rate_limited', errorMessage: 'http_429', responseMeta: redactedMeta };
-      if (response.status >= 500) return { success: false, outcome: 'provider_unavailable', retryable: true, providerMessageId: null, errorCode: 'provider_network_error', errorMessage: `http_${response.status}`, responseMeta: redactedMeta };
-      if (response.status >= 400) return { success: false, outcome: 'permanent_failure', retryable: false, providerMessageId: null, errorCode: 'provider_rejected', errorMessage: `http_${response.status}`, responseMeta: redactedMeta };
-      const messageId = response.headers.get('x-message-id') ?? response.headers.get('x-request-id');
-      return { success: Boolean(messageId), outcome: messageId ? 'accepted' : 'provider_ambiguous', retryable: !messageId, providerMessageId: messageId, errorCode: messageId ? null : 'provider_ambiguous', errorMessage: messageId ? null : 'provider_ambiguous', responseMeta: { status: response.status, providerKind: 'http_email', redactedResponseChecksum: safeNotificationChecksum(bodyText) } };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'unknown_error';
-      const isTimeout = /timeout|aborted|timed out/i.test(message);
-      return { success: false, outcome: isTimeout ? 'provider_timeout' : 'provider_unavailable', retryable: true, providerMessageId: null, errorCode: isTimeout ? 'provider_timeout' : 'provider_network_error', errorMessage: isTimeout ? 'provider_timeout' : 'provider_network_error', responseMeta: { providerKind: 'http_email', safeErrorMessage: isTimeout ? 'provider_timeout' : 'provider_network_error' } };
-    }
-  }
-}
-
 class RoutedNotificationDeliveryTransport implements NotificationDeliveryTransport {
   constructor(private readonly routes: Record<'in_app' | 'email' | 'push', ChannelDeliveryTransport>) {}
   async send(outbox: NotificationOutboxRecord, envelope: NotificationDeliveryEnvelope, deliveredAt: string): Promise<NotificationTransportResult> {
@@ -116,17 +85,18 @@ export function createNotificationDeliveryTransport(
   const capabilities = getNotificationProviderCapabilities(config);
 
   const emailTransport: ChannelDeliveryTransport = capabilities.email.enabled
-    ? config.emailProvider === 'http_email' && config.httpEmailEndpoint && config.httpEmailApiKey && config.emailFromAddress
-      ? new HttpEmailDeliveryTransport(config.httpEmailEndpoint, config.httpEmailApiKey, config.emailFromAddress, config.emailFromName)
-      : config.emailProvider === 'memory'
+    ? config.emailProvider === 'resend' && config.resendApiKey && config.emailFromAddress
+      ? new ResendEmailDeliveryTransport(config.resendApiKey, config.emailFromAddress, config.emailFromName, config.emailReplyTo, config.requestTimeoutMs)
+      : config.emailProvider === 'postmark' && config.postmarkServerToken && config.emailFromAddress
+        ? new PostmarkEmailDeliveryTransport(config.postmarkServerToken, config.emailFromAddress, config.emailFromName, config.emailReplyTo, config.postmarkMessageStream, config.requestTimeoutMs)
+        : config.emailProvider === 'memory'
         ? new MemoryEmailDeliveryTransport(deps.memoryFailureByChannel?.email)
         : new UnsupportedTransport('provider_unsupported', capabilities.email.reason ?? 'provider_unsupported')
     : new UnsupportedTransport(capabilities.email.reason === 'missing_required_config' ? 'provider_not_configured' : 'provider_unsupported', capabilities.email.reason ?? 'provider_not_configured');
 
-  const pushTransport: ChannelDeliveryTransport = new UnsupportedTransport(
-    capabilities.push.reason === 'missing_required_config' ? 'provider_not_configured' : 'provider_unsupported',
-    capabilities.push.reason ?? 'provider_unsupported'
-  );
+  const pushTransport: ChannelDeliveryTransport = capabilities.push.enabled && config.oneSignalAppId && config.oneSignalApiKey
+    ? new OneSignalWebPushDeliveryTransport(config.oneSignalAppId, config.oneSignalApiKey, config.requestTimeoutMs)
+    : new UnsupportedTransport(capabilities.push.reason === 'missing_required_config' ? 'provider_not_configured' : 'provider_unsupported', capabilities.push.reason ?? 'provider_unsupported');
 
   return new RoutedNotificationDeliveryTransport({
     in_app: new InAppInboxDeliveryTransport({ inboxRepository: deps.inboxRepository }),

@@ -21,6 +21,22 @@ export type ProviderEnv = {
   NOTIFICATIONS_PERSISTENCE_BACKEND?: 'sql' | 'memory';
   ANALYTICS_PERSISTENCE_BACKEND?: 'sql' | 'memory';
   PAYMENT_PROVIDER_MODE?: 'disabled' | 'local_fake_provider' | 'replay_provider_event' | 'sandbox_provider' | 'production_provider';
+  NOTIFICATION_PROVIDER_MODE?: 'disabled' | 'local_fake_provider' | 'replay_provider' | 'sandbox_provider' | 'production_provider' | 'production_provider_blocked';
+  NOTIFICATION_EMAIL_PROVIDER?: 'resend' | 'postmark';
+  NOTIFICATION_EMAIL_FROM_ADDRESS?: string;
+  NOTIFICATION_EMAIL_FROM_NAME?: string;
+  NOTIFICATION_EMAIL_REPLY_TO?: string;
+  RESEND_API_KEY?: string;
+  RESEND_WEBHOOK_SECRET?: string;
+  POSTMARK_SERVER_TOKEN?: string;
+  POSTMARK_WEBHOOK_USERNAME?: string;
+  POSTMARK_WEBHOOK_PASSWORD?: string;
+  POSTMARK_MESSAGE_STREAM?: string;
+  NOTIFICATION_PUSH_PROVIDER?: 'onesignal_web_push';
+  ONESIGNAL_APP_ID?: string;
+  NEXT_PUBLIC_ONESIGNAL_APP_ID?: string;
+  ONESIGNAL_APP_API_KEY?: string;
+  ONESIGNAL_WEBHOOK_CORRELATION_SECRET?: string;
   NEXT_PUBLIC_APP_BASE_URL?: string;
   BILLING_PROVIDER?: 'mock' | 'stripe';
   BILLING_WEBHOOK_SECRET?: string;
@@ -74,6 +90,10 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   if (env.NOTIFICATIONS_PERSISTENCE_BACKEND === 'sql' || env.NOTIFICATIONS_PERSISTENCE_BACKEND === 'memory') out.NOTIFICATIONS_PERSISTENCE_BACKEND=env.NOTIFICATIONS_PERSISTENCE_BACKEND;
   if (env.ANALYTICS_PERSISTENCE_BACKEND === 'sql' || env.ANALYTICS_PERSISTENCE_BACKEND === 'memory') out.ANALYTICS_PERSISTENCE_BACKEND=env.ANALYTICS_PERSISTENCE_BACKEND;
   if (env.PAYMENT_PROVIDER_MODE === 'disabled' || env.PAYMENT_PROVIDER_MODE === 'local_fake_provider' || env.PAYMENT_PROVIDER_MODE === 'replay_provider_event' || env.PAYMENT_PROVIDER_MODE === 'sandbox_provider' || env.PAYMENT_PROVIDER_MODE === 'production_provider') out.PAYMENT_PROVIDER_MODE=env.PAYMENT_PROVIDER_MODE;
+  if (env.NOTIFICATION_PROVIDER_MODE && ['disabled','local_fake_provider','replay_provider','sandbox_provider','production_provider','production_provider_blocked'].includes(env.NOTIFICATION_PROVIDER_MODE)) out.NOTIFICATION_PROVIDER_MODE=env.NOTIFICATION_PROVIDER_MODE as NonNullable<ProviderEnv['NOTIFICATION_PROVIDER_MODE']>;
+  if (env.NOTIFICATION_EMAIL_PROVIDER === 'resend' || env.NOTIFICATION_EMAIL_PROVIDER === 'postmark') out.NOTIFICATION_EMAIL_PROVIDER=env.NOTIFICATION_EMAIL_PROVIDER;
+  for (const key of ['NOTIFICATION_EMAIL_FROM_ADDRESS','NOTIFICATION_EMAIL_FROM_NAME','NOTIFICATION_EMAIL_REPLY_TO','RESEND_API_KEY','RESEND_WEBHOOK_SECRET','POSTMARK_SERVER_TOKEN','POSTMARK_WEBHOOK_USERNAME','POSTMARK_WEBHOOK_PASSWORD','POSTMARK_MESSAGE_STREAM','ONESIGNAL_APP_ID','NEXT_PUBLIC_ONESIGNAL_APP_ID','ONESIGNAL_APP_API_KEY','ONESIGNAL_WEBHOOK_CORRELATION_SECRET'] as const) if (env[key]) out[key]=env[key];
+  if (env.NOTIFICATION_PUSH_PROVIDER === 'onesignal_web_push') out.NOTIFICATION_PUSH_PROVIDER=env.NOTIFICATION_PUSH_PROVIDER;
   if (env.NEXT_PUBLIC_APP_BASE_URL) out.NEXT_PUBLIC_APP_BASE_URL = env.NEXT_PUBLIC_APP_BASE_URL;
   if (env.BILLING_PROVIDER === 'mock' || env.BILLING_PROVIDER === 'stripe') out.BILLING_PROVIDER = env.BILLING_PROVIDER;
   if (env.BILLING_WEBHOOK_SECRET) out.BILLING_WEBHOOK_SECRET = env.BILLING_WEBHOOK_SECRET;
@@ -101,6 +121,10 @@ export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
   if (deployed && env.ANALYTICS_PERSISTENCE_BACKEND !== 'sql') errors.push('deployed ANALYTICS_PERSISTENCE_BACKEND=sql is required');
   if (deployed && !env.PAYMENT_PROVIDER_MODE) errors.push('deployed PAYMENT_PROVIDER_MODE is required');
   if (deployed && ['local_fake_provider','replay_provider_event','production_provider'].includes(env.PAYMENT_PROVIDER_MODE ?? '')) errors.push('deployed PAYMENT_PROVIDER_MODE must be disabled or sandbox_provider');
+  if (deployed && env.NOTIFICATION_PROVIDER_MODE === 'production_provider') errors.push('production notification provider activation remains blocked');
+  if (env.NOTIFICATION_EMAIL_PROVIDER === 'resend' && (!env.RESEND_API_KEY || !env.NOTIFICATION_EMAIL_FROM_ADDRESS)) errors.push('Resend selection requires RESEND_API_KEY and NOTIFICATION_EMAIL_FROM_ADDRESS');
+  if (env.NOTIFICATION_EMAIL_PROVIDER === 'postmark' && (!env.POSTMARK_SERVER_TOKEN || !env.NOTIFICATION_EMAIL_FROM_ADDRESS)) errors.push('Postmark selection requires POSTMARK_SERVER_TOKEN and NOTIFICATION_EMAIL_FROM_ADDRESS');
+  if (env.NOTIFICATION_PUSH_PROVIDER === 'onesignal_web_push' && (!env.ONESIGNAL_APP_ID || !env.ONESIGNAL_APP_API_KEY)) errors.push('OneSignal selection requires ONESIGNAL_APP_ID and ONESIGNAL_APP_API_KEY');
 
   if (!env.NEXT_PUBLIC_APP_BASE_URL) {
     errors.push('NEXT_PUBLIC_APP_BASE_URL is required');

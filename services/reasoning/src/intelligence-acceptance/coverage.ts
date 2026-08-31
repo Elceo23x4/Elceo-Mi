@@ -23,6 +23,24 @@ export const MISSING_APPROVED_COVERAGE_POLICY: CoveragePolicy = Object.freeze({
   approvalReference: null,
   canonicalPayloadHash: 'f190a9475490d60463a4643ac9bd5f8bf9519ea029176dca90c747875eb6820b',
 });
+export function validateCoverageAuthority(
+  policy: CoveragePolicy,
+  approvedStructuralDecisions: ReadonlySet<string>,
+): void {
+  const { canonicalPayloadHash, ...policyBody } = policy;
+  if (
+    policy.status !== 'approved' ||
+    !policy.approvalReference ||
+    canonicalHash(policyBody) !== canonicalPayloadHash
+  )
+    throw new Error('coverage_policy_authority_invalid');
+  for (const cell of policy.cells)
+    if (
+      cell.structuralDecisionId &&
+      !approvedStructuralDecisions.has(cell.structuralDecisionId)
+    )
+      throw new Error('unapproved_structural_unavailable');
+}
 export function evaluateCoverage(
   policy: CoveragePolicy,
   cases: readonly DecisionTimeEvidence[],
@@ -36,9 +54,7 @@ export function evaluateCoverage(
 ): CoverageDecision[] {
   if (!identity.splitId) throw new Error('coverage_split_id_required');
   if (policy.status !== 'approved') return [];
-  const { canonicalPayloadHash, ...policyBody } = policy;
-  if (!policy.approvalReference || canonicalHash(policyBody) !== canonicalPayloadHash)
-    throw new Error('coverage_policy_authority_invalid');
+  validateCoverageAuthority(policy, approvedStructuralDecisions);
   return policy.cells
     .map((cell) => {
       const matching = cases.filter(

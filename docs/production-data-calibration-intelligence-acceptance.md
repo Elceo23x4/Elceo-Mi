@@ -6,8 +6,11 @@ The supported command is `npm run ifp8:acceptance -- <operation>`. Its lifecycle
 `import` → `preflight` → `open-holdout` → `evaluate`; `status` and
 `export-evidence` are read-only. Preflight returns an identity-bound digest but does
 not expose holdout evidence. That digest is required by the separate, auditable
-`open-holdout --confirm` operation. Imported envelopes and lifecycle transitions are
-durable PostgreSQL state, so a process restart does not reset single-use truth.
+`open-holdout --confirm` operation. Import persists immutable evidence without
+reserving a tranche; only a successful canonical prerequisite preflight freezes the
+candidate, and then verifies that selection before emitting the digest. Imported
+envelopes and lifecycle transitions are durable PostgreSQL state, so a process
+restart does not reset single-use truth.
 
 ```sh
 DATABASE_URL='<postgres-url>' npm run ifp8:acceptance -- import --bundle '<bundle.json>'

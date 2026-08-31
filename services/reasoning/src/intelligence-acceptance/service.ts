@@ -16,7 +16,11 @@ import type {
 import type { IntelligenceAcceptanceRepository } from './repository';
 import { verifyDatasetCertification, validateDecisionTimeEvidence } from './dataset-policy';
 import { verifyManifestSplit } from './split-policy';
-import { MISSING_APPROVED_COVERAGE_POLICY, evaluateCoverage } from './coverage';
+import {
+  MISSING_APPROVED_COVERAGE_POLICY,
+  evaluateCoverage,
+  validateCoverageAuthority,
+} from './coverage';
 import type { CoveragePolicy } from './contracts';
 import { calculateOutcome, validateOutcomeBinding } from './outcome-evaluator';
 import type { OutcomeCalculationInput } from './outcome-evaluator';
@@ -247,7 +251,7 @@ export class IntelligenceAcceptanceService {
     }
   }
 
-  async preflight(input: {
+  async preflightPrerequisites(input: {
     runFamilyId: string;
     datasetId: string;
     configurationVersionId: string;
@@ -271,12 +275,23 @@ export class IntelligenceAcceptanceService {
     const outcomePolicy = await this.acceptancePolicyAuthority.resolveOutcomePolicy();
     const empiricalPolicy = await this.acceptancePolicyAuthority.resolveEmpiricalPolicy();
     if (!certification) throw new Error('preflight_blocked_missing_certified_evidence');
-    if (!authority || authority.policy.status !== 'approved') throw new Error('preflight_blocked_missing_approved_coverage_contract');
+    if (!authority)
+      throw new Error('preflight_blocked_missing_approved_coverage_contract');
+    validateCoverageAuthority(authority.policy, authority.approvedStructuralDecisionIds);
     if (!IntelligenceAcceptanceService.approvedPolicy(outcomePolicy)) throw new Error('preflight_blocked_missing_approved_outcome_policy');
     if (!IntelligenceAcceptanceService.approvedPolicy(empiricalPolicy)) throw new Error('preflight_blocked_missing_approved_empirical_acceptance_policy');
+    return { dataset, certification, split, configuration, trial, rollback, authority, outcomePolicy, empiricalPolicy };
+  }
+  async preflight(input: {
+    runFamilyId: string;
+    datasetId: string;
+    configurationVersionId: string;
+    rollbackEvidenceId: string;
+  }) {
+    const prerequisites = await this.preflightPrerequisites(input);
     const lifecycle = await this.repository.get('holdout_lifecycle', input.runFamilyId);
-    if (!lifecycle || lifecycle.selectedConfigurationVersionId !== configuration.configurationVersionId || lifecycle.holdoutPartitionHash !== split.holdoutPartitionHash) throw new Error('durable_holdout_selection_missing');
-    return { dataset, certification, split, configuration, trial, rollback, authority, outcomePolicy, empiricalPolicy, lifecycle };
+    if (!lifecycle || lifecycle.selectedConfigurationVersionId !== prerequisites.configuration.configurationVersionId || lifecycle.holdoutPartitionHash !== prerequisites.split.holdoutPartitionHash) throw new Error('durable_holdout_selection_missing');
+    return { ...prerequisites, lifecycle };
   }
   private static approvedPolicy(policy: OutcomePolicyAuthorityRecord | EmpiricalAcceptancePolicy | null) {
     if (!policy || policy.status !== 'approved' || !policy.approvalReference) return false;

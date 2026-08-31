@@ -6,6 +6,7 @@ export * from './cognition.schema';
 export * from './providers.schema';
 export * from './reasoning.schema';
 export * from './zones.schema';
+export * from './kick-off-dashboard.schema';
 export * from './notifications.schema';
 export * from './test-fixtures';
 export * from './risk.schema';

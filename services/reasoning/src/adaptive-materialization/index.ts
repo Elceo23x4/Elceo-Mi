@@ -14,3 +14,4 @@ export * from './production-runtime';
 export * from './production-reader';
 export * from './dashboard-projection-contract';
 export * from './dashboard-projection';
+export * from './kick-off-context';

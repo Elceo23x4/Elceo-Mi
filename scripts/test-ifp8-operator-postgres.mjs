@@ -44,6 +44,11 @@ const rollback = api.createRollbackEvidence({ datasetId: manifest.datasetId, spl
   expectedPreviousParameterSnapshotHash: api.CANONICAL_RUNTIME_BASELINE.parameterSnapshotHash, restoredParameterSnapshotHash: api.CANONICAL_RUNTIME_BASELINE.parameterSnapshotHash,
   reproductions: [{ caseId: evidence.caseId, decisionTimeEvidenceHash: api.canonicalHash(evidence), previousCanonicalOutputHash: '2'.repeat(64), restoredCanonicalOutputHash: '2'.repeat(64), match: true }], createdAt: at });
 const approved = (body) => ({ ...body, canonicalPayloadHash: api.canonicalHash(body) });
+const reapprove = (record, overrides) => {
+  const { canonicalPayloadHash: ignored, ...body } = record;
+  void ignored;
+  return approved({ ...body, ...overrides });
+};
 const coveragePolicy = approved({ coveragePolicyId: 'TEST-ONLY-operator-coverage', status: 'approved', cells: [], diagnosticAssets: [], approvalReference: 'test-coverage-approval' });
 const outcomePolicy = approved({ policyId: 'TEST-ONLY-operator-outcome', policyVersion: 'test-v1', status: 'approved', supportedProperties: [], approvalReference: 'test-outcome-approval' });
 const minimumSamples = Object.fromEntries(['ifp1','ifp2','ifp3','ifp4','ifp5','ifp6','ifp7'].map((key) => [key, 1]));
@@ -98,8 +103,8 @@ try {
     rollbackEvidenceId: undefined, canonicalPayloadHash: undefined,
   });
   const successCoverage = approved({ coveragePolicyId: `${successFamily}-coverage`, status: 'approved', diagnosticAssets: [], approvalReference: `${successFamily}-coverage-approval`, cells: [{ cellId: `${successFamily}-cell`, asset: context.evidence.asset, eventClass: context.evidence.eventClass, horizon: context.evidence.horizon, requiredEvidenceFamilies: [], minimumUniqueEvents: 1, structuralDecisionId: null, policyVersion: api.COVERAGE_POLICY_VERSION }] });
-  const successOutcome = approved({ ...outcomePolicy, policyId: `${successFamily}-outcome`, approvalReference: `${successFamily}-outcome-approval`, canonicalPayloadHash: undefined });
-  const successEmpirical = approved({ ...empiricalPolicy, policyId: `${successFamily}-empirical`, approvalReference: `${successFamily}-empirical-approval`, canonicalPayloadHash: undefined });
+  const successOutcome = reapprove(outcomePolicy, { policyId: `${successFamily}-outcome`, approvalReference: `${successFamily}-outcome-approval` });
+  const successEmpirical = reapprove(empiricalPolicy, { policyId: `${successFamily}-empirical`, approvalReference: `${successFamily}-empirical-approval` });
   const successRiskBody = { ...residualBody, riskId: `${successFamily}-blocking-risk` };
   const successRisk = { ...successRiskBody, canonicalPayloadHash: api.canonicalHash(successRiskBody) };
   const outcomeInput = { caseId: context.evidence.caseId, eventInstanceId: context.evidence.eventInstanceId, asset: context.evidence.asset, horizon: context.evidence.horizon, measurementStartAt: '2026-01-01T02:00:00.000Z', measurementEndAt: '2026-01-01T03:00:00.000Z', outcomeAvailableAt: '2026-01-01T03:00:00.000Z', observations: [] };

@@ -4,8 +4,8 @@ import { pathToFileURL } from 'node:url';
 
 const [inputRootArg, entryArg] = process.argv.slice(2);
 
-if (!inputRootArg || !entryArg) {
-  console.error('Usage: node scripts/run-cjs-tests.mjs <input_root_dir> <entry_js_path>');
+if (!inputRootArg) {
+  console.error('Usage: node scripts/run-cjs-tests.mjs <input_root_dir> [entry_js_path]');
   process.exit(1);
 }
 
@@ -79,6 +79,8 @@ for (const source of allFiles) {
   }
 }
 
-const relativeEntry = path.relative(inputRoot, path.resolve(entryArg));
-const cjsEntry = path.join(outputRoot, relativeEntry.replace(/\.js$/g, '.cjs'));
-await import(pathToFileURL(cjsEntry).href);
+if (entryArg) {
+  const relativeEntry = path.relative(inputRoot, path.resolve(entryArg));
+  const cjsEntry = path.join(outputRoot, relativeEntry.replace(/\.js$/g, '.cjs'));
+  await import(pathToFileURL(cjsEntry).href);
+}

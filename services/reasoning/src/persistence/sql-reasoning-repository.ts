@@ -142,12 +142,14 @@ type SnapshotRow = {
 };
 
 function mapSnapshotRow(row: SnapshotRow): PersistedCognitionSnapshot {
+  const timestamp = (value: string | Date) =>
+    value instanceof Date ? value.toISOString() : value;
   return {
     snapshotId: row.snapshot_id,
     reasoningRunId: row.reasoning_run_id,
     asset: row.asset,
     timeframe: row.timeframe as Timeframe,
-    evaluatedAt: row.evaluated_at,
+    evaluatedAt: timestamp(row.evaluated_at),
     bias: row.bias,
     confidenceScore: row.confidence_score,
     contradictionScore: row.contradiction_score,
@@ -157,7 +159,7 @@ function mapSnapshotRow(row: SnapshotRow): PersistedCognitionSnapshot {
     reasoningVersion: row.reasoning_version,
     scoringVersion: row.scoring_version,
     cognitionJson: row.cognition_json,
-    createdAt: row.created_at
+    createdAt: timestamp(row.created_at)
   };
 }
 

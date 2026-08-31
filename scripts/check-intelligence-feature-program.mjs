@@ -39,7 +39,7 @@ const fail = (message) => failures.push(message);
 if (packageJson.scripts?.['check:ifp'] !== 'node scripts/check-intelligence-feature-program.mjs') fail('package.json check:ifp script is missing or changed');
 if (packageJson.scripts?.['test:ifp7-postgres'] !== 'npm run -w services/reasoning test && node scripts/test-ifp7-postgres.mjs') fail('IFP-7 PostgreSQL script is missing');
 if (!ci.includes('IFP-7 PostgreSQL integration')) fail('IFP-7 PostgreSQL CI step is missing');
-if (packageJson.scripts?.['test:ifp8-postgres'] !== 'npm run -w services/reasoning test && node scripts/test-ifp8-postgres.mjs') fail('IFP-8 PostgreSQL script is missing');
+if (packageJson.scripts?.['test:ifp8-postgres'] !== 'npm run -w services/reasoning test && node scripts/test-ifp8-postgres.mjs && node scripts/test-ifp8-operator-postgres.mjs') fail('IFP-8 PostgreSQL scripts are missing');
 if (!ci.includes('IFP-8 PostgreSQL integration')) fail('IFP-8 PostgreSQL CI step is missing');
 for(const phrase of ["'intelligence-acceptance-v1'",'productionAcceptance','unexplainedZeroCount'])if(!acceptanceContracts.includes(phrase))fail(`IFP-8 contract missing: ${phrase}`);
 for(const phrase of ['blocked_missing_certified_evidence','single-use holdout','RC-K remains untouched'])if(!acceptanceDoc.includes(phrase))fail(`IFP-8 documentation missing: ${phrase}`);

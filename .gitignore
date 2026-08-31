@@ -9,3 +9,5 @@ dist
 
 dist-test
 dist-test-cjs
+dist-operator
+dist-operator-cjs

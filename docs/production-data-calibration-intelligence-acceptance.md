@@ -1,5 +1,32 @@
 # IFP-8 — Production-data calibration and intelligence acceptance
 
+## Supported operator boundary
+
+The supported command is `npm run ifp8:acceptance -- <operation>`. Its lifecycle is
+`import` → `preflight` → `open-holdout` → `evaluate`; `status` and
+`export-evidence` are read-only. Preflight returns an identity-bound digest but does
+not expose holdout evidence. That digest is required by the separate, auditable
+`open-holdout --confirm` operation. Import persists immutable evidence without
+reserving a tranche; only a successful canonical prerequisite preflight freezes the
+candidate, and then verifies that selection before emitting the digest. Imported
+envelopes and lifecycle transitions are durable PostgreSQL state, so a process
+restart does not reset single-use truth.
+
+```sh
+DATABASE_URL='<postgres-url>' npm run ifp8:acceptance -- import --bundle '<bundle.json>'
+DATABASE_URL='<postgres-url>' npm run ifp8:acceptance -- preflight --run-family '<run-family>'
+DATABASE_URL='<postgres-url>' npm run ifp8:acceptance -- open-holdout --run-family '<run-family>' --confirm '<preflight-digest>'
+DATABASE_URL='<postgres-url>' npm run ifp8:acceptance -- evaluate --run-family '<run-family>'
+DATABASE_URL='<postgres-url>' npm run ifp8:acceptance -- export-evidence --run-family '<run-family>' --output '<manifest.json>'
+```
+
+The versioned bundle (`ifp8-acceptance-operator-v1`) carries canonical records,
+approved authorities, decision-time cases, outcome observations, residual risks, and
+certified raw-artifact hashes. Secret-like fields and non-qualifying fixture classes
+are rejected; raw hashes are recomputed and filenames are never certifications. The
+operator delegates evaluation to the canonical acceptance service and production IFP
+chain. It does not assert that empirical IFP-8 acceptance is complete.
+
 ## Purpose and current truth
 
 IFP-8 is an empirical evidence and calibration-governance boundary around the unchanged IFP-1 through IFP-7 services. It is not a reasoning engine, provider activation, or RC-K. The repository contains no adequate certified non-fixture corpus, so the current deterministic state is `blocked_missing_certified_evidence`; fixture and golden runs always have `productionAcceptance = false`. IFP-8 remains active and RC-K remains untouched.

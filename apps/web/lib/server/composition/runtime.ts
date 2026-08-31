@@ -60,6 +60,7 @@ import {
   createNotificationOutboxAttemptRepository,
   createNotificationOutboxRepository,
   createNotificationProviderEventRepository,
+  SqlNotificationFeedbackTransactionRepository,
   createNotificationSubscriptionRepository,
   createNotificationTargetHealthRepository,
   createNotificationTargetRepository,
@@ -139,6 +140,7 @@ function getNotificationRepositories(): NotificationDeliveryRuntimeRepositories 
     orchestrationRunRepository: createNotificationOrchestrationRunRepository(env),
     verificationRepository: createNotificationVerificationRepository(env),
     providerEventRepository: createNotificationProviderEventRepository(env),
+    ...(env.NOTIFICATIONS_PERSISTENCE_BACKEND === 'sql' ? { feedbackTransactionRepository: new SqlNotificationFeedbackTransactionRepository() } : {}),
     receiptRepository: createNotificationDeliveryReceiptRepository(env),
     targetHealthRepository: createNotificationTargetHealthRepository(env, targetRepository)
   };

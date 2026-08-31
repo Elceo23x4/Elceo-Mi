@@ -38,8 +38,11 @@ export async function runVerificationProviderTests(): Promise<void> {
   assert(cfgResend.emailProvider === 'resend', 'Resend should be selected explicitly');
   const cfgPostmark = getNotificationDeliveryProviderConfig({ NOTIFICATION_EMAIL_PROVIDER: 'postmark', POSTMARK_SERVER_TOKEN: 'pm_test', NOTIFICATION_EMAIL_FROM_ADDRESS: 'ops@x.test' });
   assert(cfgPostmark.emailProvider === 'postmark', 'Postmark should be selected explicitly');
-  const cfgPush = getNotificationDeliveryProviderConfig({ NOTIFICATION_PUSH_PROVIDER: 'onesignal_web_push', ONESIGNAL_APP_ID: 'app', ONESIGNAL_APP_API_KEY: 'key' });
+  const cfgPush = getNotificationDeliveryProviderConfig({ NOTIFICATION_PUSH_PROVIDER: 'onesignal_web_push', ONESIGNAL_APP_ID: 'app', NEXT_PUBLIC_ONESIGNAL_APP_ID: 'app', ONESIGNAL_APP_API_KEY: 'key' });
   assert(cfgPush.pushProvider === 'onesignal_web_push', 'OneSignal should be selected explicitly');
+  let mismatchRejected = false;
+  try { getNotificationDeliveryProviderConfig({ NOTIFICATION_PUSH_PROVIDER: 'onesignal_web_push', ONESIGNAL_APP_ID: 'server', NEXT_PUBLIC_ONESIGNAL_APP_ID: 'public', ONESIGNAL_APP_API_KEY: 'key' }); } catch { mismatchRejected = true; }
+  assert(mismatchRejected, 'OneSignal App ID mismatch must fail closed');
   const caps = getNotificationProviderCapabilities(cfgResend);
   assert(caps.inApp.enabled && caps.email.enabled && !caps.push.enabled, 'capabilities should reflect provider readiness');
 }

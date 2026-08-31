@@ -199,6 +199,7 @@ export type NotificationOutboxAttemptRepository = {
 };
 
 export type NotificationProviderEventRepository = {
+  claimProviderEvent?(record: PersistedNotificationProviderEventRecord): Promise<boolean>;
   saveProviderEvent(record: PersistedNotificationProviderEventRecord): Promise<void>;
   getProviderEventById(providerEventId: string): Promise<PersistedNotificationProviderEventRecord | null>;
   listProviderEventsForTarget(targetId: string, limit?: number): Promise<PersistedNotificationProviderEventRecord[]>;
@@ -230,6 +231,7 @@ export type NotificationPolicyLoadRepositories = {
 export type NotificationPolicyEvaluationRepositories = NotificationPolicyLoadRepositories;
 
 export type NotificationDeliveryRuntimeRepositories = NotificationPolicyLoadRepositories & {
+  feedbackTransactionRepository?: { withTransaction<T>(operation: () => Promise<T>): Promise<T> };
   outboxRepository: NotificationOutboxRepository;
   outboxAttemptRepository: NotificationOutboxAttemptRepository;
   targetRepository: NotificationTargetRepository;

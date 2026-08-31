@@ -48,7 +48,7 @@ export async function processProviderEvent(params: { providerKind: string; chann
 
   const correlated = await correlateProviderEvent(normalized, repositories);
 
-  await repositories.providerEventRepository.saveProviderEvent({
+  const providerEventRecord = {
     providerEventId: normalized.providerEventId,
     providerKind: normalized.providerKind,
     channel: normalized.channel,
@@ -65,7 +65,28 @@ export async function processProviderEvent(params: { providerKind: string; chann
     rawEventJson: normalized.rawEventJson,
     normalizedMetaJson: normalized.normalizedMetaJson,
     createdAt: receivedAt
-  });
+  };
+  const owned = repositories.providerEventRepository.claimProviderEvent
+    ? await repositories.providerEventRepository.claimProviderEvent(providerEventRecord)
+    : (await repositories.providerEventRepository.saveProviderEvent(providerEventRecord), true);
+  if (!owned) {
+    const winner = await repositories.providerEventRepository.getProviderEventById(normalized.providerEventId);
+    if (!winner) throw new Error('provider_event_claim_incomplete');
+    const winnerReceipt = await repositories.receiptRepository.getReceiptById(`receipt|${winner.providerKind}|${winner.providerEventId}`);
+    if (!winnerReceipt) throw new Error('provider_event_receipt_incomplete');
+    return {
+      providerEventId: winner.providerEventId,
+      receiptId: winnerReceipt.receiptId,
+      correlated: winner.targetId !== null || winner.outboxId !== null || winner.decisionId !== null,
+      targetId: winner.targetId,
+      outboxId: winner.outboxId,
+      decisionId: winner.decisionId,
+      healthState: winner.targetId ? (await repositories.targetHealthRepository.getTargetHealth(winner.targetId))?.healthState ?? null : null,
+      targetDisabled: false,
+      eventKind: winner.eventKind,
+      severity: winnerReceipt.severity
+    };
+  }
 
   const receipt = buildNotificationDeliveryReceipt(normalized, correlated, receivedAt);
   await repositories.receiptRepository.saveReceipt(receipt);

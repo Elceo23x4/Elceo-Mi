@@ -18,10 +18,11 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 function runtimeEnv(): Record<string, string | undefined> { return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {}; }
 type QueryRow = Record<string, unknown>;
 type ClientLike = { query: (sql: string, params?: unknown[]) => Promise<{ rows: QueryRow[] }>; release?: () => void };
-type PoolLike = ClientLike & { connect: () => Promise<ClientLike> };
+type PoolLike = ClientLike & { connect: () => Promise<ClientLike>; end?: () => Promise<void> };
 let poolPromise: Promise<PoolLike> | null = null;
 const transactionClient = new AsyncLocalStorage<ClientLike>();
 async function getPool(): Promise<PoolLike> { if (!poolPromise) poolPromise = (async () => { const module = await import('pg'); return new module.Pool({ connectionString: runtimeEnv().DATABASE_URL }) as unknown as PoolLike; })(); return poolPromise; }
+export async function __closeSqlNotificationPoolForTests(): Promise<void> { const pool = await poolPromise; poolPromise = null; await pool?.end?.(); }
 async function queryDb<T extends QueryRow = QueryRow>(sql: string, params: unknown[] = []): Promise<T[]> { const connection = transactionClient.getStore() ?? await getPool(); const result = await connection.query(sql, params); return result.rows as T[]; }
 export function canonicalSqlTimestamp(value: unknown): string {
   const date = value instanceof Date ? value : new Date(String(value));

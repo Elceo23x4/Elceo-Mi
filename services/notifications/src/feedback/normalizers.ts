@@ -42,6 +42,8 @@ export function normalizeHttpEmailProviderEvent(rawEvent: unknown, providerKind:
   const map: Record<string, NotificationProviderEventKind> = {
     accepted: 'accepted',
     delivered: 'delivered',
+    delayed: 'delivery_delayed',
+    failed: 'provider_failed',
     bounced: 'bounced',
     complaint: 'complained',
     complained: 'complained',

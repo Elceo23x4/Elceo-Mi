@@ -26,6 +26,12 @@ const clean = (value: string | undefined): string | null => {
 export function getNotificationDeliveryProviderConfig(env: Record<string, string | undefined>): NotificationDeliveryProviderConfig {
   const email = (env.NOTIFICATION_EMAIL_PROVIDER?.trim().toLowerCase() || (env.NODE_ENV === 'production' ? 'unsupported' : 'memory')) as NotificationProviderKind;
   const push = (env.NOTIFICATION_PUSH_PROVIDER?.trim().toLowerCase() || 'unsupported') as NotificationProviderKind;
+  const serverAppId = clean(env.ONESIGNAL_APP_ID);
+  const publicAppId = clean(env.NEXT_PUBLIC_ONESIGNAL_APP_ID);
+  const oneSignalApiKey = clean(env.ONESIGNAL_APP_API_KEY);
+  if (push === 'onesignal_web_push' && (!serverAppId || !publicAppId || !oneSignalApiKey || serverAppId !== publicAppId)) {
+    throw new Error('onesignal_configuration_invalid');
+  }
   return {
     inAppProvider: 'in_app',
     emailProvider: ['memory', 'resend', 'postmark'].includes(email) ? email : 'unsupported',
@@ -36,8 +42,8 @@ export function getNotificationDeliveryProviderConfig(env: Record<string, string
     resendApiKey: clean(env.RESEND_API_KEY),
     postmarkServerToken: clean(env.POSTMARK_SERVER_TOKEN),
     postmarkMessageStream: clean(env.POSTMARK_MESSAGE_STREAM) ?? 'outbound',
-    oneSignalAppId: clean(env.ONESIGNAL_APP_ID),
-    oneSignalApiKey: clean(env.ONESIGNAL_APP_API_KEY),
+    oneSignalAppId: serverAppId,
+    oneSignalApiKey,
     requestTimeoutMs: Math.min(30_000, Math.max(1_000, Number(env.NOTIFICATION_PROVIDER_TIMEOUT_MS) || 10_000))
   };
 }

@@ -13,13 +13,66 @@ import type {
 import type { NotificationOutboxAttemptRecord, NotificationOutboxRecord } from '../delivery/outbox-contracts';
 import type { InboxListQuery } from '../management/contracts';
 import type { NotificationOrchestrationStage } from '../orchestration/contracts';
+import { AsyncLocalStorage } from 'node:async_hooks';
 
 function runtimeEnv(): Record<string, string | undefined> { return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {}; }
 type QueryRow = Record<string, unknown>;
-type PoolLike = { query: (sql: string, params?: unknown[]) => Promise<{ rows: QueryRow[] }> };
+type ClientLike = { query: (sql: string, params?: unknown[]) => Promise<{ rows: QueryRow[] }>; release?: () => void };
+type PoolLike = ClientLike & { connect: () => Promise<ClientLike>; end?: () => Promise<void> };
 let poolPromise: Promise<PoolLike> | null = null;
+const transactionClient = new AsyncLocalStorage<ClientLike>();
 async function getPool(): Promise<PoolLike> { if (!poolPromise) poolPromise = (async () => { const module = await import('pg'); return new module.Pool({ connectionString: runtimeEnv().DATABASE_URL }) as unknown as PoolLike; })(); return poolPromise; }
-async function queryDb<T extends QueryRow = QueryRow>(sql: string, params: unknown[] = []): Promise<T[]> { const pool = await getPool(); const result = await pool.query(sql, params); return result.rows as T[]; }
+export async function __closeSqlNotificationPoolForTests(): Promise<void> { const pool = await poolPromise; poolPromise = null; await pool?.end?.(); }
+async function queryDb<T extends QueryRow = QueryRow>(sql: string, params: unknown[] = []): Promise<T[]> { const connection = transactionClient.getStore() ?? await getPool(); const result = await connection.query(sql, params); return result.rows as T[]; }
+export function canonicalSqlTimestamp(value: unknown): string {
+  const date = value instanceof Date ? value : new Date(String(value));
+  if (!Number.isFinite(date.getTime())) throw new Error('invalid_sql_timestamp');
+  return date.toISOString();
+}
+const nullableSqlTimestamp = (value: unknown): string | null => value === null || value === undefined ? null : canonicalSqlTimestamp(value);
+
+export class SqlNotificationFeedbackTransactionRepository {
+  async withTransaction<T>(operation: () => Promise<T>): Promise<T> {
+    if (transactionClient.getStore()) return operation();
+    const client = await (await getPool()).connect();
+    try {
+      await client.query('BEGIN');
+      const result = await transactionClient.run(client, operation);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally { client.release?.(); }
+  }
+}
+
+export class SqlPushSubscriptionOwnershipRepository {
+  constructor(private readonly transactions = new SqlNotificationFeedbackTransactionRepository()) {}
+
+  bind(record: NotificationTargetRecord): Promise<NotificationTargetRecord> {
+    const subscriptionId = (JSON.parse(record.addressJson) as { subscriptionId: string }).subscriptionId;
+    return this.transactions.withTransaction(async () => {
+      await queryDb(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [subscriptionId]);
+      await queryDb(`UPDATE app_notification_targets SET status='disabled', updated_at=$2 WHERE channel='push' AND target_kind='push_endpoint' AND status='active' AND COALESCE(NULLIF(address_json->>'subscriptionId',''), address_json->>'value')=$1 AND NOT (subject_kind=$3 AND subject_id=$4)`, [subscriptionId, record.updatedAt, record.subjectKind, record.subjectId]);
+      const existing = await queryDb<TargetRow>(`SELECT target_id, target_key, subject_kind, subject_id, channel, target_kind, status, label, address_json::text as address_json, created_at, updated_at, verified_at FROM app_notification_targets WHERE subject_kind=$1 AND subject_id=$2 AND channel='push' AND target_kind='push_endpoint' AND COALESCE(NULLIF(address_json->>'subscriptionId',''), address_json->>'value')=$3 ORDER BY (address_json ? 'subscriptionId') DESC, created_at ASC, target_id ASC LIMIT 1 FOR UPDATE`, [record.subjectKind, record.subjectId, subscriptionId]);
+      if (existing[0]) {
+        await queryDb(`UPDATE app_notification_targets SET status='active', address_json=$2::jsonb, target_key=$3, updated_at=$4, verified_at=COALESCE(verified_at,$4) WHERE target_id=$1`, [existing[0].target_id, record.addressJson, record.targetKey ?? null, record.updatedAt]);
+        return (await new SqlNotificationTargetRepository().getTargetById(existing[0].target_id))!;
+      }
+      await new SqlNotificationTargetRepository().saveTarget(record);
+      return record;
+    });
+  }
+
+  unbind(subjectKind: 'user', subjectId: string, subscriptionId: string, updatedAt: string): Promise<boolean> {
+    return this.transactions.withTransaction(async () => {
+      await queryDb(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [subscriptionId]);
+      const rows = await queryDb(`UPDATE app_notification_targets SET status='disabled', updated_at=$4 WHERE subject_kind=$2 AND subject_id=$3 AND channel='push' AND target_kind='push_endpoint' AND status='active' AND COALESCE(NULLIF(address_json->>'subscriptionId',''), address_json->>'value')=$1 RETURNING target_id`, [subscriptionId, subjectKind, subjectId, updatedAt]);
+      return rows.length > 0;
+    });
+  }
+}
 
 type DecisionRow = { decision_id: string; decision_key: string; asset: string; timeframe: string; rule_key: string; trigger_kind: string; reasoning_run_id: string | null; snapshot_id: string | null; drift_id: string | null; materiality_score: number; should_notify: boolean; suppression_reason: string | null; channels_json: string; cooldown_until: string | null; headline: string; body: string; created_at: string; decision_json: string };
 type OutboxRow = { outbox_id: string; outbox_key: string; decision_id: string; decision_key: string; asset: string; timeframe: string; rule_key: string; channel: string; target_id: string; subject_kind: 'user' | 'workspace' | 'ops'; subject_id: string; target_key: string; delivery_address_json: string; status: NotificationOutboxRecord['status']; available_at: string; last_attempt_at: string | null; delivered_at: string | null; dead_at: string | null; attempt_count: number; last_error_code: string | null; last_error_message: string | null; payload_json: string; created_at: string; updated_at: string };
@@ -32,7 +85,7 @@ type OrchestrationRunRow = { orchestration_run_id: string; stage: NotificationOr
 const mapDecisionRow = (row: DecisionRow): PersistedNotificationDecisionRecord => ({ decisionId: row.decision_id, decisionKey: row.decision_key, asset: row.asset, timeframe: row.timeframe as Timeframe, ruleKey: row.rule_key, triggerKind: row.trigger_kind, reasoningRunId: row.reasoning_run_id, snapshotId: row.snapshot_id, driftId: row.drift_id, materialityScore: row.materiality_score, shouldNotify: row.should_notify, suppressionReason: row.suppression_reason, channelsJson: row.channels_json, cooldownUntil: row.cooldown_until, headline: row.headline, body: row.body, createdAt: row.created_at, decisionJson: row.decision_json });
 const mapOutboxRow = (row: OutboxRow): NotificationOutboxRecord => ({ outboxId: row.outbox_id, outboxKey: row.outbox_key, decisionId: row.decision_id, decisionKey: row.decision_key, asset: row.asset, timeframe: row.timeframe as Timeframe, ruleKey: row.rule_key, channel: row.channel as NotificationChannel, targetId: row.target_id, subjectKind: row.subject_kind, subjectId: row.subject_id, targetKey: row.target_key, deliveryAddressJson: row.delivery_address_json, status: row.status, availableAt: row.available_at, lastAttemptAt: row.last_attempt_at, deliveredAt: row.delivered_at, deadAt: row.dead_at, attemptCount: row.attempt_count, lastErrorCode: row.last_error_code, lastErrorMessage: row.last_error_message, payloadJson: row.payload_json, createdAt: row.created_at, updatedAt: row.updated_at });
 const mapOutboxAttemptRow = (row: OutboxAttemptRow): NotificationOutboxAttemptRecord => ({ attemptId: row.attempt_id, outboxId: row.outbox_id, channel: row.channel as NotificationChannel, attemptedAt: row.attempted_at, status: row.status, errorCode: row.error_code, errorMessage: row.error_message, providerKind: row.provider_kind, providerMessageId: row.provider_message_id, receiptStatus: row.receipt_status, responseMetaJson: row.response_meta_json });
-const mapTargetRow = (row: TargetRow): NotificationTargetRecord => ({ ...(row.target_key ? { targetKey: row.target_key } : {}), targetId: row.target_id, subjectKind: row.subject_kind, subjectId: row.subject_id, channel: row.channel, targetKind: row.target_kind, status: row.status, label: row.label, addressJson: row.address_json, createdAt: row.created_at, updatedAt: row.updated_at, verifiedAt: row.verified_at });
+const mapTargetRow = (row: TargetRow): NotificationTargetRecord => ({ ...(row.target_key ? { targetKey: row.target_key } : {}), targetId: row.target_id, subjectKind: row.subject_kind, subjectId: row.subject_id, channel: row.channel, targetKind: row.target_kind, status: row.status, label: row.label, addressJson: row.address_json, createdAt: canonicalSqlTimestamp(row.created_at), updatedAt: canonicalSqlTimestamp(row.updated_at), verifiedAt: nullableSqlTimestamp(row.verified_at) });
 const mapSubscriptionRow = (row: SubscriptionRow): NotificationSubscriptionRecord => ({ ...(row.subscription_key ? { subscriptionKey: row.subscription_key } : {}), subscriptionId: row.subscription_id, subjectKind: row.subject_kind, subjectId: row.subject_id, channel: row.channel, asset: row.asset_scope as NotificationSubscriptionRecord['asset'], timeframe: row.timeframe_scope as NotificationSubscriptionRecord['timeframe'], ruleKey: row.rule_key_scope, enabled: row.enabled, minMaterialityScore: row.min_materiality_score, createdAt: row.created_at, updatedAt: row.updated_at });
 const mapInboxRow = (row: InboxRow): NotificationInboxRecord => ({ inboxId: row.inbox_id, targetId: row.target_id, decisionId: row.decision_id, decisionKey: row.decision_key, asset: row.asset as CanonicalAssetSymbol, timeframe: row.timeframe as Timeframe, ruleKey: row.rule_key, headline: row.headline, body: row.body, createdAt: row.created_at, readAt: row.read_at, archivedAt: row.archived_at, payloadJson: row.payload_json });
 const mapOrchestrationRunRow = (row: OrchestrationRunRow): PersistedNotificationOrchestrationRunRecord => ({ orchestrationRunId: row.orchestration_run_id, stage: row.stage, startedAt: row.started_at, endedAt: row.ended_at, durationMs: row.duration_ms, status: row.status, reasoningRunId: row.reasoning_run_id, policyEvaluationId: row.policy_evaluation_id, evaluatedDecisionCount: row.evaluated_decision_count, notifyingDecisionCount: row.notifying_decision_count, stagedOutboxCount: row.staged_outbox_count, dispatchedOutboxCount: row.dispatched_outbox_count, deliveredCount: row.delivered_count, failedCount: row.failed_count, deadCount: row.dead_count, expiredVerificationCount: row.expired_verification_count, failureReason: row.failure_reason, warningsJson: row.warnings_json, createdAt: row.created_at, reportJson: row.report_json });
@@ -47,6 +100,7 @@ export class SqlNotificationDecisionRepository implements NotificationDecisionRe
 }
 
 export class SqlNotificationTargetRepository implements NotificationTargetRepository {
+  async lockTargetById(targetId: string): Promise<NotificationTargetRecord | null> { const rows = await queryDb<TargetRow>(`SELECT target_id, target_key, subject_kind, subject_id, channel, target_kind, status, label, address_json::text as address_json, created_at, updated_at, verified_at FROM app_notification_targets WHERE target_id=$1 FOR UPDATE`, [targetId]); return rows[0] ? mapTargetRow(rows[0]) : null; }
   async saveTarget(record: NotificationTargetRecord): Promise<void> { await queryDb(`INSERT INTO app_notification_targets (target_id, target_key, subject_kind, subject_id, channel, target_kind, status, label, address_json, created_at, updated_at, verified_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT (target_id) DO UPDATE SET target_key=EXCLUDED.target_key, subject_kind=EXCLUDED.subject_kind, subject_id=EXCLUDED.subject_id, channel=EXCLUDED.channel, target_kind=EXCLUDED.target_kind, status=EXCLUDED.status, label=EXCLUDED.label, address_json=EXCLUDED.address_json, created_at=EXCLUDED.created_at, updated_at=EXCLUDED.updated_at, verified_at=EXCLUDED.verified_at`, [record.targetId, record.targetKey ?? null, record.subjectKind, record.subjectId, record.channel, record.targetKind, record.status, record.label, record.addressJson, record.createdAt, record.updatedAt, record.verifiedAt]); }
   async getTargetById(targetId: string): Promise<NotificationTargetRecord | null> { const rows = await queryDb<TargetRow>(`SELECT target_id, target_key, subject_kind, subject_id, channel, target_kind, status, label, address_json::text as address_json, created_at, updated_at, verified_at FROM app_notification_targets WHERE target_id=$1`, [targetId]); return rows[0] ? mapTargetRow(rows[0]) : null; }
   async getTargetByKey(targetKey: string): Promise<NotificationTargetRecord | null> { const rows = await queryDb<TargetRow>(`SELECT target_id, target_key, subject_kind, subject_id, channel, target_kind, status, label, address_json::text as address_json, created_at, updated_at, verified_at FROM app_notification_targets WHERE target_key=$1`, [targetKey]); return rows[0] ? mapTargetRow(rows[0]) : null; }
@@ -185,11 +239,15 @@ type ProviderEventRow = { provider_event_id: string; provider_kind: string; chan
 type ReceiptRow = { receipt_id: string; provider_event_id: string | null; provider_kind: string; channel: NotificationChannel; decision_id: string | null; decision_key: string | null; outbox_id: string | null; attempt_id: string | null; target_id: string | null; subject_kind: 'user'|'workspace'|'ops'|null; subject_id: string | null; provider_message_id: string | null; event_kind: import('@elceo/types').NotificationProviderEventKind; severity: import('@elceo/types').NotificationReceiptSeverity; occurred_at: string; reason_code: string | null; reason_message: string | null; raw_event_json: string; normalized_meta_json: string | null; created_at: string };
 type TargetHealthRow = { target_id: string; health_state: import('@elceo/types').NotificationTargetHealthState; last_receipt_kind: import('@elceo/types').NotificationProviderEventKind | null; last_receipt_at: string | null; soft_failure_count: number; hard_failure_count: number; complaint_count: number; unsubscribe_count: number; invalid_target_count: number; updated_at: string };
 
-const mapProviderEventRow = (row: ProviderEventRow) => ({ providerEventId: row.provider_event_id, providerKind: row.provider_kind, channel: row.channel, providerMessageId: row.provider_message_id, eventKind: row.event_kind, occurredAt: row.occurred_at, targetId: row.target_id, outboxId: row.outbox_id, attemptId: row.attempt_id, decisionId: row.decision_id, decisionKey: row.decision_key, reasonCode: row.reason_code, reasonMessage: row.reason_message, rawEventJson: row.raw_event_json, normalizedMetaJson: row.normalized_meta_json, createdAt: row.created_at });
-const mapReceiptRow = (row: ReceiptRow) => ({ receiptId: row.receipt_id, providerEventId: row.provider_event_id, providerKind: row.provider_kind, channel: row.channel, decisionId: row.decision_id, decisionKey: row.decision_key, outboxId: row.outbox_id, attemptId: row.attempt_id, targetId: row.target_id, subjectKind: row.subject_kind, subjectId: row.subject_id, providerMessageId: row.provider_message_id, eventKind: row.event_kind, severity: row.severity, occurredAt: row.occurred_at, reasonCode: row.reason_code, reasonMessage: row.reason_message, rawEventJson: row.raw_event_json, normalizedMetaJson: row.normalized_meta_json, createdAt: row.created_at });
-const mapTargetHealthRow = (row: TargetHealthRow) => ({ targetId: row.target_id, healthState: row.health_state, lastReceiptKind: row.last_receipt_kind, lastReceiptAt: row.last_receipt_at, softFailureCount: row.soft_failure_count, hardFailureCount: row.hard_failure_count, complaintCount: row.complaint_count, unsubscribeCount: row.unsubscribe_count, invalidTargetCount: row.invalid_target_count, updatedAt: row.updated_at });
+const mapProviderEventRow = (row: ProviderEventRow) => ({ providerEventId: row.provider_event_id, providerKind: row.provider_kind, channel: row.channel, providerMessageId: row.provider_message_id, eventKind: row.event_kind, occurredAt: canonicalSqlTimestamp(row.occurred_at), targetId: row.target_id, outboxId: row.outbox_id, attemptId: row.attempt_id, decisionId: row.decision_id, decisionKey: row.decision_key, reasonCode: row.reason_code, reasonMessage: row.reason_message, rawEventJson: row.raw_event_json, normalizedMetaJson: row.normalized_meta_json, createdAt: canonicalSqlTimestamp(row.created_at) });
+const mapReceiptRow = (row: ReceiptRow) => ({ receiptId: row.receipt_id, providerEventId: row.provider_event_id, providerKind: row.provider_kind, channel: row.channel, decisionId: row.decision_id, decisionKey: row.decision_key, outboxId: row.outbox_id, attemptId: row.attempt_id, targetId: row.target_id, subjectKind: row.subject_kind, subjectId: row.subject_id, providerMessageId: row.provider_message_id, eventKind: row.event_kind, severity: row.severity, occurredAt: canonicalSqlTimestamp(row.occurred_at), reasonCode: row.reason_code, reasonMessage: row.reason_message, rawEventJson: row.raw_event_json, normalizedMetaJson: row.normalized_meta_json, createdAt: canonicalSqlTimestamp(row.created_at) });
+const mapTargetHealthRow = (row: TargetHealthRow) => ({ targetId: row.target_id, healthState: row.health_state, lastReceiptKind: row.last_receipt_kind, lastReceiptAt: nullableSqlTimestamp(row.last_receipt_at), softFailureCount: row.soft_failure_count, hardFailureCount: row.hard_failure_count, complaintCount: row.complaint_count, unsubscribeCount: row.unsubscribe_count, invalidTargetCount: row.invalid_target_count, updatedAt: canonicalSqlTimestamp(row.updated_at) });
 
 export class SqlNotificationProviderEventRepository {
+  async claimProviderEvent(record: import('./contracts').PersistedNotificationProviderEventRecord): Promise<boolean> {
+    const rows = await queryDb(`INSERT INTO app_notification_provider_events (provider_event_id, provider_kind, channel, provider_message_id, event_kind, occurred_at, target_id, outbox_id, attempt_id, decision_id, decision_key, reason_code, reason_message, raw_event_json, normalized_meta_json, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14::jsonb,$15::jsonb,$16) ON CONFLICT (provider_event_id) DO NOTHING RETURNING provider_event_id`, [record.providerEventId, record.providerKind, record.channel, record.providerMessageId, record.eventKind, record.occurredAt, record.targetId, record.outboxId, record.attemptId, record.decisionId, record.decisionKey, record.reasonCode, record.reasonMessage, record.rawEventJson, record.normalizedMetaJson, record.createdAt]);
+    return rows.length === 1;
+  }
   async saveProviderEvent(record: import('./contracts').PersistedNotificationProviderEventRecord): Promise<void> {
     await queryDb(`INSERT INTO app_notification_provider_events (provider_event_id, provider_kind, channel, provider_message_id, event_kind, occurred_at, target_id, outbox_id, attempt_id, decision_id, decision_key, reason_code, reason_message, raw_event_json, normalized_meta_json, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14::jsonb,$15::jsonb,$16) ON CONFLICT (provider_event_id) DO UPDATE SET provider_kind=EXCLUDED.provider_kind, channel=EXCLUDED.channel, provider_message_id=EXCLUDED.provider_message_id, event_kind=EXCLUDED.event_kind, occurred_at=EXCLUDED.occurred_at, target_id=EXCLUDED.target_id, outbox_id=EXCLUDED.outbox_id, attempt_id=EXCLUDED.attempt_id, decision_id=EXCLUDED.decision_id, decision_key=EXCLUDED.decision_key, reason_code=EXCLUDED.reason_code, reason_message=EXCLUDED.reason_message, raw_event_json=EXCLUDED.raw_event_json, normalized_meta_json=EXCLUDED.normalized_meta_json, created_at=EXCLUDED.created_at`, [record.providerEventId, record.providerKind, record.channel, record.providerMessageId, record.eventKind, record.occurredAt, record.targetId, record.outboxId, record.attemptId, record.decisionId, record.decisionKey, record.reasonCode, record.reasonMessage, record.rawEventJson, record.normalizedMetaJson, record.createdAt]);
   }

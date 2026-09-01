@@ -14,15 +14,19 @@ export class CanonicalNotificationFeedbackBoundaryService {
     if (!this.repositories.providerEventRepository || !this.repositories.receiptRepository || !this.repositories.targetHealthRepository) {
       throw new Error('missing_feedback_repositories');
     }
-    return processProviderEvent({ providerKind, channel, rawEvent, ...(receivedAt ? { receivedAt } : {}) }, {
-      providerEventRepository: this.repositories.providerEventRepository,
-      receiptRepository: this.repositories.receiptRepository,
-      targetHealthRepository: this.repositories.targetHealthRepository,
+    const providerEventRepository = this.repositories.providerEventRepository;
+    const receiptRepository = this.repositories.receiptRepository;
+    const targetHealthRepository = this.repositories.targetHealthRepository;
+    const operation = () => processProviderEvent({ providerKind, channel, rawEvent, ...(receivedAt ? { receivedAt } : {}) }, {
+      providerEventRepository,
+      receiptRepository,
+      targetHealthRepository,
       targetRepository: this.repositories.targetRepository,
       outboxRepository: this.repositories.outboxRepository,
       outboxAttemptRepository: this.repositories.outboxAttemptRepository,
       decisionRepository: this.repositories.decisionRepository
     });
+    return this.repositories.feedbackTransactionRepository?.withTransaction(operation) ?? operation();
   }
 
   getProviderEventReplayById(providerEventId: string) { if (!this.repositories.providerEventRepository) throw new Error('missing_feedback_repositories'); return getFeedbackProviderEventReplayById(providerEventId, this.repositories.providerEventRepository); }

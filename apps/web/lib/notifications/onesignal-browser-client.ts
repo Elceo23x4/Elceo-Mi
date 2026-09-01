@@ -26,9 +26,14 @@ async function backend(operation: 'bind' | 'unbind', subscriptionId: string): Pr
 function synchronize(nextId: string | null): Promise<void> {
   const operation = synchronizationQueue.then(async () => {
     const confirmed = boundSubscriptionId;
-    if (confirmed && confirmed !== nextId) await backend('unbind', confirmed);
-    if (nextId && confirmed !== nextId) await backend('bind', nextId);
-    boundSubscriptionId = nextId;
+    if (confirmed && confirmed !== nextId) {
+      await backend('unbind', confirmed);
+      boundSubscriptionId = null;
+    }
+    if (nextId && boundSubscriptionId !== nextId) {
+      await backend('bind', nextId);
+      boundSubscriptionId = nextId;
+    }
   });
   synchronizationQueue = operation.catch(() => undefined);
   return operation;

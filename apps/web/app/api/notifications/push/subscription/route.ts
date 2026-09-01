@@ -8,6 +8,7 @@ function parseBody(value: unknown): { subscriptionId: string } {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('validation_error:invalid_body');
   const body = value as Record<string, unknown>;
   if (Object.keys(body).length !== 1 || typeof body.subscriptionId !== 'string') throw new Error('validation_error:subscriptionId_only');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.subscriptionId.trim())) throw new Error('validation_error:invalid_subscription_id');
   return { subscriptionId: body.subscriptionId };
 }
 
@@ -15,7 +16,7 @@ async function mutate(request: Request, operation: 'bind' | 'unbind'): Promise<R
   const subject = await requireAuthenticatedSubject();
   const body = parseBody(await parseJsonBody(request));
   const opaqueKey = `push-${operation}-${createHash('sha256').update(`${subject.subjectId}:${operation}:${body.subscriptionId.trim().toLowerCase()}`).digest('hex')}`;
-  const securedRequest = new Request(request, { headers: new Headers(request.headers) });
+  const securedRequest = new Request(request.url, { method: request.method, headers: new Headers(request.headers) });
   securedRequest.headers.set('Idempotency-Key', opaqueKey);
   const actor = { actorKind: 'user' as const, actorId: subject.userId, subjectId: subject.subjectId };
   const security = await requireSecurityDecision({ request: securedRequest, routePath: '/api/notifications/push/subscription', method: operation === 'bind' ? 'PUT' : 'DELETE', actionKind: 'notification_target_write', actor, subjectId: subject.subjectId, requestBody: { operation, subscriptionChecksum: createHash('sha256').update(body.subscriptionId).digest('hex') } });

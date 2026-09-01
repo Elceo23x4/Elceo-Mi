@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createHmac } from 'node:crypto';
 import { guardRouteCommercialEntitlement } from '../lib/server/access/route-entitlement';
 import { buildRouteInventory, type RuntimeEnforcementExpectation, type RouteRuntimeAssertion } from '../lib/server/access/route-policy-inventory';
 import { clearAuthTestOverrides, setAuthTestOverrides } from '../lib/server/auth/subject';
@@ -60,6 +61,9 @@ import * as notificationsVerificationIssueRoute from '../app/api/notifications/v
 import * as notificationsVerificationConsumeRoute from '../app/api/notifications/verification/consume/route';
 import * as notificationsHealthRoute from '../app/api/notifications/health/route';
 import * as notificationsDispatchRoute from '../app/api/notifications/delivery/dispatch/route';
+import * as notificationsPushSubscriptionRoute from '../app/api/notifications/push/subscription/route';
+import * as resendWebhookRoute from '../app/api/notifications/providers/resend/webhook/route';
+import * as postmarkWebhookRoute from '../app/api/notifications/providers/postmark/webhook/route';
 
 import * as refreshLatestRoute from '../app/api/refresh/latest/route';
 import * as refreshHistoryRoute from '../app/api/refresh/history/route';
@@ -154,6 +158,8 @@ let replayResponseJson = '{"ok":true,"data":{"run":{"runId":"replayed"}}}';
 let securityFailedCount = 0;
 let securityAuditCount = 0;
 let latestSecurityActionKind: string | null = null;
+let webhookFeedbackMutations = 0;
+const webhookEventIds = new Set<string>();
 const idempotencyRecords = new Map<string, { requestHash: string; responseJson: string; httpStatus: number }>();
 
 function assertNoSensitiveLeak(response: unknown): void {
@@ -362,6 +368,8 @@ const mockNotificationRuntime = {
     enableSubscription: async (subscriptionId: string) => { if (subscriptionId === 'sub-foreign') throw new Error('forbidden'); },
     disableSubscription: async (subscriptionId: string) => { if (subscriptionId === 'sub-foreign') throw new Error('forbidden'); },
     updateSubscriptionThreshold: async (subscriptionId: string) => { if (subscriptionId === 'sub-foreign') throw new Error('forbidden'); }
+    ,bindPushSubscription: async (subjectId: string, subscriptionId: string) => { if(!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(subscriptionId)) throw new Error('validation_error:invalid_subscription_id'); return { targetId: `push-${subjectId}`, subjectId, addressJson: JSON.stringify({ subscriptionId }), status: 'active' }; }
+    ,unbindPushSubscription: async (_subjectId: string, _subscriptionId: string) => ({ detached: true })
   },
   verification: {
     issueTargetVerification: async () => ({ verificationId: 'v-1' }),
@@ -375,7 +383,7 @@ const mockNotificationRuntime = {
     getNotificationFeedbackSummary: async () => ({ summary: true }),
     listTargetsWithDegradedHealth: async () => [],
     listRecentCriticalReceipts: async () => [],
-    processProviderEvent: async (_providerKind?: string, _channel?: string, _rawEvent?: unknown) => ({ accepted: true })
+    processProviderEvent: async (_providerKind?: string, _channel?: string, rawEvent?: unknown) => { const id=(rawEvent as {eventId?:string})?.eventId ?? 'none'; if(!webhookEventIds.has(id)){webhookEventIds.add(id);webhookFeedbackMutations++;} return { accepted: true, providerEventId:id }; }
   }
 };
 const mockReasoningRuntime = {
@@ -550,6 +558,33 @@ export async function runRouteRuntimeTests(): Promise<void> {
   securityDecisionMode = 'allowed';
   securityCompletedCount = 0;
   securityCompletedWithResponseCount = 0;
+  const pushId = '123e4567-e89b-42d3-a456-426614174000';
+  setAuthTestOverrides({ subjectResolver: async () => null });
+  assert.equal((await notificationsPushSubscriptionRoute.PUT(request('https://x/api/notifications/push/subscription',{method:'PUT',body:JSON.stringify({subscriptionId:pushId})}))).status,401);
+  assert.equal((await notificationsPushSubscriptionRoute.DELETE(request('https://x/api/notifications/push/subscription',{method:'DELETE',body:JSON.stringify({subscriptionId:pushId})}))).status,401);
+  setAuthTestOverrides({ subjectResolver: async () => subject, internalToken: 'internal-token' });
+  assert.equal((await notificationsPushSubscriptionRoute.PUT(request('https://x/api/notifications/push/subscription',{method:'PUT',body:JSON.stringify({subscriptionId:'invalid'})}))).status,400);
+  for (const authorityField of ['userId','subjectId','subjectKind']) assert.equal((await notificationsPushSubscriptionRoute.PUT(request('https://x/api/notifications/push/subscription',{method:'PUT',body:JSON.stringify({subscriptionId:pushId,[authorityField]:'attacker'})}))).status,400);
+  const pushBind = await notificationsPushSubscriptionRoute.PUT(request('https://x/api/notifications/push/subscription',{method:'PUT',body:JSON.stringify({subscriptionId:pushId})}));
+  assert.equal(pushBind.status,200); assert.equal((((await readJson(pushBind)).data as {target:{subjectId:string}}).target.subjectId),subject.subjectId);
+  assert.equal((await notificationsPushSubscriptionRoute.PUT(request('https://x/api/notifications/push/subscription',{method:'PUT',body:JSON.stringify({subscriptionId:pushId})}))).status,200);
+  assert.equal((await notificationsPushSubscriptionRoute.DELETE(request('https://x/api/notifications/push/subscription',{method:'DELETE',body:JSON.stringify({subscriptionId:pushId})}))).status,200);
+  assert.equal((await notificationsPushSubscriptionRoute.DELETE(request('https://x/api/notifications/push/subscription',{method:'DELETE',body:JSON.stringify({subscriptionId:pushId})}))).status,200);
+  webhookFeedbackMutations=0; webhookEventIds.clear();
+  const webhookEnv={RESEND_WEBHOOK_SECRET:process.env.RESEND_WEBHOOK_SECRET,POSTMARK_WEBHOOK_USERNAME:process.env.POSTMARK_WEBHOOK_USERNAME,POSTMARK_WEBHOOK_PASSWORD:process.env.POSTMARK_WEBHOOK_PASSWORD};
+  const resendKey=Buffer.from('0123456789abcdef0123456789abcdef'); process.env.RESEND_WEBHOOK_SECRET=`whsec_${resendKey.toString('base64')}`;
+  const resendBody=JSON.stringify({type:'email.delivered',created_at:'2026-08-01T00:00:00.000Z',data:{email_id:'message-1'}}); const resendId='resend-route-event'; const resendTimestamp=String(Math.floor(Date.now()/1000)); const resendSignature=`v1,${createHmac('sha256',resendKey).update(`${resendId}.${resendTimestamp}.${resendBody}`).digest('base64')}`;
+  const resendRequest=()=>new Request('https://x/api/notifications/providers/resend/webhook',{method:'POST',headers:{'svix-id':resendId,'svix-timestamp':resendTimestamp,'svix-signature':resendSignature},body:resendBody});
+  assert.equal((await resendWebhookRoute.POST(resendRequest())).status,200); await Promise.all([resendWebhookRoute.POST(resendRequest()),resendWebhookRoute.POST(resendRequest())]); assert.equal(webhookFeedbackMutations,1);
+  const beforeInvalidResend=webhookFeedbackMutations; assert.equal((await resendWebhookRoute.POST(new Request('https://x/api/notifications/providers/resend/webhook',{method:'POST',headers:{'svix-id':'bad','svix-timestamp':resendTimestamp,'svix-signature':'v1,bad'},body:resendBody}))).status,401); assert.equal(webhookFeedbackMutations,beforeInvalidResend);
+  assert.equal((await resendWebhookRoute.POST(new Request('https://x/api/notifications/providers/resend/webhook',{method:'POST',headers:{'svix-id':resendId,'svix-timestamp':resendTimestamp,'svix-signature':`v1,${createHmac('sha256',resendKey).update(`${resendId}.${resendTimestamp}.{`).digest('base64')}`},body:'{'}))).status,400);
+  const unsupportedResendBody=JSON.stringify({type:'email.opened',data:{email_id:'message-1'}}); assert.equal((await resendWebhookRoute.POST(new Request('https://x/api/notifications/providers/resend/webhook',{method:'POST',headers:{'svix-id':'unsupported','svix-timestamp':resendTimestamp,'svix-signature':`v1,${createHmac('sha256',resendKey).update(`unsupported.${resendTimestamp}.${unsupportedResendBody}`).digest('base64')}`},body:unsupportedResendBody}))).status,400);
+  process.env.POSTMARK_WEBHOOK_USERNAME='user'; process.env.POSTMARK_WEBHOOK_PASSWORD='pass'; const postmarkAuth=`Basic ${Buffer.from('user:pass').toString('base64')}`; const postmarkBody=JSON.stringify({ID:44,RecordType:'Delivery',MessageID:'message-1',DeliveredAt:'2026-08-01T00:00:00.000Z'}); const postmarkRequest=()=>new Request('https://x/api/notifications/providers/postmark/webhook',{method:'POST',headers:{authorization:postmarkAuth},body:postmarkBody});
+  assert.equal((await postmarkWebhookRoute.POST(postmarkRequest())).status,200); await Promise.all([postmarkWebhookRoute.POST(postmarkRequest()),postmarkWebhookRoute.POST(postmarkRequest())]); assert.equal(webhookFeedbackMutations,2);
+  const beforeInvalidPostmark=webhookFeedbackMutations; assert.equal((await postmarkWebhookRoute.POST(new Request('https://x/api/notifications/providers/postmark/webhook',{method:'POST',headers:{authorization:'Basic bad'},body:postmarkBody}))).status,401); assert.equal(webhookFeedbackMutations,beforeInvalidPostmark);
+  assert.equal((await postmarkWebhookRoute.POST(new Request('https://x/api/notifications/providers/postmark/webhook',{method:'POST',headers:{authorization:postmarkAuth},body:'{'}))).status,400);
+  assert.equal((await postmarkWebhookRoute.POST(new Request('https://x/api/notifications/providers/postmark/webhook',{method:'POST',headers:{authorization:postmarkAuth},body:JSON.stringify({RecordType:'Open',MessageID:'message-1'})}))).status,400);
+  Object.assign(process.env,webhookEnv);
   replayMode = 'stored';
   securityFailedCount = 0;
   securityAuditCount = 0;

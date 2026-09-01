@@ -5,7 +5,9 @@ import nextConfig from '../apps/web/next.config.mjs';
 
 const root = path.resolve('apps/web/.next/static');
 const forbidden = ['RESEND_API_KEY','RESEND_WEBHOOK_SECRET','POSTMARK_SERVER_TOKEN','POSTMARK_WEBHOOK_USERNAME','POSTMARK_WEBHOOK_PASSWORD','ONESIGNAL_APP_API_KEY','ONESIGNAL_REST_API_KEY','ONESIGNAL_WEBHOOK_CORRELATION_SECRET','DATABASE_URL','AUTH_SECRET'];
-const sentinels = forbidden.map((name) => `rc_i3_client_secret_sentinel_${name.toLowerCase()}`);
+const sentinels = forbidden.map((name) => name === 'DATABASE_URL'
+  ? 'postgresql://rc_i3_client_secret_sentinel_database_url@localhost/rc_i3'
+  : `rc_i3_client_secret_sentinel_${name.toLowerCase()}`);
 async function files(directory) { const output=[]; for (const name of await readdir(directory)) { const full=path.join(directory,name); (await stat(full)).isDirectory() ? output.push(...await files(full)) : output.push(full); } return output; }
 for (const file of await files(root)) {
   if (!/\.(?:js|css|json|map)$/.test(file)) continue;

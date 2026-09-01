@@ -10,6 +10,8 @@ const INITIALIZATION_TIMEOUT_MS = 10_000;
 let initialization: Promise<OneSignalCapabilityState> | null = null;
 let sdkInstance: OneSignalSdk | null = null;
 let boundSubscriptionId: string | null = null;
+let capabilityState: OneSignalCapabilityState = 'unsubscribed';
+let synchronizationQueue: Promise<void> = Promise.resolve();
 
 const standalone = () => window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
 const appleMobile = () => /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -17,13 +19,25 @@ const iosHomeScreenRequired = () => appleMobile() && !standalone();
 const permissionState = (sdk: OneSignalSdk): OneSignalCapabilityState => sdk.Notifications.permissionNative === 'denied' ? 'permission_denied' : sdk.Notifications.permission ? (sdk.User.PushSubscription.id ? 'subscribed' : 'unsubscribed') : 'permission_default';
 
 async function backend(operation: 'bind' | 'unbind', subscriptionId: string): Promise<void> {
-  await fetch('/api/notifications/push/subscription', { method: operation === 'bind' ? 'PUT' : 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ subscriptionId }) });
+  const response = await fetch('/api/notifications/push/subscription', { method: operation === 'bind' ? 'PUT' : 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ subscriptionId }) });
+  if (!response.ok) throw new Error(`onesignal_backend_sync_failed:${response.status}`);
 }
 
-async function synchronize(nextId: string | null): Promise<void> {
-  if (boundSubscriptionId && boundSubscriptionId !== nextId) await backend('unbind', boundSubscriptionId);
-  if (nextId && boundSubscriptionId !== nextId) await backend('bind', nextId);
-  boundSubscriptionId = nextId;
+function synchronize(nextId: string | null): Promise<void> {
+  const operation = synchronizationQueue.then(async () => {
+    const confirmed = boundSubscriptionId;
+    if (confirmed && confirmed !== nextId) await backend('unbind', confirmed);
+    if (nextId && confirmed !== nextId) await backend('bind', nextId);
+    boundSubscriptionId = nextId;
+  });
+  synchronizationQueue = operation.catch(() => undefined);
+  return operation;
+}
+
+export const getOneSignalBrowserState = () => ({ capabilityState, boundSubscriptionId });
+export const __synchronizeOneSignalSubscriptionForTests = synchronize;
+export function __resetOneSignalBrowserForTests(): void {
+  initialization = null; sdkInstance = null; boundSubscriptionId = null; capabilityState = 'unsubscribed'; synchronizationQueue = Promise.resolve();
 }
 
 export function initializeOneSignalBrowser(): Promise<OneSignalCapabilityState> {
@@ -34,15 +48,20 @@ export function initializeOneSignalBrowser(): Promise<OneSignalCapabilityState> 
     if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('Notification' in window)) return resolve('unsupported');
     if (iosHomeScreenRequired()) return resolve('ios_home_screen_required');
     let settled = false;
-    const finish = (state: OneSignalCapabilityState) => { if (!settled) { settled = true; clearTimeout(timeout); resolve(state); } };
+    const finish = (state: OneSignalCapabilityState) => { capabilityState = state; if (!settled) { settled = true; clearTimeout(timeout); resolve(state); } };
     const timeout = window.setTimeout(() => finish('initialization_error'), INITIALIZATION_TIMEOUT_MS);
     window.OneSignalDeferred = window.OneSignalDeferred ?? [];
     window.OneSignalDeferred.push(async (sdk) => {
       try {
         await sdk.init({ appId, notifyButton: { enable: false }, serviceWorkerPath: '/OneSignalSDKWorker.js' });
         sdkInstance = sdk;
-        boundSubscriptionId = sdk.User.PushSubscription.id ?? null;
-        sdk.User.PushSubscription.addEventListener('change', (event) => { void synchronize(event.current?.id ?? null); });
+        const existingId = sdk.User.PushSubscription.id ?? null;
+        if (existingId) await synchronize(existingId);
+        sdk.User.PushSubscription.addEventListener('change', (event) => {
+          void synchronize(event.current?.id ?? null)
+            .then(() => { capabilityState = permissionState(sdk); })
+            .catch(() => { capabilityState = 'initialization_error'; });
+        });
         finish(permissionState(sdk));
       } catch { finish('initialization_error'); }
     });
@@ -59,12 +78,11 @@ export function initializeOneSignalBrowser(): Promise<OneSignalCapabilityState> 
 export async function requestOneSignalPermission(): Promise<OneSignalCapabilityState> {
   const state = await initializeOneSignalBrowser();
   if (!sdkInstance || ['configuration_missing', 'unsupported', 'ios_home_screen_required', 'initialization_error'].includes(state)) return state;
-  try { await sdkInstance.Notifications.requestPermission(); await synchronize(sdkInstance.User.PushSubscription.id ?? null); return permissionState(sdkInstance); }
+  try { await sdkInstance.Notifications.requestPermission(); await synchronize(sdkInstance.User.PushSubscription.id ?? null); capabilityState = permissionState(sdkInstance); return capabilityState; }
   catch { return 'initialization_error'; }
 }
 
 /** Detaches ELCEO ownership only; it intentionally does not opt the browser out globally. */
 export async function detachOneSignalOnLogout(): Promise<void> {
-  if (boundSubscriptionId) await backend('unbind', boundSubscriptionId);
-  boundSubscriptionId = null;
+  await synchronize(null);
 }

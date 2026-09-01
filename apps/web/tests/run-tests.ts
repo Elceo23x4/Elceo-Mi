@@ -13,6 +13,8 @@ import('./route-runtime.test.js').then(({ runRouteRuntimeTests }) => runRouteRun
   .then(({ runBillingHttpContractAcceptance }) => runBillingHttpContractAcceptance())
   .then(() => import('./pwa-icon-route.test.js'))
   .then(({ runPwaIconRouteTests }) => runPwaIconRouteTests())
+  .then(() => import('./onesignal-browser-client.test.js'))
+  .then(({ runOneSignalBrowserClientTests }) => runOneSignalBrowserClientTests())
   .then(() => {
     console.log('web route runtime tests passed');
   })

@@ -58,6 +58,7 @@ export class MemoryNotificationTargetRepository implements NotificationTargetRep
 
   async saveTarget(record: NotificationTargetRecord): Promise<void> { this.byId.set(record.targetId, record); if (record.targetKey) this.idByKey.set(record.targetKey, record.targetId); }
   async getTargetById(targetId: string): Promise<NotificationTargetRecord | null> { return this.byId.get(targetId) ?? null; }
+  async getTargetForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string, targetId: string): Promise<NotificationTargetRecord | null> { const row = this.byId.get(targetId); return row?.subjectKind === subjectKind && row.subjectId === subjectId ? row : null; }
   async getTargetByKey(targetKey: string): Promise<NotificationTargetRecord | null> { const id = this.idByKey.get(targetKey); return id ? this.byId.get(id) ?? null : null; }
   async upsertTargetByKey(record: NotificationTargetRecord): Promise<void> {
     const byKey = record.targetKey ? await this.getTargetByKey(record.targetKey) : null;
@@ -74,6 +75,7 @@ export class MemoryNotificationTargetRepository implements NotificationTargetRep
     if (!current) return;
     this.byId.set(targetId, { ...current, status, updatedAt, verifiedAt: verifiedAt ?? current.verifiedAt });
   }
+  async updateTargetStatusForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string, targetId: string, status: NotificationTargetChannelStatus, updatedAt: string, verifiedAt?: string): Promise<boolean> { const current = await this.getTargetForSubject(subjectKind, subjectId, targetId); if (!current) return false; this.byId.set(targetId, { ...current, status, updatedAt, verifiedAt: verifiedAt ?? current.verifiedAt }); return true; }
   async listTargetsForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string): Promise<NotificationTargetRecord[]> {
     return [...this.byId.values()].filter((row) => row.subjectKind === subjectKind && row.subjectId === subjectId).sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || a.targetId.localeCompare(b.targetId));
   }

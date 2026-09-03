@@ -31,14 +31,17 @@ export async function runNotificationManagementServiceTests(): Promise<void> {
   assert(email.status === 'unverified', 'email target should default to unverified');
 
   let blocked = false;
-  try { await targetService.enableTarget(email.targetId, '2026-01-15T10:00:02.000Z'); } catch { blocked = true; }
+  try { await targetService.enableTargetForSubject('user', 'u1', email.targetId, '2026-01-15T10:00:02.000Z'); } catch { blocked = true; }
   assert(blocked, 'cannot activate unverified email target');
 
   await targetService.verifyTarget(email.targetId, '2026-01-15T10:00:03.000Z');
   const verifiedEmail = await targetRepository.getTargetById(email.targetId);
   assert(verifiedEmail?.status === 'active' && verifiedEmail.verifiedAt === '2026-01-15T10:00:03.000Z', 'verifyTarget should activate target');
 
-  await targetService.disableTarget(email.targetId, '2026-01-15T10:00:04.000Z');
+  await targetService.disableTargetForSubject('user', 'u1', email.targetId, '2026-01-15T10:00:04.000Z');
+  let foreignDenied = false;
+  try { await targetService.disableTargetForSubject('user', 'USER_A', email.targetId, '2026-01-15T10:00:03.500Z'); } catch { foreignDenied = true; }
+  assert(foreignDenied, 'USER_A cannot disable USER_B target');
   const disabledEmail = await targetRepository.getTargetById(email.targetId);
   assert(disabledEmail?.status === 'disabled' && disabledEmail.verifiedAt === '2026-01-15T10:00:03.000Z', 'disable should preserve verifiedAt');
 

@@ -5,9 +5,9 @@ import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, 
 import { validateWatchlistUpdateRequest } from '@elceo/schemas';
 
 export const GET = withApiErrorBoundary(async (_request: Request, context: { params: Promise<{ entryId: string }> }) => {
-  await requireAuthenticatedSubject();
+  const subject = await requireAuthenticatedSubject();
   const { entryId } = await context.params;
-  const replay = await getApplicationStateRuntime().portfolio.getPortfolioEntityReplay('watchlist_entry', entryId);
+  const replay = await getApplicationStateRuntime().portfolio.getPortfolioEntityReplay('user', subject.subjectId, 'watchlist_entry', entryId);
   if (!replay) throw new Error('not_found');
   return jsonSuccess({ entry: replay.current, replay });
 });
@@ -20,7 +20,7 @@ export const PATCH = withApiErrorBoundary(async (request: Request, context: { pa
   const security = await requireSecurityDecision({ request, routePath: '/api/portfolio/watchlist/[entryId]', method: 'PATCH', actionKind: 'portfolio_watchlist_write', actor, subjectId: subject.subjectId, requestBody: patch });
   if (!security.ok) return security.response;
   try {
-    const entry = await getApplicationStateRuntime().portfolio.updateWatchlistEntry(entryId, patch, { actorKind: 'user', actorId: subject.userId });
+    const entry = await getApplicationStateRuntime().portfolio.updateWatchlistEntry('user', subject.subjectId, entryId, patch, { actorKind: 'user', actorId: subject.userId });
     const envelope = { ok: true as const, data: { entry } };
 
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { entry }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });

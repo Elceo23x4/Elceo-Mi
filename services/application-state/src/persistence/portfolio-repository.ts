@@ -51,8 +51,8 @@ export class MemoryPortfolioRepository implements PortfolioRepository {
     this.watchlist.set(record.entryId, record);
   }
 
-  async getWatchlistEntryById(entryId: string): Promise<PersistedWatchlistEntryRecord | null> {
-    return this.watchlist.get(entryId) ?? null;
+  async getWatchlistEntryForSubject(subjectKind: PersistedWatchlistEntryRecord['subjectKind'], subjectId: string, entryId: string): Promise<PersistedWatchlistEntryRecord | null> {
+    const row = this.watchlist.get(entryId); return row?.subjectKind === subjectKind && row.subjectId === subjectId ? row : null;
   }
 
   async listWatchlistEntries(query: PortfolioEntityListQuery): Promise<PersistedWatchlistEntryRecord[]> {
@@ -63,8 +63,8 @@ export class MemoryPortfolioRepository implements PortfolioRepository {
     this.positions.set(record.positionId, record);
   }
 
-  async getPositionById(positionId: string): Promise<PersistedPositionRecord | null> {
-    return this.positions.get(positionId) ?? null;
+  async getPositionForSubject(subjectKind: PersistedPositionRecord['subjectKind'], subjectId: string, positionId: string): Promise<PersistedPositionRecord | null> {
+    const row = this.positions.get(positionId); return row?.subjectKind === subjectKind && row.subjectId === subjectId ? row : null;
   }
 
   async listPositions(query: PortfolioEntityListQuery): Promise<PersistedPositionRecord[]> {
@@ -75,8 +75,8 @@ export class MemoryPortfolioRepository implements PortfolioRepository {
     this.actions.set(record.actionId, record);
   }
 
-  async getActionItemById(actionId: string): Promise<PersistedPortfolioActionItemRecord | null> {
-    return this.actions.get(actionId) ?? null;
+  async getActionItemForSubject(subjectKind: PersistedPortfolioActionItemRecord['subjectKind'], subjectId: string, actionId: string): Promise<PersistedPortfolioActionItemRecord | null> {
+    const row = this.actions.get(actionId); return row?.subjectKind === subjectKind && row.subjectId === subjectId ? row : null;
   }
 
   async listActionItems(query: PortfolioEntityListQuery): Promise<PersistedPortfolioActionItemRecord[]> {
@@ -96,7 +96,9 @@ export class MemoryPortfolioRepository implements PortfolioRepository {
     this.revisions.set(record.revisionId, record);
   }
 
-  async listRevisionsForEntity(entityKind: PortfolioEntityKind, entityId: string): Promise<PersistedPortfolioRevisionRecord[]> {
+  async listRevisionsForEntityForSubject(subjectKind: PersistedWatchlistEntryRecord['subjectKind'], subjectId: string, entityKind: PortfolioEntityKind, entityId: string): Promise<PersistedPortfolioRevisionRecord[]> {
+    const owned = entityKind === 'watchlist_entry' ? this.watchlist.get(entityId) : entityKind === 'position' ? this.positions.get(entityId) : this.actions.get(entityId);
+    if (!owned || owned.subjectKind !== subjectKind || owned.subjectId !== subjectId) return [];
     return [...this.revisions.values()].filter((item) => item.entityKind === entityKind && item.entityId === entityId).sort(byRevisionAsc);
   }
 
@@ -306,8 +308,6 @@ export class SqlPortfolioRepository implements PortfolioRepository {
         created_at, updated_at, entry_json
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16::jsonb)
       ON CONFLICT (entry_id) DO UPDATE SET
-        subject_kind=EXCLUDED.subject_kind,
-        subject_id=EXCLUDED.subject_id,
         asset=EXCLUDED.asset,
         timeframe=EXCLUDED.timeframe,
         priority=EXCLUDED.priority,
@@ -320,7 +320,8 @@ export class SqlPortfolioRepository implements PortfolioRepository {
         linked_journal_case_id=EXCLUDED.linked_journal_case_id,
         created_at=EXCLUDED.created_at,
         updated_at=EXCLUDED.updated_at,
-        entry_json=EXCLUDED.entry_json`,
+        entry_json=EXCLUDED.entry_json
+      WHERE app_portfolio_watchlist_entries.subject_kind=EXCLUDED.subject_kind AND app_portfolio_watchlist_entries.subject_id=EXCLUDED.subject_id`,
       [
         record.entryId, record.subjectKind, record.subjectId, record.asset, record.timeframe, record.priority, record.status, record.thesisHealth, record.note,
         record.linkedReasoningRunId, record.linkedSnapshotId, record.linkedDriftId, record.linkedJournalCaseId,
@@ -329,13 +330,13 @@ export class SqlPortfolioRepository implements PortfolioRepository {
     );
   }
 
-  async getWatchlistEntryById(entryId: string): Promise<PersistedWatchlistEntryRecord | null> {
+  async getWatchlistEntryForSubject(subjectKind: PersistedWatchlistEntryRecord['subjectKind'], subjectId: string, entryId: string): Promise<PersistedWatchlistEntryRecord | null> {
     const rows = await queryDb<WatchlistRow>(
       `SELECT entry_id, subject_kind, subject_id, asset, timeframe, priority, status, thesis_health, note,
         linked_reasoning_run_id, linked_snapshot_id, linked_drift_id, linked_journal_case_id,
         created_at, updated_at, entry_json::text AS entry_json
-       FROM app_portfolio_watchlist_entries WHERE entry_id = $1`,
-      [entryId]
+       FROM app_portfolio_watchlist_entries WHERE entry_id = $1 AND subject_kind = $2 AND subject_id = $3`,
+      [entryId, subjectKind, subjectId]
     );
     return rows[0] ? mapWatchlist(rows[0]) : null;
   }
@@ -391,8 +392,6 @@ export class SqlPortfolioRepository implements PortfolioRepository {
         note, position_json
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21::jsonb)
       ON CONFLICT (position_id) DO UPDATE SET
-        subject_kind=EXCLUDED.subject_kind,
-        subject_id=EXCLUDED.subject_id,
         asset=EXCLUDED.asset,
         timeframe=EXCLUDED.timeframe,
         status=EXCLUDED.status,
@@ -410,7 +409,8 @@ export class SqlPortfolioRepository implements PortfolioRepository {
         linked_snapshot_id=EXCLUDED.linked_snapshot_id,
         linked_drift_id=EXCLUDED.linked_drift_id,
         note=EXCLUDED.note,
-        position_json=EXCLUDED.position_json`,
+        position_json=EXCLUDED.position_json
+      WHERE app_portfolio_positions.subject_kind=EXCLUDED.subject_kind AND app_portfolio_positions.subject_id=EXCLUDED.subject_id`,
       [
         record.positionId, record.subjectKind, record.subjectId, record.asset, record.timeframe, record.status, record.direction,
         record.entryPrice, record.stopLoss, record.takeProfitLevelsJson, record.size, record.openedAt, record.updatedAt, record.closedAt, record.thesisHealth,
@@ -420,15 +420,15 @@ export class SqlPortfolioRepository implements PortfolioRepository {
     );
   }
 
-  async getPositionById(positionId: string): Promise<PersistedPositionRecord | null> {
+  async getPositionForSubject(subjectKind: PersistedPositionRecord['subjectKind'], subjectId: string, positionId: string): Promise<PersistedPositionRecord | null> {
     const rows = await queryDb<PositionRow>(
       `SELECT position_id, subject_kind, subject_id, asset, timeframe, status, direction,
         entry_price, stop_loss, take_profit_levels_json::text AS take_profit_levels_json,
         size, opened_at, updated_at, closed_at, thesis_health,
         linked_journal_case_id, linked_reasoning_run_id, linked_snapshot_id, linked_drift_id,
         note, position_json::text AS position_json
-      FROM app_portfolio_positions WHERE position_id = $1`,
-      [positionId]
+      FROM app_portfolio_positions WHERE position_id = $1 AND subject_kind = $2 AND subject_id = $3`,
+      [positionId, subjectKind, subjectId]
     );
     return rows[0] ? mapPosition(rows[0]) : null;
   }
@@ -486,8 +486,6 @@ export class SqlPortfolioRepository implements PortfolioRepository {
         completed_at, dismissed_at, action_json
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20::jsonb)
       ON CONFLICT (action_id) DO UPDATE SET
-        subject_kind=EXCLUDED.subject_kind,
-        subject_id=EXCLUDED.subject_id,
         kind=EXCLUDED.kind,
         status=EXCLUDED.status,
         priority=EXCLUDED.priority,
@@ -504,7 +502,8 @@ export class SqlPortfolioRepository implements PortfolioRepository {
         updated_at=EXCLUDED.updated_at,
         completed_at=EXCLUDED.completed_at,
         dismissed_at=EXCLUDED.dismissed_at,
-        action_json=EXCLUDED.action_json`,
+        action_json=EXCLUDED.action_json
+      WHERE app_portfolio_action_items.subject_kind=EXCLUDED.subject_kind AND app_portfolio_action_items.subject_id=EXCLUDED.subject_id`,
       [
         record.actionId, record.subjectKind, record.subjectId, record.kind, record.status, record.priority, record.asset, record.timeframe,
         record.headline, record.rationale, record.linkedEntryId, record.linkedPositionId, record.linkedJournalCaseId,
@@ -514,14 +513,14 @@ export class SqlPortfolioRepository implements PortfolioRepository {
     );
   }
 
-  async getActionItemById(actionId: string): Promise<PersistedPortfolioActionItemRecord | null> {
+  async getActionItemForSubject(subjectKind: PersistedPortfolioActionItemRecord['subjectKind'], subjectId: string, actionId: string): Promise<PersistedPortfolioActionItemRecord | null> {
     const rows = await queryDb<ActionRow>(
       `SELECT action_id, subject_kind, subject_id, kind, status, priority, asset, timeframe,
         headline, rationale, linked_entry_id, linked_position_id, linked_journal_case_id,
         linked_reasoning_run_id, linked_notification_decision_id, created_at, updated_at,
         completed_at, dismissed_at, action_json::text AS action_json
-       FROM app_portfolio_action_items WHERE action_id = $1`,
-      [actionId]
+       FROM app_portfolio_action_items WHERE action_id = $1 AND subject_kind = $2 AND subject_id = $3`,
+      [actionId, subjectKind, subjectId]
     );
     return rows[0] ? mapAction(rows[0]) : null;
   }
@@ -575,13 +574,18 @@ export class SqlPortfolioRepository implements PortfolioRepository {
     );
   }
 
-  async listRevisionsForEntity(entityKind: PortfolioEntityKind, entityId: string): Promise<PersistedPortfolioRevisionRecord[]> {
+  async listRevisionsForEntityForSubject(subjectKind: PersistedWatchlistEntryRecord['subjectKind'], subjectId: string, entityKind: PortfolioEntityKind, entityId: string): Promise<PersistedPortfolioRevisionRecord[]> {
     const rows = await queryDb<RevisionRow>(
       `SELECT revision_id, entity_kind, entity_id, revision_type, changed_at, changed_by_kind, changed_by_id, summary, snapshot_json::text AS snapshot_json
       FROM app_portfolio_revisions
       WHERE entity_kind = $1 AND entity_id = $2
+        AND CASE $1
+          WHEN 'watchlist_entry' THEN EXISTS (SELECT 1 FROM app_portfolio_watchlist_entries e WHERE e.entry_id=$2 AND e.subject_kind=$3 AND e.subject_id=$4)
+          WHEN 'position' THEN EXISTS (SELECT 1 FROM app_portfolio_positions e WHERE e.position_id=$2 AND e.subject_kind=$3 AND e.subject_id=$4)
+          ELSE EXISTS (SELECT 1 FROM app_portfolio_action_items e WHERE e.action_id=$2 AND e.subject_kind=$3 AND e.subject_id=$4)
+        END
       ORDER BY changed_at ASC, revision_id ASC`,
-      [entityKind, entityId]
+      [entityKind, entityId, subjectKind, subjectId]
     );
     return rows.map(mapRevision);
   }

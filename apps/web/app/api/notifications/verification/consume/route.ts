@@ -11,7 +11,7 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   const security = await requireSecurityDecision({ request, routePath: '/api/notifications/verification/consume', method: 'POST', actionKind: 'notification_verification_consume', actor, subjectId: subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;
   try {
-    const result = await getNotificationRuntimes().verification.consumeTargetVerification(body.targetId, body.token);
+    const result = await getNotificationRuntimes().verification.consumeTargetVerificationForSubject('user', subject.subjectId, body.targetId, body.token);
     const envelope = { ok: true as const, data: { result } };
 
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { result }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });

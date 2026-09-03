@@ -12,7 +12,7 @@ export const POST = withApiErrorBoundary(async (request: Request, context: { par
     const security = await requireSecurityDecision({ request, routePath: '/api/portfolio/positions/[positionId]/open', method: 'POST', actionKind: 'portfolio_position_write', actor, subjectId: subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;
   try {
-const position = await getApplicationStateRuntime().portfolio.openPosition(positionId, body.openedAt, body, { actorKind: 'user', actorId: subject.userId });
+const position = await getApplicationStateRuntime().portfolio.openPosition('user', subject.subjectId, positionId, body.openedAt, body, { actorKind: 'user', actorId: subject.userId });
     const envelope = { ok: true as const, data: { position } };
 
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { position }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });

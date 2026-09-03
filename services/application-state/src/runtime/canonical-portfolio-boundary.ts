@@ -28,23 +28,23 @@ export class CanonicalPortfolioBoundaryService {
   }
 
   async createWatchlistEntry(input: Parameters<WatchlistService['createWatchlistEntry']>[0], actor: WatchlistActor) { return this.watchlist.createWatchlistEntry(input, actor); }
-  async updateWatchlistEntry(entryId: string, patch: Parameters<WatchlistService['updateWatchlistEntry']>[1], actor: WatchlistActor) { return this.watchlist.updateWatchlistEntry(entryId, patch, actor); }
-  async changeWatchlistStatus(entryId: string, status: Parameters<WatchlistService['changeWatchlistStatus']>[1], actor: WatchlistActor) { return this.watchlist.changeWatchlistStatus(entryId, status, actor); }
-  async changeWatchlistThesisHealth(entryId: string, thesisHealth: Parameters<WatchlistService['changeWatchlistThesisHealth']>[1], actor: WatchlistActor, explicitRecovery = false) { return this.watchlist.changeWatchlistThesisHealth(entryId, thesisHealth, actor, explicitRecovery); }
-  async archiveWatchlistEntry(entryId: string, actor: WatchlistActor) { return this.watchlist.archiveWatchlistEntry(entryId, actor); }
+  async updateWatchlistEntry(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, entryId: string, patch: Parameters<WatchlistService['updateWatchlistEntry']>[3], actor: WatchlistActor) { return this.watchlist.updateWatchlistEntry(subjectKind, subjectId, entryId, patch, actor); }
+  async changeWatchlistStatus(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, entryId: string, status: Parameters<WatchlistService['changeWatchlistStatus']>[3], actor: WatchlistActor) { return this.watchlist.changeWatchlistStatus(subjectKind, subjectId, entryId, status, actor); }
+  async changeWatchlistThesisHealth(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, entryId: string, thesisHealth: Parameters<WatchlistService['changeWatchlistThesisHealth']>[3], actor: WatchlistActor, explicitRecovery = false) { return this.watchlist.changeWatchlistThesisHealth(subjectKind, subjectId, entryId, thesisHealth, actor, explicitRecovery); }
+  async archiveWatchlistEntry(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, entryId: string, actor: WatchlistActor) { return this.watchlist.archiveWatchlistEntry(subjectKind, subjectId, entryId, actor); }
 
   async createProposedPosition(input: Parameters<PositionService['createProposedPosition']>[0], actor: PositionActor) { return this.positions.createProposedPosition(input, actor); }
-  async openPosition(positionId: string, openedAt: string, patch: Parameters<PositionService['openPosition']>[2], actor: PositionActor) { return this.positions.openPosition(positionId, openedAt, patch, actor); }
-  async reducePosition(positionId: string, patch: Parameters<PositionService['reducePosition']>[1], actor: PositionActor) { return this.positions.reducePosition(positionId, patch, actor); }
-  async closePosition(positionId: string, closedAt: string, patch: Parameters<PositionService['closePosition']>[2], actor: PositionActor) { return this.positions.closePosition(positionId, closedAt, patch, actor); }
-  async cancelPosition(positionId: string, actor: PositionActor) { return this.positions.cancelPosition(positionId, actor); }
-  async updatePosition(positionId: string, patch: Parameters<PositionService['updatePosition']>[1], actor: PositionActor) { return this.positions.updatePosition(positionId, patch, actor); }
-  async changePositionThesisHealth(positionId: string, thesisHealth: Parameters<PositionService['changePositionThesisHealth']>[1], actor: PositionActor, explicitRecovery = false) { return this.positions.changePositionThesisHealth(positionId, thesisHealth, actor, explicitRecovery); }
+  async openPosition(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, positionId: string, openedAt: string, patch: Parameters<PositionService['openPosition']>[4], actor: PositionActor) { return this.positions.openPosition(subjectKind, subjectId, positionId, openedAt, patch, actor); }
+  async reducePosition(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, positionId: string, patch: Parameters<PositionService['reducePosition']>[3], actor: PositionActor) { return this.positions.reducePosition(subjectKind, subjectId, positionId, patch, actor); }
+  async closePosition(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, positionId: string, closedAt: string, patch: Parameters<PositionService['closePosition']>[4], actor: PositionActor) { return this.positions.closePosition(subjectKind, subjectId, positionId, closedAt, patch, actor); }
+  async cancelPosition(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, positionId: string, actor: PositionActor) { return this.positions.cancelPosition(subjectKind, subjectId, positionId, actor); }
+  async updatePosition(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, positionId: string, patch: Parameters<PositionService['updatePosition']>[3], actor: PositionActor) { return this.positions.updatePosition(subjectKind, subjectId, positionId, patch, actor); }
+  async changePositionThesisHealth(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, positionId: string, thesisHealth: Parameters<PositionService['changePositionThesisHealth']>[3], actor: PositionActor, explicitRecovery = false) { return this.positions.changePositionThesisHealth(subjectKind, subjectId, positionId, thesisHealth, actor, explicitRecovery); }
 
   async createActionItem(input: Parameters<ActionService['createActionItem']>[0], actor: ActionActor) { return this.actions.createActionItem(input, actor); }
-  async updateActionItem(actionId: string, patch: Parameters<ActionService['updateActionItem']>[1], actor: ActionActor) { return this.actions.updateActionItem(actionId, patch, actor); }
-  async completeActionItem(actionId: string, completedAt: string, actor: ActionActor) { return this.actions.completeActionItem(actionId, completedAt, actor); }
-  async dismissActionItem(actionId: string, dismissedAt: string, actor: ActionActor) { return this.actions.dismissActionItem(actionId, dismissedAt, actor); }
+  async updateActionItem(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, actionId: string, patch: Parameters<ActionService['updateActionItem']>[3], actor: ActionActor) { return this.actions.updateActionItem(subjectKind, subjectId, actionId, patch, actor); }
+  async completeActionItem(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, actionId: string, completedAt: string, actor: ActionActor) { return this.actions.completeActionItem(subjectKind, subjectId, actionId, completedAt, actor); }
+  async dismissActionItem(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, actionId: string, dismissedAt: string, actor: ActionActor) { return this.actions.dismissActionItem(subjectKind, subjectId, actionId, dismissedAt, actor); }
 
   derivePortfolioActionCandidates(params: DerivePortfolioActionCandidatesParams) { return derivePortfolioActionCandidates(params); }
   async generatePortfolioSnapshot(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, generatedAt?: string) { return this.snapshots.generatePortfolioSnapshot(subjectKind, subjectId, generatedAt); }
@@ -52,14 +52,14 @@ export class CanonicalPortfolioBoundaryService {
   async listOpenPositions(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, limit?: number) { return this.query.listOpenPositions(subjectKind, subjectId, limit); }
   async listOpenActionQueue(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, limit?: number) { return this.query.listOpenActionQueue(subjectKind, subjectId, limit); }
   async getPortfolioSnapshot(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string) { return this.query.getPortfolioSnapshot(subjectKind, subjectId); }
-  async getPortfolioEntityReplay(entityKind: PortfolioEntityKind, entityId: string) { return getPortfolioEntityReplay(this.repository, entityKind, entityId); }
+  async getPortfolioEntityReplay(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, entityKind: PortfolioEntityKind, entityId: string) { return getPortfolioEntityReplay(this.repository, subjectKind, subjectId, entityKind, entityId); }
   async listWeakeningOrInvalidatedEntities(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, limit?: number) { return this.query.listWeakeningOrInvalidatedEntities(subjectKind, subjectId, limit); }
   async listPortfolioEntitiesByAssetTimeframe(asset: Parameters<PortfolioQueryService['listPortfolioEntitiesByAssetTimeframe']>[0], timeframe: Parameters<PortfolioQueryService['listPortfolioEntitiesByAssetTimeframe']>[1], limit?: number) { return this.query.listPortfolioEntitiesByAssetTimeframe(asset, timeframe, limit); }
 
-  async linkWatchlistEntryToReasoning(entryId: string, linkedReasoningRunId: string | null, linkedSnapshotId: string | null, actor: WatchlistActor) { return this.linkage.linkWatchlistEntryToReasoning(entryId, linkedReasoningRunId, linkedSnapshotId, actor); }
-  async linkPositionToJournalCase(positionId: string, linkedJournalCaseId: string | null, actor: PositionActor) { return this.linkage.linkPositionToJournalCase(positionId, linkedJournalCaseId, actor); }
-  async linkActionToNotificationDecision(actionId: string, linkedNotificationDecisionId: string | null, actor: ActionActor) { return this.linkage.linkActionToNotificationDecision(actionId, linkedNotificationDecisionId, actor); }
-  async linkPortfolioEntityToDrift(entityKind: 'watchlist_entry' | 'position', entityId: string, linkedDriftId: string | null, actor: WatchlistActor | PositionActor) { return this.linkage.linkPortfolioEntityToDrift(entityKind, entityId, linkedDriftId, actor); }
+  async linkWatchlistEntryToReasoning(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, entryId: string, linkedReasoningRunId: string | null, linkedSnapshotId: string | null, actor: WatchlistActor) { return this.linkage.linkWatchlistEntryToReasoning(subjectKind, subjectId, entryId, linkedReasoningRunId, linkedSnapshotId, actor); }
+  async linkPositionToJournalCase(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, positionId: string, linkedJournalCaseId: string | null, actor: PositionActor) { return this.linkage.linkPositionToJournalCase(subjectKind, subjectId, positionId, linkedJournalCaseId, actor); }
+  async linkActionToNotificationDecision(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, actionId: string, linkedNotificationDecisionId: string | null, actor: ActionActor) { return this.linkage.linkActionToNotificationDecision(subjectKind, subjectId, actionId, linkedNotificationDecisionId, actor); }
+  async linkPortfolioEntityToDrift(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, entityKind: 'watchlist_entry' | 'position', entityId: string, linkedDriftId: string | null, actor: WatchlistActor | PositionActor) { return this.linkage.linkPortfolioEntityToDrift(subjectKind, subjectId, entityKind, entityId, linkedDriftId, actor); }
 
   async getPortfolioAttentionSummary(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string) { return this.query.getPortfolioAttentionSummary(subjectKind, subjectId); }
   async listCriticalPortfolioActions(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, limit?: number) { return this.query.listCriticalPortfolioActions(subjectKind, subjectId, limit); }

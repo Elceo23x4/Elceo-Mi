@@ -102,9 +102,11 @@ export type NotificationDecisionRepository = {
 export type NotificationTargetRepository = {
   saveTarget(record: NotificationTargetRecord): Promise<void>;
   getTargetById(targetId: string): Promise<NotificationTargetRecord | null>;
+  getTargetForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string, targetId: string): Promise<NotificationTargetRecord | null>;
   getTargetByKey(targetKey: string): Promise<NotificationTargetRecord | null>;
   upsertTargetByKey(record: NotificationTargetRecord): Promise<void>;
   updateTargetStatus(targetId: string, status: NotificationTargetChannelStatus, updatedAt: string, verifiedAt?: string): Promise<void>;
+  updateTargetStatusForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string, targetId: string, status: NotificationTargetChannelStatus, updatedAt: string, verifiedAt?: string): Promise<boolean>;
   listTargetsForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string): Promise<NotificationTargetRecord[]>;
   listActiveTargetsForChannel(channel: NotificationChannel): Promise<NotificationTargetRecord[]>;
   listTargetsByIds(targetIds: string[]): Promise<NotificationTargetRecord[]>;

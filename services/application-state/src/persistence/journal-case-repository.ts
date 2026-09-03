@@ -27,8 +27,8 @@ export class MemoryJournalCaseRepository implements JournalCaseRepository {
     this.cases.set(record.caseId, record);
   }
 
-  async getCaseById(caseId: string): Promise<PersistedJournalCaseRecord | null> {
-    return this.cases.get(caseId) ?? null;
+  async getCaseForSubject(subjectKind: PersistedJournalCaseRecord['subjectKind'], subjectId: string, caseId: string): Promise<PersistedJournalCaseRecord | null> {
+    const row = this.cases.get(caseId); return row?.subjectKind === subjectKind && row.subjectId === subjectId ? row : null;
   }
 
   async listCases(query: JournalCaseListQuery): Promise<PersistedJournalCaseRecord[]> {
@@ -50,7 +50,9 @@ export class MemoryJournalCaseRepository implements JournalCaseRepository {
     this.revisions.set(record.revisionId, record);
   }
 
-  async listRevisionsForCase(caseId: string): Promise<PersistedJournalCaseRevisionRecord[]> {
+  async listRevisionsForCaseForSubject(subjectKind: PersistedJournalCaseRecord['subjectKind'], subjectId: string, caseId: string): Promise<PersistedJournalCaseRevisionRecord[]> {
+    const owned = this.cases.get(caseId);
+    if (!owned || owned.subjectKind !== subjectKind || owned.subjectId !== subjectId) return [];
     return [...this.revisions.values()].filter((row) => row.caseId === caseId).sort(byRevisionChangedAsc);
   }
 
@@ -207,8 +209,6 @@ export class SqlJournalCaseRepository implements JournalCaseRepository {
         $42,$43,$44::jsonb
       )
       ON CONFLICT (case_id) DO UPDATE SET
-        subject_kind=EXCLUDED.subject_kind,
-        subject_id=EXCLUDED.subject_id,
         asset=EXCLUDED.asset,
         timeframe=EXCLUDED.timeframe,
         title=EXCLUDED.title,
@@ -249,7 +249,7 @@ export class SqlJournalCaseRepository implements JournalCaseRepository {
         tags_json=EXCLUDED.tags_json,
         created_at=EXCLUDED.created_at,
         updated_at=EXCLUDED.updated_at,
-        case_json=EXCLUDED.case_json`,
+        case_json=EXCLUDED.case_json WHERE app_journal_cases.subject_kind=EXCLUDED.subject_kind AND app_journal_cases.subject_id=EXCLUDED.subject_id`,
       [
         record.caseId, record.subjectKind, record.subjectId, record.asset, record.timeframe, record.title, record.status, record.direction, record.conviction, record.thesis,
         record.setupType, record.entryPricePlanned, record.stopLossPlanned, record.takeProfitPlannedJson, record.riskAmountPlanned,
@@ -263,7 +263,7 @@ export class SqlJournalCaseRepository implements JournalCaseRepository {
     );
   }
 
-  async getCaseById(caseId: string): Promise<PersistedJournalCaseRecord | null> {
+  async getCaseForSubject(subjectKind: PersistedJournalCaseRecord['subjectKind'], subjectId: string, caseId: string): Promise<PersistedJournalCaseRecord | null> {
     const rows = await queryDb<CaseRow>(
       `SELECT
         case_id, subject_kind, subject_id, asset, timeframe, title, status, direction, conviction, thesis,
@@ -282,8 +282,8 @@ export class SqlJournalCaseRepository implements JournalCaseRepository {
         follow_up_actions_json::text AS follow_up_actions_json,
         tags_json::text AS tags_json,
         created_at, updated_at, case_json::text AS case_json
-       FROM app_journal_cases WHERE case_id = $1`,
-      [caseId]
+       FROM app_journal_cases WHERE case_id = $1 AND subject_kind = $2 AND subject_id = $3`,
+      [caseId, subjectKind, subjectId]
     );
     return rows[0] ? mapCaseRow(rows[0]) : null;
   }
@@ -370,14 +370,15 @@ export class SqlJournalCaseRepository implements JournalCaseRepository {
     );
   }
 
-  async listRevisionsForCase(caseId: string): Promise<PersistedJournalCaseRevisionRecord[]> {
+  async listRevisionsForCaseForSubject(subjectKind: PersistedJournalCaseRecord['subjectKind'], subjectId: string, caseId: string): Promise<PersistedJournalCaseRevisionRecord[]> {
     const rows = await queryDb<RevisionRow>(
       `SELECT revision_id, case_id, revision_type, previous_status, next_status, changed_at,
         changed_by_kind, changed_by_id, summary, snapshot_json::text AS snapshot_json
        FROM app_journal_case_revisions
        WHERE case_id = $1
+         AND EXISTS (SELECT 1 FROM app_journal_cases c WHERE c.case_id=$1 AND c.subject_kind=$2 AND c.subject_id=$3)
        ORDER BY changed_at ASC, revision_id ASC`,
-      [caseId]
+      [caseId, subjectKind, subjectId]
     );
     return rows.map(mapRevisionRow);
   }

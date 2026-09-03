@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { readFile, readdir } from 'node:fs/promises';
+import pg from 'pg';
+
+const base = process.env.DATABASE_URL;
+if (!base) throw new Error('DATABASE_URL_required');
+const adminUrl = new URL(base); adminUrl.pathname = '/postgres';
+const dbName = `elceo_sec_a1_${randomUUID().replaceAll('-', '')}`;
+const admin = new pg.Client({ connectionString: adminUrl.toString() });
+await admin.connect(); await admin.query(`CREATE DATABASE ${dbName}`);
+const url = new URL(base); url.pathname = `/${dbName}`;
+const client = new pg.Client({ connectionString: url.toString() });
+let closeDbPool = async () => {}; let closeNotificationDbPool = async () => {};
+try {
+  await client.connect();
+  for (const file of (await readdir('infra/db/schema')).filter((name) => /^\d{4}.*\.sql$/.test(name)).sort()) await client.query(await readFile(`infra/db/schema/${file}`, 'utf8'));
+  const now = '2026-09-03T00:00:00.000Z';
+  const watch = { entryId:'watch-b', subjectKind:'user', subjectId:'USER_B', asset:'XAU/USD', timeframe:'H1', priority:'high', status:'watching', thesisHealth:'stable', note:null, linkedReasoningRunId:null, linkedSnapshotId:null, linkedDriftId:null, linkedJournalCaseId:null, createdAt:now, updatedAt:now };
+  await client.query(`INSERT INTO app_portfolio_watchlist_entries(entry_id,subject_kind,subject_id,asset,timeframe,priority,status,thesis_health,created_at,updated_at,entry_json) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, [watch.entryId,watch.subjectKind,watch.subjectId,watch.asset,watch.timeframe,watch.priority,watch.status,watch.thesisHealth,now,now,JSON.stringify(watch)]);
+  await client.query(`INSERT INTO app_portfolio_revisions(revision_id,entity_kind,entity_id,revision_type,changed_at,changed_by_kind,changed_by_id,summary,snapshot_json) VALUES('rev-b','watchlist_entry',$1,'created',$2,'user','USER_B','created',$3)`,[watch.entryId,now,JSON.stringify(watch)]);
+  const target={targetId:'target-b',subjectKind:'user',subjectId:'USER_B',channel:'email',targetKind:'email_address',status:'unverified',label:null,addressJson:'{"email":"b@example.test"}',createdAt:now,updatedAt:now,verifiedAt:null};
+  await client.query(`INSERT INTO app_notification_targets(target_id,subject_kind,subject_id,channel,target_kind,status,address_json,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,[target.targetId,target.subjectKind,target.subjectId,target.channel,target.targetKind,target.status,target.addressJson,now,now]);
+  await client.end(); process.env.DATABASE_URL=url.toString(); process.env.APP_ENV='test'; process.env.NODE_ENV='test';
+  const dbmod=await import('../services/application-state/dist-test-cjs/services/application-state/src/db/client.cjs'); closeDbPool=dbmod.closeDbPool;
+  const {SqlPortfolioRepository}=await import('../services/application-state/dist-test-cjs/services/application-state/src/persistence/portfolio-repository.cjs');
+  const notificationPersistence=await import('../services/notifications/dist-test-cjs/services/notifications/src/persistence/sql-notification-repository.cjs'); const {SqlNotificationTargetRepository,SqlNotificationVerificationRepository}=notificationPersistence; closeNotificationDbPool=notificationPersistence.closeNotificationDbPool;
+  const {NotificationVerificationService}=await import('../services/notifications/dist-test-cjs/services/notifications/src/verification/verification-service.cjs');
+  const portfolio=new SqlPortfolioRepository();
+  assert.equal(await portfolio.getWatchlistEntryForSubject('user','USER_A','watch-b'),null);
+  assert.equal((await portfolio.getWatchlistEntryForSubject('user','USER_B','watch-b'))?.subjectId,'USER_B');
+  assert.equal((await portfolio.listRevisionsForEntityForSubject('user','USER_A','watchlist_entry','watch-b')).length,0);
+  await portfolio.saveWatchlistEntry({...watch,subjectId:'USER_A',note:'attack',entryJson:JSON.stringify({...watch,subjectId:'USER_A',note:'attack'})});
+  const exact=(await dbmod.queryDb('SELECT subject_id,note,entry_json::text FROM app_portfolio_watchlist_entries WHERE entry_id=$1',['watch-b']))[0];
+  assert.equal(exact.subject_id,'USER_B'); assert.equal(exact.note,null); assert.equal(Number((await dbmod.queryDb('SELECT count(*) c FROM app_portfolio_revisions WHERE entity_id=$1',['watch-b']))[0].c),1);
+  const targets=new SqlNotificationTargetRepository(), verifications=new SqlNotificationVerificationRepository();
+  assert.equal(await targets.updateTargetStatusForSubject('user','USER_A','target-b','disabled',now),false);
+  assert.equal((await targets.getTargetForSubject('user','USER_B','target-b'))?.status,'unverified');
+  const verification=new NotificationVerificationService({targetRepository:targets,verificationRepository:verifications},{tokenGenerator:()=> 'raw-secret'});
+  await assert.rejects(()=>verification.issueTargetVerificationForSubject('user','USER_A','target-b',now),/target_not_found/);
+  assert.equal((await verifications.listVerificationsForTarget('target-b')).length,0);
+  const issued=await verification.issueTargetVerificationForSubject('user','USER_B','target-b',now); assert.equal(issued.rawToken,'raw-secret');
+  const denied=await verification.consumeTargetVerificationForSubject('user','USER_A','target-b','raw-secret',now); assert.equal(denied.reason,'target_not_found');
+  assert.equal((await verifications.getVerificationById(issued.verificationId))?.attemptCount,0);
+  await closeDbPool(); await closeNotificationDbPool();
+  console.log(JSON.stringify({suite:'SEC-A1 PostgreSQL adversarial authority',ownerScopedSelect:true,ownerScopedUpdate:true,noWrongOwnerRevision:true,ownershipRaceGuard:true,verificationSubjectBound:true,rollbackForeignExact:true}));
+} finally { try{await closeDbPool()}catch{} try{await closeNotificationDbPool()}catch{} try{await client.end()}catch{} await admin.query(`DROP DATABASE IF EXISTS ${dbName} WITH (FORCE)`); await admin.end(); }

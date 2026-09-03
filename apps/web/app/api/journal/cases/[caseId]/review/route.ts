@@ -12,8 +12,7 @@ export const POST = withApiErrorBoundary(async (request: Request, context: { par
   const security = await requireSecurityDecision({ request, routePath: '/api/journal/cases/[caseId]/review', method: 'POST', actionKind: 'journal_case_lifecycle', actor, subjectId: subject.subjectId, requestBody: patch });
   if (!security.ok) return security.response;
   try {
-  const updated = await getApplicationStateRuntime().journal.reviewCase(caseId, patch as never, { actorKind: 'user', actorId: subject.userId });
-  if (updated.identity.subjectId !== subject.subjectId) throw new Error('forbidden');
+  const updated = await getApplicationStateRuntime().journal.reviewCase('user', subject.subjectId, caseId, patch as never, { actorKind: 'user', actorId: subject.userId });
     const envelope = { ok: true as const, data: { case: updated } };
 
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { case: updated }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });

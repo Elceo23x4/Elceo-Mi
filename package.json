@@ -68,7 +68,8 @@
     "test:backend-authority-postgres": "npm run -w services/application-state test && node scripts/test-backend-authority-postgres.mjs",
     "test:kick-off-migration-postgres": "node scripts/test-kick-off-migration-postgres.mjs",
     "test:kick-off-acceptance": "npm run -w services/reasoning test && npm run -w apps/web test && npm run test:kick-off-migration-postgres && npm run test:kick-off-production-integration",
-    "test:kick-off-production-integration": "KICK_OFF_PRODUCTION_INTEGRATION=1 npm run -w services/reasoning test"
+    "test:kick-off-production-integration": "KICK_OFF_PRODUCTION_INTEGRATION=1 npm run -w services/reasoning test",
+    "test:sec-a1-postgres": "npm run -w services/application-state test && npm run -w services/notifications test && node scripts/test-sec-a1-postgres.mjs"
   },
   "engines": {
     "node": "24.x",

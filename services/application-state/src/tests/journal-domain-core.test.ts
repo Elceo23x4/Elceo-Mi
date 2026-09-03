@@ -129,31 +129,31 @@ export async function runJournalDomainCoreTests(): Promise<void> {
   const draft = await service.createDraftCase({ identity: valid.identity, plan: valid.plan, tags: ['alpha'] }, actor);
   assert(draft.status === 'draft', 'create draft should set draft status');
 
-  const planned = await service.planCase(draft.identity.caseId, { plan: { thesis: 'Planned after checklist confirmation.' } }, { ...actor, changedAt: '2026-04-24T09:05:00.000Z' });
+  const planned = await service.planCase('user', 'u-1', draft.identity.caseId, { plan: { thesis: 'Planned after checklist confirmation.' } }, { ...actor, changedAt: '2026-04-24T09:05:00.000Z' });
   assert(planned.status === 'planned', 'plan should transition to planned');
 
-  const executed = await service.markExecuted(
+  const executed = await service.markExecuted('user', 'u-1',
     draft.identity.caseId,
     { execution: { openedAt: '2026-04-24T09:10:00.000Z', entryPriceExecuted: 3021, positionSize: 1.2 } },
     { ...actor, changedAt: '2026-04-24T09:10:00.000Z' }
   );
   assert(executed.status === 'executed', 'execute should transition to executed');
 
-  const adjusted = await service.adjustExecution(
+  const adjusted = await service.adjustExecution('user', 'u-1',
     draft.identity.caseId,
     { execution: { lastAdjustedAt: '2026-04-24T09:30:00.000Z', notes: ['Moved stop to reduce risk.'] } },
     { ...actor, changedAt: '2026-04-24T09:30:00.000Z' }
   );
   assert(adjusted.status === 'executed', 'adjust should preserve lifecycle state');
 
-  const partially = await service.markPartiallyClosed(
+  const partially = await service.markPartiallyClosed('user', 'u-1',
     draft.identity.caseId,
     { closure: { exitPrice: 3030, pnlAmount: 120, outcome: 'mixed' } },
     { ...actor, changedAt: '2026-04-24T09:45:00.000Z' }
   );
   assert(partially.status === 'partially_closed', 'partial close should transition');
 
-  const closed = await service.closeCase(
+  const closed = await service.closeCase('user', 'u-1',
     draft.identity.caseId,
     { closure: { closedAt: '2026-04-24T10:00:00.000Z', exitPrice: 3040, pnlAmount: 200, pnlPercent: 2.4, rMultiple: 1.6, outcome: 'win' } },
     { ...actor, changedAt: '2026-04-24T10:00:00.000Z' }
@@ -161,18 +161,18 @@ export async function runJournalDomainCoreTests(): Promise<void> {
   assert(closed.status === 'closed', 'close should transition to closed');
 
   await expectReject(
-    service.closeCase(draft.identity.caseId, { closure: { closedAt: '2026-04-24T10:10:00.000Z', outcome: 'open' } }, actor),
+    service.closeCase('user', 'u-1', draft.identity.caseId, { closure: { closedAt: '2026-04-24T10:10:00.000Z', outcome: 'open' } }, actor),
     'close should reject open outcome'
   );
 
-  const reviewed = await service.reviewCase(
+  const reviewed = await service.reviewCase('user', 'u-1',
     draft.identity.caseId,
     { review: { reviewedAt: '2026-04-24T10:20:00.000Z', lessons: ['Wait for pullback confirmation.'] } },
     { ...actor, changedAt: '2026-04-24T10:20:00.000Z' }
   );
   assert(reviewed.status === 'reviewed', 'review should transition to reviewed');
 
-  await expectReject(service.cancelCase(draft.identity.caseId, {}, actor), 'cancel should fail after execution lifecycle');
+  await expectReject(service.cancelCase('user', 'u-1', draft.identity.caseId, {}, actor), 'cancel should fail after execution lifecycle');
 
   const draftCancel = await service.createDraftCase(
     {
@@ -181,9 +181,9 @@ export async function runJournalDomainCoreTests(): Promise<void> {
     },
     { ...actor, changedAt: '2026-04-24T11:00:00.000Z' }
   );
-  await service.cancelCase(draftCancel.identity.caseId, {}, { ...actor, changedAt: '2026-04-24T11:01:00.000Z' });
+  await service.cancelCase('user', 'u-1', draftCancel.identity.caseId, {}, { ...actor, changedAt: '2026-04-24T11:01:00.000Z' });
 
-  const replay = await getJournalCaseReplayById(draft.identity.caseId, repository);
+  const replay = await getJournalCaseReplayById('user', 'u-1', draft.identity.caseId, repository);
   assert(replay?.revisions.length === 7, 'replay should contain ordered lifecycle revisions');
   assert(replay?.revisions[0]?.revisionType === 'created', 'first revision should be created');
 
@@ -244,6 +244,21 @@ export async function runJournalDomainCoreTests(): Promise<void> {
   );
   assert(boundaryDraft.status === 'draft', 'boundary create should work end-to-end');
 
+
+  // SEC-A1: every case-id lifecycle path establishes ownership before lifecycle validation or persistence.
+  const foreignRevisionCount = (await boundaryRepository.listRevisionsForCaseForSubject('workspace', 'ws-1', boundaryDraft.identity.caseId)).length;
+  const foreignOps = [
+    () => boundary.planCase('user', 'USER_A', boundaryDraft.identity.caseId, {}, actor),
+    () => boundary.markExecuted('user', 'USER_A', boundaryDraft.identity.caseId, {}, actor),
+    () => boundary.adjustExecution('user', 'USER_A', boundaryDraft.identity.caseId, {}, actor),
+    () => boundary.markPartiallyClosed('user', 'USER_A', boundaryDraft.identity.caseId, {}, actor),
+    () => boundary.closeCase('user', 'USER_A', boundaryDraft.identity.caseId, {}, actor),
+    () => boundary.cancelCase('user', 'USER_A', boundaryDraft.identity.caseId, {}, actor),
+    () => boundary.reviewCase('user', 'USER_A', boundaryDraft.identity.caseId, {}, actor)
+  ];
+  for (const operation of foreignOps) await expectReject(operation(), 'USER_A cannot mutate USER_B journal case');
+  assert((await boundaryRepository.listRevisionsForCaseForSubject('workspace', 'ws-1', boundaryDraft.identity.caseId)).length === foreignRevisionCount, 'denied journal lifecycle creates no revision');
+
   const boundaryReasoning = await boundary.createDraftCaseFromReasoningContext(
     { subjectKind: 'workspace', subjectId: 'ws-1', reasoningRunId: 'run-boundary', asset: 'EUR/USD', timeframe: 'H4' },
     { actorKind: 'workspace', actorId: 'ws-1', changedAt: '2026-04-24T13:01:00.000Z' }
@@ -253,8 +268,8 @@ export async function runJournalDomainCoreTests(): Promise<void> {
   const replayBoundary = await boundary.getLatestJournalCaseReplayForReasoningRun('run-boundary');
   assert(replayBoundary?.caseData.identity.caseId === boundaryReasoning.identity.caseId, 'boundary replay query should work');
 
-  const corruptRecord = await boundaryRepository.getCaseById(boundaryReasoning.identity.caseId);
+  const corruptRecord = await boundaryRepository.getCaseForSubject('workspace', 'ws-1', boundaryReasoning.identity.caseId);
   if (!corruptRecord) throw new Error('expected persisted record for corruption test');
   await boundaryRepository.saveCase({ ...corruptRecord, caseJson: '{broken' });
-  await expectReject(boundary.getJournalCase(boundaryReasoning.identity.caseId), 'malformed stored JSON should fail deterministically');
+  await expectReject(boundary.getJournalCase('workspace', 'ws-1', boundaryReasoning.identity.caseId), 'malformed stored JSON should fail deterministically');
 }

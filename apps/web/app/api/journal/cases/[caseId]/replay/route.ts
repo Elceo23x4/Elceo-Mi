@@ -5,7 +5,6 @@ import { getApplicationStateRuntime } from '@/lib/server/composition';
 export const GET = withApiErrorBoundary(async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
   const subject = await requireAuthenticatedSubject();
   const { caseId } = await context.params;
-  const replay = await getApplicationStateRuntime().journal.getJournalCaseReplay(caseId);
-  if (!replay || replay.caseData.identity.subjectId !== subject.subjectId) throw new Error('not_found');
+  const replay = await getApplicationStateRuntime().journal.getJournalCaseReplay('user', subject.subjectId, caseId);
   return jsonSuccess({ replay });
 });

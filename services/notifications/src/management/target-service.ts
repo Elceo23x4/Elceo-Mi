@@ -56,18 +56,18 @@ export class NotificationTargetManagementService {
     await this.repository.updateTargetStatus(targetId, 'active', verifiedAt, verifiedAt);
   }
 
-  async disableTarget(targetId: string, updatedAt = new Date().toISOString()): Promise<void> {
-    await this.repository.updateTargetStatus(targetId, 'disabled', updatedAt);
+  async disableTargetForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string, targetId: string, updatedAt = new Date().toISOString()): Promise<void> {
+    if (!await this.repository.updateTargetStatusForSubject(subjectKind, subjectId, targetId, 'disabled', updatedAt)) throw new Error('target_not_found');
   }
 
-  async enableTarget(targetId: string, updatedAt = new Date().toISOString()): Promise<void> {
-    const target = await this.repository.getTargetById(targetId);
-    if (!target) throw new Error('Target not found');
+  async enableTargetForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string, targetId: string, updatedAt = new Date().toISOString()): Promise<void> {
+    const target = await this.repository.getTargetForSubject(subjectKind, subjectId, targetId);
+    if (!target) throw new Error('target_not_found');
 
     if (target.targetKind !== 'in_app_user' && target.verifiedAt === null) {
       throw new Error('Cannot activate unverified non-in-app notification target');
     }
 
-    await this.repository.updateTargetStatus(targetId, 'active', updatedAt);
+    if (!await this.repository.updateTargetStatusForSubject(subjectKind, subjectId, targetId, 'active', updatedAt)) throw new Error('target_not_found');
   }
 }

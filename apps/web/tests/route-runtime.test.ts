@@ -174,7 +174,7 @@ const mockApplicationStateRuntime = {
     listJournalCases: async () => [journalCase],
     createDraftCaseFromReasoningContext: async () => journalCase,
     createDraftCase: async () => journalCase,
-    planCase: async (caseId: string) => {
+    planCase: async (_subjectKind: string, _subjectId: string, caseId: string) => {
       if (caseId === 'case-foreign') throw new Error('not_found');
       return journalCase;
     },
@@ -193,8 +193,8 @@ const mockApplicationStateRuntime = {
   portfolio: {
     listCurrentWatchlist: async () => [],
     createWatchlistEntry: async () => ({ entryId: 'entry-1' }),
-    updateWatchlistEntry: async (entryId: string) => {
-      if (entryId === 'entry-foreign') throw new Error('forbidden');
+    updateWatchlistEntry: async (_subjectKind: string, _subjectId: string, entryId: string) => {
+      if (entryId === 'entry-foreign') throw new Error('not_found');
       return { entryId: 'entry-1' };
     },
     changeWatchlistStatus: async () => ({ entryId: 'entry-1' }),
@@ -202,8 +202,8 @@ const mockApplicationStateRuntime = {
     archiveWatchlistEntry: async () => ({ entryId: 'entry-1' }),
     listOpenPositions: async () => [],
     createProposedPosition: async () => ({ positionId: 'pos-1' }),
-    openPosition: async (positionId: string) => {
-      if (positionId === 'pos-foreign') throw new Error('forbidden');
+    openPosition: async (_subjectKind: string, _subjectId: string, positionId: string) => {
+      if (positionId === 'pos-foreign') throw new Error('not_found');
       return { positionId: 'pos-1' };
     },
     closePosition: async () => ({ positionId: 'pos-1' }),
@@ -357,15 +357,15 @@ const mockNotificationRuntime = {
     registerOrUpdateTarget: async () => ({ targetId: 'target-1' }),
     registerOrUpdateSubscription: async () => ({ subscriptionId: 'sub-1' }),
     listSubscriptionsForSubjectDetailed: async () => ([{ subscriptionId: 'sub-1', subjectId: subject.subjectId }]),
-    enableTarget: async (targetId: string) => { if (targetId === 'target-foreign') throw new Error('forbidden'); },
-    disableTarget: async (targetId: string) => { if (targetId === 'target-foreign') throw new Error('forbidden'); },
+    enableTargetForSubject: async (_kind: string, _subjectId: string, targetId: string) => { if (targetId === 'target-foreign') throw new Error('not_found'); },
+    disableTargetForSubject: async (_kind: string, _subjectId: string, targetId: string) => { if (targetId === 'target-foreign') throw new Error('not_found'); },
     enableSubscription: async (subscriptionId: string) => { if (subscriptionId === 'sub-foreign') throw new Error('forbidden'); },
     disableSubscription: async (subscriptionId: string) => { if (subscriptionId === 'sub-foreign') throw new Error('forbidden'); },
     updateSubscriptionThreshold: async (subscriptionId: string) => { if (subscriptionId === 'sub-foreign') throw new Error('forbidden'); }
   },
   verification: {
-    issueTargetVerification: async () => ({ verificationId: 'v-1' }),
-    consumeTargetVerification: async () => ({ verified: true }),
+    issueTargetVerificationForSubject: async () => ({ verificationId: 'v-1' }),
+    consumeTargetVerificationForSubject: async () => ({ verified: true }),
     expireStaleVerifications: async () => ({ expiredCount: 1 })
   },
   delivery: {
@@ -638,14 +638,14 @@ export async function runRouteRuntimeTests(): Promise<void> {
 
   assert.equal((await readJson(await watchlistRoute.POST(request('https://x/api/portfolio/watchlist', { method: 'POST', body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', priority: 'high' }) })))).ok, true);
   assert.equal((await readJson(await watchlistEntryRoute.PATCH(request('https://x/api/portfolio/watchlist/entry-1', { method: 'PATCH', body: JSON.stringify({ note: 'n' }) }), { params: Promise.resolve({ entryId: 'entry-1' }) }))).ok, true);
-  assert.deepEqual(await readJson(await watchlistEntryRoute.PATCH(request('https://x/api/portfolio/watchlist/entry-foreign', { method: 'PATCH', body: JSON.stringify({ note: 'n' }) }), { params: Promise.resolve({ entryId: 'entry-foreign' }) })), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
+  assert.deepEqual(await readJson(await watchlistEntryRoute.PATCH(request('https://x/api/portfolio/watchlist/entry-foreign', { method: 'PATCH', body: JSON.stringify({ note: 'n' }) }), { params: Promise.resolve({ entryId: 'entry-foreign' }) })), { ok: false, error: { code: 'not_found', message: 'Not found' } });
   assert.equal((await readJson(await watchlistStatusRoute.POST(request('https://x/api/portfolio/watchlist/entry-1/status', { method: 'POST', body: JSON.stringify({ status: 'archived' }) }), { params: Promise.resolve({ entryId: 'entry-1' }) }))).ok, true);
   assert.equal((await readJson(await watchlistThesisRoute.POST(request('https://x/api/portfolio/watchlist/entry-1/thesis-health', { method: 'POST', body: JSON.stringify({ thesisHealth: 'weakening' }) }), { params: Promise.resolve({ entryId: 'entry-1' }) }))).ok, true);
   assert.equal((await readJson(await watchlistArchiveRoute.POST(request('https://x/api/portfolio/watchlist/entry-1/archive', { method: 'POST' }), { params: Promise.resolve({ entryId: 'entry-1' }) }))).ok, true);
 
   assert.equal((await readJson(await positionsRoute.POST(request('https://x/api/portfolio/positions', { method: 'POST', body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', direction: 'long' }) })))).ok, true);
   assert.equal((await readJson(await positionOpenRoute.POST(request('https://x/api/portfolio/positions/pos-1/open', { method: 'POST', body: JSON.stringify({ openedAt: '2026-01-01T00:00:00.000Z' }) }), { params: Promise.resolve({ positionId: 'pos-1' }) }))).ok, true);
-  assert.deepEqual(await readJson(await positionOpenRoute.POST(request('https://x/api/portfolio/positions/pos-foreign/open', { method: 'POST', body: JSON.stringify({ openedAt: '2026-01-01T00:00:00.000Z' }) }), { params: Promise.resolve({ positionId: 'pos-foreign' }) })), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });
+  assert.deepEqual(await readJson(await positionOpenRoute.POST(request('https://x/api/portfolio/positions/pos-foreign/open', { method: 'POST', body: JSON.stringify({ openedAt: '2026-01-01T00:00:00.000Z' }) }), { params: Promise.resolve({ positionId: 'pos-foreign' }) })), { ok: false, error: { code: 'not_found', message: 'Not found' } });
   assert.equal((await readJson(await positionCloseRoute.POST(request('https://x/api/portfolio/positions/pos-1/close', { method: 'POST', body: JSON.stringify({ closedAt: '2026-01-01T00:00:00.000Z' }) }), { params: Promise.resolve({ positionId: 'pos-1' }) }))).ok, true);
 
   assert.equal((await readJson(await actionsRoute.POST(request('https://x/api/portfolio/actions', { method: 'POST', body: JSON.stringify({ kind: 'review_thesis', priority: 'high', headline: 'h', rationale: 'r' }) })))).ok, true);

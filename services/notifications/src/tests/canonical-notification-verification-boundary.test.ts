@@ -20,9 +20,9 @@ export async function runCanonicalNotificationVerificationBoundaryTests(): Promi
   await repositories.targetRepository.saveTarget({ targetId: 'tv1', subjectKind: 'user', subjectId: 'u', channel: 'email', targetKind: 'email_address', status: 'unverified', label: null, addressJson: '{"email":"x@y.z"}', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', verifiedAt: null });
 
   const boundary = new CanonicalNotificationVerificationBoundaryService(repositories);
-  const issue = await boundary.issueTargetVerification('tv1', '2026-01-01T00:01:00.000Z');
+  const issue = await boundary.issueTargetVerificationForSubject('user', 'u', 'tv1', '2026-01-01T00:01:00.000Z');
   assert(issue.verificationId.length > 0, 'issue should return verification id');
-  const consume = await boundary.consumeTargetVerification('tv1', issue.rawToken, '2026-01-01T00:02:00.000Z');
+  const consume = await boundary.consumeTargetVerificationForSubject('user', 'u', 'tv1', issue.rawToken, '2026-01-01T00:02:00.000Z');
   assert(consume.verified, 'consume should verify target');
   const replay = await boundary.getVerificationReplayById(issue.verificationId);
   assert(Boolean(replay?.tokenHash) && replay?.status === 'consumed', 'replay should return consumed verification without raw token');

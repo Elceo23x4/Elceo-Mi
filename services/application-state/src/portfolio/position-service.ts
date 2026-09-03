@@ -9,8 +9,8 @@ export type PositionActor = { actorKind: PortfolioActorKind; actorId: string; ch
 export class PositionService {
   constructor(private readonly repository: PortfolioRepository) {}
 
-  private async load(positionId: string): Promise<PositionRecord> {
-    const row = await this.repository.getPositionById(positionId);
+  private async load(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, positionId: string): Promise<PositionRecord> {
+    const row = await this.repository.getPositionForSubject(subjectKind, subjectId, positionId);
     if (!row) throw new Error(`position_not_found:${positionId}`);
     return deserializePositionRecord(row.positionJson);
   }
@@ -49,48 +49,48 @@ export class PositionService {
     return this.saveWithRevision(position, 'created', actor);
   }
 
-  async openPosition(positionId: string, openedAt: string, patch: Partial<Omit<PositionRecord, 'positionId' | 'subjectKind' | 'subjectId' | 'asset' | 'timeframe'>> = {}, actor: PositionActor): Promise<PositionRecord> {
-    const current = await this.load(positionId);
+  async openPosition(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, positionId: string, openedAt: string, patch: Partial<Omit<PositionRecord, 'positionId' | 'subjectKind' | 'subjectId' | 'asset' | 'timeframe'>> = {}, actor: PositionActor): Promise<PositionRecord> {
+    const current = await this.load(subjectKind, subjectId, positionId);
     assertValidPositionTransition(current.status, 'open');
     const next: PositionRecord = { ...current, ...patch, status: 'open', openedAt, closedAt: null, updatedAt: actor.changedAt ?? nowIso() };
     return this.saveWithRevision(next, 'status_changed', actor);
   }
 
-  async reducePosition(positionId: string, patch: Partial<Omit<PositionRecord, 'positionId' | 'subjectKind' | 'subjectId' | 'asset' | 'timeframe'>> = {}, actor: PositionActor): Promise<PositionRecord> {
-    const current = await this.load(positionId);
+  async reducePosition(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, positionId: string, patch: Partial<Omit<PositionRecord, 'positionId' | 'subjectKind' | 'subjectId' | 'asset' | 'timeframe'>> = {}, actor: PositionActor): Promise<PositionRecord> {
+    const current = await this.load(subjectKind, subjectId, positionId);
     assertValidPositionTransition(current.status, 'reducing');
     const next: PositionRecord = { ...current, ...patch, status: 'reducing', updatedAt: actor.changedAt ?? nowIso() };
     return this.saveWithRevision(next, 'status_changed', actor);
   }
 
-  async closePosition(positionId: string, closedAt: string, patch: Partial<Omit<PositionRecord, 'positionId' | 'subjectKind' | 'subjectId' | 'asset' | 'timeframe'>> = {}, actor: PositionActor): Promise<PositionRecord> {
-    const current = await this.load(positionId);
+  async closePosition(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, positionId: string, closedAt: string, patch: Partial<Omit<PositionRecord, 'positionId' | 'subjectKind' | 'subjectId' | 'asset' | 'timeframe'>> = {}, actor: PositionActor): Promise<PositionRecord> {
+    const current = await this.load(subjectKind, subjectId, positionId);
     if (!(current.status === 'open' || current.status === 'reducing')) throw new Error(`invalid_position_transition:${current.status}_to_closed`);
     const next: PositionRecord = { ...current, ...patch, status: 'closed', closedAt, updatedAt: actor.changedAt ?? nowIso() };
     return this.saveWithRevision(next, 'closed', actor);
   }
 
-  async cancelPosition(positionId: string, actor: PositionActor): Promise<PositionRecord> {
-    const current = await this.load(positionId);
+  async cancelPosition(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, positionId: string, actor: PositionActor): Promise<PositionRecord> {
+    const current = await this.load(subjectKind, subjectId, positionId);
     assertValidPositionTransition(current.status, 'canceled');
     const next: PositionRecord = { ...current, status: 'canceled', updatedAt: actor.changedAt ?? nowIso() };
     return this.saveWithRevision(next, 'canceled', actor);
   }
 
-  async linkPosition(positionId: string, patch: Partial<Pick<PositionRecord, 'linkedJournalCaseId' | 'linkedReasoningRunId' | 'linkedSnapshotId' | 'linkedDriftId'>>, actor: PositionActor): Promise<PositionRecord> {
-    const current = await this.load(positionId);
+  async linkPosition(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, positionId: string, patch: Partial<Pick<PositionRecord, 'linkedJournalCaseId' | 'linkedReasoningRunId' | 'linkedSnapshotId' | 'linkedDriftId'>>, actor: PositionActor): Promise<PositionRecord> {
+    const current = await this.load(subjectKind, subjectId, positionId);
     const next: PositionRecord = { ...current, ...patch, updatedAt: actor.changedAt ?? nowIso() };
     return this.saveWithRevision(next, 'linked', actor);
   }
 
-  async updatePosition(positionId: string, patch: Partial<Omit<PositionRecord, 'positionId' | 'subjectKind' | 'subjectId' | 'asset' | 'timeframe'>>, actor: PositionActor): Promise<PositionRecord> {
-    const current = await this.load(positionId);
+  async updatePosition(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, positionId: string, patch: Partial<Omit<PositionRecord, 'positionId' | 'subjectKind' | 'subjectId' | 'asset' | 'timeframe'>>, actor: PositionActor): Promise<PositionRecord> {
+    const current = await this.load(subjectKind, subjectId, positionId);
     const next: PositionRecord = { ...current, ...patch, updatedAt: actor.changedAt ?? nowIso() };
     return this.saveWithRevision(next, 'updated', actor);
   }
 
-  async changePositionThesisHealth(positionId: string, thesisHealth: ThesisHealth, actor: PositionActor, explicitRecovery = false): Promise<PositionRecord> {
-    const current = await this.load(positionId);
+  async changePositionThesisHealth(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, positionId: string, thesisHealth: ThesisHealth, actor: PositionActor, explicitRecovery = false): Promise<PositionRecord> {
+    const current = await this.load(subjectKind, subjectId, positionId);
     assertValidThesisHealthTransition(current.thesisHealth, thesisHealth, explicitRecovery);
     const next: PositionRecord = { ...current, thesisHealth, updatedAt: actor.changedAt ?? nowIso() };
     return this.saveWithRevision(next, 'thesis_health_changed', actor);

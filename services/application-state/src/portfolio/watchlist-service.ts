@@ -21,7 +21,8 @@ export class WatchlistService {
     actor: WatchlistActor
   ): Promise<WatchlistEntry> {
     assertValidOrThrow(entry);
-    await this.repository.saveWatchlistEntry(toPersistedWatchlist(entry));
+    const saved = await this.repository.saveWatchlistEntry(toPersistedWatchlist(entry));
+    if (!saved) throw new Error(`watchlist_entry_not_found:${entry.entryId}`);
     await this.repository.saveRevision(
       makeRevision({
         entityKind: 'watchlist_entry',

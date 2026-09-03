@@ -56,11 +56,14 @@ export class NotificationTargetManagementService {
     await this.repository.updateTargetStatus(targetId, 'active', verifiedAt, verifiedAt);
   }
 
-  async disableTargetForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string, targetId: string, updatedAt = new Date().toISOString()): Promise<void> {
+  async disableTargetForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string, targetId: string, updatedAt = new Date().toISOString()): Promise<NotificationTargetRecord> {
     if (!await this.repository.updateTargetStatusForSubject(subjectKind, subjectId, targetId, 'disabled', updatedAt)) throw new Error('target_not_found');
+    const target = await this.repository.getTargetForSubject(subjectKind, subjectId, targetId);
+    if (!target) throw new Error('target_not_found');
+    return target;
   }
 
-  async enableTargetForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string, targetId: string, updatedAt = new Date().toISOString()): Promise<void> {
+  async enableTargetForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string, targetId: string, updatedAt = new Date().toISOString()): Promise<NotificationTargetRecord> {
     const target = await this.repository.getTargetForSubject(subjectKind, subjectId, targetId);
     if (!target) throw new Error('target_not_found');
 
@@ -69,5 +72,8 @@ export class NotificationTargetManagementService {
     }
 
     if (!await this.repository.updateTargetStatusForSubject(subjectKind, subjectId, targetId, 'active', updatedAt)) throw new Error('target_not_found');
+    const updated = await this.repository.getTargetForSubject(subjectKind, subjectId, targetId);
+    if (!updated) throw new Error('target_not_found');
+    return updated;
   }
 }

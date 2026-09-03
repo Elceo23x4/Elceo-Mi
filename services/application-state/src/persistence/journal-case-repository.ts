@@ -23,8 +23,10 @@ export class MemoryJournalCaseRepository implements JournalCaseRepository {
   private readonly cases = new Map<string, PersistedJournalCaseRecord>();
   private readonly revisions = new Map<string, PersistedJournalCaseRevisionRecord>();
 
-  async saveCase(record: PersistedJournalCaseRecord): Promise<void> {
-    this.cases.set(record.caseId, record);
+  async saveCase(record: PersistedJournalCaseRecord): Promise<boolean> {
+    const current = this.cases.get(record.caseId);
+    if (current && (current.subjectKind !== record.subjectKind || current.subjectId !== record.subjectId)) return false;
+    this.cases.set(record.caseId, record); return true;
   }
 
   async getCaseForSubject(subjectKind: PersistedJournalCaseRecord['subjectKind'], subjectId: string, caseId: string): Promise<PersistedJournalCaseRecord | null> {
@@ -187,8 +189,8 @@ function mapRevisionRow(row: RevisionRow): PersistedJournalCaseRevisionRecord {
 }
 
 export class SqlJournalCaseRepository implements JournalCaseRepository {
-  async saveCase(record: PersistedJournalCaseRecord): Promise<void> {
-    await queryDb(
+  async saveCase(record: PersistedJournalCaseRecord): Promise<boolean> {
+    const rows = await queryDb<{ case_id: string }>(
       `INSERT INTO app_journal_cases (
         case_id, subject_kind, subject_id, asset, timeframe, title, status, direction, conviction, thesis,
         setup_type, entry_price_planned, stop_loss_planned, take_profit_planned_json, risk_amount_planned,
@@ -249,7 +251,7 @@ export class SqlJournalCaseRepository implements JournalCaseRepository {
         tags_json=EXCLUDED.tags_json,
         created_at=EXCLUDED.created_at,
         updated_at=EXCLUDED.updated_at,
-        case_json=EXCLUDED.case_json WHERE app_journal_cases.subject_kind=EXCLUDED.subject_kind AND app_journal_cases.subject_id=EXCLUDED.subject_id`,
+        case_json=EXCLUDED.case_json WHERE app_journal_cases.subject_kind=EXCLUDED.subject_kind AND app_journal_cases.subject_id=EXCLUDED.subject_id RETURNING case_id`,
       [
         record.caseId, record.subjectKind, record.subjectId, record.asset, record.timeframe, record.title, record.status, record.direction, record.conviction, record.thesis,
         record.setupType, record.entryPricePlanned, record.stopLossPlanned, record.takeProfitPlannedJson, record.riskAmountPlanned,
@@ -261,6 +263,7 @@ export class SqlJournalCaseRepository implements JournalCaseRepository {
         record.createdAt, record.updatedAt, record.caseJson
       ]
     );
+    return rows.length === 1;
   }
 
   async getCaseForSubject(subjectKind: PersistedJournalCaseRecord['subjectKind'], subjectId: string, caseId: string): Promise<PersistedJournalCaseRecord | null> {

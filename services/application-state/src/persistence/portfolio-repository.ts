@@ -47,8 +47,10 @@ export class MemoryPortfolioRepository implements PortfolioRepository {
   private readonly revisions = new Map<string, PersistedPortfolioRevisionRecord>();
   private readonly snapshots = new Map<string, PersistedPortfolioSnapshotRecord>();
 
-  async saveWatchlistEntry(record: PersistedWatchlistEntryRecord): Promise<void> {
-    this.watchlist.set(record.entryId, record);
+  async saveWatchlistEntry(record: PersistedWatchlistEntryRecord): Promise<boolean> {
+    const current = this.watchlist.get(record.entryId);
+    if (current && (current.subjectKind !== record.subjectKind || current.subjectId !== record.subjectId)) return false;
+    this.watchlist.set(record.entryId, record); return true;
   }
 
   async getWatchlistEntryForSubject(subjectKind: PersistedWatchlistEntryRecord['subjectKind'], subjectId: string, entryId: string): Promise<PersistedWatchlistEntryRecord | null> {
@@ -59,8 +61,10 @@ export class MemoryPortfolioRepository implements PortfolioRepository {
     return filterEntity([...this.watchlist.values()], query).sort(byUpdatedAtDesc<PersistedWatchlistEntryRecord>('entryId')).slice(0, limitFrom(query.limit));
   }
 
-  async savePosition(record: PersistedPositionRecord): Promise<void> {
-    this.positions.set(record.positionId, record);
+  async savePosition(record: PersistedPositionRecord): Promise<boolean> {
+    const current = this.positions.get(record.positionId);
+    if (current && (current.subjectKind !== record.subjectKind || current.subjectId !== record.subjectId)) return false;
+    this.positions.set(record.positionId, record); return true;
   }
 
   async getPositionForSubject(subjectKind: PersistedPositionRecord['subjectKind'], subjectId: string, positionId: string): Promise<PersistedPositionRecord | null> {
@@ -71,8 +75,10 @@ export class MemoryPortfolioRepository implements PortfolioRepository {
     return filterEntity([...this.positions.values()], query).sort(byUpdatedAtDesc<PersistedPositionRecord>('positionId')).slice(0, limitFrom(query.limit));
   }
 
-  async saveActionItem(record: PersistedPortfolioActionItemRecord): Promise<void> {
-    this.actions.set(record.actionId, record);
+  async saveActionItem(record: PersistedPortfolioActionItemRecord): Promise<boolean> {
+    const current = this.actions.get(record.actionId);
+    if (current && (current.subjectKind !== record.subjectKind || current.subjectId !== record.subjectId)) return false;
+    this.actions.set(record.actionId, record); return true;
   }
 
   async getActionItemForSubject(subjectKind: PersistedPortfolioActionItemRecord['subjectKind'], subjectId: string, actionId: string): Promise<PersistedPortfolioActionItemRecord | null> {
@@ -300,8 +306,8 @@ const mapSnapshot = (row: SnapshotRow): PersistedPortfolioSnapshotRecord => ({
 });
 
 export class SqlPortfolioRepository implements PortfolioRepository {
-  async saveWatchlistEntry(record: PersistedWatchlistEntryRecord): Promise<void> {
-    await queryDb(
+  async saveWatchlistEntry(record: PersistedWatchlistEntryRecord): Promise<boolean> {
+    const rows = await queryDb<{ entry_id: string } >(
       `INSERT INTO app_portfolio_watchlist_entries (
         entry_id, subject_kind, subject_id, asset, timeframe, priority, status, thesis_health, note,
         linked_reasoning_run_id, linked_snapshot_id, linked_drift_id, linked_journal_case_id,
@@ -321,13 +327,14 @@ export class SqlPortfolioRepository implements PortfolioRepository {
         created_at=EXCLUDED.created_at,
         updated_at=EXCLUDED.updated_at,
         entry_json=EXCLUDED.entry_json
-      WHERE app_portfolio_watchlist_entries.subject_kind=EXCLUDED.subject_kind AND app_portfolio_watchlist_entries.subject_id=EXCLUDED.subject_id`,
+      WHERE app_portfolio_watchlist_entries.subject_kind=EXCLUDED.subject_kind AND app_portfolio_watchlist_entries.subject_id=EXCLUDED.subject_id RETURNING entry_id`,
       [
         record.entryId, record.subjectKind, record.subjectId, record.asset, record.timeframe, record.priority, record.status, record.thesisHealth, record.note,
         record.linkedReasoningRunId, record.linkedSnapshotId, record.linkedDriftId, record.linkedJournalCaseId,
         record.createdAt, record.updatedAt, record.entryJson
       ]
     );
+    return rows.length === 1;
   }
 
   async getWatchlistEntryForSubject(subjectKind: PersistedWatchlistEntryRecord['subjectKind'], subjectId: string, entryId: string): Promise<PersistedWatchlistEntryRecord | null> {
@@ -383,8 +390,8 @@ export class SqlPortfolioRepository implements PortfolioRepository {
     return rows.map(mapWatchlist);
   }
 
-  async savePosition(record: PersistedPositionRecord): Promise<void> {
-    await queryDb(
+  async savePosition(record: PersistedPositionRecord): Promise<boolean> {
+    const rows = await queryDb<{ position_id: string } >(
       `INSERT INTO app_portfolio_positions (
         position_id, subject_kind, subject_id, asset, timeframe, status, direction,
         entry_price, stop_loss, take_profit_levels_json, size, opened_at, updated_at, closed_at, thesis_health,
@@ -410,7 +417,7 @@ export class SqlPortfolioRepository implements PortfolioRepository {
         linked_drift_id=EXCLUDED.linked_drift_id,
         note=EXCLUDED.note,
         position_json=EXCLUDED.position_json
-      WHERE app_portfolio_positions.subject_kind=EXCLUDED.subject_kind AND app_portfolio_positions.subject_id=EXCLUDED.subject_id`,
+      WHERE app_portfolio_positions.subject_kind=EXCLUDED.subject_kind AND app_portfolio_positions.subject_id=EXCLUDED.subject_id RETURNING position_id`,
       [
         record.positionId, record.subjectKind, record.subjectId, record.asset, record.timeframe, record.status, record.direction,
         record.entryPrice, record.stopLoss, record.takeProfitLevelsJson, record.size, record.openedAt, record.updatedAt, record.closedAt, record.thesisHealth,
@@ -418,6 +425,7 @@ export class SqlPortfolioRepository implements PortfolioRepository {
         record.note, record.positionJson
       ]
     );
+    return rows.length === 1;
   }
 
   async getPositionForSubject(subjectKind: PersistedPositionRecord['subjectKind'], subjectId: string, positionId: string): Promise<PersistedPositionRecord | null> {
@@ -477,8 +485,8 @@ export class SqlPortfolioRepository implements PortfolioRepository {
     return rows.map(mapPosition);
   }
 
-  async saveActionItem(record: PersistedPortfolioActionItemRecord): Promise<void> {
-    await queryDb(
+  async saveActionItem(record: PersistedPortfolioActionItemRecord): Promise<boolean> {
+    const rows = await queryDb<{ action_id: string } >(
       `INSERT INTO app_portfolio_action_items (
         action_id, subject_kind, subject_id, kind, status, priority, asset, timeframe,
         headline, rationale, linked_entry_id, linked_position_id, linked_journal_case_id,
@@ -503,7 +511,7 @@ export class SqlPortfolioRepository implements PortfolioRepository {
         completed_at=EXCLUDED.completed_at,
         dismissed_at=EXCLUDED.dismissed_at,
         action_json=EXCLUDED.action_json
-      WHERE app_portfolio_action_items.subject_kind=EXCLUDED.subject_kind AND app_portfolio_action_items.subject_id=EXCLUDED.subject_id`,
+      WHERE app_portfolio_action_items.subject_kind=EXCLUDED.subject_kind AND app_portfolio_action_items.subject_id=EXCLUDED.subject_id RETURNING action_id`,
       [
         record.actionId, record.subjectKind, record.subjectId, record.kind, record.status, record.priority, record.asset, record.timeframe,
         record.headline, record.rationale, record.linkedEntryId, record.linkedPositionId, record.linkedJournalCaseId,
@@ -511,6 +519,7 @@ export class SqlPortfolioRepository implements PortfolioRepository {
         record.completedAt, record.dismissedAt, record.actionJson
       ]
     );
+    return rows.length === 1;
   }
 
   async getActionItemForSubject(subjectKind: PersistedPortfolioActionItemRecord['subjectKind'], subjectId: string, actionId: string): Promise<PersistedPortfolioActionItemRecord | null> {

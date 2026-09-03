@@ -96,7 +96,7 @@ export type JournalCaseListQuery = {
 };
 
 export type JournalCaseRepository = {
-  saveCase(record: PersistedJournalCaseRecord): Promise<void>;
+  saveCase(record: PersistedJournalCaseRecord): Promise<boolean>;
   getCaseForSubject(subjectKind: PersistedJournalCaseRecord['subjectKind'], subjectId: string, caseId: string): Promise<PersistedJournalCaseRecord | null>;
   listCases(query: JournalCaseListQuery): Promise<PersistedJournalCaseRecord[]>;
   saveRevision(record: PersistedJournalCaseRevisionRecord): Promise<void>;
@@ -241,15 +241,15 @@ export type PortfolioEntityListQuery = {
 };
 
 export type PortfolioRepository = {
-  saveWatchlistEntry(record: PersistedWatchlistEntryRecord): Promise<void>;
+  saveWatchlistEntry(record: PersistedWatchlistEntryRecord): Promise<boolean>;
   getWatchlistEntryForSubject(subjectKind: PersistedWatchlistEntryRecord['subjectKind'], subjectId: string, entryId: string): Promise<PersistedWatchlistEntryRecord | null>;
   listWatchlistEntries(query: PortfolioEntityListQuery): Promise<PersistedWatchlistEntryRecord[]>;
 
-  savePosition(record: PersistedPositionRecord): Promise<void>;
+  savePosition(record: PersistedPositionRecord): Promise<boolean>;
   getPositionForSubject(subjectKind: PersistedPositionRecord['subjectKind'], subjectId: string, positionId: string): Promise<PersistedPositionRecord | null>;
   listPositions(query: PortfolioEntityListQuery): Promise<PersistedPositionRecord[]>;
 
-  saveActionItem(record: PersistedPortfolioActionItemRecord): Promise<void>;
+  saveActionItem(record: PersistedPortfolioActionItemRecord): Promise<boolean>;
   getActionItemForSubject(subjectKind: PersistedPortfolioActionItemRecord['subjectKind'], subjectId: string, actionId: string): Promise<PersistedPortfolioActionItemRecord | null>;
   listActionItems(query: PortfolioEntityListQuery): Promise<PersistedPortfolioActionItemRecord[]>;
 

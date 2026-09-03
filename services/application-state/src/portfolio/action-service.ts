@@ -17,7 +17,8 @@ export class ActionService {
 
   private async saveWithRevision(item: PortfolioActionItem, revisionType: 'created' | 'updated' | 'completed' | 'dismissed' | 'linked', actor: ActionActor): Promise<PortfolioActionItem> {
     assertValidOrThrow(item);
-    await this.repository.saveActionItem(toPersistedAction(item));
+    const saved = await this.repository.saveActionItem(toPersistedAction(item));
+    if (!saved) throw new Error(`action_item_not_found:${item.actionId}`);
     await this.repository.saveRevision(
       makeRevision({
         entityKind: 'action_item',

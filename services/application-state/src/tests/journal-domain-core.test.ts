@@ -1,6 +1,7 @@
 import { validateCanonicalJournalCase } from '@elceo/schemas';
 import type { CanonicalJournalCase } from '@elceo/types';
 import { JournalCaseService } from '../journal/case-service';
+import { mapJournalAdjustRequest, mapJournalCloseRequest, mapJournalExecuteRequest, mapJournalPartialCloseRequest, mapJournalPlanRequest, mapJournalReviewRequest } from '../journal/api-patch-mappers';
 import { assertValidJournalCaseTransition, buildJournalRevisionSummary } from '../journal/lifecycle';
 import { getJournalCaseReplayById } from '../journal/replay';
 import { deserializeCanonicalJournalCase, deserializeJournalCaseRevisionRecord, serializeCanonicalJournalCase } from '../journal/serialization';
@@ -129,36 +130,38 @@ export async function runJournalDomainCoreTests(): Promise<void> {
   const draft = await service.createDraftCase({ identity: valid.identity, plan: valid.plan, tags: ['alpha'] }, actor);
   assert(draft.status === 'draft', 'create draft should set draft status');
 
-  const planned = await service.planCase('user', 'u-1', draft.identity.caseId, { plan: { thesis: 'Planned after checklist confirmation.' } }, { ...actor, changedAt: '2026-04-24T09:05:00.000Z' });
-  assert(planned.status === 'planned', 'plan should transition to planned');
+  const planned = await service.planCase('user', 'u-1', draft.identity.caseId, mapJournalPlanRequest({ title: 'Mapped title', direction: 'short', thesis: 'Planned after checklist confirmation.' }), { ...actor, changedAt: '2026-04-24T09:05:00.000Z' });
+  assert(planned.status === 'planned' && planned.identity.title === 'Mapped title' && planned.plan.direction === 'short' && planned.plan.thesis === 'Planned after checklist confirmation.', 'plan mapper should persist title, direction, and thesis');
+  const hostileMapped = mapJournalPlanRequest({ title: 'Safe title', caseId: 'foreign', subjectId: 'foreign', subjectKind: 'ops' } as never);
+  assert(hostileMapped.identity?.title === 'Safe title' && !('caseId' in (hostileMapped.identity ?? {})) && !('subjectId' in (hostileMapped.identity ?? {})), 'API mapper must strictly exclude authoritative identity fields');
 
   const executed = await service.markExecuted('user', 'u-1',
     draft.identity.caseId,
-    { execution: { openedAt: '2026-04-24T09:10:00.000Z', entryPriceExecuted: 3021, positionSize: 1.2 } },
+    mapJournalExecuteRequest({ openedAt: '2026-04-24T09:10:00.000Z', entryPriceExecuted: 3021, positionSize: 1.2 }),
     { ...actor, changedAt: '2026-04-24T09:10:00.000Z' }
   );
-  assert(executed.status === 'executed', 'execute should transition to executed');
+  assert(executed.status === 'executed' && executed.execution.openedAt === '2026-04-24T09:10:00.000Z' && executed.execution.entryPriceExecuted === 3021 && executed.execution.positionSize === 1.2, 'execute mapper should persist execution values');
 
   const adjusted = await service.adjustExecution('user', 'u-1',
     draft.identity.caseId,
-    { execution: { lastAdjustedAt: '2026-04-24T09:30:00.000Z', notes: ['Moved stop to reduce risk.'] } },
+    mapJournalAdjustRequest({ lastAdjustedAt: '2026-04-24T09:30:00.000Z', notes: ['Moved stop to reduce risk.'], stopLossPlanned: 3000 }),
     { ...actor, changedAt: '2026-04-24T09:30:00.000Z' }
   );
-  assert(adjusted.status === 'executed', 'adjust should preserve lifecycle state');
+  assert(adjusted.status === 'executed' && adjusted.execution.notes[0] === 'Moved stop to reduce risk.' && adjusted.plan.stopLossPlanned === 3000, 'adjust mapper should persist execution and plan values');
 
   const partially = await service.markPartiallyClosed('user', 'u-1',
     draft.identity.caseId,
-    { closure: { exitPrice: 3030, pnlAmount: 120, outcome: 'mixed' } },
+    mapJournalPartialCloseRequest({ exitPrice: 3030, pnlAmount: 120, outcome: 'mixed' }),
     { ...actor, changedAt: '2026-04-24T09:45:00.000Z' }
   );
   assert(partially.status === 'partially_closed', 'partial close should transition');
 
   const closed = await service.closeCase('user', 'u-1',
     draft.identity.caseId,
-    { closure: { closedAt: '2026-04-24T10:00:00.000Z', exitPrice: 3040, pnlAmount: 200, pnlPercent: 2.4, rMultiple: 1.6, outcome: 'win' } },
+    mapJournalCloseRequest({ closedAt: '2026-04-24T10:00:00.000Z', exitPrice: 3040, pnlAmount: 200, pnlPercent: 2.4, rMultiple: 1.6, outcome: 'win' }),
     { ...actor, changedAt: '2026-04-24T10:00:00.000Z' }
   );
-  assert(closed.status === 'closed', 'close should transition to closed');
+  assert(closed.status === 'closed' && closed.closure.closedAt === '2026-04-24T10:00:00.000Z' && closed.closure.outcome === 'win' && closed.closure.pnlAmount === 200, 'close mapper should persist closure values');
 
   await expectReject(
     service.closeCase('user', 'u-1', draft.identity.caseId, { closure: { closedAt: '2026-04-24T10:10:00.000Z', outcome: 'open' } }, actor),
@@ -167,10 +170,10 @@ export async function runJournalDomainCoreTests(): Promise<void> {
 
   const reviewed = await service.reviewCase('user', 'u-1',
     draft.identity.caseId,
-    { review: { reviewedAt: '2026-04-24T10:20:00.000Z', lessons: ['Wait for pullback confirmation.'] } },
+    mapJournalReviewRequest({ reviewedAt: '2026-04-24T10:20:00.000Z', lessons: ['Wait for pullback confirmation.'] }),
     { ...actor, changedAt: '2026-04-24T10:20:00.000Z' }
   );
-  assert(reviewed.status === 'reviewed', 'review should transition to reviewed');
+  assert(reviewed.status === 'reviewed' && reviewed.review.reviewedAt === '2026-04-24T10:20:00.000Z' && reviewed.review.lessons[0] === 'Wait for pullback confirmation.', 'review mapper should persist review values');
 
   await expectReject(service.cancelCase('user', 'u-1', draft.identity.caseId, {}, actor), 'cancel should fail after execution lifecycle');
 

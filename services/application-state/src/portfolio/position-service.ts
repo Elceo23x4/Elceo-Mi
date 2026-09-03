@@ -21,7 +21,8 @@ export class PositionService {
     actor: PositionActor
   ): Promise<PositionRecord> {
     assertValidOrThrow(position);
-    await this.repository.savePosition(toPersistedPosition(position));
+    const saved = await this.repository.savePosition(toPersistedPosition(position));
+    if (!saved) throw new Error(`position_not_found:${position.positionId}`);
     await this.repository.saveRevision(
       makeRevision({
         entityKind: 'position',

@@ -224,7 +224,7 @@ export class JournalCaseService {
     const validated = validateCanonicalJournalCase(caseData);
     if (validated.ok === false) throw new Error(`invalid_journal_case:${validated.errors.join('; ')}`);
 
-    await this.repository.saveCase(toPersistedCaseRecord(caseData));
+    if (!await this.repository.saveCase(toPersistedCaseRecord(caseData))) throw new Error(`journal_case_not_found:${caseData.identity.caseId}`);
     const revision = makeRevisionRecord(caseData, {
       previousStatus: null,
       nextStatus: 'draft',
@@ -286,7 +286,7 @@ export class JournalCaseService {
   private async writeMutation(caseData: CanonicalJournalCase, previousStatus: JournalCaseStatus, revisionType: JournalCaseRevisionType, actor: JournalActor): Promise<CanonicalJournalCase> {
     const validated = validateCanonicalJournalCase(caseData);
     if (validated.ok === false) throw new Error(`invalid_journal_case:${validated.errors.join('; ')}`);
-    await this.repository.saveCase(toPersistedCaseRecord(caseData));
+    if (!await this.repository.saveCase(toPersistedCaseRecord(caseData))) throw new Error(`journal_case_not_found:${caseData.identity.caseId}`);
     const changedAt = actor.changedAt ?? caseData.updatedAt;
     const revision = makeRevisionRecord(caseData, {
       previousStatus,

@@ -357,14 +357,14 @@ const mockNotificationRuntime = {
     registerOrUpdateTarget: async () => ({ targetId: 'target-1' }),
     registerOrUpdateSubscription: async () => ({ subscriptionId: 'sub-1' }),
     listSubscriptionsForSubjectDetailed: async () => ([{ subscriptionId: 'sub-1', subjectId: subject.subjectId }]),
-    enableTargetForSubject: async (_kind: string, _subjectId: string, targetId: string) => { if (targetId === 'target-foreign') throw new Error('not_found'); },
-    disableTargetForSubject: async (_kind: string, _subjectId: string, targetId: string) => { if (targetId === 'target-foreign') throw new Error('not_found'); },
+    enableTargetForSubject: async (_kind: string, _subjectId: string, targetId: string) => { if (targetId === 'target-foreign') throw new Error('not_found'); return { targetId, status: 'active' }; },
+    disableTargetForSubject: async (_kind: string, _subjectId: string, targetId: string) => { if (targetId === 'target-foreign') throw new Error('not_found'); return { targetId, status: 'disabled' }; },
     enableSubscription: async (subscriptionId: string) => { if (subscriptionId === 'sub-foreign') throw new Error('forbidden'); },
     disableSubscription: async (subscriptionId: string) => { if (subscriptionId === 'sub-foreign') throw new Error('forbidden'); },
     updateSubscriptionThreshold: async (subscriptionId: string) => { if (subscriptionId === 'sub-foreign') throw new Error('forbidden'); }
   },
   verification: {
-    issueTargetVerificationForSubject: async () => ({ verificationId: 'v-1' }),
+    issueTargetVerificationForSubject: async () => ({ verificationId: 'v-1', targetId: 'target-1', verificationKind: 'email_verification', issuedAt: '2026-01-01T00:00:00.000Z', expiresAt: '2026-01-02T00:00:00.000Z', rawToken: 'browser-secret', alreadyActive: false }),
     consumeTargetVerificationForSubject: async () => ({ verified: true }),
     expireStaleVerifications: async () => ({ expiredCount: 1 })
   },
@@ -710,10 +710,14 @@ export async function runRouteRuntimeTests(): Promise<void> {
   securityDecisionMode = 'rate_limited';
   assert.deepEqual(await readJson(await notificationsTargetEnableRoute.POST(request('https://x/api/notifications/targets/target-1/enable', { method: 'POST' }), { params: Promise.resolve({ targetId: 'target-1' }) })), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
   securityDecisionMode = 'allowed';
+  const enabledTarget = await readJson(await notificationsTargetEnableRoute.POST(request('https://x/api/notifications/targets/target-1/enable', { method: 'POST' }), { params: Promise.resolve({ targetId: 'target-1' }) }));
+  assert.deepEqual(enabledTarget, { ok: true, data: { target: { targetId: 'target-1', status: 'active' } } });
   assert.equal(latestSecurityActionKind, 'notification_target_write');
   securityDecisionMode = 'rate_limited';
   assert.deepEqual(await readJson(await notificationsTargetDisableRoute.POST(request('https://x/api/notifications/targets/target-1/disable', { method: 'POST' }), { params: Promise.resolve({ targetId: 'target-1' }) })), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
   securityDecisionMode = 'allowed';
+  const disabledTarget = await readJson(await notificationsTargetDisableRoute.POST(request('https://x/api/notifications/targets/target-1/disable', { method: 'POST' }), { params: Promise.resolve({ targetId: 'target-1' }) }));
+  assert.deepEqual(disabledTarget, { ok: true, data: { target: { targetId: 'target-1', status: 'disabled' } } });
   assert.equal(latestSecurityActionKind, 'notification_target_write');
   securityDecisionMode = 'rate_limited';
   assert.deepEqual(await readJson(await notificationsSubscriptionsRoute.POST(request('https://x/api/notifications/subscriptions', { method: 'POST', body: JSON.stringify({ channel: 'email', minimumMaterialityScore: 0.7 }) }))), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
@@ -729,7 +733,10 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal(latestSecurityActionKind, 'notification_subscription_write');
   const notificationVerificationIssueOk = await notificationsVerificationIssueRoute.POST(request('https://x/api/notifications/verification/issue', { method: 'POST', headers: { 'Idempotency-Key': 'notification-issue-ok' }, body: JSON.stringify({ targetId: 'target-1' }) }));
   assert.equal(notificationVerificationIssueOk.status, 200);
-  assert.equal((await readJson(notificationVerificationIssueOk)).ok, true);
+  const publicVerificationIssue = await readJson(notificationVerificationIssueOk);
+  assert.equal(publicVerificationIssue.ok, true);
+  assert.equal(JSON.stringify(publicVerificationIssue).includes('rawToken'), false);
+  assert.equal(JSON.stringify(publicVerificationIssue).includes('tokenHash'), false);
   assert.equal(latestSecurityActionKind, 'notification_verification_issue');
   securityDecisionMode = 'rate_limited';
   const notificationVerificationIssueRateLimited = await notificationsVerificationIssueRoute.POST(request('https://x/api/notifications/verification/issue', { method: 'POST', body: JSON.stringify({ targetId: 'target-1' }) }));

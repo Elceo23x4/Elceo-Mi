@@ -26,6 +26,8 @@ const aliasTargets = {
   '@/lib/server/composition': 'tests/stubs/composition.cjs',
   '@/lib/server/access': 'lib/server/access/index.cjs',
   '@/lib/server/security': 'lib/server/security/index.cjs',
+  '@/lib/server/notifications/target-address': 'lib/server/notifications/target-address.cjs',
+  '@/lib/server/notifications/public-verification': 'lib/server/notifications/public-verification.cjs',
 };
 
 async function walk(dir) {
@@ -51,7 +53,7 @@ function rewriteRequires(content, targetFile) {
     return `require(${quote}${next}${quote})`;
   });
 
-  updated = updated.replace(/require\((['"])(@elceo\/[a-z\-]+|@\/lib\/server\/(?:api|auth|composition|access|security))\1\)/g, (_match, quote, alias) => {
+  updated = updated.replace(/require\((['"])(@elceo\/[a-z\-]+|@\/lib\/server\/(?:api|auth|composition|access|security|notifications\/(?:target-address|public-verification)))\1\)/g, (_match, quote, alias) => {
     const relTarget = aliasTargets[alias];
     if (!relTarget) return _match;
     const absolute = path.join(outputRoot, relTarget).replace(/\\/g, '/');

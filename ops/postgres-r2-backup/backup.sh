@@ -5,6 +5,8 @@ umask 077
 started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 workdir=""
 stage="initialization"
+heartbeat_enabled=0
+heartbeat_attempted=0
 export PGCONNECT_TIMEOUT="${PGCONNECT_TIMEOUT:-15}"
 
 if ! [[ "$PGCONNECT_TIMEOUT" =~ ^[1-9][0-9]*$ ]] || (( PGCONNECT_TIMEOUT > 300 )); then
@@ -18,8 +20,12 @@ log() {
 
 cleanup() {
   status=$?
+  trap - EXIT
   if [[ -n "$workdir" && -d "$workdir" ]]; then
     rm -rf -- "$workdir"
+  fi
+  if (( status != 0 )) && [[ "${BACKUP_RUN_MODE:-}" == "backup" ]]; then
+    send_heartbeat failure
   fi
   if (( status == 0 )); then
     log "completion=PASS started_at=$started_at overall=PASS"
@@ -29,6 +35,31 @@ cleanup() {
   exit "$status"
 }
 trap cleanup EXIT
+
+send_heartbeat() {
+  local signal="$1" heartbeat_url
+  if (( heartbeat_enabled == 0 || heartbeat_attempted != 0 )); then
+    return 0
+  fi
+
+  heartbeat_attempted=1
+  heartbeat_url="$BETTERSTACK_BACKUP_HEARTBEAT_URL"
+  if [[ "$signal" == "failure" ]]; then
+    heartbeat_url="${heartbeat_url%/}/fail"
+  fi
+
+  # copyurl performs the HTTPS GET without adding another network client to the
+  # image. All transport output is suppressed because its diagnostics can
+  # contain the secret URL; only the redacted result below is observable.
+  if rclone --log-level ERROR --contimeout 5s --timeout 10s --max-duration 15s \
+      --retries 1 --low-level-retries 1 copyurl --stdout "$heartbeat_url" \
+      >/dev/null 2>&1; then
+    log "heartbeat_signal=$signal delivery=PASS"
+  else
+    log "heartbeat_signal=$signal delivery=FAIL"
+  fi
+  return 0
+}
 
 require_var() {
   if [[ -z "${!1:-}" ]]; then
@@ -42,8 +73,20 @@ for variable in BACKUP_RUN_MODE R2_ENDPOINT R2_BUCKET R2_ACCESS_KEY_ID R2_SECRET
 done
 
 case "$BACKUP_RUN_MODE" in
-  probe) ;;
-  backup) require_var DATABASE_URL ;;
+  probe)
+    log "heartbeat=SKIPPED reason=probe_mode"
+    ;;
+  backup)
+    require_var DATABASE_URL
+    if [[ -z "${BETTERSTACK_BACKUP_HEARTBEAT_URL:-}" ]]; then
+      log "heartbeat=SKIPPED reason=not_configured"
+    elif [[ "$BETTERSTACK_BACKUP_HEARTBEAT_URL" =~ ^https://uptime\.betterstack\.com/api/v1/heartbeat/[A-Za-z0-9_-]+/?$ ]]; then
+      heartbeat_enabled=1
+    else
+      printf 'error=invalid_environment variable=BETTERSTACK_BACKUP_HEARTBEAT_URL expected=better_stack_https_heartbeat_url\n' >&2
+      exit 64
+    fi
+    ;;
   *) printf 'error=invalid_run_mode expected=probe_or_backup\n' >&2; exit 64 ;;
 esac
 
@@ -132,3 +175,8 @@ stage="completion_manifest_verification"
 "${rclone_cmd[@]}" copyto "r2:${R2_BUCKET}/${manifest_key}" "$downloaded_manifest"
 cmp --silent "$manifest_file" "$downloaded_manifest"
 log "object_key=$manifest_key completion_manifest_verification=PASS"
+
+# The monitoring plane is deliberately outside the backup correctness
+# boundary. This is reached only after the authoritative manifest was fetched
+# and compared byte-for-byte, and delivery failure cannot change the exit code.
+send_heartbeat success

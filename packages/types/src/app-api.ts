@@ -172,7 +172,10 @@ export type ActionCreateRequest = {
 };
 export type ActionUpdateRequest = { priority?: WatchlistPriority; headline?: string; rationale?: string };
 
-export type TargetCreateRequest = { channel: NotificationChannel; value: string; label?: string | null };
+export type TargetCreateRequest =
+  | { channel: 'email'; email: string; label?: string | null }
+  | { channel: 'push'; subscriptionId: string; label?: string | null }
+  | { channel: 'in_app'; label?: string | null };
 export type TargetStatusRequest = { isEnabled: boolean };
 export type SubscriptionCreateRequest = {
   channel: NotificationChannel;

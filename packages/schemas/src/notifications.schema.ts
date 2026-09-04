@@ -76,7 +76,7 @@ const TARGET_STATUSES: NotificationTargetChannelStatus[] = ['active', 'disabled'
 const TARGET_KINDS: NotificationTargetKind[] = ['in_app_user', 'email_address', 'push_endpoint'];
 const VERIFICATION_STATUSES: NotificationTargetVerificationStatus[] = ['pending', 'verified', 'expired', 'consumed', 'canceled'];
 const VERIFICATION_KINDS: NotificationVerificationKind[] = ['email_verification', 'push_verification'];
-const PROVIDER_EVENT_KINDS: NotificationProviderEventKind[] = ['accepted', 'delivered', 'bounced', 'complained', 'unsubscribed', 'invalid_target', 'provider_failed', 'unknown'];
+const PROVIDER_EVENT_KINDS: NotificationProviderEventKind[] = ['accepted', 'delivered', 'delivery_delayed', 'bounced', 'complained', 'unsubscribed', 'invalid_target', 'provider_failed', 'unknown'];
 const RECEIPT_SEVERITIES: NotificationReceiptSeverity[] = ['info', 'warning', 'critical'];
 const TARGET_HEALTH_STATES: NotificationTargetHealthState[] = ['healthy', 'warning', 'degraded', 'disabled'];
 

@@ -1,6 +1,7 @@
 import { createNotificationDeliveryTransport } from '../delivery/transport.js';
 import { MemoryNotificationInboxRepository } from '../persistence/memory-notification-repository.js';
 import type { NotificationOutboxRecord } from '../delivery/outbox-contracts.js';
+import { ResendEmailDeliveryTransport } from '../providers/production-transports.js';
 
 const assert = (condition: boolean, message: string): void => { if (!condition) throw new Error(message); };
 
@@ -18,4 +19,13 @@ export async function runTransportTests(): Promise<void> {
   const failing = createNotificationDeliveryTransport({}, { inboxRepository, memoryFailureByChannel: { email: { errorCode: 'provider_not_configured', errorMessage: 'forced_failure' } } });
   const failure = await failing.send({ ...outbox, channel: 'email', targetId: 't2' }, { channel: 'email', targetId: 't2', targetKind: 'email_address', addressJson: '{}', payload: { subject: 's', body: 'b', decisionId: 'd1', ruleKey: 'critical_drift', asset: 'XAU/USD', timeframe: 'H1', createdAt: '2026-01-15T10:00:00.000Z' } }, '2026-01-15T10:01:00.000Z');
   assert(failure.success === false && failure.errorCode === 'provider_not_configured', 'memory email transport supports deterministic failure injection');
+
+  const envelope = { channel: 'email' as const, targetId: 't2', targetKind: 'email_address' as const, addressJson: '{"email":"safe@example.test"}', payload: { subject: 's', body: 'b', decisionId: 'd1', ruleKey: 'critical_drift', asset: 'XAU/USD' as const, timeframe: 'H1' as const, createdAt: '2026-01-15T10:00:00.000Z' } };
+  const resendCase = async (status: number, name: string) => new ResendEmailDeliveryTransport('secret','from@example.test',null,null,1000,async () => new Response(JSON.stringify({ name }), { status })).send({ ...outbox, channel:'email' }, envelope);
+  const invalidKey = await resendCase(400, 'invalid_idempotency_key');
+  assert(invalidKey.retryable === false && invalidKey.errorCode === 'invalid_idempotency_key', 'invalid idempotency key is permanent');
+  const mismatch = await resendCase(409, 'invalid_idempotent_request');
+  assert(mismatch.retryable === false && mismatch.errorCode === 'invalid_idempotent_request', 'same key payload mismatch is permanent');
+  const concurrent = await resendCase(409, 'concurrent_idempotent_requests');
+  assert(concurrent.retryable === true && concurrent.errorCode === 'concurrent_idempotent_requests', 'concurrent same-key request is retryable');
 }

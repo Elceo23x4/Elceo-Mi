@@ -220,8 +220,13 @@ export const validateActionUpdateRequest = (i: unknown): SchemaValidationResult<
 
 export function validateTargetCreateRequest(i: unknown): SchemaValidationResult<TargetCreateRequest> {
   const r = validateObject(i); if (!r.ok) return { ok: false, errors: (r as { ok: false; errors: string[] }).errors }; const v = r.value; const errors: string[] = [];
-  if (!isEnumValue(v.channel, NOTIFICATION_CHANNELS)) errors.push('channel is invalid');
-  if (!isNonEmptyString(v.value)) errors.push('value must be non-empty string');
+  if (!isEnumValue(v.channel, ['in_app', 'email', 'push'] as const)) errors.push('channel is invalid');
+  if (v.channel === 'email') {
+    if (typeof v.email !== 'string' || v.email.trim().length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email.trim())) errors.push('email is invalid');
+    else v.email = v.email.trim().toLowerCase();
+  }
+  if (v.channel === 'push' && (typeof v.subscriptionId !== 'string' || v.subscriptionId.trim().length < 8 || v.subscriptionId.trim().length > 256 || !/^[A-Za-z0-9._:-]+$/.test(v.subscriptionId.trim()))) errors.push('subscriptionId is invalid');
+  if (v.channel === 'push' && typeof v.subscriptionId === 'string') v.subscriptionId = v.subscriptionId.trim();
   if (!(v.label === undefined || isNullableString(v.label))) errors.push('label must be non-empty string | null');
   return errors.length ? { ok: false, errors } : { ok: true, value: v as TargetCreateRequest };
 }

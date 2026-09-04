@@ -21,6 +21,7 @@ const aliasTargets = {
   '@elceo/application-state': 'tests/stubs/application-state.cjs',
   '@elceo/analytics': 'services/analytics/src/index.cjs',
   '@elceo/billing': 'services/billing/src/index.cjs',
+  '@elceo/notifications': 'tests/stubs/notifications.cjs',
   '@/lib/server/api': 'lib/server/api/index.cjs',
   '@/lib/server/auth': 'lib/server/auth/index.cjs',
   '@/lib/server/composition': 'tests/stubs/composition.cjs',

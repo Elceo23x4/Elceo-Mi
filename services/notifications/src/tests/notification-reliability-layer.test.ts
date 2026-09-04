@@ -65,7 +65,7 @@ export async function runNotificationReliabilitySurgicalTests(): Promise<void> {
   const originalFetch = globalThis.fetch;
   try {
     globalThis.fetch = async () => new Response('auth secret body', { status: 401 }) as never;
-    const authTransport = createNotificationDeliveryTransport({ NOTIFICATION_PROVIDER_MODE: 'sandbox_provider', ELCEO_NOTIFICATION_SANDBOX_SMOKE: '1', NOTIFICATION_EMAIL_PROVIDER: 'http_email', NOTIFICATION_HTTP_EMAIL_ENDPOINT: 'https://provider.invalid', NOTIFICATION_HTTP_EMAIL_API_KEY: 'secret', NOTIFICATION_EMAIL_FROM_ADDRESS: 'sender@example.test' }, { inboxRepository: r.inboxRepository });
+    const authTransport = createNotificationDeliveryTransport({ NOTIFICATION_PROVIDER_MODE: 'sandbox_provider', ELCEO_NOTIFICATION_SANDBOX_SMOKE: '1', NOTIFICATION_EMAIL_PROVIDER: 'resend', RESEND_API_KEY: 'secret', NOTIFICATION_EMAIL_FROM_ADDRESS: 'sender@example.test' }, { inboxRepository: r.inboxRepository });
     const authResult = await authTransport.send(outbox, { channel: 'email', targetId: outbox.targetId, targetKind: 'email_address', addressJson: '{"email":"a@b.c"}', payload: { decisionId: outbox.decisionId, asset: outbox.asset, timeframe: outbox.timeframe, ruleKey: outbox.ruleKey, subject: 'h', body: 'b', createdAt: outbox.createdAt } }, '2026-01-15T10:08:00.000Z');
     assert(authResult.outcome === 'permanent_failure' && authResult.retryable === false && authResult.errorCode === 'provider_auth_failed', 'provider auth failure should be terminal');
     assert(!JSON.stringify(authResult.responseMeta).includes('auth secret body'), 'provider failure metadata should be redacted');

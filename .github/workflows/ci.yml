@@ -150,6 +150,23 @@ jobs:
         run: npm run test:kick-off-acceptance
       - name: Production build
         run: npm run build
+      - name: Notification browser bundle secret boundary
+        env:
+          RESEND_API_KEY: rc_i3_client_secret_sentinel_resend_api_key
+          RESEND_WEBHOOK_SECRET: rc_i3_client_secret_sentinel_resend_webhook_secret
+          POSTMARK_SERVER_TOKEN: rc_i3_client_secret_sentinel_postmark_server_token
+          POSTMARK_WEBHOOK_USERNAME: rc_i3_client_secret_sentinel_postmark_webhook_username
+          POSTMARK_WEBHOOK_PASSWORD: rc_i3_client_secret_sentinel_postmark_webhook_password
+          ONESIGNAL_APP_API_KEY: rc_i3_client_secret_sentinel_onesignal_app_api_key
+          ONESIGNAL_REST_API_KEY: rc_i3_client_secret_sentinel_onesignal_rest_api_key
+          ONESIGNAL_WEBHOOK_CORRELATION_SECRET: rc_i3_client_secret_sentinel_onesignal_webhook_correlation_secret
+          DATABASE_URL: postgresql://rc_i3_client_secret_sentinel_database_url@localhost/rc_i3
+          AUTH_SECRET: rc_i3_client_secret_sentinel_auth_secret
+        run: npm run -w apps/web build && npm run security:notification-client
+      - name: RC-I3 notification provider PostgreSQL integration
+        env:
+          DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3
+        run: npm run test:notification-provider-integration
       - name: Native sharp runtime
         run: npm run test:sharp
       - name: SVG transformation pipeline

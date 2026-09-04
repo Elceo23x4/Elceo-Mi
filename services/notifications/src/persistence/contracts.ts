@@ -100,6 +100,7 @@ export type NotificationDecisionRepository = {
 };
 
 export type NotificationTargetRepository = {
+  lockTargetById?(targetId: string): Promise<NotificationTargetRecord | null>;
   saveTarget(record: NotificationTargetRecord): Promise<void>;
   getTargetById(targetId: string): Promise<NotificationTargetRecord | null>;
   getTargetByKey(targetKey: string): Promise<NotificationTargetRecord | null>;
@@ -199,6 +200,7 @@ export type NotificationOutboxAttemptRepository = {
 };
 
 export type NotificationProviderEventRepository = {
+  claimProviderEvent?(record: PersistedNotificationProviderEventRecord): Promise<boolean>;
   saveProviderEvent(record: PersistedNotificationProviderEventRecord): Promise<void>;
   getProviderEventById(providerEventId: string): Promise<PersistedNotificationProviderEventRecord | null>;
   listProviderEventsForTarget(targetId: string, limit?: number): Promise<PersistedNotificationProviderEventRecord[]>;
@@ -230,6 +232,11 @@ export type NotificationPolicyLoadRepositories = {
 export type NotificationPolicyEvaluationRepositories = NotificationPolicyLoadRepositories;
 
 export type NotificationDeliveryRuntimeRepositories = NotificationPolicyLoadRepositories & {
+  feedbackTransactionRepository?: { withTransaction<T>(operation: () => Promise<T>): Promise<T> };
+  pushOwnershipRepository?: {
+    bind(record: NotificationTargetRecord): Promise<NotificationTargetRecord>;
+    unbind(subjectKind: 'user', subjectId: string, subscriptionId: string, updatedAt: string): Promise<boolean>;
+  };
   outboxRepository: NotificationOutboxRepository;
   outboxAttemptRepository: NotificationOutboxAttemptRepository;
   targetRepository: NotificationTargetRepository;

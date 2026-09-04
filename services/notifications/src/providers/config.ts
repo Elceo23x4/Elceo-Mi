@@ -1,6 +1,6 @@
 import type { NotificationChannel } from '@elceo/types';
 
-export type NotificationProviderKind = 'memory' | 'in_app' | 'smtp_email' | 'http_email' | 'web_push' | 'unsupported';
+export type NotificationProviderKind = 'memory' | 'in_app' | 'resend' | 'postmark' | 'onesignal_web_push' | 'unsupported';
 
 export type NotificationDeliveryProviderConfig = {
   inAppProvider: NotificationProviderKind;
@@ -8,70 +8,43 @@ export type NotificationDeliveryProviderConfig = {
   pushProvider: NotificationProviderKind;
   emailFromAddress: string | null;
   emailFromName: string | null;
-  smtpHost: string | null;
-  smtpPort: number | null;
-  smtpUser: string | null;
-  smtpPassword: string | null;
-  smtpSecure: boolean;
-  httpEmailEndpoint: string | null;
-  httpEmailApiKey: string | null;
-  webPushEndpoint: string | null;
-  webPushApiKey: string | null;
+  emailReplyTo: string | null;
+  resendApiKey: string | null;
+  postmarkServerToken: string | null;
+  postmarkMessageStream: string;
+  oneSignalAppId: string | null;
+  oneSignalApiKey: string | null;
+  requestTimeoutMs: number;
 };
 
-const parseProviderKind = (value: string | undefined, fallback: NotificationProviderKind): NotificationProviderKind => {
-  if (!value) return fallback;
-  const normalized = value.trim().toLowerCase() as NotificationProviderKind;
-  if (['memory', 'in_app', 'smtp_email', 'http_email', 'web_push', 'unsupported'].includes(normalized)) return normalized;
-  return 'unsupported';
-};
-
-const isProdLike = (env: Record<string, string | undefined>): boolean => {
-  const nodeEnv = (env.NODE_ENV ?? '').toLowerCase();
-  return nodeEnv === 'production' || nodeEnv === 'staging';
+const clean = (value: string | undefined): string | null => {
+  const result = value?.trim() || null;
+  if (!result || /^(change[-_ ]?me|example|placeholder|todo|xxx)/i.test(result)) return null;
+  return result;
 };
 
 export function getNotificationDeliveryProviderConfig(env: Record<string, string | undefined>): NotificationDeliveryProviderConfig {
-  const smtpHost = env.NOTIFICATION_SMTP_HOST?.trim() || null;
-  const smtpUser = env.NOTIFICATION_SMTP_USER?.trim() || null;
-  const smtpPassword = env.NOTIFICATION_SMTP_PASSWORD?.trim() || null;
-  const smtpPort = env.NOTIFICATION_SMTP_PORT ? Number(env.NOTIFICATION_SMTP_PORT) : null;
-  const httpEmailEndpoint = env.NOTIFICATION_HTTP_EMAIL_ENDPOINT?.trim() || null;
-  const httpEmailApiKey = env.NOTIFICATION_HTTP_EMAIL_API_KEY?.trim() || null;
-  const webPushEndpoint = env.NOTIFICATION_WEB_PUSH_ENDPOINT?.trim() || null;
-  const webPushApiKey = env.NOTIFICATION_WEB_PUSH_API_KEY?.trim() || null;
-
-  const emailProvider = parseProviderKind(
-    env.NOTIFICATION_EMAIL_PROVIDER,
-    smtpHost && smtpUser && smtpPassword
-      ? 'smtp_email'
-      : httpEmailEndpoint && httpEmailApiKey
-        ? 'http_email'
-        : isProdLike(env)
-          ? 'unsupported'
-          : 'memory'
-  );
-
-  const pushProvider = parseProviderKind(
-    env.NOTIFICATION_PUSH_PROVIDER,
-    webPushEndpoint && webPushApiKey ? 'web_push' : 'unsupported'
-  );
-
+  const email = (env.NOTIFICATION_EMAIL_PROVIDER?.trim().toLowerCase() || (env.NODE_ENV === 'production' ? 'unsupported' : 'memory')) as NotificationProviderKind;
+  const push = (env.NOTIFICATION_PUSH_PROVIDER?.trim().toLowerCase() || 'unsupported') as NotificationProviderKind;
+  const serverAppId = clean(env.ONESIGNAL_APP_ID);
+  const publicAppId = clean(env.NEXT_PUBLIC_ONESIGNAL_APP_ID);
+  const oneSignalApiKey = clean(env.ONESIGNAL_APP_API_KEY);
+  if (push === 'onesignal_web_push' && (!serverAppId || !publicAppId || !oneSignalApiKey || serverAppId !== publicAppId)) {
+    throw new Error('onesignal_configuration_invalid');
+  }
   return {
-    inAppProvider: parseProviderKind(env.NOTIFICATION_IN_APP_PROVIDER, 'in_app'),
-    emailProvider,
-    pushProvider,
-    emailFromAddress: env.NOTIFICATION_EMAIL_FROM_ADDRESS?.trim() || null,
-    emailFromName: env.NOTIFICATION_EMAIL_FROM_NAME?.trim() || null,
-    smtpHost,
-    smtpPort: Number.isFinite(smtpPort) ? smtpPort : null,
-    smtpUser,
-    smtpPassword,
-    smtpSecure: (env.NOTIFICATION_SMTP_SECURE ?? 'false').toLowerCase() === 'true',
-    httpEmailEndpoint,
-    httpEmailApiKey,
-    webPushEndpoint,
-    webPushApiKey
+    inAppProvider: 'in_app',
+    emailProvider: ['memory', 'resend', 'postmark'].includes(email) ? email : 'unsupported',
+    pushProvider: push === 'onesignal_web_push' ? push : 'unsupported',
+    emailFromAddress: clean(env.NOTIFICATION_EMAIL_FROM_ADDRESS),
+    emailFromName: clean(env.NOTIFICATION_EMAIL_FROM_NAME),
+    emailReplyTo: clean(env.NOTIFICATION_EMAIL_REPLY_TO),
+    resendApiKey: clean(env.RESEND_API_KEY),
+    postmarkServerToken: clean(env.POSTMARK_SERVER_TOKEN),
+    postmarkMessageStream: clean(env.POSTMARK_MESSAGE_STREAM) ?? 'outbound',
+    oneSignalAppId: serverAppId,
+    oneSignalApiKey,
+    requestTimeoutMs: Math.min(30_000, Math.max(1_000, Number(env.NOTIFICATION_PROVIDER_TIMEOUT_MS) || 10_000))
   };
 }
 

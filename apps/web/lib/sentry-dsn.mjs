@@ -1,4 +1,4 @@
-const SENTRY_SAAS_INGEST_HOST = /^o\d+\.ingest(?:\.us)?\.sentry\.io$/;
+const SENTRY_SAAS_INGEST_HOST = /^o\d+\.ingest(?:\.(?:us|de))?\.sentry\.io$/;
 const SENTRY_PUBLIC_KEY = /^[a-f0-9]{32}$/i;
 const SENTRY_PROJECT_PATH = /^\/\d+\/?$/;
 
@@ -25,7 +25,8 @@ export function parseSentrySaasDsn(value) {
 }
 
 export function sentryBrowserIngestOrigin(env) {
-  return browserSentryDsn(env)?.ingestOrigin ?? null;
+  if (!isSentryBrowserBuildAuthorized(env)) return null;
+  return parseSentrySaasDsn(env.NEXT_PUBLIC_SENTRY_DSN)?.ingestOrigin ?? null;
 }
 
 export function serverSentryDsn(env) {
@@ -34,8 +35,14 @@ export function serverSentryDsn(env) {
 }
 
 export function browserSentryDsn(env) {
-  if (env.APP_ENV !== 'staging' || env.NEXT_PUBLIC_APP_ENV !== 'staging') return null;
+  if (env.NEXT_PUBLIC_ELCEO_SENTRY_BROWSER_ENABLED !== 'true' || env.NEXT_PUBLIC_APP_ENV !== 'staging') return null;
   return parseSentrySaasDsn(env.NEXT_PUBLIC_SENTRY_DSN);
+}
+
+export function isSentryBrowserBuildAuthorized(env) {
+  return env.APP_ENV === 'staging' &&
+    env.NEXT_PUBLIC_APP_ENV === 'staging' &&
+    parseSentrySaasDsn(env.NEXT_PUBLIC_SENTRY_DSN) !== null;
 }
 
 export function sentryConnectSources(env) {

@@ -1,6 +1,7 @@
-import { sentryConnectSources } from './lib/sentry-dsn.mjs';
+import { isSentryBrowserBuildAuthorized, sentryConnectSources } from './lib/sentry-dsn.mjs';
 
 const connectSources = sentryConnectSources(process.env);
+const sentryBrowserEnabled = isSentryBrowserBuildAuthorized(process.env);
 
 /** @type {import('next').NextConfig} */
 const securityHeaders = [
@@ -20,6 +21,9 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
+  env: {
+    NEXT_PUBLIC_ELCEO_SENTRY_BROWSER_ENABLED: sentryBrowserEnabled ? 'true' : 'false'
+  },
   outputFileTracingIncludes: {
     '/pwa-icons/*': ['./public/elceo/assets/source/retro_computer_logo.svg']
   },

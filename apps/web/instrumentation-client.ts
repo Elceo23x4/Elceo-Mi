@@ -3,7 +3,7 @@ import { applySentryPrivacyPolicy, safeEnvironment } from './lib/sentry-policy';
 import { browserSentryDsn } from './lib/sentry-dsn.mjs';
 
 const sentry = browserSentryDsn({
-  APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
+  NEXT_PUBLIC_ELCEO_SENTRY_BROWSER_ENABLED: process.env.NEXT_PUBLIC_ELCEO_SENTRY_BROWSER_ENABLED,
   NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
   NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN
 });

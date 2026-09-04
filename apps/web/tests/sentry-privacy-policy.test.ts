@@ -2,9 +2,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import type { ErrorEvent } from '@sentry/nextjs';
 import { allowedCaptureTags, applySentryPrivacyPolicy, isValidPublicDsn } from '../lib/sentry-policy';
-import { browserSentryDsn, sentryBrowserIngestOrigin, sentryConnectSources, serverSentryDsn } from '../lib/sentry-dsn.mjs';
+import { browserSentryDsn, isSentryBrowserBuildAuthorized, sentryBrowserIngestOrigin, sentryConnectSources, serverSentryDsn } from '../lib/sentry-dsn.mjs';
 
-const VALID_DSN = 'https://0123456789abcdef0123456789abcdef@o4500000000000000.ingest.us.sentry.io/1234567';
+const PUBLIC_KEY = '0123456789abcdef0123456789abcdef';
+const DEFAULT_DSN = `https://${PUBLIC_KEY}@o4500000000000000.ingest.sentry.io/1234567`;
+const US_DSN = `https://${PUBLIC_KEY}@o4500000000000000.ingest.us.sentry.io/1234567`;
+const DE_DSN = `https://${PUBLIC_KEY}@o4500000000000000.ingest.de.sentry.io/1234567`;
 
 export function runSentryPrivacyPolicyTests() {
   const filtered = applySentryPrivacyPolicy({
@@ -59,9 +62,12 @@ export function runSentryPrivacyPolicyTests() {
     requestId: 'request-456'
   });
 
-  assert.equal(isValidPublicDsn(VALID_DSN), true);
+  assert.equal(isValidPublicDsn(DEFAULT_DSN), true);
+  assert.equal(isValidPublicDsn(US_DSN), true);
+  assert.equal(isValidPublicDsn(DE_DSN), true);
   assert.equal(isValidPublicDsn('https://0123456789abcdef0123456789abcdef@attacker.example/123'), false);
   assert.equal(isValidPublicDsn('https://0123456789abcdef0123456789abcdef@localhost/123'), false);
+  assert.equal(isValidPublicDsn(`https://${PUBLIC_KEY}@o1.ingest.xyz.sentry.io/123`), false);
   assert.equal(isValidPublicDsn('https://0123456789abcdef0123456789abcdef:secret@o1.ingest.sentry.io/123'), false);
   assert.equal(isValidPublicDsn('http://0123456789abcdef0123456789abcdef@o1.ingest.sentry.io/123'), false);
   assert.equal(isValidPublicDsn('https://0123456789abcdef0123456789abcdef@o1.ingest.sentry.io/not-a-project'), false);
@@ -69,14 +75,20 @@ export function runSentryPrivacyPolicyTests() {
 
   assert.equal(sentryBrowserIngestOrigin({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging' }), null);
   assert.equal(sentryBrowserIngestOrigin({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: 'https://0123456789abcdef0123456789abcdef@attacker.example/123' }), null);
-  assert.equal(sentryBrowserIngestOrigin({ APP_ENV: 'production', NEXT_PUBLIC_APP_ENV: 'production', NEXT_PUBLIC_SENTRY_DSN: VALID_DSN }), null);
-  assert.equal(serverSentryDsn({ APP_ENV: 'production', SENTRY_DSN: VALID_DSN }), null);
-  assert.equal(browserSentryDsn({ APP_ENV: 'production', NEXT_PUBLIC_APP_ENV: 'production', NEXT_PUBLIC_SENTRY_DSN: VALID_DSN }), null);
-  assert.equal(sentryBrowserIngestOrigin({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: VALID_DSN }), 'https://o4500000000000000.ingest.us.sentry.io');
-  assert.equal(sentryBrowserIngestOrigin({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: `${VALID_DSN}?token=private` }), null);
+  assert.equal(sentryBrowserIngestOrigin({ APP_ENV: 'production', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: US_DSN }), null);
+  assert.equal(sentryBrowserIngestOrigin({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'production', NEXT_PUBLIC_SENTRY_DSN: US_DSN }), null);
+  assert.equal(serverSentryDsn({ APP_ENV: 'production', SENTRY_DSN: US_DSN }), null);
+  assert.equal(browserSentryDsn({ NEXT_PUBLIC_ELCEO_SENTRY_BROWSER_ENABLED: 'false', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: US_DSN }), null);
+  assert.equal(browserSentryDsn({ NEXT_PUBLIC_ELCEO_SENTRY_BROWSER_ENABLED: 'true', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: US_DSN })?.dsn, US_DSN);
+  assert.equal(sentryBrowserIngestOrigin({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: DE_DSN }), 'https://o4500000000000000.ingest.de.sentry.io');
+  assert.equal(sentryBrowserIngestOrigin({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: `${US_DSN}?token=private` }), null);
   assert.deepEqual(sentryConnectSources({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging' }), ["'self'", 'https://api.onesignal.com']);
-  assert.deepEqual(sentryConnectSources({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: `${VALID_DSN}?token=private` }), ["'self'", 'https://api.onesignal.com']);
-  assert.deepEqual(sentryConnectSources({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: VALID_DSN }), ["'self'", 'https://api.onesignal.com', 'https://o4500000000000000.ingest.us.sentry.io']);
+  assert.deepEqual(sentryConnectSources({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: `${US_DSN}?token=private` }), ["'self'", 'https://api.onesignal.com']);
+  assert.deepEqual(sentryConnectSources({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: DE_DSN }), ["'self'", 'https://api.onesignal.com', 'https://o4500000000000000.ingest.de.sentry.io']);
+  assert.equal(isSentryBrowserBuildAuthorized({ APP_ENV: 'production', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: US_DSN }), false);
+  assert.equal(isSentryBrowserBuildAuthorized({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'production', NEXT_PUBLIC_SENTRY_DSN: US_DSN }), false);
+  assert.equal(isSentryBrowserBuildAuthorized({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: 'invalid' }), false);
+  assert.equal(isSentryBrowserBuildAuthorized({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: US_DSN }), true);
 
   const envSchema = readFileSync('../../packages/schemas/src/env.schema.ts', 'utf8');
   for (const variable of ['SENTRY_DSN', 'NEXT_PUBLIC_SENTRY_DSN', 'NEXT_PUBLIC_APP_ENV', 'SENTRY_ENVIRONMENT', 'SENTRY_RELEASE']) {

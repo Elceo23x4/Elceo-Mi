@@ -6,5 +6,6 @@ export const GET = withApiErrorBoundary(async (_request: Request, context: { par
   const subject = await requireAuthenticatedSubject();
   const { caseId } = await context.params;
   const found = await getApplicationStateRuntime().journal.getJournalCase('user', subject.subjectId, caseId);
+  if (!found) throw new Error('not_found');
   return jsonSuccess({ case: found });
 });

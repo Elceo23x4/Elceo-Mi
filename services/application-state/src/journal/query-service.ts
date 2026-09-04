@@ -13,8 +13,8 @@ const OPEN_STATUSES: JournalCaseStatus[] = ['draft', 'planned', 'executed', 'par
 export class JournalQueryService {
   constructor(private readonly repository: JournalCaseRepository) {}
 
-  async getJournalCase(caseId: string): Promise<CanonicalJournalCase | null> {
-    const record = await this.repository.getCaseById(caseId);
+  async getJournalCase(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, caseId: string): Promise<CanonicalJournalCase | null> {
+    const record = await this.repository.getCaseForSubject(subjectKind, subjectId, caseId);
     return record ? deserializeCanonicalJournalCase(record.caseJson) : null;
   }
 
@@ -23,8 +23,8 @@ export class JournalQueryService {
     return records.map((row) => deserializeCanonicalJournalCase(row.caseJson));
   }
 
-  async getJournalCaseReplay(caseId: string): Promise<JournalCaseReplayBundle | null> {
-    return getJournalCaseReplayById(caseId, this.repository);
+  async getJournalCaseReplay(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, caseId: string): Promise<JournalCaseReplayBundle | null> {
+    return getJournalCaseReplayById(subjectKind, subjectId, caseId, this.repository);
   }
 
   async getLatestJournalCaseReplayForReasoningRun(reasoningRunId: string): Promise<JournalCaseReplayBundle | null> {

@@ -143,6 +143,10 @@ jobs:
         env:
           DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3
         run: npm run test:backend-authority-postgres
+      - name: SEC-A1 cross-tenant authority PostgreSQL acceptance
+        env:
+          DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3
+        run: npm run test:sec-a1-postgres
       - name: Kick Off dashboard acceptance
         env:
           DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3

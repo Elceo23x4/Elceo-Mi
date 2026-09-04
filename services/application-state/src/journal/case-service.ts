@@ -224,7 +224,7 @@ export class JournalCaseService {
     const validated = validateCanonicalJournalCase(caseData);
     if (validated.ok === false) throw new Error(`invalid_journal_case:${validated.errors.join('; ')}`);
 
-    await this.repository.saveCase(toPersistedCaseRecord(caseData));
+    if (!await this.repository.saveCase(toPersistedCaseRecord(caseData))) throw new Error(`journal_case_not_found:${caseData.identity.caseId}`);
     const revision = makeRevisionRecord(caseData, {
       previousStatus: null,
       nextStatus: 'draft',
@@ -277,8 +277,8 @@ export class JournalCaseService {
     );
   }
 
-  private async loadCase(caseId: string): Promise<CanonicalJournalCase> {
-    const record = await this.repository.getCaseById(caseId);
+  private async loadCase(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, caseId: string): Promise<CanonicalJournalCase> {
+    const record = await this.repository.getCaseForSubject(subjectKind, subjectId, caseId);
     if (!record) throw new Error(`journal_case_not_found:${caseId}`);
     return deserializeCanonicalJournalCase(record.caseJson);
   }
@@ -286,7 +286,7 @@ export class JournalCaseService {
   private async writeMutation(caseData: CanonicalJournalCase, previousStatus: JournalCaseStatus, revisionType: JournalCaseRevisionType, actor: JournalActor): Promise<CanonicalJournalCase> {
     const validated = validateCanonicalJournalCase(caseData);
     if (validated.ok === false) throw new Error(`invalid_journal_case:${validated.errors.join('; ')}`);
-    await this.repository.saveCase(toPersistedCaseRecord(caseData));
+    if (!await this.repository.saveCase(toPersistedCaseRecord(caseData))) throw new Error(`journal_case_not_found:${caseData.identity.caseId}`);
     const changedAt = actor.changedAt ?? caseData.updatedAt;
     const revision = makeRevisionRecord(caseData, {
       previousStatus,
@@ -310,16 +310,16 @@ export class JournalCaseService {
     return caseData;
   }
 
-  async planCase(caseId: string, patch: JournalCasePatch, actor: JournalActor): Promise<CanonicalJournalCase> {
-    const current = await this.loadCase(caseId);
+  async planCase(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, caseId: string, patch: JournalCasePatch, actor: JournalActor): Promise<CanonicalJournalCase> {
+    const current = await this.loadCase(subjectKind, subjectId, caseId);
     if (current.status !== 'draft') throw new Error(`invalid_journal_transition:${current.status}_to_planned`);
     const updatedAt = actor.changedAt ?? nowIso();
     const next = applyPatch(current, patch, 'planned', updatedAt);
     return this.writeMutation(next, current.status, 'planned', actor);
   }
 
-  async markExecuted(caseId: string, patch: JournalCasePatch, actor: JournalActor): Promise<CanonicalJournalCase> {
-    const current = await this.loadCase(caseId);
+  async markExecuted(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, caseId: string, patch: JournalCasePatch, actor: JournalActor): Promise<CanonicalJournalCase> {
+    const current = await this.loadCase(subjectKind, subjectId, caseId);
     if (current.status !== 'planned') throw new Error(`invalid_journal_transition:${current.status}_to_executed`);
     const updatedAt = actor.changedAt ?? nowIso();
     const next = applyPatch(current, patch, 'executed', updatedAt);
@@ -327,8 +327,8 @@ export class JournalCaseService {
     return this.writeMutation(next, current.status, 'executed', actor);
   }
 
-  async adjustExecution(caseId: string, patch: JournalCasePatch, actor: JournalActor): Promise<CanonicalJournalCase> {
-    const current = await this.loadCase(caseId);
+  async adjustExecution(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, caseId: string, patch: JournalCasePatch, actor: JournalActor): Promise<CanonicalJournalCase> {
+    const current = await this.loadCase(subjectKind, subjectId, caseId);
     if (!(current.status === 'executed' || current.status === 'partially_closed')) {
       throw new Error(`invalid_journal_transition:${current.status}_to_adjusted`);
     }
@@ -337,16 +337,16 @@ export class JournalCaseService {
     return this.writeMutation(next, current.status, 'adjusted', actor);
   }
 
-  async markPartiallyClosed(caseId: string, patch: JournalCasePatch, actor: JournalActor): Promise<CanonicalJournalCase> {
-    const current = await this.loadCase(caseId);
+  async markPartiallyClosed(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, caseId: string, patch: JournalCasePatch, actor: JournalActor): Promise<CanonicalJournalCase> {
+    const current = await this.loadCase(subjectKind, subjectId, caseId);
     if (current.status !== 'executed') throw new Error(`invalid_journal_transition:${current.status}_to_partially_closed`);
     const updatedAt = actor.changedAt ?? nowIso();
     const next = applyPatch(current, patch, 'partially_closed', updatedAt);
     return this.writeMutation(next, current.status, 'partially_closed', actor);
   }
 
-  async closeCase(caseId: string, patch: JournalCasePatch, actor: JournalActor): Promise<CanonicalJournalCase> {
-    const current = await this.loadCase(caseId);
+  async closeCase(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, caseId: string, patch: JournalCasePatch, actor: JournalActor): Promise<CanonicalJournalCase> {
+    const current = await this.loadCase(subjectKind, subjectId, caseId);
     if (!(current.status === 'executed' || current.status === 'partially_closed')) {
       throw new Error(`invalid_journal_transition:${current.status}_to_closed`);
     }
@@ -357,8 +357,8 @@ export class JournalCaseService {
     return this.writeMutation(next, current.status, 'closed', actor);
   }
 
-  async cancelCase(caseId: string, patch: JournalCasePatch, actor: JournalActor): Promise<CanonicalJournalCase> {
-    const current = await this.loadCase(caseId);
+  async cancelCase(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, caseId: string, patch: JournalCasePatch, actor: JournalActor): Promise<CanonicalJournalCase> {
+    const current = await this.loadCase(subjectKind, subjectId, caseId);
     if (!(current.status === 'draft' || current.status === 'planned')) {
       throw new Error(`invalid_journal_transition:${current.status}_to_canceled`);
     }
@@ -368,8 +368,8 @@ export class JournalCaseService {
     return this.writeMutation(next, current.status, 'canceled', actor);
   }
 
-  async reviewCase(caseId: string, patch: JournalCasePatch, actor: JournalActor): Promise<CanonicalJournalCase> {
-    const current = await this.loadCase(caseId);
+  async reviewCase(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, caseId: string, patch: JournalCasePatch, actor: JournalActor): Promise<CanonicalJournalCase> {
+    const current = await this.loadCase(subjectKind, subjectId, caseId);
     if (!(current.status === 'closed' || current.status === 'canceled')) {
       throw new Error(`invalid_journal_transition:${current.status}_to_reviewed`);
     }

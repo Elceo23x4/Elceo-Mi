@@ -72,9 +72,9 @@ export async function runPortfolioDomainCoreTests(): Promise<void> {
   );
   assert(createdWatch.status === 'watching', 'watchlist create should set requested state');
 
-  await watchlist.changeWatchlistStatus(createdWatch.entryId, 'thesis_active', { ...actor, changedAt: '2026-04-25T08:02:00.000Z' });
-  await watchlist.changeWatchlistThesisHealth(createdWatch.entryId, 'weakening', { ...actor, changedAt: '2026-04-25T08:03:00.000Z' });
-  await watchlist.archiveWatchlistEntry(createdWatch.entryId, { ...actor, changedAt: '2026-04-25T08:04:00.000Z' });
+  await watchlist.changeWatchlistStatus('user', 'u-1', createdWatch.entryId, 'thesis_active', { ...actor, changedAt: '2026-04-25T08:02:00.000Z' });
+  await watchlist.changeWatchlistThesisHealth('user', 'u-1', createdWatch.entryId, 'weakening', { ...actor, changedAt: '2026-04-25T08:03:00.000Z' });
+  await watchlist.archiveWatchlistEntry('user', 'u-1', createdWatch.entryId, { ...actor, changedAt: '2026-04-25T08:04:00.000Z' });
 
   const proposed = await position.createProposedPosition(
     {
@@ -96,9 +96,9 @@ export async function runPortfolioDomainCoreTests(): Promise<void> {
     },
     { ...actor, changedAt: '2026-04-25T09:00:00.000Z' }
   );
-  const opened = await position.openPosition(proposed.positionId, '2026-04-25T09:05:00.000Z', { entryPrice: 95000, size: 0.5 }, { ...actor, changedAt: '2026-04-25T09:05:00.000Z' });
-  const reducing = await position.reducePosition(opened.positionId, { size: 0.3 }, { ...actor, changedAt: '2026-04-25T09:10:00.000Z' });
-  const closed = await position.closePosition(reducing.positionId, '2026-04-25T09:20:00.000Z', { note: 'Closed per invalidation risk' }, { ...actor, changedAt: '2026-04-25T09:20:00.000Z' });
+  const opened = await position.openPosition('user', 'u-1', proposed.positionId, '2026-04-25T09:05:00.000Z', { entryPrice: 95000, size: 0.5 }, { ...actor, changedAt: '2026-04-25T09:05:00.000Z' });
+  const reducing = await position.reducePosition('user', 'u-1', opened.positionId, { size: 0.3 }, { ...actor, changedAt: '2026-04-25T09:10:00.000Z' });
+  const closed = await position.closePosition('user', 'u-1', reducing.positionId, '2026-04-25T09:20:00.000Z', { note: 'Closed per invalidation risk' }, { ...actor, changedAt: '2026-04-25T09:20:00.000Z' });
   assert(closed.status === 'closed', 'position should close deterministically');
 
   const cancelable = await position.createProposedPosition(
@@ -121,7 +121,7 @@ export async function runPortfolioDomainCoreTests(): Promise<void> {
     },
     { ...actor, changedAt: '2026-04-25T09:30:00.000Z' }
   );
-  const canceled = await position.cancelPosition(cancelable.positionId, { ...actor, changedAt: '2026-04-25T09:35:00.000Z' });
+  const canceled = await position.cancelPosition('user', 'u-1', cancelable.positionId, { ...actor, changedAt: '2026-04-25T09:35:00.000Z' });
   assert(canceled.status === 'canceled', 'proposed position should cancel deterministically');
 
   const actionItem = await action.createActionItem(
@@ -142,8 +142,8 @@ export async function runPortfolioDomainCoreTests(): Promise<void> {
     },
     { ...actor, changedAt: '2026-04-25T10:00:00.000Z' }
   );
-  await action.updateActionItem(actionItem.actionId, { headline: 'Review thesis now.' }, { ...actor, changedAt: '2026-04-25T10:01:00.000Z' });
-  await action.completeActionItem(actionItem.actionId, '2026-04-25T10:02:00.000Z', { ...actor, changedAt: '2026-04-25T10:02:00.000Z' });
+  await action.updateActionItem('user', 'u-1', actionItem.actionId, { headline: 'Review thesis now.' }, { ...actor, changedAt: '2026-04-25T10:01:00.000Z' });
+  await action.completeActionItem('user', 'u-1', actionItem.actionId, '2026-04-25T10:02:00.000Z', { ...actor, changedAt: '2026-04-25T10:02:00.000Z' });
 
   const dismissed = await action.createActionItem(
     {
@@ -163,7 +163,7 @@ export async function runPortfolioDomainCoreTests(): Promise<void> {
     },
     { ...actor, changedAt: '2026-04-25T10:03:00.000Z' }
   );
-  await action.dismissActionItem(dismissed.actionId, '2026-04-25T10:04:00.000Z', { ...actor, changedAt: '2026-04-25T10:04:00.000Z' });
+  await action.dismissActionItem('user', 'u-1', dismissed.actionId, '2026-04-25T10:04:00.000Z', { ...actor, changedAt: '2026-04-25T10:04:00.000Z' });
 
   const liveEntry = await watchlist.createWatchlistEntry(
     {
@@ -183,10 +183,10 @@ export async function runPortfolioDomainCoreTests(): Promise<void> {
     { ...actor, changedAt: '2026-04-25T10:05:00.000Z' }
   );
 
-  await linkage.linkWatchlistEntryToReasoning(liveEntry.entryId, 'run-1', 'snap-1', { ...actor, changedAt: '2026-04-25T10:06:00.000Z' });
-  await linkage.linkPositionToJournalCase(closed.positionId, 'case-9', { ...actor, changedAt: '2026-04-25T10:07:00.000Z' });
-  await linkage.linkActionToNotificationDecision(dismissed.actionId, 'decision-7', { ...actor, changedAt: '2026-04-25T10:08:00.000Z' });
-  await linkage.linkPortfolioEntityToDrift('watchlist_entry', liveEntry.entryId, 'drift-33', { ...actor, changedAt: '2026-04-25T10:09:00.000Z' });
+  await linkage.linkWatchlistEntryToReasoning('user', 'u-1', liveEntry.entryId, 'run-1', 'snap-1', { ...actor, changedAt: '2026-04-25T10:06:00.000Z' });
+  await linkage.linkPositionToJournalCase('user', 'u-1', closed.positionId, 'case-9', { ...actor, changedAt: '2026-04-25T10:07:00.000Z' });
+  await linkage.linkActionToNotificationDecision('user', 'u-1', dismissed.actionId, 'decision-7', { ...actor, changedAt: '2026-04-25T10:08:00.000Z' });
+  await linkage.linkPortfolioEntityToDrift('user', 'u-1', 'watchlist_entry', liveEntry.entryId, 'drift-33', { ...actor, changedAt: '2026-04-25T10:09:00.000Z' });
 
   const generated = await snapshotService.generatePortfolioSnapshot('user', 'u-1', '2026-04-25T10:10:00.000Z');
   assert(validateCanonicalPortfolioSnapshot(generated).ok, 'generated snapshot should validate');
@@ -206,7 +206,7 @@ export async function runPortfolioDomainCoreTests(): Promise<void> {
   const byAssetTf = await query.listPortfolioEntitiesByAssetTimeframe('BTC/USD', 'M15', 30);
   assert(byAssetTf.watchlist.some((entry) => entry.entryId === liveEntry.entryId), 'asset/timeframe query should match watchlist records');
 
-  const replay = await getPortfolioEntityReplay(repository, 'watchlist_entry', liveEntry.entryId);
+  const replay = await getPortfolioEntityReplay(repository, 'user', 'u-1', 'watchlist_entry', liveEntry.entryId);
   assert((replay?.revisions.length ?? 0) > 0, 'entity replay should include ordered revisions');
 
   const candidates = derivePortfolioActionCandidates({
@@ -251,5 +251,26 @@ export async function runPortfolioDomainCoreTests(): Promise<void> {
   const attention = await boundary.getPortfolioAttentionSummary('workspace', 'ws-1');
   assert(typeof attention.openActions === 'number', 'boundary summary helper should execute');
 
-  await expectReject(position.cancelPosition(proposed.positionId, actor), 'cancel should fail after opening lifecycle');
+
+  // SEC-A1 two-user adversarial authority: foreign reads, replay and mutations are indistinguishable from missing resources.
+  const foreignWatchBefore = await repository.getWatchlistEntryForSubject('user', 'u-1', boundaryEntry.entryId);
+  assert(foreignWatchBefore === null, 'USER_A cannot read USER_B watchlist entry');
+  assert(await getPortfolioEntityReplay(repository, 'user', 'u-1', 'watchlist_entry', boundaryEntry.entryId) === null, 'USER_A cannot replay USER_B history');
+  assert(await repository.getPositionForSubject('user', 'attacker', closed.positionId) === null, 'USER_A cannot read USER_B position');
+  assert(await repository.getActionItemForSubject('user', 'attacker', dismissed.actionId) === null, 'USER_A cannot read USER_B action');
+  const revisionCountBefore = (await repository.listRevisionsForEntityForSubject('workspace', 'ws-1', 'watchlist_entry', boundaryEntry.entryId)).length;
+  await expectReject(watchlist.updateWatchlistEntry('user', 'u-1', boundaryEntry.entryId, { note: 'attack' }, actor), 'USER_A cannot mutate USER_B watchlist');
+  await expectReject(watchlist.changeWatchlistStatus('user', 'u-1', boundaryEntry.entryId, 'archived', actor), 'USER_A cannot transition USER_B watchlist');
+  await expectReject(watchlist.changeWatchlistThesisHealth('user', 'u-1', boundaryEntry.entryId, 'weakening', actor), 'USER_A cannot change USER_B watchlist thesis');
+  await expectReject(position.updatePosition('user', 'attacker', closed.positionId, { note: 'attack' }, actor), 'wrong subject cannot mutate position');
+  await expectReject(position.openPosition('user', 'attacker', closed.positionId, '2026-04-25T12:00:00.000Z', {}, actor), 'wrong subject cannot open position');
+  await expectReject(position.reducePosition('user', 'attacker', closed.positionId, {}, actor), 'wrong subject cannot reduce position');
+  await expectReject(position.closePosition('user', 'attacker', closed.positionId, '2026-04-25T12:00:00.000Z', {}, actor), 'wrong subject cannot close position');
+  await expectReject(position.cancelPosition('user', 'attacker', closed.positionId, actor), 'wrong subject cannot cancel position');
+  await expectReject(action.updateActionItem('user', 'attacker', dismissed.actionId, { headline: 'attack' }, actor), 'wrong subject cannot mutate action');
+  await expectReject(action.completeActionItem('user', 'attacker', dismissed.actionId, '2026-04-25T12:00:00.000Z', actor), 'wrong subject cannot complete action');
+  await expectReject(action.dismissActionItem('user', 'attacker', dismissed.actionId, '2026-04-25T12:00:00.000Z', actor), 'wrong subject cannot dismiss action');
+  assert((await repository.listRevisionsForEntityForSubject('workspace', 'ws-1', 'watchlist_entry', boundaryEntry.entryId)).length === revisionCountBefore, 'denied portfolio mutation creates no revision');
+
+  await expectReject(position.cancelPosition('user', 'u-1', proposed.positionId, actor), 'cancel should fail after opening lifecycle');
 }

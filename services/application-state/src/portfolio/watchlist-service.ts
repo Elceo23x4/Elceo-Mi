@@ -9,8 +9,8 @@ export type WatchlistActor = { actorKind: PortfolioActorKind; actorId: string; c
 export class WatchlistService {
   constructor(private readonly repository: PortfolioRepository) {}
 
-  private async load(entryId: string): Promise<WatchlistEntry> {
-    const row = await this.repository.getWatchlistEntryById(entryId);
+  private async load(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, entryId: string): Promise<WatchlistEntry> {
+    const row = await this.repository.getWatchlistEntryForSubject(subjectKind, subjectId, entryId);
     if (!row) throw new Error(`watchlist_entry_not_found:${entryId}`);
     return deserializeWatchlistEntry(row.entryJson);
   }
@@ -21,7 +21,8 @@ export class WatchlistService {
     actor: WatchlistActor
   ): Promise<WatchlistEntry> {
     assertValidOrThrow(entry);
-    await this.repository.saveWatchlistEntry(toPersistedWatchlist(entry));
+    const saved = await this.repository.saveWatchlistEntry(toPersistedWatchlist(entry));
+    if (!saved) throw new Error(`watchlist_entry_not_found:${entry.entryId}`);
     await this.repository.saveRevision(
       makeRevision({
         entityKind: 'watchlist_entry',
@@ -42,33 +43,33 @@ export class WatchlistService {
     return this.saveWithRevision(entry, 'created', actor);
   }
 
-  async updateWatchlistEntry(entryId: string, patch: Partial<Omit<WatchlistEntry, 'entryId' | 'subjectKind' | 'subjectId' | 'createdAt'>>, actor: WatchlistActor): Promise<WatchlistEntry> {
-    const current = await this.load(entryId);
+  async updateWatchlistEntry(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, entryId: string, patch: Partial<Omit<WatchlistEntry, 'entryId' | 'subjectKind' | 'subjectId' | 'createdAt'>>, actor: WatchlistActor): Promise<WatchlistEntry> {
+    const current = await this.load(subjectKind, subjectId, entryId);
     const next: WatchlistEntry = { ...current, ...patch, updatedAt: actor.changedAt ?? nowIso() };
     return this.saveWithRevision(next, 'updated', actor);
   }
 
-  async linkWatchlistEntry(entryId: string, patch: Partial<Pick<WatchlistEntry, 'linkedReasoningRunId' | 'linkedSnapshotId' | 'linkedDriftId' | 'linkedJournalCaseId'>>, actor: WatchlistActor): Promise<WatchlistEntry> {
-    const current = await this.load(entryId);
+  async linkWatchlistEntry(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, entryId: string, patch: Partial<Pick<WatchlistEntry, 'linkedReasoningRunId' | 'linkedSnapshotId' | 'linkedDriftId' | 'linkedJournalCaseId'>>, actor: WatchlistActor): Promise<WatchlistEntry> {
+    const current = await this.load(subjectKind, subjectId, entryId);
     const next: WatchlistEntry = { ...current, ...patch, updatedAt: actor.changedAt ?? nowIso() };
     return this.saveWithRevision(next, 'linked', actor);
   }
 
-  async changeWatchlistStatus(entryId: string, status: WatchlistEntryStatus, actor: WatchlistActor): Promise<WatchlistEntry> {
-    const current = await this.load(entryId);
+  async changeWatchlistStatus(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, entryId: string, status: WatchlistEntryStatus, actor: WatchlistActor): Promise<WatchlistEntry> {
+    const current = await this.load(subjectKind, subjectId, entryId);
     assertValidWatchlistTransition(current.status, status);
     const next: WatchlistEntry = { ...current, status, updatedAt: actor.changedAt ?? nowIso() };
     return this.saveWithRevision(next, status === 'archived' ? 'archived' : 'status_changed', actor);
   }
 
-  async changeWatchlistThesisHealth(entryId: string, thesisHealth: ThesisHealth, actor: WatchlistActor, explicitRecovery = false): Promise<WatchlistEntry> {
-    const current = await this.load(entryId);
+  async changeWatchlistThesisHealth(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, entryId: string, thesisHealth: ThesisHealth, actor: WatchlistActor, explicitRecovery = false): Promise<WatchlistEntry> {
+    const current = await this.load(subjectKind, subjectId, entryId);
     assertValidThesisHealthTransition(current.thesisHealth, thesisHealth, explicitRecovery);
     const next: WatchlistEntry = { ...current, thesisHealth, updatedAt: actor.changedAt ?? nowIso() };
     return this.saveWithRevision(next, 'thesis_health_changed', actor);
   }
 
-  async archiveWatchlistEntry(entryId: string, actor: WatchlistActor): Promise<WatchlistEntry> {
-    return this.changeWatchlistStatus(entryId, 'archived', actor);
+  async archiveWatchlistEntry(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, entryId: string, actor: WatchlistActor): Promise<WatchlistEntry> {
+    return this.changeWatchlistStatus(subjectKind, subjectId, entryId, 'archived', actor);
   }
 }

@@ -96,11 +96,11 @@ export type JournalCaseListQuery = {
 };
 
 export type JournalCaseRepository = {
-  saveCase(record: PersistedJournalCaseRecord): Promise<void>;
-  getCaseById(caseId: string): Promise<PersistedJournalCaseRecord | null>;
+  saveCase(record: PersistedJournalCaseRecord): Promise<boolean>;
+  getCaseForSubject(subjectKind: PersistedJournalCaseRecord['subjectKind'], subjectId: string, caseId: string): Promise<PersistedJournalCaseRecord | null>;
   listCases(query: JournalCaseListQuery): Promise<PersistedJournalCaseRecord[]>;
   saveRevision(record: PersistedJournalCaseRevisionRecord): Promise<void>;
-  listRevisionsForCase(caseId: string): Promise<PersistedJournalCaseRevisionRecord[]>;
+  listRevisionsForCaseForSubject(subjectKind: PersistedJournalCaseRecord['subjectKind'], subjectId: string, caseId: string): Promise<PersistedJournalCaseRevisionRecord[]>;
   getLatestCaseForReasoningRun(reasoningRunId: string): Promise<PersistedJournalCaseRecord | null>;
 };
 
@@ -241,20 +241,20 @@ export type PortfolioEntityListQuery = {
 };
 
 export type PortfolioRepository = {
-  saveWatchlistEntry(record: PersistedWatchlistEntryRecord): Promise<void>;
-  getWatchlistEntryById(entryId: string): Promise<PersistedWatchlistEntryRecord | null>;
+  saveWatchlistEntry(record: PersistedWatchlistEntryRecord): Promise<boolean>;
+  getWatchlistEntryForSubject(subjectKind: PersistedWatchlistEntryRecord['subjectKind'], subjectId: string, entryId: string): Promise<PersistedWatchlistEntryRecord | null>;
   listWatchlistEntries(query: PortfolioEntityListQuery): Promise<PersistedWatchlistEntryRecord[]>;
 
-  savePosition(record: PersistedPositionRecord): Promise<void>;
-  getPositionById(positionId: string): Promise<PersistedPositionRecord | null>;
+  savePosition(record: PersistedPositionRecord): Promise<boolean>;
+  getPositionForSubject(subjectKind: PersistedPositionRecord['subjectKind'], subjectId: string, positionId: string): Promise<PersistedPositionRecord | null>;
   listPositions(query: PortfolioEntityListQuery): Promise<PersistedPositionRecord[]>;
 
-  saveActionItem(record: PersistedPortfolioActionItemRecord): Promise<void>;
-  getActionItemById(actionId: string): Promise<PersistedPortfolioActionItemRecord | null>;
+  saveActionItem(record: PersistedPortfolioActionItemRecord): Promise<boolean>;
+  getActionItemForSubject(subjectKind: PersistedPortfolioActionItemRecord['subjectKind'], subjectId: string, actionId: string): Promise<PersistedPortfolioActionItemRecord | null>;
   listActionItems(query: PortfolioEntityListQuery): Promise<PersistedPortfolioActionItemRecord[]>;
 
   saveRevision(record: PersistedPortfolioRevisionRecord): Promise<void>;
-  listRevisionsForEntity(entityKind: PortfolioEntityKind, entityId: string): Promise<PersistedPortfolioRevisionRecord[]>;
+  listRevisionsForEntityForSubject(subjectKind: PersistedWatchlistEntryRecord['subjectKind'], subjectId: string, entityKind: PortfolioEntityKind, entityId: string): Promise<PersistedPortfolioRevisionRecord[]>;
 
   saveSnapshot(record: PersistedPortfolioSnapshotRecord): Promise<void>;
   getLatestSnapshot(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string): Promise<PersistedPortfolioSnapshotRecord | null>;

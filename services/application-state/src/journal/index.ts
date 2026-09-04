@@ -12,3 +12,5 @@ export * from './influence-replay';
 export * from './influence-serialization';
 export * from '../persistence/journal-case-repository';
 export * from '../persistence/journal-influence-repository';
+
+export * from './api-patch-mappers';

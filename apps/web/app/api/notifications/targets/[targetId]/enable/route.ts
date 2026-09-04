@@ -10,7 +10,7 @@ export const POST = withApiErrorBoundary(async (request: Request, context: { par
   const security = await requireSecurityDecision({ request, routePath: '/api/notifications/targets/[targetId]/enable', method: 'POST', actionKind: 'notification_target_write', actor, subjectId: subject.subjectId, requestBody: { targetId } });
   if (!security.ok) return security.response;
   try {
-    const target = await getNotificationRuntimes().management.enableTarget(targetId);
+    const target = await getNotificationRuntimes().management.enableTargetForSubject('user', subject.subjectId, targetId);
     const envelope = { ok: true as const, data: { target } };
 
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { target }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });

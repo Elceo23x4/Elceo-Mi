@@ -31,8 +31,8 @@ export class CanonicalNotificationManagementBoundaryService {
 
   async registerOrUpdateTarget(input: UpsertNotificationTargetInput, nowIso?: string) { return this.targetService.registerOrUpdateTarget(input, nowIso); }
   async verifyTarget(targetId: string, verifiedAt?: string) { return this.targetService.verifyTarget(targetId, verifiedAt); }
-  async disableTarget(targetId: string, updatedAt?: string) { return this.targetService.disableTarget(targetId, updatedAt); }
-  async enableTarget(targetId: string, updatedAt?: string) { return this.targetService.enableTarget(targetId, updatedAt); }
+  async disableTargetForSubject(subjectKind: NotificationSubjectKind, subjectId: string, targetId: string, updatedAt?: string) { return this.targetService.disableTargetForSubject(subjectKind, subjectId, targetId, updatedAt); }
+  async enableTargetForSubject(subjectKind: NotificationSubjectKind, subjectId: string, targetId: string, updatedAt?: string) { return this.targetService.enableTargetForSubject(subjectKind, subjectId, targetId, updatedAt); }
 
   async bindPushSubscription(subjectId: string, subscriptionId: string, nowIso = new Date().toISOString()) {
     const normalized = subscriptionId.trim().toLowerCase();

@@ -12,9 +12,9 @@ export class CanonicalNotificationVerificationBoundaryService {
     });
   }
 
-  async issueTargetVerification(targetId: string, nowIso?: string) { return this.service.issueTargetVerification(targetId, nowIso); }
-  async resendTargetVerification(targetId: string, nowIso?: string) { return this.service.resendTargetVerification(targetId, nowIso); }
-  async consumeTargetVerification(targetId: string, rawToken: string, consumedAt?: string) { return this.service.consumeTargetVerification(targetId, rawToken, consumedAt); }
+  async issueTargetVerificationForSubject(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, targetId: string, nowIso?: string) { return this.service.issueTargetVerificationForSubject(subjectKind, subjectId, targetId, nowIso); }
+  async resendTargetVerificationForSubject(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, targetId: string, nowIso?: string) { return this.service.resendTargetVerificationForSubject(subjectKind, subjectId, targetId, nowIso); }
+  async consumeTargetVerificationForSubject(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, targetId: string, rawToken: string, consumedAt?: string) { return this.service.consumeTargetVerificationForSubject(subjectKind, subjectId, targetId, rawToken, consumedAt); }
   async expireStaleVerifications(asOfIso?: string) { return this.service.expireStaleVerifications(asOfIso); }
 
   async getVerificationReplayById(verificationId: string) { return getVerificationReplayById(this.repositories.verificationRepository, verificationId); }

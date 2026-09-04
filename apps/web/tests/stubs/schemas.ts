@@ -35,7 +35,14 @@ export const validatePositionThesisHealthRequest = (input: unknown) => validatio
 export const validateActionCreateRequest = (input: unknown) => validation<{ kind: string; priority: string; headline: string; rationale: string }>(input, ['kind', 'priority', 'headline', 'rationale']);
 export const validateActionUpdateRequest = (input: unknown) => validation<Record<string, unknown>>(input);
 
-export const validateTargetCreateRequest = (input: unknown) => validation<{ channel: string; value: string }>(input, ['channel', 'value']);
+export const validateTargetCreateRequest = (input: unknown) => {
+  const result = validation<{ channel: string; email?: string; subscriptionId?: string }>(input, ['channel']);
+  if (!result.ok) return result;
+  if (!['in_app', 'email', 'push'].includes(result.value.channel)) return { ok: false as const, errors: ['channel is invalid'] };
+  if (result.value.channel === 'email') return validation(input, ['channel', 'email']);
+  if (result.value.channel === 'push') return validation(input, ['channel', 'subscriptionId']);
+  return result;
+};
 export const validateTargetStatusRequest = (input: unknown) => validation<{ isEnabled: boolean }>(input, ['isEnabled']);
 export const validateSubscriptionCreateRequest = (input: unknown) => validation<{ channel: string }>(input, ['channel']);
 export const validateSubscriptionUpdateRequest = (input: unknown) => validation<Record<string, unknown>>(input);

@@ -12,7 +12,7 @@ export const POST = withApiErrorBoundary(async (request: Request, context: { par
   const security = await requireSecurityDecision({ request, routePath: '/api/portfolio/watchlist/[entryId]/status', method: 'POST', actionKind: 'portfolio_watchlist_write', actor, subjectId: subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;
   try {
-    const entry = await getApplicationStateRuntime().portfolio.changeWatchlistStatus(entryId, body.status, { actorKind: 'user', actorId: subject.userId });
+    const entry = await getApplicationStateRuntime().portfolio.changeWatchlistStatus('user', subject.subjectId, entryId, body.status, { actorKind: 'user', actorId: subject.userId });
     const envelope = { ok: true as const, data: { entry } };
 
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { entry }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });

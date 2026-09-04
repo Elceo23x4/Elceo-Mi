@@ -17,22 +17,22 @@ export class PortfolioLinkageService {
     this.actions = new ActionService(repository);
   }
 
-  async linkWatchlistEntryToReasoning(entryId: string, linkedReasoningRunId: string | null, linkedSnapshotId: string | null, actor: PortfolioActor) {
-    return this.watchlist.linkWatchlistEntry(entryId, { linkedReasoningRunId, linkedSnapshotId }, actor);
+  async linkWatchlistEntryToReasoning(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, entryId: string, linkedReasoningRunId: string | null, linkedSnapshotId: string | null, actor: PortfolioActor) {
+    return this.watchlist.linkWatchlistEntry(subjectKind, subjectId, entryId, { linkedReasoningRunId, linkedSnapshotId }, actor);
   }
 
-  async linkPositionToJournalCase(positionId: string, linkedJournalCaseId: string | null, actor: PortfolioActor) {
-    return this.positions.linkPosition(positionId, { linkedJournalCaseId }, actor);
+  async linkPositionToJournalCase(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, positionId: string, linkedJournalCaseId: string | null, actor: PortfolioActor) {
+    return this.positions.linkPosition(subjectKind, subjectId, positionId, { linkedJournalCaseId }, actor);
   }
 
-  async linkActionToNotificationDecision(actionId: string, linkedNotificationDecisionId: string | null, actor: PortfolioActor) {
-    return this.actions.linkAction(actionId, { linkedNotificationDecisionId }, actor);
+  async linkActionToNotificationDecision(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, actionId: string, linkedNotificationDecisionId: string | null, actor: PortfolioActor) {
+    return this.actions.linkAction(subjectKind, subjectId, actionId, { linkedNotificationDecisionId }, actor);
   }
 
-  async linkPortfolioEntityToDrift(entityKind: 'watchlist_entry' | 'position', entityId: string, linkedDriftId: string | null, actor: PortfolioActor) {
+  async linkPortfolioEntityToDrift(subjectKind: 'user' | 'workspace' | 'ops', subjectId: string, entityKind: 'watchlist_entry' | 'position', entityId: string, linkedDriftId: string | null, actor: PortfolioActor) {
     if (entityKind === 'watchlist_entry') {
-      return this.watchlist.linkWatchlistEntry(entityId, { linkedDriftId }, actor);
+      return this.watchlist.linkWatchlistEntry(subjectKind, subjectId, entityId, { linkedDriftId }, actor);
     }
-    return this.positions.linkPosition(entityId, { linkedDriftId }, actor);
+    return this.positions.linkPosition(subjectKind, subjectId, entityId, { linkedDriftId }, actor);
   }
 }

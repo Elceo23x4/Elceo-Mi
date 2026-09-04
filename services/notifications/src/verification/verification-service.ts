@@ -18,8 +18,8 @@ export class NotificationVerificationService {
     this.tokenService = createVerificationTokenService(tokenOptions);
   }
 
-  async issueTargetVerification(targetId: string, nowIso = new Date().toISOString()): Promise<NotificationVerificationIssueResult> {
-    const target = await this.repositories.targetRepository.getTargetById(targetId);
+  async issueTargetVerificationForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string, targetId: string, nowIso = new Date().toISOString()): Promise<NotificationVerificationIssueResult> {
+    const target = await this.repositories.targetRepository.getTargetForSubject(subjectKind, subjectId, targetId);
     if (!target) throw new Error('target_not_found');
     if (target.status === 'active' && target.verifiedAt) {
       return { verificationId: buildDeterministicId('verification-active', `${targetId}|${target.verifiedAt}`), targetId, verificationKind: target.targetKind === 'push_endpoint' ? 'push_verification' : 'email_verification', issuedAt: nowIso, expiresAt: nowIso, rawToken: '', alreadyActive: true };
@@ -53,12 +53,12 @@ export class NotificationVerificationService {
     return { verificationId: record.verificationId, targetId: record.targetId, verificationKind, issuedAt: record.issuedAt, expiresAt: record.expiresAt, rawToken, alreadyActive: false };
   }
 
-  async resendTargetVerification(targetId: string, nowIso = new Date().toISOString()): Promise<NotificationVerificationIssueResult> {
-    return this.issueTargetVerification(targetId, nowIso);
+  async resendTargetVerificationForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string, targetId: string, nowIso = new Date().toISOString()): Promise<NotificationVerificationIssueResult> {
+    return this.issueTargetVerificationForSubject(subjectKind, subjectId, targetId, nowIso);
   }
 
-  async consumeTargetVerification(targetId: string, rawToken: string, consumedAt = new Date().toISOString()): Promise<NotificationVerificationConsumeResult> {
-    const target = await this.repositories.targetRepository.getTargetById(targetId);
+  async consumeTargetVerificationForSubject(subjectKind: NotificationTargetRecord['subjectKind'], subjectId: string, targetId: string, rawToken: string, consumedAt = new Date().toISOString()): Promise<NotificationVerificationConsumeResult> {
+    const target = await this.repositories.targetRepository.getTargetForSubject(subjectKind, subjectId, targetId);
     if (!target) return { verificationId: '', targetId, verified: false, reason: 'target_not_found' };
     let verificationKind: NotificationVerificationKind;
     try { verificationKind = resolveVerificationKind(target); } catch { return { verificationId: '', targetId, verified: false, reason: 'unsupported_verification_target_kind' }; }
@@ -75,7 +75,7 @@ export class NotificationVerificationService {
       return { verificationId: active.verificationId, targetId, verified: false, reason: 'invalid_verification_token' };
     }
     await this.repositories.verificationRepository.markVerificationConsumed(active.verificationId, consumedAt);
-    await this.repositories.targetRepository.updateTargetStatus(targetId, 'active', consumedAt, consumedAt);
+    await this.repositories.targetRepository.updateTargetStatusForSubject(subjectKind, subjectId, targetId, 'active', consumedAt, consumedAt);
     return { verificationId: active.verificationId, targetId, verified: true, reason: null };
   }
 

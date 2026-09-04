@@ -3,8 +3,7 @@ import { requireAuthenticatedSubject } from '@/lib/server/auth';
 import { getNotificationRuntimes } from '@/lib/server/composition';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 import { validateTargetCreateRequest } from '@elceo/schemas';
-
-const targetKindByChannel = { in_app: 'in_app_user', email: 'email_address', push: 'push_endpoint', sms: 'email_address', webhook: 'email_address' } as const;
+import { buildPublicTargetAddress } from '@/lib/server/notifications/target-address';
 
 export const GET = withApiErrorBoundary(async () => {
   const subject = await requireAuthenticatedSubject();
@@ -19,17 +18,14 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   const security = await requireSecurityDecision({ request, routePath: '/api/notifications/targets', method: 'POST', actionKind: 'notification_target_write', actor, subjectId: subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;
   try {
+    const address = buildPublicTargetAddress(body, subject.subjectId);
     const target = await getNotificationRuntimes().management.registerOrUpdateTarget({
       subjectKind: subject.subjectKind,
       subjectId: subject.subjectId,
       channel: body.channel,
-      targetKind: targetKindByChannel[body.channel],
+      targetKind: address.targetKind,
       label: body.label ?? null,
-      addressJson: body.channel === 'email'
-        ? JSON.stringify({ email: body.email })
-        : body.channel === 'push'
-          ? JSON.stringify({ subscriptionId: body.subscriptionId })
-          : JSON.stringify({ subjectId: subject.subjectId })
+      addressJson: address.addressJson
     });
     const envelope = { ok: true as const, data: { target } };
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { target }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });

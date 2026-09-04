@@ -31,19 +31,29 @@ export async function runNotificationManagementServiceTests(): Promise<void> {
   assert(email.status === 'unverified', 'email target should default to unverified');
 
   let blocked = false;
-  try { await targetService.enableTarget(email.targetId, '2026-01-15T10:00:02.000Z'); } catch { blocked = true; }
+  try { await targetService.enableTargetForSubject('user', 'u1', email.targetId, '2026-01-15T10:00:02.000Z'); } catch { blocked = true; }
   assert(blocked, 'cannot activate unverified email target');
 
   await targetService.verifyTarget(email.targetId, '2026-01-15T10:00:03.000Z');
   const verifiedEmail = await targetRepository.getTargetById(email.targetId);
   assert(verifiedEmail?.status === 'active' && verifiedEmail.verifiedAt === '2026-01-15T10:00:03.000Z', 'verifyTarget should activate target');
 
-  await targetService.disableTarget(email.targetId, '2026-01-15T10:00:04.000Z');
+  await targetService.disableTargetForSubject('user', 'u1', email.targetId, '2026-01-15T10:00:04.000Z');
+  let foreignDenied = false;
+  try { await targetService.disableTargetForSubject('user', 'USER_A', email.targetId, '2026-01-15T10:00:03.500Z'); } catch { foreignDenied = true; }
+  assert(foreignDenied, 'USER_A cannot disable USER_B target');
   const disabledEmail = await targetRepository.getTargetById(email.targetId);
   assert(disabledEmail?.status === 'disabled' && disabledEmail.verifiedAt === '2026-01-15T10:00:03.000Z', 'disable should preserve verifiedAt');
 
   const repeat = await targetService.registerOrUpdateTarget({ subjectKind: 'user', subjectId: 'u1', channel: 'email', targetKind: 'email_address', addressJson: '{"email":" a@b.c "}', label: 'Primary' }, '2026-01-15T10:00:05.000Z');
   assert(repeat.targetId === email.targetId, 'idempotent target upsert should not duplicate rows');
+  const emailB = await targetService.registerOrUpdateTarget({ subjectKind: 'user', subjectId: 'u1', channel: 'email', targetKind: 'email_address', addressJson: '{"email":"different@example.test"}' }, '2026-01-15T10:00:06.000Z');
+  assert(emailB.targetId !== email.targetId && emailB.targetKey !== email.targetKey, 'different normalized email must have distinct identity');
+  assert(emailB.status === 'unverified' && emailB.verifiedAt === null, 'email A verification must not carry to email B');
+  const pushA = await targetService.registerOrUpdateTarget({ subjectKind: 'user', subjectId: 'u1', channel: 'push', targetKind: 'push_endpoint', addressJson: '{"endpoint":" https://push.example/a "}' }, '2026-01-15T10:00:07.000Z');
+  await targetService.verifyTarget(pushA.targetId, '2026-01-15T10:00:08.000Z');
+  const pushB = await targetService.registerOrUpdateTarget({ subjectKind: 'user', subjectId: 'u1', channel: 'push', targetKind: 'push_endpoint', addressJson: '{"endpoint":"https://push.example/b"}' }, '2026-01-15T10:00:09.000Z');
+  assert(pushB.targetId !== pushA.targetId && pushB.status === 'unverified' && pushB.verifiedAt === null, 'push A verification must not carry to push B');
 
   const subA = await subscriptionService.registerOrUpdateSubscription({ subjectKind: 'user', subjectId: 'u1', channel: 'in_app', assetScope: '*', timeframeScope: '*', ruleKeyScope: '*', enabled: true }, '2026-01-15T10:00:00.000Z');
   const subB = await subscriptionService.registerOrUpdateSubscription({ subjectKind: 'user', subjectId: 'u1', channel: 'in_app', assetScope: '*', timeframeScope: '*', ruleKeyScope: '*', enabled: false }, '2026-01-15T10:00:01.000Z');
@@ -75,7 +85,7 @@ export async function runNotificationManagementServiceTests(): Promise<void> {
   await outboxRepository.stageOutbox({ outboxId: 'o2', outboxKey: 'ok2', decisionId: 'd2', decisionKey: 'k2', asset: 'XAU/USD', timeframe: 'H1', ruleKey: 'major_drift', channel: 'email', targetId: repeat.targetId, subjectKind: 'user', subjectId: 'u1', targetKey: repeat.targetKey ?? 'target|fallback2', deliveryAddressJson: '{}', status: 'failed', availableAt: '2026-01-15T10:00:00.000Z', lastAttemptAt: null, deliveredAt: null, deadAt: null, attemptCount: 1, lastErrorCode: 'ERR', lastErrorMessage: 'x', payloadJson: '{}', createdAt: '2026-01-15T10:02:00.000Z', updatedAt: '2026-01-15T10:02:00.000Z' });
 
   const summary = await summaryService.getNotificationOperationalSummaryForSubject('user', 'u1');
-  assert(summary.subjectTargetCount === 2 && summary.recentDeliveredCount === 1 && summary.recentFailedCount === 1, 'operational summary counts should be exact');
+  assert(summary.subjectTargetCount === 5 && summary.recentDeliveredCount === 1 && summary.recentFailedCount === 1, 'operational summary counts should be exact');
 
   const health = await summaryService.getNotificationDeliveryHealthSummary('2026-01-15T10:03:00.000Z', 2);
   assert(health.delivered === 1 && health.failed === 1, 'delivery health summary should count by status in lookback');

@@ -48,15 +48,19 @@ Heartbeat reporting is optional and applies only to `backup` mode; probe mode
 never sends a heartbeat. When configured, the value must be an HTTPS URL on
 `uptime.betterstack.com` with the `/api/v1/heartbeat/<token>` endpoint shape.
 Keep the complete value in the Railway secret variable and never place it in
-commands, source, build arguments, or logs.
+commands, source, build arguments, or logs. An invalid value disables heartbeat
+delivery and emits a redacted configuration warning without blocking the
+PostgreSQL-to-R2 backup.
 
 The worker sends the normal heartbeat only after the dump and completion
 manifest have both been uploaded and remotely verified. If a real backup step
 fails, its single exit handler makes one best-effort request to the configured
 URL with `/fail` appended and then returns the original backup exit status.
-Rclone `copyurl` supplies the HTTPS transport already present in the hardened
-image; it uses a five-second connection timeout, a ten-second stalled-I/O
-timeout, a 15-second maximum duration, and one attempt with no transport output.
+Rclone `copyurl --urls` supplies the HTTPS transport already present in the
+hardened image and reads the URL from a private temporary file rather than
+process arguments. It uses a five-second connection timeout, a ten-second
+stalled-I/O timeout, a 15-second maximum duration, and one attempt with no
+transport output.
 
 The R2/database result and heartbeat-delivery result are separate operational
 signals. A Better Stack outage is logged as a redacted `delivery=FAIL`, but it
@@ -70,8 +74,8 @@ Create a Railway service whose root directory is this directory and whose
 Dockerfile is `Dockerfile`. Add only the variables above, initially set
 `BACKUP_RUN_MODE=probe`, and trigger one manual deployment/run. Confirm the run
 reports upload, downloaded SHA-256 verification, remote deletion, and overall
-`PASS`. Then switch to `backup` and manually run once. Do not configure a Cron
-schedule in this phase. The same one-shot command can be scheduled later.
+`PASS`. Then switch to `backup` and manually run once. The accepted staging
+Railway cron is `0 3 * * *`, which runs the one-shot backup daily at 03:00 UTC.
 
 Probe mode never connects to PostgreSQL. It writes random local content, uploads
 it below a unique `probes/` prefix, downloads and SHA-256 verifies it, then

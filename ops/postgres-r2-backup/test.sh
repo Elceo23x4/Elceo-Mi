@@ -12,13 +12,23 @@ cat >"$mockbin/rclone" <<'MOCK'
 #!/bin/bash
 set -euo pipefail
 args=("$@")
+env >>"$MOCK_CHILD_ENV_LOG"
+printf '%s\n' "$*" >>"$MOCK_RCLONE_LOG"
 if [[ " $* " == *" copyurl "* ]]; then
+  [[ " $* " != *fake-sentinel-token* ]] || { printf 'heartbeat secret exposed in argv\n' >&2; exit 90; }
+  [[ -z "${BETTERSTACK_BACKUP_HEARTBEAT_URL+x}" ]] || { printf 'heartbeat secret exposed in environment\n' >&2; exit 91; }
+  urls_file=${args[${#args[@]}-2]}
+  response_dir=${args[${#args[@]}-1]}
+  [[ "$(stat -c %a "$urls_file")" == 600 ]]
+  IFS=, read -r private_url response_name <"$urls_file"
+  [[ "$response_name" == response ]]
   signal=success
-  [[ "${args[${#args[@]}-1]}" == */fail ]] && signal=failure
+  [[ "$private_url" == */fail ]] && signal=failure
   printf 'heartbeat %s\n' "$signal" >>"$MOCK_RCLONE_LOG"
+  printf '%s\n' "$private_url" >&2
+  printf 'discarded response' >"$response_dir/$response_name"
   exit "${MOCK_HEARTBEAT_STATUS:-0}"
 fi
-printf '%s\n' "$*" >>"$MOCK_RCLONE_LOG"
 for ((i=0; i<${#args[@]}; i++)); do
   if [[ "${args[$i]}" == copyto ]]; then
     source=${args[${#args[@]}-2]}; destination=${args[${#args[@]}-1]}
@@ -48,6 +58,7 @@ fi
 MOCK
 cat >"$mockbin/pg_dump" <<'MOCK'
 #!/bin/bash
+env >>"$MOCK_CHILD_ENV_LOG"
 printf 'pg_dump %s\n' "$*" >>"$MOCK_PG_LOG"
 [[ "${1:-}" == --version ]] && { echo 'pg_dump (PostgreSQL) 18.6 (Debian 18.6-1.pgdg12+1)'; exit; }
 [[ "${MOCK_DUMP_STATUS:-0}" != 0 ]] && exit "$MOCK_DUMP_STATUS"
@@ -56,17 +67,19 @@ exit 0
 MOCK
 cat >"$mockbin/pg_restore" <<'MOCK'
 #!/bin/bash
+env >>"$MOCK_CHILD_ENV_LOG"
 printf 'pg_restore %s\n' "$*" >>"$MOCK_PG_LOG"
 exit "${MOCK_RESTORE_STATUS:-0}"
 MOCK
 chmod +x "$mockbin"/*
 
 export PATH="$mockbin:$PATH" MOCK_RCLONE_LOG="$tmp/rclone.log" MOCK_PG_LOG="$tmp/postgres.log" MOCK_REMOTE="$tmp/remote"
+export MOCK_CHILD_ENV_LOG="$tmp/child-environment.log"
 export R2_ENDPOINT=https://account.r2.cloudflarestorage.com R2_BUCKET=elceo-staging-backups
 export R2_ACCESS_KEY_ID=redacted-key R2_SECRET_ACCESS_KEY=redacted-secret
 
 assert_clean() { [[ -z "$(find "$TMPDIR" -mindepth 1 -print -quit)" ]]; }
-reset_mocks() { rm -rf "$MOCK_REMOTE"; : >"$MOCK_RCLONE_LOG"; : >"$MOCK_PG_LOG"; }
+reset_mocks() { rm -rf "$MOCK_REMOTE"; : >"$MOCK_RCLONE_LOG"; : >"$MOCK_PG_LOG"; : >"$MOCK_CHILD_ENV_LOG"; }
 heartbeat_url='https://uptime.betterstack.com/api/v1/heartbeat/fake-sentinel-token'
 
 if env -u R2_BUCKET BACKUP_RUN_MODE=probe "$subject" >"$tmp/missing.log" 2>&1; then
@@ -117,13 +130,17 @@ assert_clean
 # completion-manifest verification; it never uses the failure endpoint.
 reset_mocks
 DATABASE_URL=redacted BETTERSTACK_BACKUP_HEARTBEAT_URL="$heartbeat_url" \
-  BACKUP_RUN_MODE=backup "$subject" >"$tmp/heartbeat-success.log" 2>&1
+  BACKUP_RUN_MODE=backup "$subject" >"$tmp/heartbeat-success.stdout" 2>"$tmp/heartbeat-success.stderr"
 [[ "$(grep -c '^heartbeat success$' "$MOCK_RCLONE_LOG")" == 1 ]]
 ! grep -q '^heartbeat failure$' "$MOCK_RCLONE_LOG"
-manifest_line=$(grep -n 'completion_manifest_verification=PASS' "$tmp/heartbeat-success.log" | cut -d: -f1)
-heartbeat_line=$(grep -n 'heartbeat_signal=success delivery=PASS' "$tmp/heartbeat-success.log" | cut -d: -f1)
-overall_line=$(grep -n 'overall=PASS' "$tmp/heartbeat-success.log" | cut -d: -f1)
+manifest_line=$(grep -n 'completion_manifest_verification=PASS' "$tmp/heartbeat-success.stdout" | cut -d: -f1)
+heartbeat_line=$(grep -n 'heartbeat_signal=success delivery=PASS' "$tmp/heartbeat-success.stdout" | cut -d: -f1)
+overall_line=$(grep -n 'overall=PASS' "$tmp/heartbeat-success.stdout" | cut -d: -f1)
 (( manifest_line < heartbeat_line && heartbeat_line < overall_line ))
+! grep -Fq 'fake-sentinel-token' "$tmp/heartbeat-success.stdout" "$tmp/heartbeat-success.stderr" "$MOCK_RCLONE_LOG" "$MOCK_PG_LOG" "$MOCK_CHILD_ENV_LOG"
+! grep -Fq 'BETTERSTACK_BACKUP_HEARTBEAT_URL=' "$MOCK_CHILD_ENV_LOG"
+! grep -Fq 'copyurl --stdout' "$MOCK_RCLONE_LOG"
+grep -q 'copyurl --urls .*heartbeat-urls.csv .*heartbeat-response' "$MOCK_RCLONE_LOG"
 assert_clean
 
 # Monitoring degradation after a valid backup does not alter backup success
@@ -173,19 +190,20 @@ grep -q 'heartbeat_signal=failure delivery=FAIL' "$tmp/failure-heartbeat-unavail
 ! grep -Fq 'fake-sentinel-token' "$tmp/failure-heartbeat-unavailable.log"
 assert_clean
 
-# Invalid configuration is rejected without attempting delivery or disclosing
-# the supplied value.
+# Invalid monitoring configuration is redacted and non-gating: the complete
+# database/R2 path still determines PASS and no heartbeat is attempted.
 for invalid_url in \
   'http://uptime.betterstack.com/api/v1/heartbeat/fake-sentinel-token' \
   'https://unexpected.invalid/api/v1/heartbeat/fake-sentinel-token' \
   'not-a-url-fake-sentinel-token'; do
   reset_mocks
-  if DATABASE_URL=redacted BETTERSTACK_BACKUP_HEARTBEAT_URL="$invalid_url" \
-      BACKUP_RUN_MODE=backup "$subject" >"$tmp/invalid-heartbeat.log" 2>&1; then
-    echo 'invalid heartbeat URL unexpectedly passed' >&2; exit 1
-  fi
-  grep -q 'variable=BETTERSTACK_BACKUP_HEARTBEAT_URL' "$tmp/invalid-heartbeat.log"
-  ! grep -Fq 'fake-sentinel-token' "$tmp/invalid-heartbeat.log"
+  DATABASE_URL=redacted BETTERSTACK_BACKUP_HEARTBEAT_URL="$invalid_url" \
+    BACKUP_RUN_MODE=backup "$subject" >"$tmp/invalid-heartbeat.log" 2>&1
+  grep -q 'configuration=WARNING variable=BETTERSTACK_BACKUP_HEARTBEAT_URL heartbeat=DISABLED reason=invalid_url' "$tmp/invalid-heartbeat.log"
+  grep -q 'completion_manifest_verification=PASS' "$tmp/invalid-heartbeat.log"
+  grep -q 'overall=PASS' "$tmp/invalid-heartbeat.log"
+  ! grep -Fq 'fake-sentinel-token' "$tmp/invalid-heartbeat.log" "$MOCK_RCLONE_LOG" "$MOCK_PG_LOG" "$MOCK_CHILD_ENV_LOG"
+  ! grep -Fq 'BETTERSTACK_BACKUP_HEARTBEAT_URL=' "$MOCK_CHILD_ENV_LOG"
   ! grep -q '^heartbeat ' "$MOCK_RCLONE_LOG"
   assert_clean
 done

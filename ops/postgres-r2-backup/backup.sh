@@ -1,5 +1,12 @@
 #!/bin/bash
 set -euo pipefail
+
+# Railway supplies this as an exported secret. Move it into shell-only state
+# before any external process is started, then remove it from the environment
+# inherited by pg_dump, rclone, and every other child.
+heartbeat_base_url="${BETTERSTACK_BACKUP_HEARTBEAT_URL:-}"
+unset BETTERSTACK_BACKUP_HEARTBEAT_URL
+
 umask 077
 
 started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -21,11 +28,11 @@ log() {
 cleanup() {
   status=$?
   trap - EXIT
-  if [[ -n "$workdir" && -d "$workdir" ]]; then
-    rm -rf -- "$workdir"
-  fi
   if (( status != 0 )) && [[ "${BACKUP_RUN_MODE:-}" == "backup" ]]; then
     send_heartbeat failure
+  fi
+  if [[ -n "$workdir" && -d "$workdir" ]]; then
+    rm -rf -- "$workdir" || :
   fi
   if (( status == 0 )); then
     log "completion=PASS started_at=$started_at overall=PASS"
@@ -37,27 +44,37 @@ cleanup() {
 trap cleanup EXIT
 
 send_heartbeat() {
-  local signal="$1" heartbeat_url
+  local signal="$1" heartbeat_url heartbeat_urls_file heartbeat_response_dir
   if (( heartbeat_enabled == 0 || heartbeat_attempted != 0 )); then
     return 0
   fi
 
   heartbeat_attempted=1
-  heartbeat_url="$BETTERSTACK_BACKUP_HEARTBEAT_URL"
+  if [[ -z "$workdir" || ! -d "$workdir" ]]; then
+    log "heartbeat_signal=$signal delivery=FAIL"
+    return 0
+  fi
+  heartbeat_url="$heartbeat_base_url"
   if [[ "$signal" == "failure" ]]; then
     heartbeat_url="${heartbeat_url%/}/fail"
   fi
 
-  # copyurl performs the HTTPS GET without adding another network client to the
-  # image. All transport output is suppressed because its diagnostics can
-  # contain the secret URL; only the redacted result below is observable.
-  if rclone --log-level ERROR --contimeout 5s --timeout 10s --max-duration 15s \
-      --retries 1 --low-level-retries 1 copyurl --stdout "$heartbeat_url" \
-      >/dev/null 2>&1; then
+  # rclone 1.75.0 copyurl --urls reads the secret from an owner-only CSV rather
+  # than argv. The fixed response name and directory disclose no token. All
+  # transport output is suppressed because diagnostics can contain the URL.
+  heartbeat_urls_file="$workdir/heartbeat-urls.csv"
+  heartbeat_response_dir="$workdir/heartbeat-response"
+  if mkdir -m 700 -- "$heartbeat_response_dir" \
+      && printf '%s,%s\n' "$heartbeat_url" response >"$heartbeat_urls_file" \
+      && rclone --log-level ERROR --contimeout 5s --timeout 10s --max-duration 15s \
+        --retries 1 --low-level-retries 1 copyurl --urls \
+        "$heartbeat_urls_file" "$heartbeat_response_dir" \
+        >/dev/null 2>&1; then
     log "heartbeat_signal=$signal delivery=PASS"
   else
     log "heartbeat_signal=$signal delivery=FAIL"
   fi
+  rm -rf -- "$heartbeat_urls_file" "$heartbeat_response_dir" || :
   return 0
 }
 
@@ -78,13 +95,12 @@ case "$BACKUP_RUN_MODE" in
     ;;
   backup)
     require_var DATABASE_URL
-    if [[ -z "${BETTERSTACK_BACKUP_HEARTBEAT_URL:-}" ]]; then
+    if [[ -z "$heartbeat_base_url" ]]; then
       log "heartbeat=SKIPPED reason=not_configured"
-    elif [[ "$BETTERSTACK_BACKUP_HEARTBEAT_URL" =~ ^https://uptime\.betterstack\.com/api/v1/heartbeat/[A-Za-z0-9_-]+/?$ ]]; then
+    elif [[ "$heartbeat_base_url" =~ ^https://uptime\.betterstack\.com/api/v1/heartbeat/[A-Za-z0-9_-]+/?$ ]]; then
       heartbeat_enabled=1
     else
-      printf 'error=invalid_environment variable=BETTERSTACK_BACKUP_HEARTBEAT_URL expected=better_stack_https_heartbeat_url\n' >&2
-      exit 64
+      log "configuration=WARNING variable=BETTERSTACK_BACKUP_HEARTBEAT_URL heartbeat=DISABLED reason=invalid_url"
     fi
     ;;
   *) printf 'error=invalid_run_mode expected=probe_or_backup\n' >&2; exit 64 ;;

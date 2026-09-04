@@ -17,6 +17,7 @@ import * as workspaceHistoryRoute from '../app/api/workspace/history/route';
 import * as workspaceAgendaRoute from '../app/api/workspace/agenda/route';
 
 import * as journalCasesRoute from '../app/api/journal/cases/route';
+import * as journalCaseRoute from '../app/api/journal/cases/[caseId]/route';
 import * as journalPlanRoute from '../app/api/journal/cases/[caseId]/plan/route';
 import * as journalAdjustRoute from '../app/api/journal/cases/[caseId]/adjust/route';
 import * as journalCancelRoute from '../app/api/journal/cases/[caseId]/cancel/route';
@@ -184,7 +185,10 @@ const mockApplicationStateRuntime = {
     closeCase: async () => journalCase,
     cancelCase: async () => journalCase,
     reviewCase: async () => journalCase,
-    getJournalCaseReplay: async () => ({ caseData: journalCase, revisions: [], caseRecord: {} })
+    getJournalCase: async (_subjectKind: string, _subjectId: string, caseId: string) =>
+      caseId === 'case-1' ? journalCase : null,
+    getJournalCaseReplay: async (_subjectKind: string, _subjectId: string, caseId: string) =>
+      caseId === 'case-1' ? { caseData: journalCase, revisions: [], caseRecord: {} } : null
   },
   journalInfluence: {
     getLatestJournalInfluenceSnapshot: async () => null,
@@ -596,6 +600,27 @@ export async function runRouteRuntimeTests(): Promise<void> {
   const journalCaseCreateIdempotencyConflict = await journalCasesRoute.POST(request('https://x/api/journal/cases', { method: 'POST', headers: { 'Idempotency-Key': 'journal-create-conflict' }, body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', title: 'draft' }) }));
   assert.deepEqual(await readJson(journalCaseCreateIdempotencyConflict), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
   securityDecisionMode = 'allowed';
+
+  const canonicalNotFound = { ok: false, error: { code: 'not_found', message: 'Not found' } };
+  const ownedJournalCase = await journalCaseRoute.GET(request('https://x/api/journal/cases/case-1'), { params: Promise.resolve({ caseId: 'case-1' }) });
+  assert.equal(ownedJournalCase.status, 200);
+  assert.deepEqual(await readJson(ownedJournalCase), { ok: true, data: { case: journalCase } });
+  const missingJournalCase = await journalCaseRoute.GET(request('https://x/api/journal/cases/case-missing'), { params: Promise.resolve({ caseId: 'case-missing' }) });
+  assert.equal(missingJournalCase.status, 404);
+  assert.deepEqual(await readJson(missingJournalCase), canonicalNotFound);
+  const foreignJournalCase = await journalCaseRoute.GET(request('https://x/api/journal/cases/case-foreign'), { params: Promise.resolve({ caseId: 'case-foreign' }) });
+  assert.equal(foreignJournalCase.status, 404);
+  assert.deepEqual(await readJson(foreignJournalCase), canonicalNotFound);
+
+  const ownedJournalReplay = await journalReplayRoute.GET(request('https://x/api/journal/cases/case-1/replay'), { params: Promise.resolve({ caseId: 'case-1' }) });
+  assert.equal(ownedJournalReplay.status, 200);
+  assert.deepEqual(await readJson(ownedJournalReplay), { ok: true, data: { replay: { caseData: journalCase, revisions: [], caseRecord: {} } } });
+  const missingJournalReplay = await journalReplayRoute.GET(request('https://x/api/journal/cases/case-missing/replay'), { params: Promise.resolve({ caseId: 'case-missing' }) });
+  assert.equal(missingJournalReplay.status, 404);
+  assert.deepEqual(await readJson(missingJournalReplay), canonicalNotFound);
+  const foreignJournalReplay = await journalReplayRoute.GET(request('https://x/api/journal/cases/case-foreign/replay'), { params: Promise.resolve({ caseId: 'case-foreign' }) });
+  assert.equal(foreignJournalReplay.status, 404);
+  assert.deepEqual(await readJson(foreignJournalReplay), canonicalNotFound);
 
   const journalPlanOk = await journalPlanRoute.POST(request('https://x/api/journal/cases/case-1/plan', { method: 'POST', body: JSON.stringify({ thesis: 'x' }) }), { params: Promise.resolve({ caseId: 'case-1' }) });
   assert.equal(journalPlanOk.status, 200);

@@ -1,11 +1,21 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import type { ErrorEvent } from '@sentry/nextjs';
 import { allowedCaptureTags, applySentryPrivacyPolicy, isValidPublicDsn } from '../lib/sentry-policy';
+import { browserSentryDsn, sentryBrowserIngestOrigin, sentryConnectSources, serverSentryDsn } from '../lib/sentry-dsn.mjs';
+
+const VALID_DSN = 'https://0123456789abcdef0123456789abcdef@o4500000000000000.ingest.us.sentry.io/1234567';
 
 export function runSentryPrivacyPolicyTests() {
   const filtered = applySentryPrivacyPolicy({
     type: undefined,
-    message: 'actionable failure',
+    message: 'private@example.com journal-sentinel cus_payment_123 Bearer_token_secret webhook_provider_secret',
+    exception: { values: [{
+      type: 'PaymentProviderError',
+      value: 'private@example.com journal-sentinel cus_payment_123 Bearer_token_secret webhook_provider_secret',
+      mechanism: { type: 'generic', handled: true, data: { authorization: 'Bearer_token_secret' } },
+      stacktrace: { frames: [{ filename: 'https://elceo.test/route.ts?token=Bearer_token_secret', function: 'POST', lineno: 42, vars: { token: 'Bearer_token_secret' } }] }
+    }] },
     request: { url: 'https://elceo.test/dashboard?token=secret', cookies: { session: 'secret' } },
     user: { id: 'user-1', email: 'private@example.com', ip_address: '127.0.0.1' },
     extra: { body: 'private journal text' },
@@ -22,6 +32,16 @@ export function runSentryPrivacyPolicyTests() {
   assert.equal(filtered.user, undefined);
   assert.equal(filtered.extra, undefined);
   assert.equal(filtered.breadcrumbs, undefined);
+  assert.equal(filtered.message, 'ELCEO captured error');
+  assert.equal(filtered.exception?.values?.[0]?.value, 'ELCEO captured error');
+  assert.equal(filtered.exception?.values?.[0]?.type, 'PaymentProviderError');
+  assert.equal(filtered.exception?.values?.[0]?.stacktrace?.frames?.[0]?.lineno, 42);
+  assert.equal(filtered.exception?.values?.[0]?.stacktrace?.frames?.[0]?.filename, 'https://elceo.test/route.ts');
+  assert.equal(filtered.exception?.values?.[0]?.stacktrace?.frames?.[0]?.vars, undefined);
+  const serialized = JSON.stringify(filtered);
+  for (const sentinel of ['private@example.com', 'journal-sentinel', 'cus_payment_123', 'Bearer_token_secret', 'webhook_provider_secret']) {
+    assert.equal(serialized.includes(sentinel), false);
+  }
   assert.deepEqual(filtered.tags, {
     scope: 'api.dashboard',
     route: '/dashboard',
@@ -39,7 +59,35 @@ export function runSentryPrivacyPolicyTests() {
     requestId: 'request-456'
   });
 
-  assert.equal(isValidPublicDsn('https://public@example.ingest.sentry.io/123'), true);
-  assert.equal(isValidPublicDsn('https://public:secret@example.ingest.sentry.io/123'), false);
+  assert.equal(isValidPublicDsn(VALID_DSN), true);
+  assert.equal(isValidPublicDsn('https://0123456789abcdef0123456789abcdef@attacker.example/123'), false);
+  assert.equal(isValidPublicDsn('https://0123456789abcdef0123456789abcdef@localhost/123'), false);
+  assert.equal(isValidPublicDsn('https://0123456789abcdef0123456789abcdef:secret@o1.ingest.sentry.io/123'), false);
+  assert.equal(isValidPublicDsn('http://0123456789abcdef0123456789abcdef@o1.ingest.sentry.io/123'), false);
+  assert.equal(isValidPublicDsn('https://0123456789abcdef0123456789abcdef@o1.ingest.sentry.io/not-a-project'), false);
   assert.equal(isValidPublicDsn('not-a-dsn'), false);
+
+  assert.equal(sentryBrowserIngestOrigin({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging' }), null);
+  assert.equal(sentryBrowserIngestOrigin({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: 'https://0123456789abcdef0123456789abcdef@attacker.example/123' }), null);
+  assert.equal(sentryBrowserIngestOrigin({ APP_ENV: 'production', NEXT_PUBLIC_APP_ENV: 'production', NEXT_PUBLIC_SENTRY_DSN: VALID_DSN }), null);
+  assert.equal(serverSentryDsn({ APP_ENV: 'production', SENTRY_DSN: VALID_DSN }), null);
+  assert.equal(browserSentryDsn({ APP_ENV: 'production', NEXT_PUBLIC_APP_ENV: 'production', NEXT_PUBLIC_SENTRY_DSN: VALID_DSN }), null);
+  assert.equal(sentryBrowserIngestOrigin({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: VALID_DSN }), 'https://o4500000000000000.ingest.us.sentry.io');
+  assert.equal(sentryBrowserIngestOrigin({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: `${VALID_DSN}?token=private` }), null);
+  assert.deepEqual(sentryConnectSources({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging' }), ["'self'", 'https://api.onesignal.com']);
+  assert.deepEqual(sentryConnectSources({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: `${VALID_DSN}?token=private` }), ["'self'", 'https://api.onesignal.com']);
+  assert.deepEqual(sentryConnectSources({ APP_ENV: 'staging', NEXT_PUBLIC_APP_ENV: 'staging', NEXT_PUBLIC_SENTRY_DSN: VALID_DSN }), ["'self'", 'https://api.onesignal.com', 'https://o4500000000000000.ingest.us.sentry.io']);
+
+  const envSchema = readFileSync('../../packages/schemas/src/env.schema.ts', 'utf8');
+  for (const variable of ['SENTRY_DSN', 'NEXT_PUBLIC_SENTRY_DSN', 'NEXT_PUBLIC_APP_ENV', 'SENTRY_ENVIRONMENT', 'SENTRY_RELEASE']) {
+    assert.match(envSchema, new RegExp(`${variable}\\?`));
+  }
+  const sentrySources = [
+    readFileSync('instrumentation.ts', 'utf8'),
+    readFileSync('instrumentation-client.ts', 'utf8'),
+    readFileSync('lib/sentry-policy.ts', 'utf8'),
+    readFileSync('lib/sentry-dsn.mjs', 'utf8')
+  ].join('\n');
+  assert.equal(sentrySources.includes(['SENTRY', 'AUTH', 'TOKEN'].join('_')), false);
+
 }

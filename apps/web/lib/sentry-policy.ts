@@ -1,4 +1,5 @@
 import type { ErrorEvent, EventHint } from '@sentry/nextjs';
+import { parseSentrySaasDsn } from './sentry-dsn.mjs';
 
 const SAFE_TAGS = new Set([
   'appEnv',
@@ -27,20 +28,22 @@ export function safeRoute(value: unknown): string | undefined {
     const path = label.startsWith('http://') || label.startsWith('https://')
       ? new URL(label).pathname
       : label.split(/[?#]/, 1)[0];
-    return path?.startsWith('/') && /^[a-zA-Z0-9._~!$&'()*+,;=:@%/{}\[\]-]+$/.test(path) ? path : undefined;
+    return path?.startsWith('/') && /^[a-zA-Z0-9._~!$&'()*+,;=:@%/{}[\]-]+$/.test(path) ? path : undefined;
   } catch {
     return undefined;
   }
 }
 
+function safeStackLocation(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const location = value.split(/[?#]/, 1)[0]?.trim();
+  return location && /^[a-zA-Z0-9._~!$&'()*+,;=:@%/{}[\]-]+$/.test(location)
+    ? location.slice(0, 240)
+    : undefined;
+}
+
 export function isValidPublicDsn(value: string | undefined): value is string {
-  if (!value) return false;
-  try {
-    const dsn = new URL(value);
-    return dsn.protocol === 'https:' && Boolean(dsn.username) && !dsn.password && /^\/\d+\/?$/.test(dsn.pathname);
-  } catch {
-    return false;
-  }
+  return parseSentrySaasDsn(value) !== null;
 }
 
 export function safeEnvironment(value: string | undefined): string {
@@ -87,6 +90,26 @@ export function applySentryPrivacyPolicy(event: ErrorEvent, _hint?: EventHint): 
   const runtime = runtimeName || runtimeVersion
     ? { name: runtimeName, version: runtimeVersion }
     : undefined;
+  const exception = event.exception?.values?.map((value) => ({
+    type: safeLabel(value.type, 80) ?? 'Error',
+    value: 'ELCEO captured error',
+    mechanism: value.mechanism ? {
+      type: safeLabel(value.mechanism.type, 80) ?? 'generic',
+      handled: value.mechanism.handled,
+      synthetic: value.mechanism.synthetic
+    } : undefined,
+    stacktrace: value.stacktrace ? {
+      frames: value.stacktrace.frames?.map((frame) => ({
+        filename: safeStackLocation(frame.filename),
+        function: safeLabel(frame.function, 120),
+        module: safeLabel(frame.module, 120),
+        lineno: frame.lineno,
+        colno: frame.colno,
+        in_app: frame.in_app,
+        abs_path: safeStackLocation(frame.abs_path)
+      }))
+    } : undefined
+  }));
 
   return {
     type: undefined,
@@ -94,8 +117,8 @@ export function applySentryPrivacyPolicy(event: ErrorEvent, _hint?: EventHint): 
     timestamp: event.timestamp,
     platform: event.platform,
     level: event.level,
-    exception: event.exception,
-    message: event.message,
+    exception: exception ? { values: exception } : undefined,
+    message: 'ELCEO captured error',
     environment: safeEnvironment(event.environment),
     release: safeRelease(event.release),
     tags,

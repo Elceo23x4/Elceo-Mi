@@ -1,10 +1,17 @@
 import * as Sentry from '@sentry/nextjs';
-import { applySentryPrivacyPolicy, isValidPublicDsn, safeEnvironment } from './lib/sentry-policy';
+import { applySentryPrivacyPolicy, safeEnvironment } from './lib/sentry-policy';
+import { browserSentryDsn } from './lib/sentry-dsn.mjs';
 
-if (process.env.NEXT_PUBLIC_APP_ENV === 'staging' && isValidPublicDsn(process.env.NEXT_PUBLIC_SENTRY_DSN)) {
+const sentry = browserSentryDsn({
+  APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
+  NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
+  NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN
+});
+
+if (sentry) {
   try {
     Sentry.init({
-      dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+      dsn: sentry.dsn,
       environment: safeEnvironment(process.env.NEXT_PUBLIC_APP_ENV),
       sendDefaultPii: false,
       tracesSampleRate: 0,

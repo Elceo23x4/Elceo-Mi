@@ -1,12 +1,14 @@
 import * as Sentry from '@sentry/nextjs';
-import { applySentryPrivacyPolicy, isValidPublicDsn, safeEnvironment, safeRelease } from './lib/sentry-policy';
+import { applySentryPrivacyPolicy, safeEnvironment, safeRelease } from './lib/sentry-policy';
+import { serverSentryDsn } from './lib/sentry-dsn.mjs';
 
 export async function register() {
-  if (process.env.APP_ENV !== 'staging' || !isValidPublicDsn(process.env.SENTRY_DSN)) return;
+  const sentry = serverSentryDsn(process.env);
+  if (!sentry) return;
 
   try {
     Sentry.init({
-      dsn: process.env.SENTRY_DSN,
+      dsn: sentry.dsn,
       environment: safeEnvironment(process.env.SENTRY_ENVIRONMENT ?? process.env.APP_ENV),
       release: safeRelease(process.env.SENTRY_RELEASE),
       sendDefaultPii: false,

@@ -1,4 +1,5 @@
 export type ProviderEnv = {
+  // Server deployment identity and server-only monitoring configuration.
   APP_ENV?: 'development' | 'test' | 'staging' | 'production';
   NODE_ENV?: string;
   DATABASE_URL?: string;
@@ -45,6 +46,11 @@ export type ProviderEnv = {
   STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY?: string;
   ELCEO_INTERNAL_API_TOKEN?: string;
   SENTRY_DSN?: string;
+  SENTRY_ENVIRONMENT?: string;
+  SENTRY_RELEASE?: string;
+  // Browser-visible deployment identity and public client DSN only.
+  NEXT_PUBLIC_APP_ENV?: 'development' | 'test' | 'staging' | 'production';
+  NEXT_PUBLIC_SENTRY_DSN?: string;
   LOG_LEVEL?: 'debug' | 'info' | 'warn' | 'error';
   TIINGO_API_KEY?: string;
   TIINGO_LIVE_ENABLED?: string;
@@ -102,6 +108,10 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   if (env.STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY) out.STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY = env.STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY;
   if (env.ELCEO_INTERNAL_API_TOKEN) out.ELCEO_INTERNAL_API_TOKEN = env.ELCEO_INTERNAL_API_TOKEN;
   if (env.SENTRY_DSN) out.SENTRY_DSN = env.SENTRY_DSN;
+  if (env.SENTRY_ENVIRONMENT) out.SENTRY_ENVIRONMENT = env.SENTRY_ENVIRONMENT;
+  if (env.SENTRY_RELEASE) out.SENTRY_RELEASE = env.SENTRY_RELEASE;
+  if (env.NEXT_PUBLIC_APP_ENV === 'development' || env.NEXT_PUBLIC_APP_ENV === 'test' || env.NEXT_PUBLIC_APP_ENV === 'staging' || env.NEXT_PUBLIC_APP_ENV === 'production') out.NEXT_PUBLIC_APP_ENV = env.NEXT_PUBLIC_APP_ENV;
+  if (env.NEXT_PUBLIC_SENTRY_DSN) out.NEXT_PUBLIC_SENTRY_DSN = env.NEXT_PUBLIC_SENTRY_DSN;
   if (env.LOG_LEVEL === 'debug' || env.LOG_LEVEL === 'info' || env.LOG_LEVEL === 'warn' || env.LOG_LEVEL === 'error') out.LOG_LEVEL = env.LOG_LEVEL;
   if (env.TIINGO_API_KEY) out.TIINGO_API_KEY = env.TIINGO_API_KEY;
   if (env.TIINGO_LIVE_ENABLED) out.TIINGO_LIVE_ENABLED = env.TIINGO_LIVE_ENABLED;

@@ -223,6 +223,7 @@ jobs:
           test "$(docker run --rm --entrypoint pg_dump elceo-postgres-r2-backup:test --version | awk '{print $3}')" = "18.6"
           test "$(docker run --rm --entrypoint pg_restore elceo-postgres-r2-backup:test --version | awk '{print $3}')" = "18.6"
           docker run --rm --entrypoint rclone elceo-postgres-r2-backup:test version | grep -F 'rclone v1.75.0'
+          docker run --rm --entrypoint rclone elceo-postgres-r2-backup:test copyurl --help | grep -F -- '--urls'
           test "$(docker run --rm --entrypoint id elceo-postgres-r2-backup:test -u)" != "0"
           docker run --rm --entrypoint sh elceo-postgres-r2-backup:test -c \
             'test -s /etc/ssl/certs/ca-certificates.crt; test -r /etc/ssl/certs/ca-certificates.crt; ! command -v curl; ! command -v unzip; test "$(id -u)" != 0; workdir=$(mktemp -d); test -d "$workdir"; rm -rf "$workdir"'

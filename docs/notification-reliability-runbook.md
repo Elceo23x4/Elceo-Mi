@@ -30,3 +30,11 @@ RC-I2-CERT remains a mandatory unresolved pre-launch blocker. RC-J remains a man
 
 ## RC-J monitoring alignment
 Notification production-live activation remains blocked unless separately approved. RC-J monitoring/alert smoke validates alert routing and redaction status only; it does not complete notification sandbox/live certification and does not enable production-live notification delivery.
+
+## RC-I3 provider contract
+
+The launch delivery stack is the existing PostgreSQL outbox plus in-app delivery, Resend email, and exact-subscription OneSignal browser push. Postmark is a dormant, manually selected contingency; there is no automatic provider failover. Credentials never activate `production_provider`, and both `ELCEO_ALLOW_NOTIFICATION_SENDS` and `NOTIFICATION_SENDS_ENABLED` remain manual safety gates.
+
+Resend requires a verified sending domain and a Svix-verified webhook. OneSignal requires its web app ID and a real sandbox browser subscription; iOS/iPadOS web push may require installation to the Home Screen. Postmark callbacks use HTTPS Basic Authentication; provider IP allowlisting belongs at the trusted WAF/proxy boundary. Only `NEXT_PUBLIC_ONESIGNAL_APP_ID` is browser-public; all API keys, webhook credentials, and correlation secrets are server-only.
+
+External certification remains outstanding after repository merge. Explicit smoke forms are `npm run notification:sandbox-smoke -- --provider resend`, `--provider onesignal`, and optional `--provider postmark`; incomplete prerequisites exit non-zero and must never be treated as certification evidence.

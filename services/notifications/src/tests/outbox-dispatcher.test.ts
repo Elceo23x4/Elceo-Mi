@@ -1,4 +1,4 @@
-import { dispatchDueNotificationOutbox } from '../delivery/outbox-dispatcher.js';
+import { buildNotificationRetryAvailableAt, dispatchDueNotificationOutbox } from '../delivery/outbox-dispatcher.js';
 import { buildDecision, buildDecisionRecord } from './test-fixtures.js';
 import {
   MemoryNotificationDecisionRepository,
@@ -27,6 +27,11 @@ function buildRepos() {
 }
 
 export async function runOutboxDispatcherTests(): Promise<void> {
+  const start = '2026-01-01T00:00:00.000Z';
+  const ordinaryHorizon = [1,2,3,4].reduce((at, attempt) => buildNotificationRetryAvailableAt(at, attempt), start);
+  const rateLimitedHorizon = [1,2,3,4].reduce((at, attempt) => buildNotificationRetryAvailableAt(at, attempt, 'rate_limited'), start);
+  assert((Date.parse(ordinaryHorizon) - Date.parse(start)) / 60_000 === 75, 'ordinary fifth-attempt horizon must remain 75 minutes');
+  assert((Date.parse(rateLimitedHorizon) - Date.parse(start)) / 60_000 === 450, 'rate-limited fifth-attempt horizon must remain 450 minutes');
   const repos = buildRepos();
   await repos.subscriptionRepository.saveSubscription({ subscriptionId: 'sub-1', subjectKind: 'user', subjectId: 'u-1', channel: 'in_app', asset: '*', timeframe: '*', ruleKey: '*', enabled: true, minMaterialityScore: null, createdAt: '2026-01-15T10:00:00.000Z', updatedAt: '2026-01-15T10:00:00.000Z' });
   await repos.targetRepository.saveTarget({ targetId: 'target-1', subjectKind: 'user', subjectId: 'u-1', channel: 'in_app', targetKind: 'in_app_user', status: 'active', label: null, addressJson: '{}', createdAt: '2026-01-15T10:00:00.000Z', updatedAt: '2026-01-15T10:00:00.000Z', verifiedAt: null });

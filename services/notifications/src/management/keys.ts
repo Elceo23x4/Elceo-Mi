@@ -39,7 +39,9 @@ function normalizeAddressIdentity(input: NotificationTargetKeyInput): string {
     return `email:${normalizeEmailAddress(raw)}`;
   }
 
-  const raw = typeof payload.endpoint === 'string'
+  const raw = typeof payload.subscriptionId === 'string'
+    ? payload.subscriptionId
+    : typeof payload.endpoint === 'string'
     ? payload.endpoint
     : typeof payload.token === 'string'
       ? payload.token

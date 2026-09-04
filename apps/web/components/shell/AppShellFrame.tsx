@@ -9,6 +9,7 @@ import { ThemeToggle } from '../theme/ThemeToggle';
 import { CinematicAtmosphere } from '../visual/CinematicAtmosphere';
 import { InAppAlertsTray } from './InAppAlertsTray';
 import { privateRouteGroups, privateRouteOrder, resolvePrivateRoute } from './privateRouteConfig';
+import { AuthenticatedNotificationLifecycle } from '../notifications/AuthenticatedNotificationLifecycle';
 
 export function AppShellFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -17,6 +18,7 @@ export function AppShellFrame({ children }: { children: ReactNode }) {
 
   return (
     <div className="elceo-app-shell">
+      <AuthenticatedNotificationLifecycle />
       <GsapOrchestrator mode="shell" />
       <CinematicAtmosphere className="elceo-cinematic-atmosphere-shell" variant="shell" />
 

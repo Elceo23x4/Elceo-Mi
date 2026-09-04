@@ -22,7 +22,10 @@ export function createDefaultTargetHealth(targetId: string, nowIso: string): Not
 
 export function applyReceiptToTargetHealth(existingHealth: NotificationTargetHealthRecord | null, receipt: NotificationDeliveryReceipt, targetRecord: NotificationTargetRecord | null, nowIso: string): TargetHealthApplyResult {
   const current = existingHealth ?? createDefaultTargetHealth(receipt.targetId ?? targetRecord?.targetId ?? 'unknown_target', nowIso);
-  const next: NotificationTargetHealthRecord = { ...current, lastReceiptKind: receipt.eventKind, lastReceiptAt: receipt.occurredAt, updatedAt: nowIso };
+  const receiptIsCanonicalLatest = current.lastReceiptAt === null
+    || receipt.occurredAt > current.lastReceiptAt
+    || (receipt.occurredAt === current.lastReceiptAt && receipt.eventKind > (current.lastReceiptKind ?? ''));
+  const next: NotificationTargetHealthRecord = { ...current, ...(receiptIsCanonicalLatest ? { lastReceiptKind: receipt.eventKind, lastReceiptAt: receipt.occurredAt } : {}), updatedAt: nowIso };
   let targetStatusChange: NotificationTargetRecord['status'] | null = null;
 
   if (receipt.eventKind === 'provider_failed') {

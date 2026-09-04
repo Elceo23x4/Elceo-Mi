@@ -18,7 +18,7 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   const security = await requireSecurityDecision({ request, routePath: '/api/notifications/targets', method: 'POST', actionKind: 'notification_target_write', actor, subjectId: subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;
   try {
-    const address = buildPublicTargetAddress(body.channel, body.value, subject.subjectId);
+    const address = buildPublicTargetAddress(body, subject.subjectId);
     const target = await getNotificationRuntimes().management.registerOrUpdateTarget({
       subjectKind: subject.subjectKind,
       subjectId: subject.subjectId,

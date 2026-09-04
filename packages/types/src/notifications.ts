@@ -196,6 +196,7 @@ export type NotificationVerificationConsumeResult = {
 export type NotificationProviderEventKind =
   | 'accepted'
   | 'delivered'
+  | 'delivery_delayed'
   | 'bounced'
   | 'complained'
   | 'unsubscribed'

@@ -147,6 +147,11 @@ jobs:
         env:
           DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3
         run: npm run test:sec-a1-postgres
+      - name: SEC-B credential authentication PostgreSQL and Redis acceptance
+        env:
+          DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3
+          REDIS_URL: redis://127.0.0.1:6379
+        run: npm run test:sec-b-auth-postgres
       - name: Kick Off dashboard acceptance
         env:
           DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3

@@ -6,8 +6,7 @@ import { queryDb } from '../db/client';
 export interface UserStateRepository {
   getUserProfileById(userId: string): Promise<UserProfileRecord | null>;
   getUserProfileByEmail(email: string): Promise<UserProfileRecord | null>;
-  createUserProfile(input: { email: string; name: string; role?: UserProfileRecord['role']; planTier?: PlanTier; passwordHash?: string | null }): Promise<UserProfileRecord>;
-  verifyPasswordCredentials(email: string, password: string): Promise<UserProfileRecord | null>;
+  createUserProfile(input: { email: string; name: string; role?: UserProfileRecord['role']; planTier?: PlanTier }): Promise<UserProfileRecord>;
   updateOnboarding(userId: string, input: OnboardingUpdateInput): Promise<UserProfileRecord>;
   updatePlanTier(userId: string, planTier: PlanTier): Promise<UserProfileRecord>;
   getWatchlist(userId: string): Promise<UserWatchlistRecord>;
@@ -138,7 +137,7 @@ export class PostgresUserStateRepository implements UserStateRepository {
     return rows[0] ? mapProfile(rows[0]) : null;
   }
 
-  async createUserProfile(input: { email: string; name: string; role?: UserProfileRecord['role']; planTier?: PlanTier; passwordHash?: string | null }): Promise<UserProfileRecord> {
+  async createUserProfile(input: { email: string; name: string; role?: UserProfileRecord['role']; planTier?: PlanTier }): Promise<UserProfileRecord> {
     const profileRows = await queryDb<ProfileRow>(
       `INSERT INTO app_user_profiles (email, name, role, plan_tier)
        VALUES ($1, $2, $3, $4)
@@ -181,33 +180,7 @@ export class PostgresUserStateRepository implements UserStateRepository {
       [profile.id]
     );
 
-    if (input.passwordHash) {
-      await queryDb(
-        `INSERT INTO app_auth_credentials (user_id, password_hash)
-         VALUES ($1, $2)
-         ON CONFLICT (user_id) DO UPDATE SET password_hash = EXCLUDED.password_hash`,
-        [profile.id, input.passwordHash]
-      );
-    }
-
     return profile;
-  }
-
-  async verifyPasswordCredentials(email: string, password: string): Promise<UserProfileRecord | null> {
-    const rows = await queryDb<ProfileRow & { password_hash: string | null }>(
-      `SELECT p.id, p.email, p.name, p.role, p.plan_tier, p.terms_accepted, p.disclaimer_accepted, p.onboarding_completed_at, p.motion_intensity,
-              c.password_hash
-       FROM app_user_profiles p
-       LEFT JOIN app_auth_credentials c ON c.user_id = p.id
-       WHERE lower(p.email) = lower($1)`,
-      [email]
-    );
-
-    const row = rows[0];
-    if (!row?.password_hash) return null;
-    if (row.password_hash !== password) return null;
-
-    return mapProfile(row);
   }
 
   async updateOnboarding(userId: string, input: OnboardingUpdateInput): Promise<UserProfileRecord> {
@@ -417,7 +390,7 @@ export class InMemoryUserStateRepository implements UserStateRepository {
     return id ? memoryProfiles.get(id) ?? null : null;
   }
 
-  async createUserProfile(input: { email: string; name: string; role?: UserProfileRecord['role']; planTier?: PlanTier; passwordHash?: string | null }): Promise<UserProfileRecord> {
+  async createUserProfile(input: { email: string; name: string; role?: UserProfileRecord['role']; planTier?: PlanTier }): Promise<UserProfileRecord> {
     const existing = await this.getUserProfileByEmail(input.email);
     if (existing) return existing;
 
@@ -449,12 +422,6 @@ export class InMemoryUserStateRepository implements UserStateRepository {
     });
     memorySubscriptions.set(id, defaultSubscriptionState(id));
     return profile;
-  }
-
-  async verifyPasswordCredentials(email: string, password: string): Promise<UserProfileRecord | null> {
-    const profile = await this.getUserProfileByEmail(email);
-    if (!profile) return null;
-    return password.length > 0 ? profile : null;
   }
 
   async updateOnboarding(userId: string, input: OnboardingUpdateInput): Promise<UserProfileRecord> {

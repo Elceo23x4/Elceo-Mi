@@ -1,7 +1,10 @@
 import { sentryBrowserBuildEnv, sentryConnectSources } from './lib/sentry-dsn.mjs';
+import { sentrySourceMapBuildOptions } from './lib/sentry-build-config.mjs';
+import { withSentryConfig } from '@sentry/nextjs/config';
 
 const connectSources = sentryConnectSources(process.env);
 const sentryBrowserEnv = sentryBrowserBuildEnv(process.env);
+const sentryBuildOptions = sentrySourceMapBuildOptions(process.env);
 
 /** @type {import('next').NextConfig} */
 const securityHeaders = [
@@ -44,4 +47,6 @@ const nextConfig = {
   }
 };
 
-export default nextConfig;
+export default sentryBuildOptions
+  ? withSentryConfig(nextConfig, sentryBuildOptions)
+  : nextConfig;

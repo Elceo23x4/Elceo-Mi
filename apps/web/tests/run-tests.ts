@@ -19,6 +19,8 @@ import('./route-runtime.test.js').then(({ runRouteRuntimeTests }) => runRouteRun
   .then(({ runOneSignalBrowserClientTests }) => runOneSignalBrowserClientTests())
   .then(() => import('./sentry-privacy-policy.test.js'))
   .then(({ runSentryPrivacyPolicyTests }) => runSentryPrivacyPolicyTests())
+  .then(() => import('./sentry-build-config.test.js'))
+  .then(({ runSentryBuildConfigTests }) => runSentryBuildConfigTests())
   .then(() => {
     console.log('web route runtime tests passed');
   })

@@ -13,6 +13,7 @@ if (sentry) {
     Sentry.init({
       dsn: sentry.dsn,
       environment: safeEnvironment(process.env.NEXT_PUBLIC_APP_ENV),
+      release: process.env.NEXT_PUBLIC_ELCEO_SENTRY_RELEASE,
       sendDefaultPii: false,
       tracesSampleRate: 0,
       enableLogs: false,

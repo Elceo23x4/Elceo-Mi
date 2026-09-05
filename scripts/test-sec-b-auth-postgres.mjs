@@ -4,7 +4,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import pg from 'pg';
 
 const base=process.env.DATABASE_URL,redisUrl=process.env.REDIS_URL;if(!base)throw new Error('DATABASE_URL_required');if(!redisUrl)throw new Error('REDIS_URL_required');
-const adminUrl=new URL(base);adminUrl.pathname='/postgres';const dbName=`elceo_sec_b_${randomUUID().replaceAll('-','')}`;const admin=new pg.Client({connectionString:adminUrl});await admin.connect();await admin.query(`CREATE DATABASE ${dbName}`);const dbUrl=new URL(base);dbUrl.pathname=`/${dbName}`;const sql=new pg.Client({connectionString:dbUrl});
+const adminUrl=new URL(base);adminUrl.pathname='/postgres';const dbName=`elceo_sec_b_${randomUUID().replaceAll('-','')}`;const admin=new pg.Client({connectionString:adminUrl.toString()});await admin.connect();await admin.query(`CREATE DATABASE ${dbName}`);const dbUrl=new URL(base);dbUrl.pathname=`/${dbName}`;const sql=new pg.Client({connectionString:dbUrl.toString()});
 const proof={legacyMigration:false,argon2AtRest:false,credentialRotation:false,loginParallelBounded:false,loginSharedRedis:false,blockedTtlNonRenewing:false,loginRecoveredAndCleared:false,resetThrottleIndependent:false,resetThrottleNoSideEffects:false,publicResponsesIdentical:false,publicResponseDefersWork:false,canonicalResetOrigin:false,deliveryFailureRevoked:false,resetConcurrentSingleWinner:false,invalidTokenSkippedArgon2:false,activationContract:false,recoveryRoutes:false,googleIndependent:false};
 let closeDb=async()=>{};const closers=[];
 try{

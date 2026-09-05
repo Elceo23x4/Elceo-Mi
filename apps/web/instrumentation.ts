@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
-import { applySentryPrivacyPolicy, safeEnvironment, safeRelease } from './lib/sentry-policy';
-import { serverSentryDsn } from './lib/sentry-dsn.mjs';
+import { applySentryPrivacyPolicy, safeEnvironment } from './lib/sentry-policy';
+import { sentryRelease, serverSentryDsn } from './lib/sentry-dsn.mjs';
 
 export async function register() {
   const sentry = serverSentryDsn(process.env);
@@ -10,7 +10,7 @@ export async function register() {
     Sentry.init({
       dsn: sentry.dsn,
       environment: safeEnvironment(process.env.SENTRY_ENVIRONMENT ?? process.env.APP_ENV),
-      release: safeRelease(process.env.SENTRY_RELEASE),
+      release: sentryRelease(process.env),
       sendDefaultPii: false,
       tracesSampleRate: 0,
       enableLogs: false,

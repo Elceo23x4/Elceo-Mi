@@ -46,13 +46,33 @@ export function isSentryBrowserBuildAuthorized(env) {
     parseSentrySaasDsn(env.NEXT_PUBLIC_SENTRY_DSN) !== null;
 }
 
-/** Return only an immutable Git commit identifier for an authorized browser build. */
-export function sentryBrowserRelease(env) {
-  if (!isSentryBrowserBuildAuthorized(env)) return undefined;
+/** Resolve only an immutable Git commit identifier from deployment metadata. */
+export function sentryRelease(env) {
+  const railwayRelease = env.RAILWAY_GIT_COMMIT_SHA;
+  if (typeof railwayRelease === 'string' && IMMUTABLE_GIT_RELEASE.test(railwayRelease)) {
+    return railwayRelease;
+  }
+
   const release = env.SENTRY_RELEASE;
   return typeof release === 'string' && IMMUTABLE_GIT_RELEASE.test(release)
     ? release
     : undefined;
+}
+
+/** Return a release only when the browser build itself is authorized. */
+export function sentryBrowserRelease(env) {
+  return isSentryBrowserBuildAuthorized(env) ? sentryRelease(env) : undefined;
+}
+
+/** Publish the minimum browser-safe Sentry build environment. */
+export function sentryBrowserBuildEnv(env) {
+  const enabled = isSentryBrowserBuildAuthorized(env);
+  const release = sentryBrowserRelease(env);
+
+  return {
+    NEXT_PUBLIC_ELCEO_SENTRY_BROWSER_ENABLED: enabled ? 'true' : 'false',
+    ...(release ? { NEXT_PUBLIC_ELCEO_SENTRY_RELEASE: release } : {})
+  };
 }
 
 export function sentryConnectSources(env) {

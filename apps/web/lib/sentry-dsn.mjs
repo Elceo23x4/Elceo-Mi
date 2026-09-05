@@ -1,6 +1,7 @@
 const SENTRY_SAAS_INGEST_HOST = /^o\d+\.ingest(?:\.(?:us|de))?\.sentry\.io$/;
 const SENTRY_PUBLIC_KEY = /^[a-f0-9]{32}$/i;
 const SENTRY_PROJECT_PATH = /^\/\d+\/?$/;
+const IMMUTABLE_GIT_RELEASE = /^[a-f0-9]{40}$/i;
 
 export function parseSentrySaasDsn(value) {
   if (!value) return null;
@@ -43,6 +44,15 @@ export function isSentryBrowserBuildAuthorized(env) {
   return env.APP_ENV === 'staging' &&
     env.NEXT_PUBLIC_APP_ENV === 'staging' &&
     parseSentrySaasDsn(env.NEXT_PUBLIC_SENTRY_DSN) !== null;
+}
+
+/** Return only an immutable Git commit identifier for an authorized browser build. */
+export function sentryBrowserRelease(env) {
+  if (!isSentryBrowserBuildAuthorized(env)) return undefined;
+  const release = env.SENTRY_RELEASE;
+  return typeof release === 'string' && IMMUTABLE_GIT_RELEASE.test(release)
+    ? release
+    : undefined;
 }
 
 export function sentryConnectSources(env) {

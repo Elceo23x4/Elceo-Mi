@@ -1,26 +1,20 @@
 import NextAuth, { type NextAuthConfig, type Session } from 'next-auth';
 import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
-import { ApplicationStateService, CredentialAuthenticationService, PostgresCredentialRepository, RedisLoginThrottle, getUserStateRepository } from '@elceo/application-state';
+import { ApplicationStateService, CredentialAuthenticationService, PostgresCredentialRepository, RedisLoginThrottle, RedisPasswordResetThrottle, getUserStateRepository } from '@elceo/application-state';
+import { resolveCredentialsActivation } from './credentials-activation';
 
 const appStateService = new ApplicationStateService(getUserStateRepository());
 
 const runtimeEnv = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
 const isProduction = runtimeEnv.APP_ENV === 'production';
-export const credentialsAuthEnabled = runtimeEnv.AUTH_CREDENTIALS_ENABLED === 'true';
+const credentialsActivation = resolveCredentialsActivation(runtimeEnv);
+export const credentialsAuthEnabled = credentialsActivation.enabled;
 
-if (isProduction && !runtimeEnv.AUTH_SECRET) {
-  throw new Error('AUTH_SECRET must be configured in production');
-}
-if (isProduction && credentialsAuthEnabled) {
-  if (!runtimeEnv.REDIS_URL) throw new Error('REDIS_URL must be configured when production credentials authentication is enabled');
-  const emailProvider=runtimeEnv.NOTIFICATION_EMAIL_PROVIDER;
-  const providerReady=emailProvider==='resend'?Boolean(runtimeEnv.RESEND_API_KEY):emailProvider==='postmark'?Boolean(runtimeEnv.POSTMARK_SERVER_TOKEN):false;
-  if (!providerReady || !runtimeEnv.NOTIFICATION_EMAIL_FROM_ADDRESS) throw new Error('Transactional email must be configured when production credentials authentication is enabled');
-}
+if (isProduction && !runtimeEnv.AUTH_SECRET) throw new Error('AUTH_SECRET must be configured in production');
 
-const credentialService=credentialsAuthEnabled
-  ? new CredentialAuthenticationService(new PostgresCredentialRepository(),new RedisLoginThrottle(runtimeEnv.REDIS_URL!))
+const credentialService = credentialsAuthEnabled && runtimeEnv.REDIS_URL
+  ? new CredentialAuthenticationService(new PostgresCredentialRepository(), new RedisLoginThrottle(runtimeEnv.REDIS_URL), new RedisPasswordResetThrottle(runtimeEnv.REDIS_URL))
   : null;
 
 type AuthenticatedProfile = {

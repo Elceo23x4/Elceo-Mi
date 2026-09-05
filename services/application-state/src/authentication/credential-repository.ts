@@ -25,7 +25,8 @@ export interface CredentialRepository {
   findAuthenticationRecord(email: string): Promise<CredentialAuthenticationRecord | null>;
   replaceVerifier(userId: string, verifier: EncodedPasswordVerifier): Promise<void>;
   replaceVerifierIfCurrent(userId: string, expected: string, verifier: EncodedPasswordVerifier): Promise<boolean>;
-  createResetToken(userId: string, digest: Buffer, expiresAt: Date): Promise<void>;
+  replaceResetToken(userId: string, digest: Buffer, expiresAt: Date): Promise<void>;
+  isResetTokenUsable(digest: Buffer, now: Date): Promise<boolean>;
   revokeResetToken(digest: Buffer): Promise<void>;
   consumeResetToken(digest: Buffer, verifier: EncodedPasswordVerifier, now: Date): Promise<'consumed'|'invalid_or_expired'>;
 }
@@ -41,7 +42,8 @@ export class PostgresCredentialRepository implements CredentialRepository {
   async replaceVerifierIfCurrent(userId:string,expected:string,verifier:EncodedPasswordVerifier):Promise<boolean>{
     const rows=await queryDb<{user_id:string}>(`UPDATE app_auth_credentials SET password_hash=$3,credential_state='active',password_updated_at=now(),updated_at=now() WHERE user_id=$1 AND credential_state='active' AND password_hash=$2 RETURNING user_id`,[userId,expected,verifier]); return rows.length===1;
   }
-  async createResetToken(userId:string,digest:Buffer,expiresAt:Date):Promise<void>{await queryDb(`INSERT INTO app_password_reset_tokens(user_id,token_digest,expires_at) VALUES($1,$2,$3)`,[userId,digest,expiresAt]);}
+  async replaceResetToken(userId:string,digest:Buffer,expiresAt:Date):Promise<void>{await withDbTransaction(async tx=>{await tx.query(`SELECT id FROM app_user_profiles WHERE id=$1 FOR UPDATE`,[userId]);await tx.query(`UPDATE app_password_reset_tokens SET consumed_at=now() WHERE user_id=$1 AND consumed_at IS NULL`,[userId]);await tx.query(`INSERT INTO app_password_reset_tokens(user_id,token_digest,expires_at) VALUES($1,$2,$3)`,[userId,digest,expiresAt]);});}
+  async isResetTokenUsable(digest:Buffer,now:Date):Promise<boolean>{const rows=await queryDb<{exists:boolean}>(`SELECT EXISTS(SELECT 1 FROM app_password_reset_tokens WHERE token_digest=$1 AND consumed_at IS NULL AND expires_at>$2) AS exists`,[digest,now]);return rows[0]?.exists===true;}
   async revokeResetToken(digest:Buffer):Promise<void>{await queryDb(`UPDATE app_password_reset_tokens SET consumed_at=COALESCE(consumed_at,now()) WHERE token_digest=$1`,[digest]);}
   async consumeResetToken(digest:Buffer,verifier:EncodedPasswordVerifier,now:Date):Promise<'consumed'|'invalid_or_expired'>{
     return withDbTransaction(async tx=>{

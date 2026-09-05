@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { GsapOrchestrator } from '../../../components/motion/GsapOrchestrator';
 import { CinematicAtmosphere } from '../../../components/visual/CinematicAtmosphere';
@@ -99,6 +100,7 @@ export function SecureLoginClient({ credentialsEnabled }: { credentialsEnabled: 
           </button>
 
           {error ? <p className="elceo-auth-error">{error}</p> : null}
+          <Link href="/forgot-password">Forgot password?</Link>
           </> : null}
         </div>
       </section>

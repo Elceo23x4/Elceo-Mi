@@ -457,7 +457,7 @@ function assertCommercialRestrictionAndSliceEvidence(): void {
 
 function assertRouteInventorySynchronized(): void {
   const inventory = buildRouteInventory();
-  assert.equal(inventory.length, 149);
+  assert.equal(inventory.length, 151);
   const byPath = new Map(inventory.map((row) => [row.routePath, row]));
   assert.equal(byPath.size, inventory.length);
   for (const row of inventory) {
@@ -519,7 +519,7 @@ function assertRouteInventorySynchronized(): void {
   assert.equal(byPath.get('/api/admin/billing/provider-plan-mappings')?.targetUserBoundary, 'not_applicable');
   assert.equal(byPath.get('/api/admin/billing/policy')?.targetUserBoundary, 'not_applicable');
   const docs = readFileSync('../../docs/route-entitlement-enforcement-map.md', 'utf8');
-  assert.match(docs, /RC-E generated live route count: 149/);
+  assert.match(docs, /RC-E generated live route count: 151/);
   assert.match(docs, /runtime_enforced/);
   assert.match(docs, /environment_verification_required/);
   assert.match(docs, /blocked_live_activation/);

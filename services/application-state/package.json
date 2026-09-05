@@ -15,7 +15,9 @@
   "dependencies": {
     "@elceo/config": "0.1.0",
     "@elceo/types": "0.1.0",
+    "argon2": "0.45.1",
     "next-auth": "5.0.0-beta.32",
-    "pg": "^8.15.6"
+    "pg": "^8.15.6",
+    "redis": "5.8.2"
   }
 }

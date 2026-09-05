@@ -1,7 +1,9 @@
 export type ProviderEnv = {
+  // Server deployment identity and server-only monitoring configuration.
   APP_ENV?: 'development' | 'test' | 'staging' | 'production';
   NODE_ENV?: string;
   DATABASE_URL?: string;
+  REDIS_URL?: string;
   FINNHUB_API_KEY?: string;
   ALPHAVANTAGE_API_KEY?: string;
   FMP_API_KEY?: string;
@@ -15,6 +17,7 @@ export type ProviderEnv = {
   PERSISTENCE_MODE?: 'filesystem' | 'memory';
   PERSISTENCE_FILE_PATH?: string;
   AUTH_SECRET?: string;
+  AUTH_CREDENTIALS_ENABLED?: string;
   AUTH_GOOGLE_CLIENT_ID?: string;
   AUTH_GOOGLE_CLIENT_SECRET?: string;
   APP_STATE_REPOSITORY?: 'sql' | 'memory';
@@ -45,6 +48,11 @@ export type ProviderEnv = {
   STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY?: string;
   ELCEO_INTERNAL_API_TOKEN?: string;
   SENTRY_DSN?: string;
+  SENTRY_ENVIRONMENT?: string;
+  SENTRY_RELEASE?: string;
+  // Browser-visible deployment identity and public client DSN only.
+  NEXT_PUBLIC_APP_ENV?: 'development' | 'test' | 'staging' | 'production';
+  NEXT_PUBLIC_SENTRY_DSN?: string;
   LOG_LEVEL?: 'debug' | 'info' | 'warn' | 'error';
   TIINGO_API_KEY?: string;
   TIINGO_LIVE_ENABLED?: string;
@@ -71,6 +79,7 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   if (env.APP_ENV === 'development' || env.APP_ENV === 'test' || env.APP_ENV === 'staging' || env.APP_ENV === 'production') out.APP_ENV = env.APP_ENV;
   if (env.NODE_ENV) out.NODE_ENV=env.NODE_ENV;
   if (env.DATABASE_URL) out.DATABASE_URL=env.DATABASE_URL;
+  if (env.REDIS_URL) out.REDIS_URL=env.REDIS_URL;
   if (env.FINNHUB_API_KEY) out.FINNHUB_API_KEY = env.FINNHUB_API_KEY;
   if (env.ALPHAVANTAGE_API_KEY) out.ALPHAVANTAGE_API_KEY = env.ALPHAVANTAGE_API_KEY;
   if (env.FMP_API_KEY) out.FMP_API_KEY = env.FMP_API_KEY;
@@ -84,6 +93,7 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   if (env.PERSISTENCE_MODE === 'filesystem' || env.PERSISTENCE_MODE === 'memory') out.PERSISTENCE_MODE = env.PERSISTENCE_MODE;
   if (env.PERSISTENCE_FILE_PATH) out.PERSISTENCE_FILE_PATH = env.PERSISTENCE_FILE_PATH;
   if (env.AUTH_SECRET) out.AUTH_SECRET = env.AUTH_SECRET;
+  if (env.AUTH_CREDENTIALS_ENABLED) out.AUTH_CREDENTIALS_ENABLED = env.AUTH_CREDENTIALS_ENABLED;
   if (env.AUTH_GOOGLE_CLIENT_ID) out.AUTH_GOOGLE_CLIENT_ID = env.AUTH_GOOGLE_CLIENT_ID;
   if (env.AUTH_GOOGLE_CLIENT_SECRET) out.AUTH_GOOGLE_CLIENT_SECRET = env.AUTH_GOOGLE_CLIENT_SECRET;
   if (env.APP_STATE_REPOSITORY === 'sql' || env.APP_STATE_REPOSITORY === 'memory') out.APP_STATE_REPOSITORY = env.APP_STATE_REPOSITORY;
@@ -102,6 +112,10 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   if (env.STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY) out.STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY = env.STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY;
   if (env.ELCEO_INTERNAL_API_TOKEN) out.ELCEO_INTERNAL_API_TOKEN = env.ELCEO_INTERNAL_API_TOKEN;
   if (env.SENTRY_DSN) out.SENTRY_DSN = env.SENTRY_DSN;
+  if (env.SENTRY_ENVIRONMENT) out.SENTRY_ENVIRONMENT = env.SENTRY_ENVIRONMENT;
+  if (env.SENTRY_RELEASE) out.SENTRY_RELEASE = env.SENTRY_RELEASE;
+  if (env.NEXT_PUBLIC_APP_ENV === 'development' || env.NEXT_PUBLIC_APP_ENV === 'test' || env.NEXT_PUBLIC_APP_ENV === 'staging' || env.NEXT_PUBLIC_APP_ENV === 'production') out.NEXT_PUBLIC_APP_ENV = env.NEXT_PUBLIC_APP_ENV;
+  if (env.NEXT_PUBLIC_SENTRY_DSN) out.NEXT_PUBLIC_SENTRY_DSN = env.NEXT_PUBLIC_SENTRY_DSN;
   if (env.LOG_LEVEL === 'debug' || env.LOG_LEVEL === 'info' || env.LOG_LEVEL === 'warn' || env.LOG_LEVEL === 'error') out.LOG_LEVEL = env.LOG_LEVEL;
   if (env.TIINGO_API_KEY) out.TIINGO_API_KEY = env.TIINGO_API_KEY;
   if (env.TIINGO_LIVE_ENABLED) out.TIINGO_LIVE_ENABLED = env.TIINGO_LIVE_ENABLED;
@@ -113,6 +127,7 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
 export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
   const errors: string[] = [];
   const appEnv = env.APP_ENV;
+  if (env.AUTH_CREDENTIALS_ENABLED !== undefined && env.AUTH_CREDENTIALS_ENABLED !== 'true' && env.AUTH_CREDENTIALS_ENABLED !== 'false') errors.push('AUTH_CREDENTIALS_ENABLED must be true or false');
   const deployed = appEnv === 'production' || appEnv === 'staging';
   // APP_ENV may be absent during compilation; NODE_ENV alone is not deployed identity.
   if (deployed && env.NODE_ENV !== 'production') errors.push('deployed APP_ENV requires NODE_ENV=production');
@@ -135,6 +150,13 @@ export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
     errors.push('NEXT_PUBLIC_APP_BASE_URL is required');
   } else if (!isValidAbsoluteHttpUrl(env.NEXT_PUBLIC_APP_BASE_URL)) {
     errors.push('NEXT_PUBLIC_APP_BASE_URL must be an absolute http(s) URL');
+  }
+
+  if (appEnv === 'production' && env.AUTH_CREDENTIALS_ENABLED === 'true') {
+    let secureBase = false; try { secureBase = new URL(env.NEXT_PUBLIC_APP_BASE_URL ?? '').protocol === 'https:'; } catch { /* Report below. */ }
+    if (!secureBase) errors.push('production credentials require an HTTPS NEXT_PUBLIC_APP_BASE_URL');
+    if (!env.REDIS_URL) errors.push('production credentials require REDIS_URL');
+    if (!env.NOTIFICATION_EMAIL_FROM_ADDRESS || !env.NOTIFICATION_EMAIL_PROVIDER || (env.NOTIFICATION_EMAIL_PROVIDER === 'resend' ? !env.RESEND_API_KEY : !env.POSTMARK_SERVER_TOKEN)) errors.push('production credentials require transactional email');
   }
 
   if (deployed && !env.AUTH_SECRET) {

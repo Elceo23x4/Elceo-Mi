@@ -17,3 +17,4 @@ export * from './orchestration';
 export * from './feedback';
 
 export * from './user-preferences/foundation';
+export * from './transactional-auth-email';

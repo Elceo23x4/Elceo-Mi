@@ -1,3 +1,8 @@
+import { sentryBrowserBuildEnv, sentryConnectSources } from './lib/sentry-dsn.mjs';
+
+const connectSources = sentryConnectSources(process.env);
+const sentryBrowserEnv = sentryBrowserBuildEnv(process.env);
+
 /** @type {import('next').NextConfig} */
 const securityHeaders = [
   { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
@@ -10,12 +15,13 @@ const securityHeaders = [
   {
     key: 'Content-Security-Policy',
     value:
-      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://cdn.onesignal.com; worker-src 'self' blob: https://cdn.onesignal.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.onesignal.com;"
+      `default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://cdn.onesignal.com; worker-src 'self' blob: https://cdn.onesignal.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src ${connectSources.join(' ')};`
   }
 ];
 
 const nextConfig = {
   reactStrictMode: true,
+  env: sentryBrowserEnv,
   outputFileTracingIncludes: {
     '/pwa-icons/*': ['./public/elceo/assets/source/retro_computer_logo.svg']
   },

@@ -2,13 +2,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import type { ErrorEvent } from '@sentry/nextjs';
 import { allowedCaptureTags, applySentryPrivacyPolicy, isValidPublicDsn } from '../lib/sentry-policy';
-import { browserSentryDsn, isSentryBrowserBuildAuthorized, sentryBrowserIngestOrigin, sentryBrowserRelease, sentryConnectSources, serverSentryDsn } from '../lib/sentry-dsn.mjs';
+import { browserSentryDsn, isSentryBrowserBuildAuthorized, sentryBrowserBuildEnv, sentryBrowserIngestOrigin, sentryBrowserRelease, sentryConnectSources, sentryRelease, serverSentryDsn } from '../lib/sentry-dsn.mjs';
 
 const PUBLIC_KEY = '0123456789abcdef0123456789abcdef';
 const DEFAULT_DSN = `https://${PUBLIC_KEY}@o4500000000000000.ingest.sentry.io/1234567`;
 const US_DSN = `https://${PUBLIC_KEY}@o4500000000000000.ingest.us.sentry.io/1234567`;
 const DE_DSN = `https://${PUBLIC_KEY}@o4500000000000000.ingest.de.sentry.io/1234567`;
 const COMMIT_RELEASE = '0123456789abcdef0123456789abcdef01234567';
+const RAILWAY_COMMIT_RELEASE = 'a4b7c9d2e5f80123456789abcdef0123456789ab';
 
 export function runSentryPrivacyPolicyTests() {
   const filtered = applySentryPrivacyPolicy({
@@ -95,21 +96,45 @@ export function runSentryPrivacyPolicyTests() {
     NEXT_PUBLIC_APP_ENV: 'staging',
     NEXT_PUBLIC_SENTRY_DSN: US_DSN
   };
-  assert.equal(sentryBrowserRelease({ ...authorizedBrowserBuild, SENTRY_RELEASE: COMMIT_RELEASE }), COMMIT_RELEASE);
+  assert.equal(sentryBrowserRelease({ ...authorizedBrowserBuild, RAILWAY_GIT_COMMIT_SHA: RAILWAY_COMMIT_RELEASE }), RAILWAY_COMMIT_RELEASE);
+  assert.equal(sentryRelease({ RAILWAY_GIT_COMMIT_SHA: RAILWAY_COMMIT_RELEASE, SENTRY_RELEASE: COMMIT_RELEASE }), RAILWAY_COMMIT_RELEASE);
+  assert.equal(sentryRelease({ RAILWAY_GIT_COMMIT_SHA: 'malformed', SENTRY_RELEASE: COMMIT_RELEASE }), COMMIT_RELEASE);
+  assert.equal(sentryRelease({ RAILWAY_GIT_COMMIT_SHA: 'malformed', SENTRY_RELEASE: 'also-malformed' }), undefined);
+  assert.equal(sentryRelease({}), undefined);
   assert.equal(sentryBrowserRelease(authorizedBrowserBuild), undefined);
   for (const unsafeRelease of [
     'main',
+    'feature/sentry-release',
+    '0123456',
     '0123456789abcdef0123456789abcdef0123456',
     `${COMMIT_RELEASE}\nSENTRY_AUTH_TOKEN=secret`,
     'release@example.com'
   ]) {
-    assert.equal(sentryBrowserRelease({ ...authorizedBrowserBuild, SENTRY_RELEASE: unsafeRelease }), undefined);
+    assert.equal(sentryRelease({ RAILWAY_GIT_COMMIT_SHA: unsafeRelease }), undefined);
+    assert.equal(sentryRelease({ SENTRY_RELEASE: unsafeRelease }), undefined);
   }
   assert.equal(sentryBrowserRelease({
     ...authorizedBrowserBuild,
     APP_ENV: 'production',
-    SENTRY_RELEASE: COMMIT_RELEASE
+    RAILWAY_GIT_COMMIT_SHA: RAILWAY_COMMIT_RELEASE
   }), undefined);
+
+  assert.deepEqual(sentryBrowserBuildEnv({
+    ...authorizedBrowserBuild,
+    RAILWAY_GIT_COMMIT_SHA: RAILWAY_COMMIT_RELEASE,
+    SENTRY_DSN: DEFAULT_DSN,
+    [['SENTRY', 'AUTH', 'TOKEN'].join('_')]: 'must-not-be-public',
+    SENTRY_ENVIRONMENT: 'private',
+    OTHER_SERVER_ONLY_VALUE: 'private'
+  }), {
+    NEXT_PUBLIC_ELCEO_SENTRY_BROWSER_ENABLED: 'true',
+    NEXT_PUBLIC_ELCEO_SENTRY_RELEASE: RAILWAY_COMMIT_RELEASE
+  });
+  assert.deepEqual(sentryBrowserBuildEnv({
+    ...authorizedBrowserBuild,
+    APP_ENV: 'production',
+    RAILWAY_GIT_COMMIT_SHA: RAILWAY_COMMIT_RELEASE
+  }), { NEXT_PUBLIC_ELCEO_SENTRY_BROWSER_ENABLED: 'false' });
 
   const envSchema = readFileSync('../../packages/schemas/src/env.schema.ts', 'utf8');
   for (const variable of ['SENTRY_DSN', 'NEXT_PUBLIC_SENTRY_DSN', 'NEXT_PUBLIC_APP_ENV', 'SENTRY_ENVIRONMENT', 'SENTRY_RELEASE']) {
@@ -124,8 +149,13 @@ export function runSentryPrivacyPolicyTests() {
   assert.equal(sentrySources.includes(['SENTRY', 'AUTH', 'TOKEN'].join('_')), false);
 
   const nextConfigSource = readFileSync('next.config.mjs', 'utf8');
-  assert.match(nextConfigSource, /NEXT_PUBLIC_ELCEO_SENTRY_RELEASE/);
+  assert.match(readFileSync('lib/sentry-dsn.mjs', 'utf8'), /NEXT_PUBLIC_ELCEO_SENTRY_RELEASE/);
   assert.equal(nextConfigSource.includes('NEXT_PUBLIC_APP_ENV:'), false);
   assert.equal(nextConfigSource.includes(['SENTRY', 'AUTH', 'TOKEN'].join('_')), false);
+  assert.match(nextConfigSource, /sentryBrowserBuildEnv\(process\.env\)/);
+
+  const serverInstrumentationSource = readFileSync('instrumentation.ts', 'utf8');
+  assert.match(serverInstrumentationSource, /release: sentryRelease\(process\.env\)/);
+  assert.equal(serverInstrumentationSource.includes('process.env.SENTRY_RELEASE'), false);
 
 }

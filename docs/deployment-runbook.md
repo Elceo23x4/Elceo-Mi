@@ -175,3 +175,9 @@ Promotion requires explicit target environment selection, release-gate evidence,
 Rollback target must be explicit and must not require hand-editing production. After rollback, run the configured smoke check and record evidence. Migration rollback policy is roll-forward by default; irreversible migrations require a documented compensating plan, backup confirmation, and operator sign-off before promotion.
 
 Backup/restore proof is mandatory. RPO target is the most recent verified backup artifact for the environment under review; RTO target is the documented restore runbook execution window for that environment. Restore rehearsal must use staging or disposable databases by default and must refuse production without explicit approval.
+
+# Sentry build credential boundary
+
+`ELCEO_SENTRY_SOURCEMAPS_UPLOAD=true` is a staging-build-only, fail-closed switch. The build also requires the validated Railway commit SHA and the `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` build values. Builds without the exact switch do not attempt an upload and do not require those credentials.
+
+Railway service variables are inherited by both build and runtime. After this change is accepted, harden the Railway start command manually so the final Next.js application process is started with `SENTRY_AUTH_TOKEN` removed from its inherited environment. Use a shell `unset`/`exec`-style boundary so the shell is replaced by the application process and no long-lived Node or npm wrapper retains the token. The architect must select the exact command after reviewing the deployed start-script behavior; this repository intentionally does not change Railway configuration or the start command in this batch.

@@ -1,4 +1,4 @@
-export type SuperAdminCommercialActionKind='focus_plan_gift'|'focus_plan_gift_retract'|'user_restriction';
+export type SuperAdminCommercialActionKind='focus_plan_gift'|'focus_plan_gift_retract'|'user_restriction'|'focus_plan_price_update';
 export type SuperAdminCommercialControlStatus='success'|'blocked'|'failed';
 export type SuperAdminFocusPlanGiftDuration='two_weeks'|'one_month';
 export type SuperAdminGiftStatus='active'|'expired'|'retracted';

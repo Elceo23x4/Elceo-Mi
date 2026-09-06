@@ -40,6 +40,8 @@ export * from './security';
 export * from './runtime/canonical-security-boundary';
 
 export * from './commercial-entitlements';
+export * from './commercial-pricing';
+export * from './payment-providers/korapay-adapter';
 
 export * from './super-admin-commercial-controls';
 

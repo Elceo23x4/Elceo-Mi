@@ -1,0 +1,11 @@
+import {KoraPayAdapter,koraEventIdentity,validateKoraTruth,verifyKoraWebhook,internalPaymentRuntime} from '@elceo/application-state';
+export async function POST(request:Request){
+ const raw=await request.text();let envelope:Record<string,unknown>;try{envelope=JSON.parse(raw)}catch{return Response.json({error:'invalid_payload'},{status:400})}
+ const data=envelope.data;if(!data||typeof data!=='object')return Response.json({error:'invalid_payload'},{status:400});
+ const secret=process.env.KORAPAY_SECRET_KEY??'';try{verifyKoraWebhook(data,request.headers.get('x-korapay-signature'),secret)}catch{return Response.json({error:'invalid_signature'},{status:400})}
+ const d=data as Record<string,unknown>;const reference=typeof d.reference==='string'?d.reference:null;if(!reference)return Response.json({error:'invalid_reference'},{status:400});
+ const op=await internalPaymentRuntime.repository.getOperation(typeof (d.metadata as any)?.operationId==='string'?(d.metadata as any).operationId:'');if(!op||op.provider!=='korapay')return Response.json({ok:true,matched:false},{status:202});
+ let truth;try{truth=await new KoraPayAdapter(secret).retrieve(reference);validateKoraTruth({reference,amountMinor:String(op.amount),currency:op.currency,plan:op.targetPlan,interval:op.billingInterval??'monthly',operationId:op.internalPaymentOperationId},truth)}catch{await internalPaymentRuntime.repository.transition(op.internalPaymentOperationId,op.version,'reconciliation_required',{reconciliationState:'mismatch',safeErrorCategory:'provider_commercial_mismatch'},'Kora provider truth mismatch');return Response.json({ok:true,reconciliationRequired:true},{status:202})}
+ const event=typeof envelope.event==='string'?envelope.event:'charge.notification';await internalPaymentRuntime.webhook({eventId:koraEventIdentity(event,data),kind:'success',operationId:op.internalPaymentOperationId,providerPaymentReference:reference,payload:{currentPeriodStart:new Date().toISOString(),currentPeriodEnd:periodEnd(op.billingInterval??'monthly'),providerTransactionReference:reference}});return Response.json({ok:true});
+}
+function periodEnd(interval:'monthly'|'quarterly'|'yearly'){const d=new Date();d.setUTCMonth(d.getUTCMonth()+(interval==='monthly'?1:interval==='quarterly'?3:12));return d.toISOString()}

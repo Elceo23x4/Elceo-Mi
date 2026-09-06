@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 
-type InventoryClass = 'through_provider_api_gate'|'fixture_only_behind_gate'|'dry_run_only_behind_gate'|'replay_only_behind_gate'|'operator_inspection_only'|'descriptor_only'|'test_only'|'remaining_unmanaged_call';
+type InventoryClass = 'through_provider_api_gate'|'fixture_only_behind_gate'|'dry_run_only_behind_gate'|'replay_only_behind_gate'|'operator_inspection_only'|'adapter_implementation'|'legacy_construction_fail_closed'|'test_only'|'remaining_unmanaged_call';
 const roots = ['services/reasoning','services/ingestion','services/application-state','apps/web/app/api','packages/providers'];
-const runtimeProviderCallPattern = /(new\s+(TiingoMarketDataAdapter|CftcCotAdapter)\b|persistAdapterFetchAndNormalize\s*\(|\.fetch\s*\([^)]*ProviderSourceRequest|fetchLiveTiingoBars\s*\()/;
+const legacyAdapterNames = ['FinnhubMarketDataAdapter','FinnhubMacroCalendarAdapter','AlphaVantageMarketDataAdapter','FmpMarketDataAdapter','FmpMacroCalendarAdapter','MarketauxNewsAdapter','NewsApiNewsAdapter','GdeltEventAdapter','FirecrawlExtractionAdapter','InvestingCalendarScrapeAdapter','ImfMacroContextAdapter','WorldBankMacroContextAdapter','OecdMacroContextAdapter'];
+const runtimeProviderCallPattern = new RegExp(`(new\\s+(TiingoMarketDataAdapter|CftcCotAdapter|${legacyAdapterNames.join('|')})\\b|persistAdapterFetchAndNormalize\\s*\\(|\\.fetch\\s*\\([^)]*ProviderSourceRequest|fetchLiveTiingoBars\\s*\\()`);
 
 export function runProviderUnmanagedCallInventoryTests(){
   const repoRoot = findRepoRoot(process.cwd());
@@ -14,6 +15,13 @@ export function runProviderUnmanagedCallInventoryTests(){
   const scheduled = rows.find((row) => row.file === 'services/reasoning/src/scheduled-ingestion/scheduled-ingestion-service.ts');
   assert.equal(scheduled?.classification, 'through_provider_api_gate');
   assert.ok(rows.some((row) => row.classification === 'fixture_only_behind_gate'));
+  for (const boundary of ['services/ingestion/src/facade/provider-suite-builder.ts','services/ingestion/src/adapters/build-provider-graph.ts']) {
+    assert.equal(rows.find((row) => row.file === boundary)?.classification, 'legacy_construction_fail_closed');
+  }
+  const legacyConfig = readFileSync(join(repoRoot,'services/ingestion/src/facade/provider-config.ts'),'utf8');
+  assert.ok(legacyConfig.includes("APP_ENV === 'staging'") && legacyConfig.includes("APP_ENV === 'production'") && legacyConfig.includes("NODE_ENV === 'production'"));
+  const negative = classify(join(repoRoot,'services/application-state/src/runtime/direct-provider.ts'), "const provider = new FinnhubMarketDataAdapter(process.env.FINNHUB_API_KEY ?? '');");
+  assert.equal(negative.classification, 'remaining_unmanaged_call');
 }
 function walkRuntimeFiles(cwd:string): string[] {
   const out:string[]=[];
@@ -24,7 +32,13 @@ function walkRuntimeFiles(cwd:string): string[] {
 function classify(absFile:string, source:string): { file:string; classification:InventoryClass } {
   const file = relative(findRepoRoot(process.cwd()), absFile);
   if(file.includes('/tests/') || file.endsWith('.test.ts')) return { file, classification:'test_only' };
-  if(file.startsWith('packages/providers/')) return { file, classification:'descriptor_only' };
+  if(file.startsWith('packages/providers/')) return { file, classification:'adapter_implementation' };
+  if(file === 'services/ingestion/src/facade/provider-suite-builder.ts' || file === 'services/ingestion/src/adapters/build-provider-graph.ts') {
+    const failClosed = file.endsWith('provider-suite-builder.ts')
+      ? source.includes('getIngestionProviderConfig(rawEnv)')
+      : source.includes("APP_ENV === 'staging'") && source.includes("APP_ENV === 'production'") && source.includes("NODE_ENV === 'production'");
+    return { file, classification:failClosed ? 'legacy_construction_fail_closed' : 'remaining_unmanaged_call' };
+  }
   if(file.includes('/provider-sources/') && !file.includes('scheduled-ingestion')) return { file, classification:'fixture_only_behind_gate' };
   if(file === 'services/reasoning/src/runtime/canonical-market-intelligence-boundary.ts' && source.includes('runTiingoFixtureIngestion') && source.includes("mode: 'fixture'")) return { file, classification:'fixture_only_behind_gate' };
   if(source.includes('ProviderApiGateSnapshot') || source.includes('buildProviderApiGateSnapshot')) return { file, classification:'operator_inspection_only' };

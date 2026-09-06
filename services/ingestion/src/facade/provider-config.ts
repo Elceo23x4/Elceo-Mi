@@ -90,7 +90,7 @@ function resolveDisableReason(params: {
 export function getIngestionProviderConfig(rawEnv: Record<string, string | undefined>): IngestionProviderConfigSet {
   const env = readProviderEnv(rawEnv);
   const globallyEnabled = globalEnabled(rawEnv);
-  const deployed = rawEnv.APP_ENV === 'staging' || rawEnv.APP_ENV === 'production';
+  const deployed = rawEnv.APP_ENV === 'staging' || rawEnv.APP_ENV === 'production' || rawEnv.NODE_ENV === 'production';
 
   const providers = PROVIDER_SPECS.map((spec) => {
     const presentKeys = spec.requiredKeys.filter((key) => Boolean(rawEnv[key]));

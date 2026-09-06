@@ -1,4 +1,5 @@
-import { AlphaVantageMarketDataAdapter, FirecrawlExtractionAdapter, GdeltEventAdapter, InvestingCalendarScrapeAdapter, fetchJson } from '@elceo/providers';
+import { AlphaVantageMarketDataAdapter, FirecrawlExtractionAdapter, GdeltEventAdapter, InvestingCalendarScrapeAdapter } from '@elceo/providers';
+import { fetchJson } from '../../../../packages/providers/src/http';
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(`Assertion failed: ${message}`);
@@ -17,8 +18,7 @@ export async function runProviderPreflightHardeningTests(): Promise<void> {
     } catch (error) {
       serialized = JSON.stringify(error, Object.getOwnPropertyNames(error));
     }
-    assert(!serialized.includes(sentinel), 'HTTP errors must redact query and header credential sentinels');
-
+    assert(serialized.length > 0 && !serialized.includes(sentinel) && serialized.includes('[REDACTED]'), 'HTTP errors must redact query and header credential sentinels');
     const candles = await new AlphaVantageMarketDataAdapter(sentinel).getCandles('EUR/USD', '1h', '', '');
     assert(candles.length === 0, 'unsupported Alpha Vantage candles must not be synthesized');
     const events = await new GdeltEventAdapter().searchEvents('risk', '', '');

@@ -31,16 +31,20 @@ export function runProviderSuiteBuilderTests(): void {
   assert(finnhubCapability.enabled === false, 'missing key should disable provider');
   assert(finnhubCapability.reason === 'missing_api_key', 'missing key reason should be deterministic');
 
-  let constructed = 0;
-  const stagingEnv = { APP_ENV: 'staging', FINNHUB_API_KEY: 'sentinel', FMP_API_KEY: 'sentinel', ALPHAVANTAGE_API_KEY: 'sentinel', MARKETAUX_API_KEY: 'sentinel', NEWSAPI_API_KEY: 'sentinel', FIRECRAWL_API_KEY: 'sentinel', TIINGO_API_KEY: 'sentinel', FRED_API_KEY: 'sentinel' };
-  const staging = buildCanonicalProviderSuite(stagingEnv, { createFirecrawlExtractionAdapter: () => { constructed += 1; throw new Error('must_not_construct'); } });
-  assert(Object.keys(staging.suite).length === 0, 'deployed canonical suite must not expose unmanaged providers');
-  assert(staging.activeProviderCount === 0, 'credentials must not activate deployed legacy providers');
-  assert(constructed === 0, 'deployed credentials must not construct network-capable adapters');
-  const configured = getIngestionProviderConfig(stagingEnv);
-  assert(configured.providers.every((provider) => !provider.enabled && provider.liveDisabled && !provider.stagingLiveAuthorized && !provider.stagingLiveValidated), 'staging legacy readiness must remain live-disabled and unvalidated');
-  assert(configured.providers.find((provider) => provider.providerName === 'finnhub')?.credentialPresent === true, 'credential presence must be reported separately');
-  let graphDenied = false;
-  try { buildProviderGraph(stagingEnv); } catch (error) { graphDenied = error instanceof Error && error.message === 'legacy_provider_graph_denied_in_deployed_runtime'; }
-  assert(graphDenied, 'direct deployed provider graph must fail closed');
+  const credentials = { FINNHUB_API_KEY: 'sentinel', FMP_API_KEY: 'sentinel', ALPHAVANTAGE_API_KEY: 'sentinel', MARKETAUX_API_KEY: 'sentinel', NEWSAPI_API_KEY: 'sentinel', FIRECRAWL_API_KEY: 'sentinel', TIINGO_API_KEY: 'sentinel', FRED_API_KEY: 'sentinel' };
+  for (const deployment of [{ APP_ENV: 'staging' }, { APP_ENV: 'production' }, { NODE_ENV: 'production' }]) {
+    let constructed = 0;
+    const deployedEnv = { ...credentials, ...deployment };
+    const deployed = buildCanonicalProviderSuite(deployedEnv, { createFirecrawlExtractionAdapter: () => { constructed += 1; throw new Error('must_not_construct'); } });
+    assert(Object.keys(deployed.suite).length === 0, 'production-like canonical suite must not expose unmanaged providers');
+    assert(deployed.activeProviderCount === 0, 'credentials must not activate production-like legacy providers');
+    assert(constructed === 0, 'production-like credentials must not construct network-capable adapters');
+    const configured = getIngestionProviderConfig(deployedEnv);
+    assert(configured.providers.every((provider) => !provider.enabled && provider.liveDisabled && !provider.stagingLiveAuthorized && !provider.stagingLiveValidated), 'production-like legacy readiness must remain live-disabled and unvalidated');
+    assert(configured.providers.find((provider) => provider.providerName === 'finnhub')?.credentialPresent === true, 'credential presence must be reported separately');
+    let graphDenied = false;
+    try { buildProviderGraph(deployedEnv); } catch (error) { graphDenied = error instanceof Error && error.message === 'legacy_provider_graph_denied_in_deployed_runtime'; }
+    assert(graphDenied, 'direct production-like provider graph must fail closed');
+  }
+  assert(Boolean(buildCanonicalProviderSuite({ ...credentials, APP_ENV: 'test', NODE_ENV: 'test' }).suite.marketData), 'explicit test runtime must retain adapter fixture behavior');
 }

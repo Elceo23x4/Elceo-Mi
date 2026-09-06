@@ -46,6 +46,12 @@ export type ProviderEnv = {
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_PRODUCT_ID_FOCUS_PLAN?: string;
+  PAYMENT_PROVIDER_KIND?: 'stripe'|'korapay';
+  ELCEO_PAYMENT_PRODUCTION_LIVE_ENABLED?: string;
+  ELCEO_PAYMENT_SANDBOX_SMOKE?: string;
+  ELCEO_PAYMENT_FAKE_OUTCOMES_ENABLED?: string;
+  KORAPAY_SECRET_KEY?: string;
+  KORAPAY_KEY_ENVIRONMENT?: 'test'|'live';
   ELCEO_INTERNAL_API_TOKEN?: string;
   SENTRY_DSN?: string;
   SENTRY_ENVIRONMENT?: string;
@@ -110,6 +116,9 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   if (env.STRIPE_SECRET_KEY) out.STRIPE_SECRET_KEY = env.STRIPE_SECRET_KEY;
   if (env.STRIPE_WEBHOOK_SECRET) out.STRIPE_WEBHOOK_SECRET = env.STRIPE_WEBHOOK_SECRET;
   if (env.STRIPE_PRODUCT_ID_FOCUS_PLAN) out.STRIPE_PRODUCT_ID_FOCUS_PLAN = env.STRIPE_PRODUCT_ID_FOCUS_PLAN;
+  if (env.PAYMENT_PROVIDER_KIND === 'stripe' || env.PAYMENT_PROVIDER_KIND === 'korapay') out.PAYMENT_PROVIDER_KIND=env.PAYMENT_PROVIDER_KIND;
+  for(const key of ['ELCEO_PAYMENT_PRODUCTION_LIVE_ENABLED','ELCEO_PAYMENT_SANDBOX_SMOKE','ELCEO_PAYMENT_FAKE_OUTCOMES_ENABLED','KORAPAY_SECRET_KEY'] as const)if(env[key])out[key]=env[key];
+  if(env.KORAPAY_KEY_ENVIRONMENT==='test'||env.KORAPAY_KEY_ENVIRONMENT==='live')out.KORAPAY_KEY_ENVIRONMENT=env.KORAPAY_KEY_ENVIRONMENT;
   if (env.ELCEO_INTERNAL_API_TOKEN) out.ELCEO_INTERNAL_API_TOKEN = env.ELCEO_INTERNAL_API_TOKEN;
   if (env.SENTRY_DSN) out.SENTRY_DSN = env.SENTRY_DSN;
   if (env.SENTRY_ENVIRONMENT) out.SENTRY_ENVIRONMENT = env.SENTRY_ENVIRONMENT;
@@ -135,7 +144,16 @@ export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
   if (deployed && env.NOTIFICATIONS_PERSISTENCE_BACKEND !== 'sql') errors.push('deployed NOTIFICATIONS_PERSISTENCE_BACKEND=sql is required');
   if (deployed && env.ANALYTICS_PERSISTENCE_BACKEND !== 'sql') errors.push('deployed ANALYTICS_PERSISTENCE_BACKEND=sql is required');
   if (deployed && !env.PAYMENT_PROVIDER_MODE) errors.push('deployed PAYMENT_PROVIDER_MODE is required');
-  if (deployed && ['local_fake_provider','replay_provider_event','production_provider'].includes(env.PAYMENT_PROVIDER_MODE ?? '')) errors.push('deployed PAYMENT_PROVIDER_MODE must be disabled or sandbox_provider');
+  if (deployed && ['local_fake_provider','replay_provider_event'].includes(env.PAYMENT_PROVIDER_MODE ?? '')) errors.push('deployed PAYMENT_PROVIDER_MODE must be disabled, sandbox_provider, or guarded production_provider');
+  if(env.PAYMENT_PROVIDER_MODE==='production_provider'){
+    if(appEnv!=='production'||env.ELCEO_PAYMENT_PRODUCTION_LIVE_ENABLED!=='1')errors.push('production_provider requires APP_ENV=production and ELCEO_PAYMENT_PRODUCTION_LIVE_ENABLED=1');
+    if(env.APP_STATE_REPOSITORY!=='sql'||!env.DATABASE_URL)errors.push('production_provider requires SQL persistence');
+    try{if(new URL(env.NEXT_PUBLIC_APP_BASE_URL??'').protocol!=='https:')errors.push('production_provider requires HTTPS NEXT_PUBLIC_APP_BASE_URL')}catch{errors.push('production_provider requires HTTPS NEXT_PUBLIC_APP_BASE_URL')}
+    if(!env.PAYMENT_PROVIDER_KIND)errors.push('production_provider requires explicit PAYMENT_PROVIDER_KIND');
+    if(env.ELCEO_PAYMENT_SANDBOX_SMOKE==='1'||env.ELCEO_PAYMENT_FAKE_OUTCOMES_ENABLED==='1')errors.push('production_provider forbids sandbox/fake payment modes');
+    if(env.PAYMENT_PROVIDER_KIND==='stripe'&&(!env.STRIPE_SECRET_KEY?.startsWith('sk_live_')||!env.STRIPE_WEBHOOK_SECRET||!env.STRIPE_PRODUCT_ID_FOCUS_PLAN))errors.push('production_provider Stripe live configuration incomplete');
+    if(env.PAYMENT_PROVIDER_KIND==='korapay'&&(!env.KORAPAY_SECRET_KEY||env.KORAPAY_KEY_ENVIRONMENT!=='live'))errors.push('production_provider Kora live configuration incomplete');
+  }
   if (deployed && env.NOTIFICATION_PROVIDER_MODE === 'production_provider') errors.push('production notification provider activation remains blocked');
   if (env.NOTIFICATION_EMAIL_PROVIDER === 'resend' && (!env.RESEND_API_KEY || !env.NOTIFICATION_EMAIL_FROM_ADDRESS)) errors.push('Resend selection requires RESEND_API_KEY and NOTIFICATION_EMAIL_FROM_ADDRESS');
   if (env.NOTIFICATION_EMAIL_PROVIDER === 'postmark' && (!env.POSTMARK_SERVER_TOKEN || !env.NOTIFICATION_EMAIL_FROM_ADDRESS)) errors.push('Postmark selection requires POSTMARK_SERVER_TOKEN and NOTIFICATION_EMAIL_FROM_ADDRESS');

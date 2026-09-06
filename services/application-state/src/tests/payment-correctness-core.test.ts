@@ -96,7 +96,7 @@ export async function runPaymentCorrectnessCoreTests(): Promise<void> {
   assert.equal(invoiceLine.currentPeriodEnd,'2023-12-14T22:13:20.000Z','single invoice subscription line supplies service-period truth');
   assert.throws(()=>resolvePaymentProviderMode({APP_ENV:'staging'}),/payment_provider_mode_invalid/);
   const saved={APP_ENV:process.env.APP_ENV,APP_STATE_REPOSITORY:process.env.APP_STATE_REPOSITORY,DATABASE_URL:process.env.DATABASE_URL};process.env.APP_ENV='staging';process.env.APP_STATE_REPOSITORY='memory';delete process.env.DATABASE_URL;assert.throws(()=>createInternalPaymentRepository(),/payment_persistence_unavailable/);Object.assign(process.env,saved);
-  assert.equal(resolvePaymentProviderMode({ PAYMENT_PROVIDER_MODE:'production_provider' }), 'production_provider_blocked', 'production provider mode blocked');
+  assert.throws(()=>resolvePaymentProviderMode({PAYMENT_PROVIDER_MODE:'production_provider'}),/production_payment_provider_blocked/,'production provider mode defaults blocked');
   const redacted = redactProviderPayload({ tokenHeader:'Bearer example_redacted_value', nested:{ hookValue:'example_redacted_hook_value' } });
   assert.equal(secretLikeValuesFound(redacted), false, 'redacted provider payload contains no secret-like values');
   const refund = normalizeStripeProviderPayload({ id:'evt_refund', type:'charge.refunded', data:{ object:{ id:'ch_refund', payment_intent:'pi_refund', amount:2000, currency:'usd', status:'succeeded' } } }, 'req_refund');

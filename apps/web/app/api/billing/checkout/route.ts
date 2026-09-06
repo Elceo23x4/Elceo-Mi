@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { KoraPayAdapter, StripeSandboxPaymentProviderAdapter, shouldResumeProviderCheckout, reconcileStripePaymentOperation, internalPaymentRuntime, normalizeProviderError, type FakeProviderOutcome } from '@elceo/application-state';
+import { KoraPayAdapter, StripeSandboxPaymentProviderAdapter, assertProductionPaymentActivation, shouldResumeProviderCheckout, reconcileStripePaymentOperation, internalPaymentRuntime, normalizeProviderError, type FakeProviderOutcome } from '@elceo/application-state';
 import { requireAppUserState } from '../../../../lib/auth/session';
 import { guardRoutePaymentReadiness } from '../../../../lib/server/access/route-entitlement';
 import { captureError } from '../../../../lib/monitoring';
@@ -29,8 +29,9 @@ export async function POST(request: Request) {
     if (body.fakeProviderOutcome && !fakeOutcomesEnabled) return NextResponse.json({ ok: false, error: 'fake_provider_outcome_disabled', liveActivation: 'blocked' }, { status: 400, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
     await assertProviderCapability({provider,environment:process.env.APP_ENV==='production'?'production':'sandbox',rail:body.rail??(provider==='stripe'?'card':'checkout'),currency,recurring:provider==='stripe'});
     const providerMode = process.env.PAYMENT_PROVIDER_MODE ?? process.env.ELCEO_PAYMENT_PROVIDER_MODE;
-    if (providerMode === 'sandbox_provider') {
-      if (process.env.ELCEO_PAYMENT_SANDBOX_SMOKE !== '1') throw new Error('sandbox_checkout_requires_explicit_smoke_context');
+    if (providerMode === 'sandbox_provider' || providerMode === 'production_provider') {
+      if(providerMode==='production_provider')assertProductionPaymentActivation(process.env,provider);
+      if (providerMode==='sandbox_provider' && process.env.ELCEO_PAYMENT_SANDBOX_SMOKE !== '1') throw new Error('sandbox_checkout_requires_explicit_smoke_context');
       const repo = internalPaymentRuntime.repository;
       const created = await repo.createOrReuseOperation({ subjectUserId: session.user.id, targetPlan: 'focus_plan', billingInterval: interval, amount:Number(price.amountMinor), currency:price.currency, commercialPriceVersionId:price.id, quotedProviderProductReference:provider==='stripe'?process.env.STRIPE_PRODUCT_ID_FOCUS_PLAN:undefined, businessIdempotencyKey, provider });
       let operation = created.operation;
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
       }
       if(unresolved&&!shouldResumeProviderCheckout(operation)&&provider==='stripe'){const reconciled=await reconcileStripePaymentOperation(repo,new StripeSandboxPaymentProviderAdapter(),operation.internalPaymentOperationId);operation=reconciled.operation??operation;}
       logRequest('api.billing.checkout', requestId, 'RC-I2 sandbox checkout operation recorded', { userId: session.user.id, state: operation.state, reused: created.reused });
-      return NextResponse.json({ ok: true, liveActivation: 'blocked', sandboxOnly: true, productionLive: false, providerMode, reused: created.reused, checkoutUrl, operation }, { status: 202, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
+      return NextResponse.json({ ok: true, liveActivation:providerMode==='production_provider'?'enabled':'blocked',sandboxOnly:providerMode==='sandbox_provider',productionLive:providerMode==='production_provider', providerMode, reused: created.reused, checkoutUrl, operation }, { status: 202, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
     }
     const result = await internalPaymentRuntime.checkout({ subjectUserId: session.user.id, targetPlan: 'focus_plan', billingInterval: interval, amount:Number(price.amountMinor), currency:price.currency, commercialPriceVersionId:price.id, businessIdempotencyKey, outcome: fakeOutcomesEnabled ? body.fakeProviderOutcome : undefined });
     logRequest('api.billing.checkout', requestId, 'RC-I1 local checkout operation recorded', { userId: session.user.id, state: result.operation.state, reused: result.reused });

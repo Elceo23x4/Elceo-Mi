@@ -1,0 +1,7 @@
+const EXPONENTS:Readonly<Record<string,number>>=Object.freeze({NGN:2,KES:2,GHS:2,ZAR:2,USD:2,XAF:0,XOF:0});
+function exponent(currency:string){const value=EXPONENTS[currency.toUpperCase()];if(value===undefined)throw new Error('korapay_currency_exponent_unverified');return value;}
+function integer(value:string){if(!/^(?:0|[1-9][0-9]*)$/.test(value))throw new Error('invalid_exact_money');const result=BigInt(value);if(result>BigInt(Number.MAX_SAFE_INTEGER))throw new Error('exact_money_overflow');return result;}
+export function koraCurrencyExponent(currency:string){return exponent(currency);}
+export function encodeKoraProviderAmount(amountMinor:string,currency:string){const minor=integer(amountMinor),places=exponent(currency);if(places===0)return minor.toString();const scale=10n**BigInt(places),whole=minor/scale,fraction=(minor%scale).toString().padStart(places,'0');return `${whole}.${fraction}`;}
+export function decodeKoraProviderAmount(amount:string,currency:string){const places=exponent(currency);if(!/^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/.test(amount))throw new Error('invalid_korapay_provider_amount');const [whole,fraction='']=amount.split('.');if(fraction.length>places)throw new Error('korapay_provider_amount_precision_mismatch');const minor=BigInt(whole!)*(10n**BigInt(places))+BigInt((fraction+'0'.repeat(places)).slice(0,places)||'0');if(minor>BigInt(Number.MAX_SAFE_INTEGER))throw new Error('exact_money_overflow');return minor.toString();}
+export const KORA_CHECKOUT_REDIRECT_CURRENCIES=Object.freeze(Object.keys(EXPONENTS));

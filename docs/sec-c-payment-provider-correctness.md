@@ -19,3 +19,9 @@ Capabilities are separate durable rows keyed by provider, environment, rail and 
 ## Activation and failure
 
 Sandbox and production rows, keys, secure callback base URL, SQL persistence and an explicit live-payment gate are all required. CI uses HTTP fixtures, never provider endpoints. Unknown results, commercial mismatch, under/overpayment and provider failures remain reconciliation-required and fail closed. Inbox, transition, ledger, canonical subscription and audit writes commit or roll back together; reconciliation queries happen before the short locked mutation transaction and never initiate a charge.
+
+## Capability provisioning
+
+No capability is seeded as enabled. A production operator must verify the exact merchant-account provider, environment, rail, and currency in the provider console, then insert or update that exact `payment_provider_capabilities` key with `merchant_enabled`, `checkout_supported`, `reconciliation_supported`, the verification time, and a non-secret ticket/document reference. Recurring support is enabled only when the exact provider rail contract has been verified. Changing a capability is an operator-controlled database change and never creates a price or performs FX.
+
+Production charging requires `APP_ENV=production`, `PAYMENT_PROVIDER_MODE=production_provider`, `ELCEO_PAYMENT_PRODUCTION_LIVE_ENABLED=1`, SQL persistence, an HTTPS canonical base URL, an explicit provider, matching live credentials, a configured Product for Stripe, an effective commercial price, and an enabled verified capability. Sandbox/fake flags are contradictory and fail closed. The flag defaults off.

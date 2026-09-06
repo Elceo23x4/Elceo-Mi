@@ -46,3 +46,25 @@ CREATE UNIQUE INDEX payment_operations_provider_transaction_uidx ON payment_oper
 -- against accidentally mutating immutable price history.
 CREATE OR REPLACE FUNCTION reject_commercial_price_update() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF TG_OP='UPDATE' AND OLD.status='active' AND NEW.status='superseded' AND NEW.retired_at IS NOT NULL AND (to_jsonb(NEW)-'status'-'retired_at')=(to_jsonb(OLD)-'status'-'retired_at') THEN RETURN NEW; END IF; RAISE EXCEPTION 'commercial_price_versions_are_immutable'; END $$;
 CREATE TRIGGER commercial_price_versions_immutable BEFORE UPDATE OR DELETE ON commercial_price_versions FOR EACH ROW EXECUTE FUNCTION reject_commercial_price_update();
+
+-- Extend, but do not remove, the durable Super Admin action allowlists.
+ALTER TABLE super_admin_step_up_challenges DROP CONSTRAINT IF EXISTS super_admin_step_up_challenges_action_known;
+ALTER TABLE super_admin_step_up_challenges ADD CONSTRAINT super_admin_step_up_challenges_action_known CHECK (action_kind IN ('focus_plan_gift','focus_plan_gift_retract','user_restriction','focus_plan_price_update'));
+ALTER TABLE super_admin_step_up_audit_events DROP CONSTRAINT IF EXISTS super_admin_step_up_audit_action_known;
+ALTER TABLE super_admin_step_up_audit_events ADD CONSTRAINT super_admin_step_up_audit_action_known CHECK (action_kind IS NULL OR action_kind IN ('focus_plan_gift','focus_plan_gift_retract','user_restriction','focus_plan_price_update'));
+ALTER TABLE super_admin_commercial_operations DROP CONSTRAINT IF EXISTS super_admin_commercial_operations_action_kind_check;
+ALTER TABLE super_admin_commercial_operations ADD CONSTRAINT super_admin_commercial_operations_action_kind_check CHECK (action_kind IN ('focus_plan_gift','focus_plan_gift_retract','user_restriction','focus_plan_price_update'));
+ALTER TABLE super_admin_commercial_operation_events DROP CONSTRAINT IF EXISTS super_admin_commercial_operation_events_action_kind_check;
+ALTER TABLE super_admin_commercial_operation_events ADD CONSTRAINT super_admin_commercial_operation_events_action_kind_check CHECK (action_kind IN ('focus_plan_gift','focus_plan_gift_retract','user_restriction','focus_plan_price_update'));
+
+-- This stable function name is also used by backend-authority trigger restoration.
+-- Defining it independently of the trigger lifecycle prevents pg_get_functiondef
+-- from returning NULL after a test temporarily drops the trigger/function.
+CREATE OR REPLACE FUNCTION app_super_admin_audit_events_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'super_admin_audit_events_are_immutable';
+END $$;
+DROP TRIGGER IF EXISTS trg_super_admin_step_up_audit_events_immutable ON super_admin_step_up_audit_events;
+CREATE TRIGGER trg_super_admin_step_up_audit_events_immutable BEFORE UPDATE OR DELETE ON super_admin_step_up_audit_events FOR EACH ROW EXECUTE FUNCTION app_super_admin_audit_events_immutable();
+DROP TRIGGER IF EXISTS trg_super_admin_commercial_operation_events_immutable ON super_admin_commercial_operation_events;
+CREATE TRIGGER trg_super_admin_commercial_operation_events_immutable BEFORE UPDATE OR DELETE ON super_admin_commercial_operation_events FOR EACH ROW EXECUTE FUNCTION app_super_admin_audit_events_immutable();

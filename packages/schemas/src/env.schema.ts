@@ -149,10 +149,10 @@ export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
     if(appEnv!=='production'||env.ELCEO_PAYMENT_PRODUCTION_LIVE_ENABLED!=='1')errors.push('production_provider requires APP_ENV=production and ELCEO_PAYMENT_PRODUCTION_LIVE_ENABLED=1');
     if(env.APP_STATE_REPOSITORY!=='sql'||!env.DATABASE_URL)errors.push('production_provider requires SQL persistence');
     try{if(new URL(env.NEXT_PUBLIC_APP_BASE_URL??'').protocol!=='https:')errors.push('production_provider requires HTTPS NEXT_PUBLIC_APP_BASE_URL')}catch{errors.push('production_provider requires HTTPS NEXT_PUBLIC_APP_BASE_URL')}
-    if(!env.PAYMENT_PROVIDER_KIND)errors.push('production_provider requires explicit PAYMENT_PROVIDER_KIND');
     if(env.ELCEO_PAYMENT_SANDBOX_SMOKE==='1'||env.ELCEO_PAYMENT_FAKE_OUTCOMES_ENABLED==='1')errors.push('production_provider forbids sandbox/fake payment modes');
-    if(env.PAYMENT_PROVIDER_KIND==='stripe'&&(!env.STRIPE_SECRET_KEY?.startsWith('sk_live_')||!env.STRIPE_WEBHOOK_SECRET||!env.STRIPE_PRODUCT_ID_FOCUS_PLAN))errors.push('production_provider Stripe live configuration incomplete');
-    if(env.PAYMENT_PROVIDER_KIND==='korapay'&&(!env.KORAPAY_SECRET_KEY||env.KORAPAY_KEY_ENVIRONMENT!=='live'))errors.push('production_provider Kora live configuration incomplete');
+    const stripeConfigured=Boolean(env.STRIPE_SECRET_KEY||env.STRIPE_WEBHOOK_SECRET||env.STRIPE_PRODUCT_ID_FOCUS_PLAN);if(stripeConfigured&&(!env.STRIPE_SECRET_KEY?.startsWith('sk_live_')||!env.STRIPE_WEBHOOK_SECRET||!env.STRIPE_PRODUCT_ID_FOCUS_PLAN))errors.push('production_provider Stripe live configuration incomplete');
+    const koraConfigured=Boolean(env.KORAPAY_SECRET_KEY||env.KORAPAY_KEY_ENVIRONMENT);if(koraConfigured&&(!env.KORAPAY_SECRET_KEY||env.KORAPAY_KEY_ENVIRONMENT!=='live'))errors.push('production_provider Kora live configuration incomplete');
+    if(!stripeConfigured&&!koraConfigured)errors.push('production_provider requires at least one provider configuration');
   }
   if (deployed && env.NOTIFICATION_PROVIDER_MODE === 'production_provider') errors.push('production notification provider activation remains blocked');
   if (env.NOTIFICATION_EMAIL_PROVIDER === 'resend' && (!env.RESEND_API_KEY || !env.NOTIFICATION_EMAIL_FROM_ADDRESS)) errors.push('Resend selection requires RESEND_API_KEY and NOTIFICATION_EMAIL_FROM_ADDRESS');
@@ -196,8 +196,14 @@ export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
   }
 
   const tiingoLiveEnabled = env.TIINGO_LIVE_ENABLED === 'true' || env.TIINGO_LIVE_ENABLED === '1';
+  if (env.TIINGO_LIVE_ENABLED !== undefined && !['true', 'false', '1', '0'].includes(env.TIINGO_LIVE_ENABLED)) {
+    errors.push('TIINGO_LIVE_ENABLED must be true, false, 1, or 0');
+  }
   if (tiingoLiveEnabled && !env.TIINGO_API_KEY) {
     errors.push('TIINGO_API_KEY is required when TIINGO_LIVE_ENABLED=true');
+  }
+  if (appEnv === 'production' && tiingoLiveEnabled) {
+    errors.push('production live Tiingo activation remains blocked');
   }
   if (env.TIINGO_BASE_URL && !isValidAbsoluteHttpUrl(env.TIINGO_BASE_URL)) {
     errors.push('TIINGO_BASE_URL must be an absolute http(s) URL');

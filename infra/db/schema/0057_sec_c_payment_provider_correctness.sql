@@ -29,11 +29,15 @@ CREATE TABLE payment_provider_capabilities (
   checkout_supported BOOLEAN NOT NULL DEFAULT FALSE,
   recurring_supported BOOLEAN NOT NULL DEFAULT FALSE,
   reconciliation_supported BOOLEAN NOT NULL DEFAULT FALSE,
+  minor_unit_exponent SMALLINT CHECK (minor_unit_exponent BETWEEN 0 AND 18),
+  provider_amount_encoding TEXT NOT NULL DEFAULT 'integer_minor' CHECK (provider_amount_encoding IN ('integer_minor','decimal_major_json_number')),
   verified_at TIMESTAMPTZ NOT NULL,
   verification_source TEXT NOT NULL,
   PRIMARY KEY(provider,environment,rail,currency)
 );
 
+ALTER TABLE payment_operations ALTER COLUMN amount TYPE BIGINT USING amount::bigint;
+ALTER TABLE payment_ledger_effects ALTER COLUMN amount TYPE BIGINT USING amount::bigint;
 ALTER TABLE payment_operations ADD COLUMN commercial_price_version_id UUID REFERENCES commercial_price_versions(commercial_price_version_id);
 ALTER TABLE payment_operations ADD COLUMN quoted_plan TEXT;
 ALTER TABLE payment_operations ADD COLUMN quoted_amount_minor BIGINT;

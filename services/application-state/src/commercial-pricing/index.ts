@@ -11,7 +11,7 @@ export async function resolveActiveCommercialPrice(input:{planCode:string;billin
 }
 export async function assertProviderCapability(input:{provider:PaymentProvider;environment:'sandbox'|'production';rail:string;currency:string;recurring?:boolean}){
  const rows=await queryDb<any>(`SELECT * FROM payment_provider_capabilities WHERE provider=$1 AND environment=$2 AND rail=$3 AND currency=$4 AND merchant_enabled AND checkout_supported`,[input.provider,input.environment,input.rail,currency(input.currency)]);
- if(!rows[0]||(input.recurring&&!rows[0].recurring_supported))throw new Error('payment_provider_capability_not_configured');return rows[0];
+ if(!rows[0]||(input.recurring&&!rows[0].recurring_supported))throw new Error('payment_provider_capability_not_configured');const row=rows[0];return {...row,moneyCapability:row.provider_amount_encoding==='decimal_major_json_number'&&Number.isInteger(row.minor_unit_exponent)?{minorUnitExponent:row.minor_unit_exponent,providerAmountEncoding:'decimal_major_json_number' as const}:null};
 }
 export function assertImmediateCommercialPriceEffectiveFrom(effectiveFrom:string,nowMs=Date.now()){const value=new Date(effectiveFrom).getTime();if(!Number.isFinite(value)||value>nowMs+5000)throw new Error('future_commercial_price_not_supported');}
 export async function createCommercialPriceVersion(input:{actorSuperAdminId:string;planCode:string;billingInterval:BillingInterval;currency:string;amountMinor:string;effectiveFrom:string;reasonCode:string;operatorNote:string;idempotencyKey:string}){

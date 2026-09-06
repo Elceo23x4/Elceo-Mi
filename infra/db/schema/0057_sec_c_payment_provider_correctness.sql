@@ -38,6 +38,7 @@ ALTER TABLE payment_operations ADD COLUMN commercial_price_version_id UUID REFER
 ALTER TABLE payment_operations ADD COLUMN quoted_plan TEXT;
 ALTER TABLE payment_operations ADD COLUMN quoted_amount_minor BIGINT;
 ALTER TABLE payment_operations ADD COLUMN quoted_currency TEXT;
+ALTER TABLE payment_operations ADD COLUMN quoted_provider_product_reference TEXT;
 ALTER TABLE payment_operations ADD COLUMN provider_transaction_reference TEXT;
 CREATE UNIQUE INDEX payment_operations_provider_transaction_uidx ON payment_operations(provider_transaction_reference) WHERE provider_transaction_reference IS NOT NULL;
 

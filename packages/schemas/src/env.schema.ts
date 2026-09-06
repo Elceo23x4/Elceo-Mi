@@ -45,7 +45,7 @@ export type ProviderEnv = {
   BILLING_WEBHOOK_SECRET?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
-  STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY?: string;
+  STRIPE_PRODUCT_ID_FOCUS_PLAN?: string;
   ELCEO_INTERNAL_API_TOKEN?: string;
   SENTRY_DSN?: string;
   SENTRY_ENVIRONMENT?: string;
@@ -109,7 +109,7 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   if (env.BILLING_WEBHOOK_SECRET) out.BILLING_WEBHOOK_SECRET = env.BILLING_WEBHOOK_SECRET;
   if (env.STRIPE_SECRET_KEY) out.STRIPE_SECRET_KEY = env.STRIPE_SECRET_KEY;
   if (env.STRIPE_WEBHOOK_SECRET) out.STRIPE_WEBHOOK_SECRET = env.STRIPE_WEBHOOK_SECRET;
-  if (env.STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY) out.STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY = env.STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY;
+  if (env.STRIPE_PRODUCT_ID_FOCUS_PLAN) out.STRIPE_PRODUCT_ID_FOCUS_PLAN = env.STRIPE_PRODUCT_ID_FOCUS_PLAN;
   if (env.ELCEO_INTERNAL_API_TOKEN) out.ELCEO_INTERNAL_API_TOKEN = env.ELCEO_INTERNAL_API_TOKEN;
   if (env.SENTRY_DSN) out.SENTRY_DSN = env.SENTRY_DSN;
   if (env.SENTRY_ENVIRONMENT) out.SENTRY_ENVIRONMENT = env.SENTRY_ENVIRONMENT;
@@ -170,7 +170,7 @@ export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
   if (env.BILLING_PROVIDER === 'stripe') {
     if (!env.STRIPE_SECRET_KEY) errors.push('STRIPE_SECRET_KEY is required when BILLING_PROVIDER=stripe');
     if (!env.STRIPE_WEBHOOK_SECRET) errors.push('STRIPE_WEBHOOK_SECRET is required when BILLING_PROVIDER=stripe');
-    if (!env.STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY) errors.push('STRIPE_PRICE_ID_FOCUS_PLAN_MONTHLY is required when BILLING_PROVIDER=stripe');
+    if (!env.STRIPE_PRODUCT_ID_FOCUS_PLAN) errors.push('STRIPE_PRODUCT_ID_FOCUS_PLAN is required when BILLING_PROVIDER=stripe');
   }
 
   if (env.ENABLE_KAFKA === 'true' && !env.KAFKA_BROKERS) {

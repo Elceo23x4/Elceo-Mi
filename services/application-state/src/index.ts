@@ -54,3 +54,7 @@ export * from './observability-audit';
 
 export * from './route-entitlement-map';
 export * from './authentication';
+
+export * from './payment-providers/stripe-reconciliation';
+
+export * from './billing/checkout-resume';

@@ -74,7 +74,8 @@ async function runSqlTransactionIntegrityTests(): Promise<void> {
 
 export async function runPaymentCorrectnessCoreTests(): Promise<void> {
   const rawBody = JSON.stringify({ id:'evt_rc_i2_valid', type:'checkout.session.completed', created:1700000000, data:{ object:{ id:'cs_rc_i2', payment_intent:'pi_rc_i2', amount_total:2000, currency:'usd', payment_status:'paid', metadata:{ operationId:'ipo_rc_i2' } } } });
-  const signature = `t=1700000000,v1=${createHmac('sha256','whsec_rc_i2_fixture_secret').update(`1700000000.${rawBody}`).digest('hex')}`;
+  const signatureTimestamp=String(Math.floor(Date.now()/1000));
+  const signature = `t=${signatureTimestamp},v1=${createHmac('sha256','whsec_rc_i2_fixture_secret').update(`${signatureTimestamp}.${rawBody}`).digest('hex')}`;
   assert.throws(() => verifyStripeWebhookSignature(rawBody, null, 'whsec_rc_i2_fixture_secret'), /missing_provider_webhook_signature/, 'missing sandbox provider signature rejected');
   assert.throws(() => verifyStripeWebhookSignature(rawBody, 't=1700000000,v1=00', 'whsec_rc_i2_fixture_secret'), /invalid_provider_webhook_signature/, 'wrong sandbox provider signature rejected');
   assert.equal(verifyStripeWebhookSignature(rawBody, signature, 'whsec_rc_i2_fixture_secret'), true, 'valid sandbox provider signature accepted');
@@ -125,7 +126,7 @@ export async function runPaymentCorrectnessCoreTests(): Promise<void> {
     return new Response(JSON.stringify({ id:'cs_sandbox_test', object:'checkout.session', payment_intent:'pi_sandbox_test', amount_total:2000, currency:'usd', payment_status:'unpaid', metadata:{ operationId:'ipo_sandbox_test', providerIdempotencyKey:'pik_sandbox_test', subjectUserId:'sandbox_user' }, url:'https://checkout.stripe.test/session' }), { status:200, headers:{ 'request-id':'req_sandbox_test', 'content-type':'application/json' } });
   }) as typeof fetch;
   try {
-    const adapter = new StripeSandboxPaymentProviderAdapter({ providerKind:'stripe', secretKey:'sk_test_unit_safe', publicKey:'pk_test_unit_safe', webhookSecret:'whsec_unit_safe', priceId:'price_unit_safe' });
+    const adapter = new StripeSandboxPaymentProviderAdapter({ providerKind:'stripe', secretKey:'sk_test_unit_safe', publicKey:'pk_test_unit_safe', webhookSecret:'whsec_unit_safe', productId:'prod_unit_safe' });
     const session = await adapter.createCheckoutOrPaymentSession({ subjectUserId:'sandbox_user', targetPlan:'focus_plan', amount:2000, currency:'USD', providerIdempotencyKey:'pik_sandbox_test', operationId:'ipo_sandbox_test' });
     assert.equal(observedIdempotencyKeys[0], 'pik_sandbox_test', 'sandbox checkout uses provider idempotency key as Stripe Idempotency-Key');
     assert.match(observedCheckoutBodies[0]!,/mode=subscription/);
@@ -149,7 +150,7 @@ export async function runPaymentCorrectnessCoreTests(): Promise<void> {
   assert.equal(a.operation.internalPaymentOperationId,b.operation.internalPaymentOperationId,'rapid double click / concurrent checkout reuses operation');
   assert.equal(a.operation.providerIdempotencyKey,b.operation.providerIdempotencyKey,'retry reuses provider idempotency key');
   assert.equal((await rt.counts()).operations,1,'one durable operation per intention');
-  assert.equal(rt.providerChargeAttempts,1,'one provider charge attempt per intention');
+  assert.equal((await rt.counts()).providerCharges,1,'provider idempotency produces one charge despite concurrent attempts');
   await rt.webhook({eventId:'evt_success_1',kind:'success',operationId:a.operation.internalPaymentOperationId,providerPaymentReference:a.operation.providerPaymentReference,payload:{providerCustomerReference:'cus_initial',providerSubscriptionReference:'sub_initial',subscriptionState:'active',currentPeriodStart:'2026-08-01T00:00:00.000Z',currentPeriodEnd:'2026-09-01T00:00:00.000Z',cancelAtPeriodEnd:false}});
   const persistedInitial=await repo.getOperation(a.operation.internalPaymentOperationId);
   assert.equal(persistedInitial?.providerCustomerReference,'cus_initial','initial webhook persists customer lifecycle field');

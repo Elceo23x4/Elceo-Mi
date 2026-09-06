@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { KoraPayAdapter, StripeSandboxPaymentProviderAdapter, internalPaymentRuntime, normalizeProviderError, type FakeProviderOutcome } from '@elceo/application-state';
+import { KoraPayAdapter, StripeSandboxPaymentProviderAdapter, shouldResumeProviderCheckout, reconcileStripePaymentOperation, internalPaymentRuntime, normalizeProviderError, type FakeProviderOutcome } from '@elceo/application-state';
 import { requireAppUserState } from '../../../../lib/auth/session';
 import { guardRoutePaymentReadiness } from '../../../../lib/server/access/route-entitlement';
 import { captureError } from '../../../../lib/monitoring';
@@ -32,28 +32,29 @@ export async function POST(request: Request) {
     if (providerMode === 'sandbox_provider') {
       if (process.env.ELCEO_PAYMENT_SANDBOX_SMOKE !== '1') throw new Error('sandbox_checkout_requires_explicit_smoke_context');
       const repo = internalPaymentRuntime.repository;
-      const created = await repo.createOrReuseOperation({ subjectUserId: session.user.id, targetPlan: 'focus_plan', billingInterval: interval, amount:Number(price.amountMinor), currency:price.currency, commercialPriceVersionId:price.id, businessIdempotencyKey, provider });
+      const created = await repo.createOrReuseOperation({ subjectUserId: session.user.id, targetPlan: 'focus_plan', billingInterval: interval, amount:Number(price.amountMinor), currency:price.currency, commercialPriceVersionId:price.id, quotedProviderProductReference:provider==='stripe'?process.env.STRIPE_PRODUCT_ID_FOCUS_PLAN:undefined, businessIdempotencyKey, provider });
       let operation = created.operation;
       let checkoutUrl: string | null = null;
-      if (!created.reused && !operation.providerCheckoutSessionReference && !operation.providerPaymentReference) {
+      const unresolved=['created','pending_provider','processing','unknown','reconciliation_required'].includes(operation.state);
+      if (shouldResumeProviderCheckout(operation)) {
         try {
           const origin = new URL(request.url).origin;
           if(provider==='korapay'){
             const secret=process.env.KORAPAY_SECRET_KEY;if(!secret)throw new Error('korapay_secret_required');
             const result=await new KoraPayAdapter(secret).initialize({amountMinor:String(operation.amount),currency:operation.currency,reference:operation.providerIdempotencyKey,notificationUrl:`${origin}/api/billing/webhook/korapay`,redirectUrl:`${origin}/settings?billing=return`,customer:{name:session.user.name??'ELCEO customer',email:session.user.email??''},plan:'focus_plan',interval,operationId:operation.internalPaymentOperationId,channels:body.rail?[body.rail]:undefined});
-            checkoutUrl=result.checkoutUrl;operation=await repo.recordProviderAccepted(operation.internalPaymentOperationId,null,null);operation=await repo.transition(operation.internalPaymentOperationId,operation.version,'processing',{lastProviderComparisonSnapshot:{providerKind:'korapay',providerTransactionReference:result.reference}},'korapay checkout initialized');
+            checkoutUrl=result.checkoutUrl;operation=await repo.transaction(async tx=>{let attached=await tx.recordProviderAccepted(operation.internalPaymentOperationId,null,null);return tx.transition(attached.internalPaymentOperationId,attached.version,'processing',{providerTransactionReference:result.reference,lastProviderComparisonSnapshot:{providerKind:'korapay',providerTransactionReference:result.reference}},'korapay checkout initialized')});
           }else{
             const adapter = new StripeSandboxPaymentProviderAdapter();
             const result = await adapter.createCheckoutOrPaymentSession({ subjectUserId: session.user.id, targetPlan: 'focus_plan', billingInterval: interval, amount: operation.amount, currency: operation.currency, providerIdempotencyKey: operation.providerIdempotencyKey, operationId: operation.internalPaymentOperationId, successUrl: `${origin}/settings?billing=sandbox_success`, cancelUrl: `${origin}/settings?billing=sandbox_cancel` });
             checkoutUrl = result.checkoutUrl;
-            operation = await repo.recordProviderAccepted(operation.internalPaymentOperationId, result.providerPaymentReference, result.providerSessionReference);
-            operation = await repo.transition(operation.internalPaymentOperationId, operation.version, 'processing', { lastProviderComparisonSnapshot: { providerKind: result.providerKind, providerRequestId: result.providerRequestId, providerPaymentReference: result.providerPaymentReference, providerSessionReference: result.providerSessionReference, safeRedactedPayloadChecksum: result.safeRedactedPayloadChecksum } }, 'sandbox provider accepted');
+            operation = await repo.transaction(async tx=>{const attached=await tx.recordProviderAccepted(operation.internalPaymentOperationId,result.providerPaymentReference,result.providerSessionReference);return tx.transition(attached.internalPaymentOperationId,attached.version,'processing', { lastProviderComparisonSnapshot: { providerKind: result.providerKind, providerRequestId: result.providerRequestId, providerPaymentReference: result.providerPaymentReference, providerSessionReference: result.providerSessionReference, safeRedactedPayloadChecksum: result.safeRedactedPayloadChecksum } }, 'sandbox provider accepted')});
           }
         } catch (providerError) {
           const normalized = normalizeProviderError(providerError);
           operation = await repo.transition(operation.internalPaymentOperationId, operation.version, normalized.acceptedByProvider ? 'reconciliation_required' : normalized.unknownOutcome ? 'unknown' : 'failed', { safeErrorCategory: normalized.safeErrorCategory, reconciliationState: normalized.unknownOutcome || normalized.acceptedByProvider ? 'required' : operation.reconciliationState, lastProviderComparisonSnapshot: { providerKind: normalized.providerKind, providerRequestId: normalized.providerRequestId, retryable: normalized.retryable, unknownOutcome: normalized.unknownOutcome, acceptedByProvider: normalized.acceptedByProvider } }, 'sandbox provider error');
         }
       }
+      if(unresolved&&!shouldResumeProviderCheckout(operation)&&provider==='stripe'){const reconciled=await reconcileStripePaymentOperation(repo,new StripeSandboxPaymentProviderAdapter(),operation.internalPaymentOperationId);operation=reconciled.operation??operation;}
       logRequest('api.billing.checkout', requestId, 'RC-I2 sandbox checkout operation recorded', { userId: session.user.id, state: operation.state, reused: created.reused });
       return NextResponse.json({ ok: true, liveActivation: 'blocked', sandboxOnly: true, productionLive: false, providerMode, reused: created.reused, checkoutUrl, operation }, { status: 202, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
     }

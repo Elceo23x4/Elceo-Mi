@@ -4,13 +4,13 @@
 
 ## Price authority and intentions
 
-`commercial_price_versions` is immutable, versioned Super Admin commercial truth. Amounts are positive integer provider minor units and currency identifiers are capability-driven. There is deliberately no seed or fallback price. The step-up-scoped `focus_plan_price_update` action creates a version and supersedes (rather than edits) the prior row. Checkout snapshots its price version, plan, interval, amount and currency; subscriptions and open intentions are never repriced.
+`commercial_price_versions` is immutable, versioned Super Admin commercial truth. Amounts are positive integer provider minor units and currency identifiers are capability-driven. There is deliberately no seed or fallback price. The step-up-scoped `focus_plan_price_update` action creates a version and supersedes (rather than edits) the prior row. Future-effective mutations are rejected, so the current price cannot be retired into a scheduling blackout. Checkout snapshots its price version, plan, interval, amount and currency; subscriptions and open intentions are never repriced.
 
 Clients supply an opaque 8–255 character idempotency key for one purchase gesture. Repeating it with changed plan, interval, quote, currency, or provider fails. Provider identity is generated once and reused after crashes or lost responses. Short database transactions surround, but never contain, provider HTTP calls.
 
 ## Providers
 
-Stripe Checkout uses inline recurring `price_data`, with five-minute signed-webhook timestamp tolerance and multiple `v1` signature rotation support. Provider retrieval must validate session/payment, customer, product, amount, currency, interval and status against the immutable quote before value.
+Stripe Checkout uses inline recurring `price_data`, with five-minute signed-webhook timestamp tolerance and multiple `v1` signature rotation support. Stripe reconciliation retrieves provider truth before its short `SELECT ... FOR UPDATE` transaction and validates session/payment, customer, product, amount, currency, interval and status against the immutable quote before value.
 
 Kora uses `https://api.korapay.com/merchant/api/v1/charges/initialize` and `GET /api/v1/charges/:reference`. Its `x-korapay-signature` is timing-safe HMAC-SHA256 over only the JSON `data` object. A notification never grants value until the charge is re-queried and matches the local quote. Redirects are navigation only.
 

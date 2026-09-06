@@ -1,4 +1,5 @@
 export * from './contracts/index';
+export * from './http';
 export * from './interfaces/MarketDataProvider';
 export * from './interfaces/MacroCalendarProvider';
 export * from './interfaces/NewsProvider';

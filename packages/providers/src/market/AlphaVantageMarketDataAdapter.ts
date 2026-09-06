@@ -24,19 +24,7 @@ export class AlphaVantageMarketDataAdapter implements MarketDataProvider {
     });
   }
 
-  async getCandles(assetCode: string, timeframe: string, _fromIso: string, _toIso: string): Promise<NormalizedCandle[]> {
-    return [
-      ensureUtc({
-        type: 'market_candle' as const,
-        provider: 'alphavantage' as const,
-        assetCode,
-        timeframe,
-        open: 0,
-        high: 0,
-        low: 0,
-        close: 0,
-        timestampUtc: new Date().toISOString()
-      })
-    ];
+  async getCandles(_assetCode: string, _timeframe: string, _fromIso: string, _toIso: string): Promise<NormalizedCandle[]> {
+    return [];
   }
 }

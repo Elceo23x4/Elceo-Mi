@@ -3,6 +3,8 @@ import type { SourceCategory } from '@elceo/types';
 import type { ProviderCapabilityDiagnostic } from './provider-capabilities';
 
 export type IngestionProviderConfig = {
+  credentialPresent: boolean;
+  configured: boolean;
   enabled: boolean;
   reasonIfDisabled: string | null;
   providerName: string;
@@ -10,6 +12,10 @@ export type IngestionProviderConfig = {
   requiresKeys: string[];
   presentKeys: string[];
   healthyToConstruct: boolean;
+  liveDisabled: boolean;
+  stagingLiveAuthorized: boolean;
+  stagingLiveValidated: boolean;
+  productionLiveBlocked: boolean;
 };
 
 export type IngestionProviderConfigSet = {
@@ -65,12 +71,14 @@ function detectRuntimeSupport(rawEnv: Record<string, string | undefined>, provid
 }
 
 function resolveDisableReason(params: {
+  deployed: boolean;
   globallyEnabled: boolean;
   categoryEnabled: boolean;
   providerEnabled: boolean;
   runtimeSupported: boolean;
   hasRequiredKeys: boolean;
 }): string | null {
+  if (params.deployed) return 'unmanaged_provider_gate_required';
   if (!params.globallyEnabled) return 'provider_disabled_by_env';
   if (!params.categoryEnabled) return 'provider_disabled_by_env';
   if (!params.providerEnabled) return 'provider_disabled_by_env';
@@ -82,6 +90,7 @@ function resolveDisableReason(params: {
 export function getIngestionProviderConfig(rawEnv: Record<string, string | undefined>): IngestionProviderConfigSet {
   const env = readProviderEnv(rawEnv);
   const globallyEnabled = globalEnabled(rawEnv);
+  const deployed = rawEnv.APP_ENV === 'staging' || rawEnv.APP_ENV === 'production';
 
   const providers = PROVIDER_SPECS.map((spec) => {
     const presentKeys = spec.requiredKeys.filter((key) => Boolean(rawEnv[key]));
@@ -91,6 +100,7 @@ export function getIngestionProviderConfig(rawEnv: Record<string, string | undef
     const runtimeSupported = detectRuntimeSupport(rawEnv, spec.providerName);
 
     const reasonIfDisabled = resolveDisableReason({
+      deployed,
       globallyEnabled,
       categoryEnabled: isCategoryEnabled,
       providerEnabled: isProviderEnabled,
@@ -99,13 +109,19 @@ export function getIngestionProviderConfig(rawEnv: Record<string, string | undef
     });
 
     return {
+      credentialPresent: presentKeys.length > 0,
+      configured: hasRequiredKeys,
       enabled: reasonIfDisabled === null,
       reasonIfDisabled,
       providerName: spec.providerName,
       category: spec.category,
       requiresKeys: spec.requiredKeys,
       presentKeys,
-      healthyToConstruct: reasonIfDisabled === null
+      healthyToConstruct: reasonIfDisabled === null,
+      liveDisabled: true,
+      stagingLiveAuthorized: false,
+      stagingLiveValidated: false,
+      productionLiveBlocked: rawEnv.APP_ENV === 'production'
     } satisfies IngestionProviderConfig;
   });
 

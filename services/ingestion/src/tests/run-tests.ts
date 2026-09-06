@@ -28,6 +28,7 @@ import { runRuntimeOutboxIntegrationTests } from './runtime-outbox-integration.t
 import { runPublishTransportTests } from './publish-transport.test.js';
 import { runCanonicalCandleObservationTests } from './canonical-candle-observation.test.js';
 import { runCanonicalCandlePostgresTests } from './canonical-candle-postgres.test.js';
+import { runProviderPreflightHardeningTests } from './provider-preflight-hardening.test.js';
 
 async function run(): Promise<void> {
   await runCanonicalCandleObservationTests();
@@ -39,6 +40,7 @@ async function run(): Promise<void> {
   runEventMergeTests();
   await runCompositeEventIngestionTests();
   runProviderSuiteBuilderTests();
+  await runProviderPreflightHardeningTests();
   await runCanonicalIngestionFacadeTests();
   await runLegacyBridgeTests();
   runActiveBoundaryTests();

@@ -1,0 +1,104 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" id="section_2_layout" width="1440" height="1440" viewBox="0 0 1440 1440" role="img" aria-labelledby="title desc" version="1.1" data-name="section_2_layout">
+  <title id="title">section_2_layout</title>
+  <desc id="desc">Editable standalone SVG element: section_2_layout</desc>
+  <defs id="defs19">
+    <style id="style1">
+    :root { --font-ui: 'Tribes Regular','Tribes','Space Mono','Share Tech Mono','IBM Plex Mono',monospace; --font-dot: 'OffBit DotBold','OffBit','Courier New',monospace; }
+    .ui { font-family: var(--font-ui); letter-spacing: .04em; }
+    .tiny { font-family: var(--font-ui); letter-spacing: .06em; }
+    .section-label { font-family: var(--font-ui); letter-spacing: .08em; }
+    .editable-note { pointer-events:none; }
+    .stitch { stroke-dasharray: 10 10; stroke-linecap: round; }
+    .fine-stitch { stroke-dasharray: 5 8; stroke-linecap: round; }
+    .ring { fill:none; stroke-linecap: butt; }
+  </style>
+    <radialGradient id="bgGlow" cx="0.5" cy="0.12" r="0.69999999">
+      <stop offset="0" stop-color="#19120b" stop-opacity="1" id="stop1"/>
+      <stop offset="0.45" stop-color="#050505" stop-opacity="1" id="stop2"/>
+      <stop offset="1" stop-color="#000" stop-opacity="1" id="stop3"/>
+    </radialGradient>
+    <radialGradient id="globeGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffb05a" stop-opacity="0.92" id="stop4"/>
+      <stop offset="0.42" stop-color="#ff6a00" stop-opacity="0.72" id="stop5"/>
+      <stop offset="0.72" stop-color="#7a2d00" stop-opacity="0.52" id="stop6"/>
+      <stop offset="1" stop-color="#050301" stop-opacity="1" id="stop7"/>
+    </radialGradient>
+    <linearGradient id="orangeFlat" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ff7a12" id="stop8"/>
+      <stop offset="1" stop-color="#ec4a00" id="stop9"/>
+    </linearGradient>
+    <linearGradient id="beltFlat" x1="0" x2="1">
+      <stop offset="0" stop-color="#060606" id="stop10"/>
+      <stop offset="0.5" stop-color="#111111" id="stop11"/>
+      <stop offset="1" stop-color="#060606" id="stop12"/>
+    </linearGradient>
+    <filter id="orangeGlow" x="0.038076885" y="-0.04675835" width="1.0125955" height="0.93438113">
+      <feGaussianBlur stdDeviation="7" result="blur" id="feGaussianBlur12"/>
+      <feFlood flood-color="#ff6a00" flood-opacity="0.9" id="feFlood12"/>
+      <feComposite in2="blur" operator="in" id="feComposite12"/>
+      <feMerge id="feMerge13">
+        <feMergeNode id="feMergeNode12"/>
+        <feMergeNode in="SourceGraphic" id="feMergeNode13"/>
+      </feMerge>
+    </filter>
+    <filter id="blueOutGlow" x="-0.13136362" y="-0.025395431" width="1.2627272" height="1.0507907">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="11" result="outerBlur" id="feGaussianBlur13"/>
+      <feFlood flood-color="#008cff" flood-opacity="0.95" result="blue" id="feFlood13"/>
+      <feComposite in="blue" in2="outerBlur" operator="in" result="blueBlur" id="feComposite13"/>
+      <feMerge id="feMerge15">
+        <feMergeNode in="blueBlur" id="feMergeNode14"/>
+        <feMergeNode in="SourceGraphic" id="feMergeNode15"/>
+      </feMerge>
+    </filter>
+    <filter id="softShadow" x="-0.0013681743" y="0" width="1.0027363" height="1.0007139">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity="0.55"/>
+    </filter>
+    <pattern id="microGrid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.1" fill="#222" opacity="0.7" id="circle15"/>
+    </pattern>
+    <pattern id="globeDots" width="10" height="10" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="3" r="1.7" fill="#ff8a1c" opacity="0.92" id="circle16"/>
+    </pattern>
+    <clipPath id="globeClip">
+      <circle cx="720" cy="520" r="210" id="circle17"/>
+    </clipPath>
+    <symbol id="pocket-tile" viewBox="0 0 380 260">
+      <path d="M 18,18 H 362 V 172 L 190,246 18,172 Z" fill="#030303" stroke="#f4f4f4" stroke-width="3" id="path17"/>
+      <path d="M 42,42 H 338 V 158 L 190,220 42,158 Z" fill="none" stroke="#f4f4f4" stroke-width="2.6" stroke-dasharray="10, 9" stroke-linecap="round" opacity="0.95" id="path18"/>
+      <circle cx="42" cy="42" r="10" fill="#040404" stroke="#ff9300" stroke-width="5" id="circle18"/>
+      <circle cx="338" cy="42" r="10" fill="#040404" stroke="#ff9300" stroke-width="5" id="circle19"/>
+    </symbol>
+  </defs>
+  <g id="section-2-tie-and-six-pocket-tiles" class="ui">
+    <rect x="0" y="0" width="1440" height="1440" rx="0" fill="transparent" opacity="1" id="rect200"/>
+    <g id="tile-content-1" transform="translate(64,90)">
+      <use href="#pocket-tile" width="380" height="260" id="use200"/>
+      <text x="190" y="145" fill="#f4f4f4" font-size="32px" text-anchor="middle" font-weight="500" font-family="'var(--font-ui)'" id="text200">Content 1</text>
+    </g>
+    <g id="tile-content-2" transform="translate(64,500)">
+      <use href="#pocket-tile" width="380" height="260" id="use201"/>
+      <text x="190" y="145" fill="#f4f4f4" font-size="32px" text-anchor="middle" font-weight="500" font-family="'var(--font-ui)'" id="text201">Content 2</text>
+    </g>
+    <g id="tile-content-3" transform="translate(64,910)">
+      <use href="#pocket-tile" width="380" height="260" id="use202"/>
+      <text x="190" y="145" fill="#f4f4f4" font-size="32px" text-anchor="middle" font-weight="500" font-family="'var(--font-ui)'" id="text202">Content 3</text>
+    </g>
+    <g id="tile-content-4" transform="translate(996,90)">
+      <use href="#pocket-tile" width="380" height="260" id="use203"/>
+      <text x="190" y="145" fill="#f4f4f4" font-size="32px" text-anchor="middle" font-weight="500" font-family="'var(--font-ui)'" id="text203">Content 4</text>
+    </g>
+    <g id="tile-content-5" transform="translate(996,500)">
+      <use href="#pocket-tile" width="380" height="260" id="use204"/>
+      <text x="190" y="145" fill="#f4f4f4" font-size="32px" text-anchor="middle" font-weight="500" font-family="'var(--font-ui)'" id="text204">Content 5</text>
+    </g>
+    <g id="tile-content-6" transform="translate(996,910)">
+      <use href="#pocket-tile" width="380" height="260" id="use205"/>
+      <text x="190" y="145" fill="#f4f4f4" font-size="32px" text-anchor="middle" font-weight="500" font-family="'var(--font-ui)'" id="text205">Content 6</text>
+    </g>
+    <g id="central-tie-dark-fill-blue-outward-glow" filter="url(#blueOutGlow)">
+      <path d="m 638,72 h 164 l -22,118 -40,30 h -40 l -40,-30 z m 62,148 h 40 l 66,280 24,558 -110,152 -110,-152 24,-558 z" fill="#020303" stroke="#64b7ff" stroke-width="5" stroke-linejoin="round" id="path205"/>
+      <path d="m 638,72 h 164 l -22,118 -40,30 h -40 l -40,-30 z m 62,148 h 40 l 66,280 24,558 -110,152 -110,-152 24,-558 z" fill="none" stroke="#008cff" stroke-width="2" opacity="0.9" id="path206"/>
+    </g>
+  </g>
+</svg>

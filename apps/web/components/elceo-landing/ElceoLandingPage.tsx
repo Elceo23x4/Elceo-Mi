@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { SectionTwoBody } from './SectionTwoBody';
 import { InlineAssetSvg } from './svg/InlineAssetSvg';
 
 const navLinks = [
@@ -35,6 +36,7 @@ export function ElceoLandingPage() {
           <div className="elceo-f2a-proof" aria-hidden="true">F2A-PROOF-MARKER</div>
         </div>
       </section>
+      <SectionTwoBody />
     </main>
   );
 }

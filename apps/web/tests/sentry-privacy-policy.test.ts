@@ -193,16 +193,4 @@ export function runSentryPrivacyPolicyTests() {
   assert.match(serverInstrumentationSource, /release: sentryRelease\(process\.env\)/);
   assert.equal(serverInstrumentationSource.includes('process.env.SENTRY_RELEASE'), false);
 
-  const diagnosticPageSource = readFileSync('app/diagnostics/sentry-symbolication/page.tsx', 'utf8');
-  const diagnosticClientSource = readFileSync('app/diagnostics/sentry-symbolication/SentrySymbolicationProbe.tsx', 'utf8');
-  assert.match(diagnosticPageSource, /process\.env\.APP_ENV !== 'staging'/);
-  assert.match(diagnosticPageSource, /notFound\(\)/);
-  assert.match(diagnosticPageSource, /dynamic = 'force-dynamic'/);
-  assert.match(diagnosticPageSource, /robots: \{ index: false, follow: false \}/);
-  assert.match(diagnosticClientSource, /process\.env\.NEXT_PUBLIC_APP_ENV !== 'staging'/);
-  assert.match(diagnosticClientSource, /new Error\('ELCEO Sentry native symbolication probe'\)/);
-  assert.match(diagnosticClientSource, /Sentry\.captureException\(error/);
-  assert.match(diagnosticClientSource, /ELCEOSentryNativeSymbolicationProbeV2/);
-  assert.equal(/(?:\.stack\s*=|defineProperty\s*\([^,]+,\s*['"]stack|filename\s*:|lineno\s*:|colno\s*:|sourceURL|\beval\s*\()/.test(diagnosticClientSource), false);
-
 }

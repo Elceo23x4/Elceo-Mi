@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/nextjs';
-import { applySentryPrivacyPolicy, safeEnvironment } from './lib/sentry-policy';
+import { applyBrowserSentryPrivacyPolicy, safeEnvironment } from './lib/sentry-policy';
 import { browserSentryDsn } from './lib/sentry-dsn.mjs';
 
 const sentry = browserSentryDsn({
@@ -17,7 +17,7 @@ if (sentry) {
       sendDefaultPii: false,
       tracesSampleRate: 0,
       enableLogs: false,
-      beforeSend: applySentryPrivacyPolicy
+      beforeSend: applyBrowserSentryPrivacyPolicy
     });
   } catch {
     // Browser monitoring is optional and may not prevent ELCEO from starting.

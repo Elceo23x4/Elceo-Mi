@@ -4,16 +4,10 @@ import type { TiingoPriceBar, TiingoPriceHistoryRequest } from './tiingo-contrac
 
 export const TIINGO_PROVIDER_ID = 'tiingo_market_data';
 
-const TICKER_MAP: Record<string, string> = {
-  xau_usd: 'XAUUSD',
-  eur_usd: 'EURUSD',
-  btc_usd: 'BTCUSD',
-  nasdaq_100: 'QQQ',
-  sp500: 'SPY'
-};
+const TICKER_MAP: Record<string, string> = { eur_usd:'eurusd',gbp_usd:'gbpusd',usd_jpy:'usdjpy',aud_usd:'audusd',usd_chf:'usdchf',nzd_usd:'nzdusd',usd_cad:'usdcad',btc_usd:'btcusd' };
 
 export function mapAssetToTiingoTicker(asset: string): string {
-  return TICKER_MAP[asset] ?? asset.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return TICKER_MAP[asset] ?? asset.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 export function mapTiingoFrequencyToTimeframe(frequency: string | null): string {
@@ -21,7 +15,7 @@ export function mapTiingoFrequencyToTimeframe(frequency: string | null): string 
   if (frequency === 'weekly') return '1w';
   if (frequency === 'monthly') return '1M';
   if (frequency === 'hourly') return '1h';
-  return '1d';
+  throw new Error('tiingo_unsupported_frequency');
 }
 
 
@@ -58,7 +52,7 @@ export function buildTiingoPricePayload(request: TiingoPriceHistoryRequest, bar:
     confidenceScore: clampConfidenceScore(90),
     dataQuality: bar.volume === null ? 'medium' : 'high',
     valuesJson: buildValuesJson({ o: bar.open, h: bar.high, l: bar.low, c: bar.close, v: bar.volume }),
-    metadataJson: buildMetadataJson({ ticker: request.ticker, frequency: request.frequency, timeframe: mapTiingoFrequencyToTimeframe(request.frequency), source: 'tiingo_fixture', evidenceClass: mapAssetToEvidenceClass(request.asset) })
+    metadataJson: buildMetadataJson({ requestId: request.requestId, ticker: request.ticker, frequency: request.frequency, timeframe: mapTiingoFrequencyToTimeframe(request.frequency), source: request.sourceMode === 'fixture' ? 'tiingo_fixture' : 'tiingo_live_staging', sourceMode: request.sourceMode, evidenceClass: mapAssetToEvidenceClass(request.asset) })
   };
 }
 

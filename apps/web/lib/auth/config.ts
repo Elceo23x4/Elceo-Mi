@@ -1,17 +1,21 @@
 import NextAuth, { type NextAuthConfig, type Session } from 'next-auth';
 import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
-import { ApplicationStateService, getUserStateRepository } from '@elceo/application-state';
-import { logEvent } from '@elceo/config';
+import { ApplicationStateService, CredentialAuthenticationService, PostgresCredentialRepository, RedisLoginThrottle, RedisPasswordResetThrottle, getUserStateRepository } from '@elceo/application-state';
+import { resolveCredentialsActivation } from './credentials-activation';
 
 const appStateService = new ApplicationStateService(getUserStateRepository());
 
 const runtimeEnv = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
 const isProduction = runtimeEnv.APP_ENV === 'production';
+const credentialsActivation = resolveCredentialsActivation(runtimeEnv);
+export const credentialsAuthEnabled = credentialsActivation.enabled;
 
-if (isProduction && !runtimeEnv.AUTH_SECRET) {
-  throw new Error('AUTH_SECRET must be configured in production');
-}
+if (isProduction && !runtimeEnv.AUTH_SECRET) throw new Error('AUTH_SECRET must be configured in production');
+
+const credentialService = credentialsAuthEnabled && runtimeEnv.REDIS_URL
+  ? new CredentialAuthenticationService(new PostgresCredentialRepository(), new RedisLoginThrottle(runtimeEnv.REDIS_URL), new RedisPasswordResetThrottle(runtimeEnv.REDIS_URL))
+  : null;
 
 type AuthenticatedProfile = {
   id: string;
@@ -39,7 +43,7 @@ const authConfig: NextAuthConfig = {
           })
         ]
       : []),
-    Credentials({
+    ...(credentialService ? [Credentials({
       name: 'Email + Password',
       credentials: {
         email: { label: 'Email', type: 'email' },
@@ -48,13 +52,10 @@ const authConfig: NextAuthConfig = {
       async authorize(credentials): Promise<AuthenticatedProfile | null> {
         const email = String(credentials?.email ?? '').trim();
         const password = String(credentials?.password ?? '');
-        if (!email || !password || password.length > 256) return null;
+        if (!email || !password || Array.from(password.normalize('NFC')).length > 256) return null;
 
-        const profile = await getUserStateRepository().verifyPasswordCredentials(email, password);
-        if (!profile) {
-          logEvent('auth.credentials', 'warn', 'credential authorization failed', { email });
-          return null;
-        }
+        const profile = await credentialService.authenticate(email, password);
+        if (!profile) return null;
 
         return {
           id: profile.id,
@@ -65,7 +66,7 @@ const authConfig: NextAuthConfig = {
           onboardingCompletedAt: profile.onboardingCompletedAt
         };
       }
-    })
+    })] : [])
   ],
   callbacks: {
     async signIn({ user }) {

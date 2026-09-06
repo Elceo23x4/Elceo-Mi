@@ -36,7 +36,8 @@ const { TiingoMarketDataAdapter } = require(fileURLToPath(tiingoPath));
 const fakeFetch = async () => ({ ok: true, status: 200, json: async () => ([{ date: '2026-01-01T00:00:00.000Z', open: 1.1, high: 1.2, low: 1, close: 1.15, volume: null }]) });
 const adapter = new TiingoMarketDataAdapter({ mode: 'live_enabled', liveEnabled: true, apiKey: process.env[secretName], fetchImpl: process.env.ELCEO_PROVIDER_STAGING_SMOKE_FAKE_ADAPTER === '1' ? fakeFetch : undefined });
 const requestId = `staging-smoke-${provider}-${Date.now()}`;
-const result = await executeProviderApiGateRequest({ requestId, sourceId: provider, capabilityId: capability, asset: process.env.ELCEO_PROVIDER_ASSET ?? 'eur_usd', region: 'global', activationMode: 'staging_live_allowed', provenance: { actor: 'provider_staging_smoke', purpose: 'rc_h_staging_live_validation' }, policy: { explicitStagingLiveAllow: true, requestMetadata: { credentialPresent: true }, allowedNullableFields: ['volume'], allowUnknownFields: true } }, adapter);
+const providerRequestParams = { startDate: '2026-01-01', endDate: '2026-01-02', frequency: 'daily' };
+const result = await executeProviderApiGateRequest({ requestId, sourceId: provider, capabilityId: capability, asset: process.env.ELCEO_PROVIDER_ASSET ?? 'eur_usd', region: 'global', activationMode: 'staging_live_allowed', providerRequestParams, provenance: { actor: 'provider_staging_smoke', purpose: 'prov_p1a_staging_live_validation' }, policy: { explicitStagingLiveAllow: true, requestMetadata: { credentialPresent: true }, allowedNullableFields: ['volume'], allowUnknownFields: true } }, adapter);
 if (!result.response || result.response.payloadSchemaStatus !== 'valid') {
   console.error(`staging_live_failed:${result.response?.error?.category ?? result.decision.reason}`);
   process.exit(5);

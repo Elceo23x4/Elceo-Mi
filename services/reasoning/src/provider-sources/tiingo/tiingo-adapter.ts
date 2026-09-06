@@ -1,62 +1,52 @@
 import type { MarketEvidenceProviderAdapter, ProviderManagedExecution } from '../normalization-contracts';
 import type { ProviderSourceRequest, ProviderSourceResponse } from '@elceo/types';
-import type { TiingoFixtureResponse, TiingoPriceBar, TiingoPriceHistoryRequest } from './tiingo-contracts';
+import type { TiingoFixtureResponse, TiingoLiveAsset, TiingoPriceBar, TiingoPriceHistoryRequest } from './tiingo-contracts';
 import { TIINGO_FIXTURES } from './fixtures';
 import { mapAssetToTiingoTicker, normalizeTiingoPriceBars, TIINGO_PROVIDER_ID } from './tiingo-normalizer';
 import { getProviderDescriptor } from '../provider-capability-registry';
 
-const SUPPORTED_CAPABILITIES = new Set(['market_price_history', 'end_of_day_prices', 'intraday_quotes']);
+const FX_ASSETS = new Set(['eur_usd','gbp_usd','usd_jpy','aud_usd','usd_chf','nzd_usd','usd_cad']);
+const DEFERRED_ASSET_CODES:Record<string,string>={nasdaq_100:'tiingo_live_unsupported_index_proxy_nasdaq_100',sp500:'tiingo_live_unsupported_index_proxy_sp500',de30:'tiingo_live_unsupported_unverified_de30',xau_usd:'tiingo_live_unsupported_unverified_xau_usd'};
+const FREQUENCIES:Record<string,string>={daily:'1day',hourly:'1hour'};
 export type TiingoAdapterMode = 'fixture' | 'live_disabled' | 'live_enabled';
 export type TiingoRuntimeConfig = { mode?: TiingoAdapterMode; liveEnabled?: boolean; apiKey?: string | null; baseUrl?: string | null; timeoutMs?: number | null; fetchImpl?: typeof fetch };
 export type TiingoProviderHealth = { providerId: string; configured: boolean; liveEnabled: boolean; mode: TiingoAdapterMode; hasApiKey: boolean; baseUrl: string; timeoutMs: number; capabilityStatus: 'configured'|'disabled'|'missing_api_key'|'invalid_config'; reasons: string[] };
+type ResolvedConfig={mode:TiingoAdapterMode;liveEnabled:boolean;baseUrl:string;timeoutMs:number;apiKey:string|null;fetchImpl:typeof fetch};
 
-export function resolveTiingoConfig(config: TiingoRuntimeConfig = {}): { mode: TiingoAdapterMode; liveEnabled: boolean; baseUrl: string; timeoutMs: number; apiKey: string | null; fetchImpl: typeof fetch } {
-  const liveEnabled = config.liveEnabled ?? false;
-  const mode = config.mode ?? (liveEnabled ? 'live_enabled' : 'live_disabled');
-  const baseUrl = config.baseUrl?.trim() || 'https://api.tiingo.com';
-  const timeoutMs = config.timeoutMs && Number.isFinite(config.timeoutMs) && config.timeoutMs > 0 ? config.timeoutMs : 10000;
-  return { mode, liveEnabled, apiKey: config.apiKey ?? null, baseUrl, timeoutMs, fetchImpl: config.fetchImpl ?? fetch };
-}
-export function getTiingoProviderHealth(config: TiingoRuntimeConfig = {}): TiingoProviderHealth {
-  const resolved = resolveTiingoConfig(config); const reasons: string[] = []; let capabilityStatus: TiingoProviderHealth['capabilityStatus'] = 'configured';
-  if (!resolved.baseUrl.startsWith('http://') && !resolved.baseUrl.startsWith('https://')) { capabilityStatus='invalid_config'; reasons.push('invalid_base_url'); }
-  if (resolved.mode === 'fixture') { capabilityStatus='disabled'; reasons.push('fixture_mode'); }
-  else if (!resolved.liveEnabled || resolved.mode === 'live_disabled') { capabilityStatus='disabled'; reasons.push('live_disabled'); }
-  else if (!resolved.apiKey) { capabilityStatus='missing_api_key'; reasons.push('missing_api_key'); }
-  return { providerId: TIINGO_PROVIDER_ID, configured: capabilityStatus==='configured', liveEnabled: resolved.liveEnabled, mode: resolved.mode, hasApiKey: Boolean(resolved.apiKey), baseUrl: resolved.baseUrl, timeoutMs: resolved.timeoutMs, capabilityStatus, reasons };
-}
+export function resolveTiingoLiveAsset(asset:string):TiingoLiveAsset|null { if(FX_ASSETS.has(asset))return{family:'fx',ticker:mapAssetToTiingoTicker(asset)};if(asset==='btc_usd')return{family:'crypto',ticker:'btcusd'};return null; }
+export function resolveTiingoConfig(config: TiingoRuntimeConfig = {}):ResolvedConfig { const liveEnabled=config.liveEnabled??false,mode=config.mode??(liveEnabled?'live_enabled':'live_disabled'),baseUrl=config.baseUrl?.trim()||'https://api.tiingo.com',timeoutMs=config.timeoutMs&&Number.isFinite(config.timeoutMs)&&config.timeoutMs>0?config.timeoutMs:10000;return{mode,liveEnabled,apiKey:config.apiKey??null,baseUrl,timeoutMs,fetchImpl:config.fetchImpl??fetch}; }
+export function getTiingoProviderHealth(config:TiingoRuntimeConfig={}):TiingoProviderHealth { const r=resolveTiingoConfig(config),reasons:string[]=[];let capabilityStatus:TiingoProviderHealth['capabilityStatus']='configured';if(!r.baseUrl.startsWith('http://')&&!r.baseUrl.startsWith('https://')){capabilityStatus='invalid_config';reasons.push('invalid_base_url');}if(r.mode==='fixture'){capabilityStatus='disabled';reasons.push('fixture_mode');}else if(!r.liveEnabled||r.mode==='live_disabled'){capabilityStatus='disabled';reasons.push('live_disabled');}else if(!r.apiKey){capabilityStatus='missing_api_key';reasons.push('missing_api_key');}return{providerId:TIINGO_PROVIDER_ID,configured:capabilityStatus==='configured',liveEnabled:r.liveEnabled,mode:r.mode,hasApiKey:Boolean(r.apiKey),baseUrl:r.baseUrl,timeoutMs:r.timeoutMs,capabilityStatus,reasons}; }
 
 export class TiingoMarketDataAdapter implements MarketEvidenceProviderAdapter {
-  public readonly descriptor = getProviderDescriptor(TIINGO_PROVIDER_ID) ?? (() => { throw new Error('missing_tiingo_descriptor'); })();
-  constructor(private readonly config: TiingoRuntimeConfig = {}) {}
-
-  async fetch(request: ProviderSourceRequest): Promise<ProviderSourceResponse> { return this.fetchInternal(request); }
-  async fetchManaged(request:ProviderSourceRequest,execution:ProviderManagedExecution):Promise<ProviderSourceResponse>{return this.fetchInternal(request,execution);}
-  private async fetchInternal(request:ProviderSourceRequest,execution?:ProviderManagedExecution):Promise<ProviderSourceResponse> {
-    const cfg = resolveTiingoConfig(this.config);
-    if (!SUPPORTED_CAPABILITIES.has(request.capability)) return { ...baseResponse(request), status: 'unsupported', rawPayloadJson: null, errorCode: 'unsupported_capability', errorMessage: `Unsupported capability: ${request.capability}` };
-    if (request.asset === null) return { ...baseResponse(request), status: 'failed', rawPayloadJson: null, errorCode: 'missing_asset', errorMessage: 'Asset is required for tiingo fetch' };
-    if (cfg.mode === 'fixture') {
-      const fixture = TIINGO_FIXTURES[request.asset];
-      if (!fixture) return { ...baseResponse(request), status: 'empty', rawPayloadJson: JSON.stringify({ request: buildTiingoRequest(request), bars: [] }), errorCode: null, errorMessage: null };
-      return { ...baseResponse(request), status: 'success', rawPayloadJson: JSON.stringify(fixture), errorCode: null, errorMessage: null };
-    }
-    if (cfg.mode === 'live_disabled' || !cfg.liveEnabled) return { ...baseResponse(request), status: 'failed', rawPayloadJson: null, errorCode: 'tiingo_live_disabled', errorMessage: 'Live Tiingo fetch is disabled' };
-    if (!cfg.apiKey) return { ...baseResponse(request), status: 'failed', rawPayloadJson: null, errorCode: 'missing_api_key', errorMessage: 'TIINGO_API_KEY required for live mode' };
-    const live = await fetchLiveTiingoBars(buildTiingoRequest(request), cfg, execution);
-    if (live.ok) return { ...baseResponse(request), status: 'success', rawPayloadJson: JSON.stringify(live.payload), sourceUrl: live.sourceUrl, errorCode: null, errorMessage: null };
-    const failed = live as { ok: false; errorCode: string; errorMessage: string };
-    return { ...baseResponse(request), status: 'failed', rawPayloadJson: null, errorCode: failed.errorCode, errorMessage: failed.errorMessage };
-  }
-
-  async normalize(response: ProviderSourceResponse) { if (response.rawPayloadJson === null || response.rawPayloadJson.trim()==='') return []; const parsed = JSON.parse(response.rawPayloadJson) as TiingoFixtureResponse; if (!parsed || !parsed.request || !Array.isArray(parsed.bars)) throw new Error('tiingo_malformed_payload'); return normalizeTiingoPriceBars(parsed.request, parsed.bars as TiingoPriceBar[], response.providerId).payloads; }
+ public readonly descriptor=getProviderDescriptor(TIINGO_PROVIDER_ID)??(()=>{throw new Error('missing_tiingo_descriptor');})();
+ constructor(private readonly config:TiingoRuntimeConfig={}){}
+ async fetch(request:ProviderSourceRequest){return this.fetchInternal(request);}
+ async fetchManaged(request:ProviderSourceRequest,execution:ProviderManagedExecution){return this.fetchInternal(request,execution);}
+ private async fetchInternal(request:ProviderSourceRequest,execution?:ProviderManagedExecution):Promise<ProviderSourceResponse>{
+  const cfg=resolveTiingoConfig(this.config);
+  if(request.capability!=='market_price_history')return fail(request,'unsupported_capability',`Unsupported capability: ${request.capability}`,'unsupported');
+  if(request.asset===null)return fail(request,'missing_asset','Asset is required for tiingo fetch');
+  if(cfg.mode==='fixture'){const fixture=TIINGO_FIXTURES[request.asset];if(!fixture)return{...baseResponse(request),status:'empty',rawPayloadJson:JSON.stringify({request:buildFixtureRequest(request),bars:[]})};return{...baseResponse(request),status:'success',rawPayloadJson:JSON.stringify({...fixture,request:{...fixture.request,requestId:request.requestId,requestedAt:request.requestedAt}})};}
+  if(cfg.mode==='live_disabled'||!cfg.liveEnabled)return fail(request,'tiingo_live_disabled','Live Tiingo fetch is disabled');
+  if(!cfg.apiKey)return fail(request,'missing_api_key','TIINGO_API_KEY required for live mode');
+  const liveAsset=resolveTiingoLiveAsset(request.asset);if(!liveAsset)return fail(request,DEFERRED_ASSET_CODES[request.asset]??'tiingo_live_unsupported_asset','Direct live Tiingo price is unsupported for this asset','unsupported');
+  const built=buildLiveRequest(request,liveAsset);if('code' in built)return fail(request,built.code,built.message);
+  const live=await fetchLiveTiingoBars(built.request,liveAsset,cfg,execution);
+  if(live.ok)return{...baseResponse(request),status:live.payload.bars.length?'success':'empty',rawPayloadJson:JSON.stringify(live.payload),sourceUrl:live.sourceUrl};
+  const failed=live as {ok:false;errorCode:string;errorMessage:string};return fail(request,failed.errorCode,failed.errorMessage);
+ }
+ async normalize(response:ProviderSourceResponse){if(response.rawPayloadJson===null||response.rawPayloadJson.trim()==='')return[];const parsed=parseEnvelope(JSON.parse(response.rawPayloadJson));return normalizeTiingoPriceBars(parsed.request,parsed.bars,response.providerId).payloads;}
 }
-async function fetchLiveTiingoBars(request: TiingoPriceHistoryRequest, cfg: ReturnType<typeof resolveTiingoConfig>, managed?:ProviderManagedExecution): Promise<{ok:true;payload:TiingoFixtureResponse;sourceUrl:string}|{ok:false;errorCode:string;errorMessage:string}> {
-  const url = `${cfg.baseUrl.replace(/\/$/, '')}/tiingo/daily/${encodeURIComponent(request.ticker)}/prices`;
-  const controller=managed?null:new AbortController();const timer=managed?null:setTimeout(()=>controller!.abort(),cfg.timeoutMs);const signal=managed?.signal??controller!.signal;
-  try { const response = await cfg.fetchImpl(url, { signal, headers: { Authorization: `Token ${cfg.apiKey ?? ''}` } }); if (!response.ok) return { ok:false, errorCode:'tiingo_http_error', errorMessage:`HTTP ${response.status}`}; const json = await response.json() as unknown; if (!Array.isArray(json)) return { ok:false, errorCode:'tiingo_malformed_live_payload', errorMessage:'Expected array payload'}; return { ok:true, payload:{ request, bars: json as TiingoPriceBar[] }, sourceUrl:url }; }
-  catch (error) { if (error instanceof Error && error.name === 'AbortError') return { ok:false, errorCode:'tiingo_timeout', errorMessage:'Tiingo request timed out' }; return { ok:false, errorCode:'tiingo_fetch_error', errorMessage:'Tiingo request failed' }; }
-  finally { if(timer)clearTimeout(timer); }
-}
-function buildTiingoRequest(request: ProviderSourceRequest): TiingoPriceHistoryRequest { return { asset: request.asset ?? 'unknown', ticker: mapAssetToTiingoTicker(request.asset ?? 'unknown'), startDate: null, endDate: null, frequency: 'daily', requestedAt: request.requestedAt }; }
-function baseResponse(request: ProviderSourceRequest): ProviderSourceResponse { return { requestId: request.requestId, providerId: request.providerId, capability: request.capability, status: 'failed', fetchedAt: request.requestedAt, sourceUrl: null, rawPayloadJson: null, errorCode: null, errorMessage: null }; }
+
+function parseParams(paramsJson:string):{ok:true;value:{startDate:string|null;endDate:string|null;frequency:string}}|{ok:false;code:string;message:string}{let raw:unknown;try{raw=JSON.parse(paramsJson);}catch{return{ok:false,code:'tiingo_invalid_request_params',message:'Tiingo request params must be valid JSON'};}if(!raw||typeof raw!=='object'||Array.isArray(raw))return{ok:false,code:'tiingo_invalid_request_params',message:'Tiingo request params must be an object'};const p=raw as Record<string,unknown>,allowed=new Set(['startDate','endDate','frequency','resampleFreq']);if(Object.keys(p).some(k=>!allowed.has(k)))return{ok:false,code:'tiingo_unsupported_request_param',message:'Tiingo request contains an unsupported parameter'};const start=p.startDate??null,end=p.endDate??null,f1=p.frequency,f2=p.resampleFreq;if(f1!==undefined&&f2!==undefined&&f1!==f2)return{ok:false,code:'tiingo_conflicting_frequency',message:'Tiingo request contains conflicting frequency values'};const frequency=f1??f2??'daily';if(typeof frequency!=='string'||!FREQUENCIES[frequency])return{ok:false,code:'tiingo_unsupported_frequency',message:'Tiingo request frequency is unsupported'};for(const value of [start,end])if(value!==null&&(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value)||Number.isNaN(Date.parse(`${value}T00:00:00.000Z`))))return{ok:false,code:'tiingo_invalid_date',message:'Tiingo request dates must use YYYY-MM-DD'};if(start&&end&&Date.parse(`${start}T00:00:00Z`)>Date.parse(`${end}T00:00:00Z`))return{ok:false,code:'tiingo_invalid_date_range',message:'Tiingo startDate must not follow endDate'};return{ok:true,value:{startDate:start as string|null,endDate:end as string|null,frequency}};}
+function buildLiveRequest(source:ProviderSourceRequest,asset:TiingoLiveAsset):{ok:true;request:TiingoPriceHistoryRequest}|{ok:false;code:string;message:string}{const params=parseParams(source.paramsJson);if('code' in params)return params;return{ok:true,request:{requestId:source.requestId,asset:source.asset!,ticker:asset.ticker,...params.value,requestedAt:source.requestedAt,sourceMode:'live_staging'}};}
+function buildFixtureRequest(source:ProviderSourceRequest):TiingoPriceHistoryRequest{return{requestId:source.requestId,asset:source.asset??'unknown',ticker:mapAssetToTiingoTicker(source.asset??'unknown'),startDate:null,endDate:null,frequency:'daily',requestedAt:source.requestedAt,sourceMode:'fixture'};}
+function buildUrl(request:TiingoPriceHistoryRequest,asset:TiingoLiveAsset,baseUrl:string):string{const root=baseUrl.replace(/\/$/,'');const url=asset.family==='fx'?new URL(`${root}/tiingo/fx/${encodeURIComponent(asset.ticker)}/prices`):new URL(`${root}/tiingo/crypto/prices`);if(asset.family==='crypto')url.searchParams.set('tickers',asset.ticker);if(request.startDate)url.searchParams.set('startDate',request.startDate);if(request.endDate)url.searchParams.set('endDate',request.endDate);url.searchParams.set('resampleFreq',FREQUENCIES[request.frequency??'daily']!);return url.toString();}
+async function fetchLiveTiingoBars(request:TiingoPriceHistoryRequest,asset:TiingoLiveAsset,cfg:ResolvedConfig,managed?:ProviderManagedExecution):Promise<{ok:true;payload:TiingoFixtureResponse;sourceUrl:string}|{ok:false;errorCode:string;errorMessage:string}>{const url=buildUrl(request,asset,cfg.baseUrl),controller=managed?null:new AbortController(),timer=managed?null:setTimeout(()=>controller!.abort(),cfg.timeoutMs),signal=managed?.signal??controller!.signal;try{const response=await cfg.fetchImpl(url,{signal,headers:{Authorization:`Token ${cfg.apiKey??''}`}});if(!response.ok)return{ok:false,errorCode:'tiingo_http_error',errorMessage:`HTTP ${response.status}`};const json=await response.json() as unknown;try{const bars=asset.family==='fx'?parseFxPayload(json):parseCryptoPayload(json,asset.ticker);return{ok:true,payload:{request,bars},sourceUrl:url};}catch{return{ok:false,errorCode:'tiingo_malformed_live_payload',errorMessage:'Tiingo returned a structurally invalid price payload'};}}catch(error){if(error instanceof Error&&error.name==='AbortError')return{ok:false,errorCode:'tiingo_timeout',errorMessage:'Tiingo request timed out'};return{ok:false,errorCode:'tiingo_fetch_error',errorMessage:'Tiingo request failed'};}finally{if(timer)clearTimeout(timer);}}
+function parseFxPayload(value:unknown):TiingoPriceBar[]{if(!Array.isArray(value))throw new Error('invalid_fx_payload');return value.map(parseBar);}
+function parseCryptoPayload(value:unknown,ticker:string):TiingoPriceBar[]{if(!Array.isArray(value))throw new Error('invalid_crypto_payload');const match=value.find(x=>isRecord(x)&&typeof x.ticker==='string'&&x.ticker.toLowerCase()===ticker);if(!isRecord(match)||!Array.isArray(match.priceData))throw new Error('invalid_crypto_price_data');return match.priceData.map(parseBar);}
+function parseEnvelope(value:unknown):TiingoFixtureResponse{if(!isRecord(value)||!isRecord(value.request)||!Array.isArray(value.bars))throw new Error('tiingo_malformed_payload');const r=value.request;if(typeof r.requestId!=='string'||typeof r.asset!=='string'||typeof r.ticker!=='string'||typeof r.requestedAt!=='string'||(r.sourceMode!=='fixture'&&r.sourceMode!=='live_staging'))throw new Error('tiingo_malformed_request');return{request:r as TiingoPriceHistoryRequest,bars:value.bars.map(parseBar)};}
+function parseBar(value:unknown):TiingoPriceBar{if(!isRecord(value)||typeof value.date!=='string'||Number.isNaN(Date.parse(value.date)))throw new Error('tiingo_invalid_timestamp');const open=value.open,high=value.high,low=value.low,close=value.close;if(typeof open!=='number'||typeof high!=='number'||typeof low!=='number'||typeof close!=='number'||![open,high,low,close].every(Number.isFinite))throw new Error('tiingo_invalid_ohlc_non_finite');if(high<low)throw new Error('tiingo_invalid_ohlc_range');const nullable=(key:string):number|null=>{const v=value[key];if(v===undefined||v===null)return null;if(typeof v!=='number'||!Number.isFinite(v))throw new Error(`tiingo_invalid_${key}`);return v;};return{date:value.date,open,high,low,close,volume:nullable('volume'),adjOpen:nullable('adjOpen'),adjHigh:nullable('adjHigh'),adjLow:nullable('adjLow'),adjClose:nullable('adjClose'),adjVolume:nullable('adjVolume'),divCash:nullable('divCash'),splitFactor:nullable('splitFactor')};}
+function isRecord(value:unknown):value is Record<string,unknown>{return typeof value==='object'&&value!==null&&!Array.isArray(value);}
+function baseResponse(request:ProviderSourceRequest):ProviderSourceResponse{return{requestId:request.requestId,providerId:request.providerId,capability:request.capability,status:'failed',fetchedAt:request.requestedAt,sourceUrl:null,rawPayloadJson:null,errorCode:null,errorMessage:null};}
+function fail(request:ProviderSourceRequest,errorCode:string,errorMessage:string,status:'failed'|'unsupported'='failed'):ProviderSourceResponse{return{...baseResponse(request),status,errorCode,errorMessage};}

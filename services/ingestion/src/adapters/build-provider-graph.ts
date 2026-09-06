@@ -20,8 +20,11 @@ import {
   WorldBankMacroContextAdapter
 } from '@elceo/providers';
 
-export function buildProviderGraph() {
-  const runtimeEnv = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
+export function buildProviderGraph(rawEnv?: Record<string, string | undefined>) {
+  const runtimeEnv = rawEnv ?? (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
+  if (runtimeEnv.APP_ENV === 'staging' || runtimeEnv.APP_ENV === 'production' || runtimeEnv.NODE_ENV === 'production') {
+    throw new Error('legacy_provider_graph_denied_in_deployed_runtime');
+  }
   const env = readProviderEnv(runtimeEnv);
 
   const marketComposite = new MarketDataCompositeAdapter({

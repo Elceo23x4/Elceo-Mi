@@ -21,6 +21,7 @@ const INGESTION_PROVIDERS: IngestionProviderSpec[] = [
   { providerName: 'oecd', category: 'macro_context', requiredKeys: [] },
   { providerName: 'marketaux', category: 'news', requiredKeys: ['MARKETAUX_API_KEY'] },
   { providerName: 'newsapi', category: 'news', requiredKeys: ['NEWSAPI_API_KEY'] },
+  { providerName: 'tiingo_market_data', category: 'market_data', requiredKeys: ['TIINGO_API_KEY'] },
   { providerName: 'gdelt', category: 'geopolitics', requiredKeys: [] }
 ];
 
@@ -42,9 +43,11 @@ export function getAdminProviderCapabilitySummary(env: Record<string, string | u
   const ingestionProviders = INGESTION_PROVIDERS.map((spec) => {
     const missing = spec.requiredKeys.filter((key) => !env[key]);
     const configured = missing.length === 0;
-    const enabled = configured;
-    const reasons = configured ? ['configured'] : missing.map((k) => `missing:${k}`);
-    return { providerName: spec.providerName, category: spec.category, configured, enabled, capabilityStatus: normalizeStatus(configured, enabled), reasons };
+    const credentialPresent = spec.requiredKeys.some((key) => Boolean(env[key]));
+    const productionLiveBlocked = env.APP_ENV === 'production';
+    const enabled = false;
+    const reasons = configured ? ['configured', 'live_disabled', productionLiveBlocked ? 'production_live_blocked' : 'staging_live_not_authorized'] : missing.map((k) => `missing:${k}`);
+    return { providerName: spec.providerName, category: spec.category, credentialPresent, configured, liveDisabled: true, stagingLiveAuthorized: false, stagingLiveValidated: false, productionLiveBlocked, enabled, capabilityStatus: normalizeStatus(configured, enabled), reasons };
   }).sort((a, b) => a.category.localeCompare(b.category) || a.providerName.localeCompare(b.providerName));
 
   return { generatedAt: new Date().toISOString(), notificationProviders, ingestionProviders };

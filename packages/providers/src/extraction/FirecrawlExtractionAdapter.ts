@@ -9,15 +9,7 @@ export class FirecrawlExtractionAdapter implements CrawlerProvider {
 
   async extract(url: string): Promise<NormalizedExtractedDocument | null> {
     if (!this.apiKey) {
-      return ensureUtc({
-        type: 'extracted_document' as const,
-        provider: 'firecrawl' as const,
-        documentId: `firecrawl-${encodeURIComponent(url).slice(0, 12)}`,
-        sourceUrl: url,
-        extractedText: 'Firecrawl API key missing; extraction fallback content.',
-        extractedAtUtc: new Date().toISOString(),
-        documentClass: 'other' as const
-      });
+      return null;
     }
 
     try {
@@ -30,12 +22,14 @@ export class FirecrawlExtractionAdapter implements CrawlerProvider {
         body: JSON.stringify({ url, formats: ['markdown'] })
       });
 
+      const extractedText = payload.data?.markdown?.trim();
+      if (!extractedText) return null;
       return ensureUtc({
         type: 'extracted_document' as const,
         provider: 'firecrawl' as const,
         documentId: `firecrawl-${encodeURIComponent(url).slice(0, 12)}`,
         sourceUrl: url,
-        extractedText: payload.data?.markdown ?? '',
+        extractedText,
         extractedAtUtc: new Date().toISOString(),
         documentClass: 'other' as const
       });

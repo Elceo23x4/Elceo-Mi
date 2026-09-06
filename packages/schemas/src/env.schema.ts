@@ -178,8 +178,14 @@ export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
   }
 
   const tiingoLiveEnabled = env.TIINGO_LIVE_ENABLED === 'true' || env.TIINGO_LIVE_ENABLED === '1';
+  if (env.TIINGO_LIVE_ENABLED !== undefined && !['true', 'false', '1', '0'].includes(env.TIINGO_LIVE_ENABLED)) {
+    errors.push('TIINGO_LIVE_ENABLED must be true, false, 1, or 0');
+  }
   if (tiingoLiveEnabled && !env.TIINGO_API_KEY) {
     errors.push('TIINGO_API_KEY is required when TIINGO_LIVE_ENABLED=true');
+  }
+  if (appEnv === 'production' && tiingoLiveEnabled) {
+    errors.push('production live Tiingo activation remains blocked');
   }
   if (env.TIINGO_BASE_URL && !isValidAbsoluteHttpUrl(env.TIINGO_BASE_URL)) {
     errors.push('TIINGO_BASE_URL must be an absolute http(s) URL');

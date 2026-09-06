@@ -125,3 +125,17 @@ export function applySentryPrivacyPolicy(event: ErrorEvent, _hint?: EventHint): 
     contexts: runtime ? { runtime } : undefined
   };
 }
+
+/**
+ * Preserve the browser SDK's completed debug-image association after applying
+ * the common allowlist. In @sentry/nextjs 10.73.0, DebugMeta contains only the
+ * SDK-generated `images` array; keeping the object intact avoids corrupting
+ * source-map, wasm, or Mach-O image variants as that SDK contract evolves.
+ */
+export function applyBrowserSentryPrivacyPolicy(event: ErrorEvent, hint?: EventHint): ErrorEvent {
+  const sanitized = applySentryPrivacyPolicy(event, hint);
+
+  return event.debug_meta
+    ? { ...sanitized, debug_meta: event.debug_meta }
+    : sanitized;
+}

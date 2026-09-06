@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import type { ErrorEvent } from '@sentry/nextjs';
-import { allowedCaptureTags, applySentryPrivacyPolicy, isValidPublicDsn } from '../lib/sentry-policy';
+import { allowedCaptureTags, applyBrowserSentryPrivacyPolicy, applySentryPrivacyPolicy, isValidPublicDsn } from '../lib/sentry-policy';
 import { browserSentryDsn, isSentryBrowserBuildAuthorized, sentryBrowserBuildEnv, sentryBrowserIngestOrigin, sentryBrowserRelease, sentryConnectSources, sentryRelease, serverSentryDsn } from '../lib/sentry-dsn.mjs';
 
 const PUBLIC_KEY = '0123456789abcdef0123456789abcdef';
@@ -52,6 +52,36 @@ export function runSentryPrivacyPolicyTests() {
     route: '/dashboard',
     requestId: 'request-123'
   });
+
+  const debugMeta = {
+    images: [{
+      type: 'sourcemap' as const,
+      code_file: 'https://staging.elceo.app/_next/static/chunks/app.js',
+      debug_id: '12345678-1234-4234-8234-123456789abc'
+    }]
+  };
+  const ambientBrowserEvent = {
+    type: undefined,
+    message: 'private journal content',
+    debug_meta: debugMeta,
+    request: { data: 'provider payload' },
+    user: { email: 'private@example.com' },
+    extra: { customer: 'cus_private' },
+    breadcrumbs: [{ message: 'authorization material' }],
+    contexts: { device: { name: 'private device' } },
+    tags: { category: 'diagnostic', arbitrary: 'private' }
+  } as ErrorEvent;
+  const browserFiltered = applyBrowserSentryPrivacyPolicy(ambientBrowserEvent);
+  assert.equal(browserFiltered.debug_meta, debugMeta);
+  assert.equal(browserFiltered.debug_meta?.images, debugMeta.images);
+  assert.deepEqual(browserFiltered.debug_meta?.images?.[0], debugMeta.images[0]);
+  assert.equal(browserFiltered.request, undefined);
+  assert.equal(browserFiltered.user, undefined);
+  assert.equal(browserFiltered.extra, undefined);
+  assert.equal(browserFiltered.breadcrumbs, undefined);
+  assert.equal(browserFiltered.contexts, undefined);
+  assert.deepEqual(browserFiltered.tags, { category: 'diagnostic' });
+  assert.equal(applySentryPrivacyPolicy(ambientBrowserEvent).debug_meta, undefined);
 
   assert.deepEqual(allowedCaptureTags('api.checkout', {
     requestId: 'request-456',
@@ -155,7 +185,24 @@ export function runSentryPrivacyPolicyTests() {
   assert.match(nextConfigSource, /sentryBrowserBuildEnv\(process\.env\)/);
 
   const serverInstrumentationSource = readFileSync('instrumentation.ts', 'utf8');
+  const browserInstrumentationSource = readFileSync('instrumentation-client.ts', 'utf8');
+  assert.match(browserInstrumentationSource, /beforeSend: applyBrowserSentryPrivacyPolicy/);
+  assert.equal(browserInstrumentationSource.includes('beforeSend: applySentryPrivacyPolicy'), false);
+  assert.match(serverInstrumentationSource, /beforeSend: applySentryPrivacyPolicy/);
+  assert.equal(serverInstrumentationSource.includes('applyBrowserSentryPrivacyPolicy'), false);
   assert.match(serverInstrumentationSource, /release: sentryRelease\(process\.env\)/);
   assert.equal(serverInstrumentationSource.includes('process.env.SENTRY_RELEASE'), false);
+
+  const diagnosticPageSource = readFileSync('app/diagnostics/sentry-symbolication/page.tsx', 'utf8');
+  const diagnosticClientSource = readFileSync('app/diagnostics/sentry-symbolication/SentrySymbolicationProbe.tsx', 'utf8');
+  assert.match(diagnosticPageSource, /process\.env\.APP_ENV !== 'staging'/);
+  assert.match(diagnosticPageSource, /notFound\(\)/);
+  assert.match(diagnosticPageSource, /dynamic = 'force-dynamic'/);
+  assert.match(diagnosticPageSource, /robots: \{ index: false, follow: false \}/);
+  assert.match(diagnosticClientSource, /process\.env\.NEXT_PUBLIC_APP_ENV !== 'staging'/);
+  assert.match(diagnosticClientSource, /new Error\('ELCEO Sentry native symbolication probe'\)/);
+  assert.match(diagnosticClientSource, /Sentry\.captureException\(error/);
+  assert.match(diagnosticClientSource, /ELCEOSentryNativeSymbolicationProbeV2/);
+  assert.equal(/(?:\.stack\s*=|defineProperty\s*\([^,]+,\s*['"]stack|filename\s*:|lineno\s*:|colno\s*:|sourceURL|\beval\s*\()/.test(diagnosticClientSource), false);
 
 }

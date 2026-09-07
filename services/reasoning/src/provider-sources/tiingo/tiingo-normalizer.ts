@@ -12,9 +12,6 @@ export function mapAssetToTiingoTicker(asset: string): string {
 
 export function mapTiingoFrequencyToTimeframe(frequency: string | null): string {
   if (frequency === 'daily' || frequency === null) return '1d';
-  if (frequency === 'weekly') return '1w';
-  if (frequency === 'monthly') return '1M';
-  if (frequency === 'hourly') return '1h';
   throw new Error('tiingo_unsupported_frequency');
 }
 

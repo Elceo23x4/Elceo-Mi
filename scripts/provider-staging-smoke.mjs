@@ -33,7 +33,7 @@ if (!existsSync(gatePath) || !existsSync(validationPath) || !existsSync(tiingoPa
 const { executeProviderApiGateRequest } = require(fileURLToPath(gatePath));
 const { buildCapturedPayloadContract, hashPayload } = require(fileURLToPath(validationPath));
 const { TiingoMarketDataAdapter } = require(fileURLToPath(tiingoPath));
-const fakeFetch = async () => ({ ok: true, status: 200, json: async () => ([{ date: '2026-01-01T00:00:00.000Z', open: 1.1, high: 1.2, low: 1, close: 1.15, volume: null }]) });
+const fakeFetch = async () => ({ ok: true, status: 200, json: async () => ([{ ticker: 'eurusd', date: '2026-01-01T00:00:00.000Z', open: 1.1, high: 1.2, low: 1, close: 1.15, volume: null }]) });
 const adapter = new TiingoMarketDataAdapter({ mode: 'live_enabled', liveEnabled: true, apiKey: process.env[secretName], fetchImpl: process.env.ELCEO_PROVIDER_STAGING_SMOKE_FAKE_ADAPTER === '1' ? fakeFetch : undefined });
 const requestId = `staging-smoke-${provider}-${Date.now()}`;
 const providerRequestParams = { startDate: '2026-01-01', endDate: '2026-01-02', frequency: 'daily' };

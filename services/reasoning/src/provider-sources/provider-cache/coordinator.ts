@@ -79,7 +79,8 @@ export function sanitizeProviderSharedFailureReason(value: unknown): ProviderSha
   if (reason === 'provider_cache_entry_too_large') return reason;
   if (reason === 'provider_cache_local_capacity_exceeded') return reason;
   if (reason === 'provider_singleflight_ownership_lost') return reason;
-  if (reason === 'provider_singleflight_wait_timeout') return reason;
+    if (reason === 'provider_singleflight_wait_timeout') return reason;
+  if (reason === 'provider_evaluation_result_not_shareable') return reason;
   if (reason === 'provider_resilience_policy_hash_mismatch' || reason === 'provider_resilience_policy_inactive' || reason === 'provider_resilience_policy_invalid_identity' || reason === 'provider_resilience_policy_invalid_integer' || reason === 'provider_resilience_policy_missing' || reason === 'provider_resilience_policy_not_approved' || reason === 'provider_resilience_policy_out_of_bounds' || reason === 'provider_resilience_policy_scope_mismatch') return reason;
   if (reason === 'provider_resilience_open' || reason === 'provider_resilience_probe_limit' || reason === 'provider_resilience_unavailable') return reason;
   if (reason === 'settlement_unconfirmed') return 'provider_settlement_unconfirmed';
@@ -116,7 +117,8 @@ export class ProviderCacheCoordinator {
     owner: ProviderCacheOwnerExecution,
     staleFailureAuthorizer: ProviderCacheStaleFailureAuthorizer = () => true,
   ): Promise<ProviderCacheSharedOutcome> {
-    const hit = this.l1.get(identity, policy);
+    const noStore = policy.payloadStorageMode === 'evaluation_no_store';
+    const hit = noStore ? undefined : this.l1.get(identity, policy);
     if (hit) return { material: hit.material, layer: 'l1', freshness: 'fresh', role: 'none', entry: hit };
     const existing = this.inflight.get(identity.hash);
     if (existing) return { ...(await existing), role: 'follower' };
@@ -171,8 +173,9 @@ export class ProviderCacheCoordinator {
     owner: ProviderCacheOwnerExecution,
     staleFailureAuthorizer: ProviderCacheStaleFailureAuthorizer,
   ): Promise<ProviderCacheSharedOutcome> {
+    const noStore = policy.payloadStorageMode === 'evaluation_no_store';
     let hadStaleCandidate = false;
-    try {
+    if (!noStore) try {
       const read = await this.store.read(identity, policy);
       if (read.state === 'FRESH' && read.entry) {
         this.l1.set(identity, read.entry, policy);
@@ -194,7 +197,7 @@ export class ProviderCacheCoordinator {
           // newly-free flight cannot cause a duplicate upstream execution.
           let postAcquire;
           try {
-            postAcquire = await this.store.read(identity, policy);
+            postAcquire = noStore ? { state: 'MISS' as const } : await this.store.read(identity, policy);
           } catch {
             await this.store.releaseOwnerSafely(identity, token).catch(() => false);
             return this.failureOrStale(identity, policy, 'follower', 'provider_cache_control_unavailable', hadStaleCandidate, staleFailureAuthorizer);
@@ -227,7 +230,7 @@ export class ProviderCacheCoordinator {
       const backoff = Math.min(250, 25 * 2 ** Math.min(4, Math.floor(elapsed / 100)));
       await new Promise((resolve) => setTimeout(resolve, backoff + Math.floor(Math.random() * 20)));
       try {
-        const read = await this.store.read(identity, policy);
+        const read = noStore ? { state: 'MISS' as const } : await this.store.read(identity, policy);
         if (read.state === 'FRESH' && read.entry) {
           this.l1.set(identity, read.entry, policy);
           return { material: read.entry.material, layer: 'l2', freshness: 'fresh', role: 'follower', entry: read.entry };
@@ -235,6 +238,9 @@ export class ProviderCacheCoordinator {
         hadStaleCandidate = read.state === 'STALE_BUT_ELIGIBLE';
         const state = await this.store.readFlightState(identity);
         if (state.completion) {
+          if (state.completion.state === 'success_no_store') return {
+            failureReason: 'provider_evaluation_result_not_shareable', layer: 'none', freshness: 'miss', role: 'follower',
+          };
           return this.failureOrStale(identity, policy, 'follower', state.completion.reason, hadStaleCandidate, staleFailureAuthorizer);
         }
       } catch {
@@ -269,6 +275,11 @@ export class ProviderCacheCoordinator {
       const executed = await owner(abort.signal);
       const response = executed.response;
       if (!lost && response?.payloadSchemaStatus === 'valid' && executed.settlementState === 'settled_committed') {
+        if (noStore) {
+          const completed = await this.store.completeSuccessWithoutMaterial?.(identity, token, policy.completionTtlMs) ?? false;
+          if (!completed) return this.failureOrStale(identity, policy, 'owner', 'provider_singleflight_ownership_lost', false, staleFailureAuthorizer);
+          return { layer: 'none', freshness: 'miss', role: 'owner' };
+        }
         const material = materialFromResponse(response, identity.fingerprint, policy);
         const publication = await this.store.publishSuccessAndComplete(identity, token, material, policy);
         if (publication.published) {

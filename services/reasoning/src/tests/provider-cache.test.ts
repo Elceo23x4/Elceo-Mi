@@ -24,6 +24,7 @@ import { buildProviderRequestFingerprint, MemoryProviderControlStore, type Provi
 import { buildTestProviderControlPolicy } from './provider-control.test.js';
 import { MemoryProviderResilienceStore, type ProviderProbeLease, type ProviderResilienceOutcome, type ProviderResiliencePolicy, type ProviderResilienceStore } from '../provider-sources/provider-resilience/index.js';
 import { buildTestProviderResiliencePolicy } from './provider-resilience.test.js';
+import { resolveProviderEvaluationProfile, TIINGO_EVALUATION_CACHE_POLICY } from '../provider-sources/provider-evaluation-certification.js';
 
 class TestRedisResilienceStore implements ProviderResilienceStore {
   readonly kind = 'redis' as const;
@@ -113,6 +114,13 @@ class TestCacheStore implements ProviderCacheStore {
     this.token = undefined;
     return true;
   }
+  async completeSuccessWithoutMaterial(_identity: ProviderCacheIdentity, token: string): Promise<boolean> {
+    if (this.token !== token) return false;
+    this.entry = undefined;
+    this.completion = { state: 'success_no_store', completedAt: Date.now() };
+    this.token = undefined;
+    return true;
+  }
   async releaseOwnerSafely(_identity: ProviderCacheIdentity, token: string): Promise<boolean> {
     if (this.token !== token) return false;
     this.token = undefined;
@@ -149,6 +157,12 @@ function compatibilityResponse(requestId: string, marker: string): ProviderRunti
 }
 
 export async function runProviderCacheTests(): Promise<void> {
+  assert.equal(resolveProviderEvaluationProfile('tiingo_market_data', 'market_price_history', 'eur_usd')?.credentialPoolId, 'evaluation_free');
+  assert.equal(resolveProviderEvaluationProfile('newsapi', 'market_price_history', 'eur_usd'), null);
+  assertProviderCachePolicyAuthority(TIINGO_EVALUATION_CACHE_POLICY, { sourceId: 'tiingo_market_data', capabilityId: 'market_price_history' }, 'evaluation_free');
+  for (const overrides of [{ freshTtlMs: 1 }, { staleIfErrorTtlMs: 1 }, { maxEntryBytes: 1 }]) {
+    assert.throws(() => assertProviderCachePolicyAuthority(buildTestProviderCachePolicy({ payloadStorageMode: 'evaluation_no_store', freshTtlMs: 0, staleIfErrorTtlMs: 0, maxEntryBytes: 0, ...overrides }), { sourceId: 'tiingo_market_data', capabilityId: 'market_price_history' }, 'primary'), /zero_payload_storage/);
+  }
   const policy = buildTestProviderCachePolicy();
   assertProviderCachePolicyAuthority(policy, { sourceId: policy.sourceId, capabilityId: policy.capabilityId }, 'primary');
   for (const bad of [buildTestProviderCachePolicy({ status: 'test_only' }), buildTestProviderCachePolicy({ status: 'disabled' })]) {

@@ -28,3 +28,4 @@ export * from './provider-api-gate';
 export * from './provider-control/index';
 export * from './provider-cache/index';
 export * from './provider-resilience/index';
+export * from './provider-evaluation-certification';

@@ -21,7 +21,7 @@ import { buildWeightedEvidenceAssemblyReport, buildWeightedEvidenceSnapshot, get
 import { buildMarketCognitionAssemblyReport as buildCognitionReport, buildMarketCognitionSnapshot as buildCognitionSnapshot } from '../market-cognition/index';
 import { buildSeoContentFeedAssemblyReport as buildSeoFeedReport, buildSeoContentFeedSnapshot as buildSeoFeedSnapshot } from '../seo-feed/index';
 import { getSeoContentArchitectureSnapshot, listSeoPagesForAsset, listSeoPagesForEvidenceClass } from '../seo-content/index';
-import { ScheduledIngestionService, ScheduledIngestionQueryService, getScheduledIngestionPolicySnapshot, getScheduledIngestionRunReplay } from '../scheduled-ingestion/index';
+import { ScheduledIngestionService, ScheduledIngestionQueryService, getScheduledIngestionPolicySnapshot, getScheduledIngestionRunReplay, type ScheduledIngestionExecutionOptions } from '../scheduled-ingestion/index';
 import type { ScheduledIngestionRunRepository } from '../persistence/scheduled-ingestion-repository';
 import { buildProviderActivationChecklist, getProviderSourceDescriptor, getProviderSourceRegistrySnapshot, listProviderSourceGaps, listProviderSourcesByFamily, listProviderSourcesForAsset } from '../provider-source-registry/index';
 import { buildFixtureEvidenceForScenario, buildFixtureExpectedOutput, getLaunchAssetFixtureAssetPack, getLaunchAssetFixtureCoverageReport, getLaunchAssetFixtureLibrary, getLaunchAssetFixtureScenario, listLaunchAssetFixtureScenarios } from '../launch-asset-fixtures/index';
@@ -49,14 +49,14 @@ export class CanonicalMarketIntelligenceBoundaryService {
   private readonly scheduledIngestionService: ScheduledIngestionService | null = null;
   private readonly scheduledIngestionQuery: ScheduledIngestionQueryService | null = null;
   private readonly scheduledIngestionRepository: ScheduledIngestionRunRepository | null = null;
-  constructor(private readonly marketEvidenceRepository: MarketEvidenceRegistrySnapshotRepository, private readonly seoRepository: SeoContentArchitectureSnapshotRepository, requestRepository?: ProviderSourceRequestRepository, responseRepository?: ProviderSourceResponseRepository, payloadRepository?: NormalizedMarketEvidencePayloadRepository, scheduledIngestionRepository?: ScheduledIngestionRunRepository) {
+  constructor(private readonly marketEvidenceRepository: MarketEvidenceRegistrySnapshotRepository, private readonly seoRepository: SeoContentArchitectureSnapshotRepository, requestRepository?: ProviderSourceRequestRepository, responseRepository?: ProviderSourceResponseRepository, payloadRepository?: NormalizedMarketEvidencePayloadRepository, scheduledIngestionRepository?: ScheduledIngestionRunRepository, scheduledExecutionOptions?:ScheduledIngestionExecutionOptions) {
     this.scheduledIngestionRepository = scheduledIngestionRepository ?? null;
     if (requestRepository && responseRepository && payloadRepository) {
       this.ingestion = new IngestionPersistenceService(requestRepository, responseRepository, payloadRepository);
       this.query = new ProviderSourceQueryService(requestRepository, responseRepository, payloadRepository);
       this.replay = new ProviderSourceReplayService(requestRepository, responseRepository, payloadRepository);
       if (this.scheduledIngestionRepository) {
-        this.scheduledIngestionService = new ScheduledIngestionService(this.ingestion, this.scheduledIngestionRepository);
+        this.scheduledIngestionService = new ScheduledIngestionService(this.ingestion, this.scheduledIngestionRepository,scheduledExecutionOptions);
       }
     }
     if (this.scheduledIngestionRepository) this.scheduledIngestionQuery = new ScheduledIngestionQueryService(this.scheduledIngestionRepository);

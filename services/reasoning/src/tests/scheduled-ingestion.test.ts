@@ -5,7 +5,7 @@ import { MemoryScheduledIngestionRunRepository } from '../persistence/scheduled-
 import { IngestionPersistenceService } from '../provider-sources/ingestion-persistence-service.js';
 import type { ScheduledIngestionJobPolicy } from '@elceo/types';
 import { CanonicalMarketIntelligenceBoundaryService } from '../runtime/canonical-market-intelligence-boundary.js';
-import { computeNextRetryAt, deserializeScheduledIngestionRunRecord, deriveRetryStatus, deriveStalenessStatus, getDefaultScheduledIngestionPolicies, ScheduledIngestionService, serializeScheduledIngestionRunRecord } from '../scheduled-ingestion/index.js';
+import { computeBoundedProviderRetryAt, computeNextRetryAt, deserializeScheduledIngestionRunRecord, deriveRetryStatus, deriveStalenessStatus, getDefaultScheduledIngestionPolicies, isRetryableProviderFailure, ScheduledIngestionService, serializeScheduledIngestionRunRecord } from '../scheduled-ingestion/index.js';
 
 export async function runScheduledIngestionTests(){
   const policies=getDefaultScheduledIngestionPolicies();
@@ -17,6 +17,9 @@ export async function runScheduledIngestionTests(){
   assert.equal(validateScheduledIngestionJobPolicy({}).ok,false);
   assert.equal(deriveRetryStatus('failed',0,1),'retry_scheduled');
   assert.equal(computeNextRetryAt('2026-01-01T00:00:00.000Z',1,30),'2026-01-01T00:01:00.000Z');
+  assert.equal(computeBoundedProviderRetryAt('2026-01-01T00:00:00.000Z',0,30,undefined,.5),'2026-01-01T00:00:30.000Z');
+  assert.equal(computeBoundedProviderRetryAt('2026-01-01T00:00:00.000Z',1,30,90_000,.5),'2026-01-01T00:01:30.000Z');
+  assert.equal(isRetryableProviderFailure('provider_5xx'),true);assert.equal(isRetryableProviderFailure('tiingo_auth_failed'),false);
   assert.equal(deriveStalenessStatus('2026-01-01T00:00:00.000Z','2026-01-01T00:01:00.000Z',5,15),'fresh');
   assert.equal(deriveStalenessStatus('2026-01-01T00:00:00.000Z','2026-01-01T00:10:00.000Z',5,15),'stale');
   assert.equal(deriveStalenessStatus('2026-01-01T00:00:00.000Z','2026-01-01T00:20:00.000Z',5,15),'expired');
@@ -70,6 +73,11 @@ export async function runScheduledIngestionTests(){
     assert.equal(result.run.errorCode, reason);
   }
   assert.equal(blockedCalls, 0);
+
+  await runRepo.saveRun({...ti.run,runId:'retry-early',runMode:'staging_live',status:'failed',retryStatus:'retry_scheduled',retryCount:0,nextRetryAt:'2026-03-01T00:01:00.000Z'});
+  const early=await svc.retryScheduledIngestionRun('retry-early','2026-03-01T00:00:59.000Z');assert.equal(early.run.errorCode,'provider_retry_too_early');assert.equal(blockedCalls,0);
+  await runRepo.saveRun({...ti.run,runId:'retry-exhausted',runMode:'staging_live',status:'failed',retryStatus:'exhausted',retryCount:2,nextRetryAt:null});
+  const exhausted=await svc.retryScheduledIngestionRun('retry-exhausted','2026-03-01T00:02:00.000Z');assert.equal(exhausted.run.errorCode,'provider_retry_not_authorized');assert.equal(blockedCalls,0);
   const liveBlockedSvc = new ScheduledIngestionService(blockingIngestion, new MemoryScheduledIngestionRunRepository());
   assert.equal((await liveBlockedSvc.runScheduledIngestionJob(tiJob,'production_live','2026-02-02T00:00:00.000Z')).run.errorCode,'production_live_not_approved');
   assert.equal((await liveBlockedSvc.runScheduledIngestionJob(tiJob,'staging_live','2026-02-03T00:00:00.000Z')).run.errorCode,'staging_live_requires_explicit_allow');

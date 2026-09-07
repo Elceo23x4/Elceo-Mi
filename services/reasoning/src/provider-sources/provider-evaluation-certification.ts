@@ -1,10 +1,10 @@
 import type { ProviderCapabilityId } from './provider-api-gate';
-import type { ProviderCachePolicy, ProviderCachePolicyResolver, ProviderPayloadStorageMode } from './provider-cache';
-import { hashProviderCachePolicy } from './provider-cache';
-import type { ProviderControlPolicy, ProviderControlPolicyResolver } from './provider-control';
-import { hashProviderControlPolicy } from './provider-control';
-import type { ProviderResiliencePolicy, ProviderResiliencePolicyResolver } from './provider-resilience';
-import { providerResiliencePolicyHash } from './provider-resilience';
+import type { ProviderCachePolicy, ProviderCachePolicyResolver, ProviderPayloadStorageMode } from './provider-cache/index.js';
+import { hashProviderCachePolicy } from './provider-cache/index.js';
+import type { ProviderControlPolicy, ProviderControlPolicyResolver } from './provider-control/index.js';
+import { hashProviderControlPolicy } from './provider-control/index.js';
+import type { ProviderResiliencePolicy, ProviderResiliencePolicyResolver } from './provider-resilience/index.js';
+import { providerResiliencePolicyHash } from './provider-resilience/index.js';
 
 export type ProviderEvaluationProfile = {
   profileId: string; profileVersion: string; sourceId: string; capabilityId: ProviderCapabilityId;

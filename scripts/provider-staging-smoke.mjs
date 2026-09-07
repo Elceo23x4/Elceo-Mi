@@ -1,23 +1,13 @@
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { evaluateProviderStagingSmokePreflight } from './provider-evaluation-preflight.mjs';
 
-function refuse(condition, message) { if (condition) { console.error(`provider evaluation smoke refused:${message}`); process.exit(2); } }
-refuse(process.env.APP_ENV !== 'staging', 'APP_ENV_must_be_staging');
-refuse(process.env.NODE_ENV !== 'production', 'NODE_ENV_must_be_production');
-refuse(process.env.ELCEO_PROVIDER_MODE !== 'fixture', 'normal_provider_mode_must_be_fixture');
-for (const key of ['ELCEO_LIVE_PROVIDER_ACTIVATION','ELCEO_ALLOW_LIVE_FETCHES','TIINGO_LIVE_ENABLED']) refuse(process.env[key] !== 'false', `${key}_must_be_false`);
-refuse(process.env.ELCEO_PROVIDER_STAGING_SMOKE !== '1', 'operator_opt_in_required');
-refuse(process.env.ELCEO_PROVIDER_EVALUATION_MODE !== 'evaluation_no_store', 'evaluation_no_store_required');
-refuse(process.env.ELCEO_PROVIDER_ACTIVATION_MODE === 'production_live_allowed', 'production_activation_not_approved');
-refuse(!process.env.REDIS_URL, 'REDIS_URL_required');
-refuse(!process.env.TIINGO_API_KEY, 'TIINGO_API_KEY_required');
+function refuse(condition, reason) { if (condition) { console.error(`provider evaluation smoke refused:${reason}`); process.exit(2); } }
 
-const provider=process.env.ELCEO_PROVIDER_SOURCE_ID??'tiingo_market_data';
-const capability=process.env.ELCEO_PROVIDER_CAPABILITY_ID??'market_price_history';
-const asset=process.env.ELCEO_PROVIDER_ASSET??'eur_usd';
-const frequency=process.env.ELCEO_PROVIDER_FREQUENCY??'daily';
-refuse(frequency!=='daily','frequency_not_allowlisted');
+const preflight=evaluateProviderStagingSmokePreflight(process.env);
+if (!preflight.ok) { console.error(`provider evaluation smoke refused:${preflight.reason}`); process.exit(2); }
+const {provider,capability,asset,frequency}=preflight;
 const require=createRequire(import.meta.url);
 const root=new URL('../services/reasoning/dist-test-cjs/services/reasoning/src/provider-sources/',import.meta.url);
 const modules=['provider-api-gate.cjs','provider-evaluation-certification.cjs','provider-cache/index.cjs','provider-control/index.cjs','provider-resilience/index.cjs','tiingo/tiingo-adapter.cjs'];

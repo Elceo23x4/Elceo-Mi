@@ -150,6 +150,7 @@ export type ProviderCacheSharedOutcome = {
   freshness: 'fresh' | 'stale' | 'miss';
   role: 'owner' | 'follower' | 'none';
   entry?: ProviderCacheEntry;
+  completionState?: 'success_no_store';
 };
 export type ProviderCacheOwnerExecution = (signal: AbortSignal) => Promise<{
   response: ProviderRuntimeResponse | null;

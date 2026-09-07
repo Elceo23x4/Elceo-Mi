@@ -121,7 +121,15 @@ export class ProviderCacheCoordinator {
     const hit = noStore ? undefined : this.l1.get(identity, policy);
     if (hit) return { material: hit.material, layer: 'l1', freshness: 'fresh', role: 'none', entry: hit };
     const existing = this.inflight.get(identity.hash);
-    if (existing) return { ...(await existing), role: 'follower' };
+    if (existing) {
+      const shared = await existing;
+      if (shared.completionState === 'success_no_store') return {
+        completionState: 'success_no_store',
+        failureReason: 'provider_evaluation_result_not_shareable',
+        layer: 'none', freshness: 'miss', role: 'follower',
+      };
+      return { ...shared, role: 'follower' };
+    }
     if (this.inflight.size >= this.maxInflight) {
       return { failureReason: 'provider_cache_local_capacity_exceeded', layer: 'none', freshness: 'miss', role: 'none' };
     }
@@ -190,6 +198,16 @@ export class ProviderCacheCoordinator {
     let role: 'owner' | 'follower' = 'follower';
     while (Date.now() < deadline) {
       try {
+        // No-store completion is the authoritative coalescing result. Check it
+        // before acquisition because acquiring a new generation clears the
+        // prior completion marker and could otherwise duplicate the call.
+        if (noStore) {
+          const prior = await this.store.readFlightState(identity);
+          if (prior.completion?.state === 'success_no_store') return {
+            completionState: 'success_no_store', failureReason: 'provider_evaluation_result_not_shareable',
+            layer: 'none', freshness: 'miss', role: 'follower',
+          };
+        }
         if (await this.store.tryAcquireFlight(identity, token, policy.flightLeaseMs)) {
           // Publication and flight release are atomic, but a follower may have
           // observed MISS immediately before the prior owner published. Re-read
@@ -239,7 +257,7 @@ export class ProviderCacheCoordinator {
         const state = await this.store.readFlightState(identity);
         if (state.completion) {
           if (state.completion.state === 'success_no_store') return {
-            failureReason: 'provider_evaluation_result_not_shareable', layer: 'none', freshness: 'miss', role: 'follower',
+            completionState: 'success_no_store', failureReason: 'provider_evaluation_result_not_shareable', layer: 'none', freshness: 'miss', role: 'follower',
           };
           return this.failureOrStale(identity, policy, 'follower', state.completion.reason, hadStaleCandidate, staleFailureAuthorizer);
         }
@@ -278,7 +296,7 @@ export class ProviderCacheCoordinator {
         if (noStore) {
           const completed = await this.store.completeSuccessWithoutMaterial?.(identity, token, policy.completionTtlMs) ?? false;
           if (!completed) return this.failureOrStale(identity, policy, 'owner', 'provider_singleflight_ownership_lost', false, staleFailureAuthorizer);
-          return { layer: 'none', freshness: 'miss', role: 'owner' };
+          return { completionState: 'success_no_store', layer: 'none', freshness: 'miss', role: 'owner' };
         }
         const material = materialFromResponse(response, identity.fingerprint, policy);
         const publication = await this.store.publishSuccessAndComplete(identity, token, material, policy);

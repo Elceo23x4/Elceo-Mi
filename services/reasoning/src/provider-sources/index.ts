@@ -25,6 +25,7 @@ export * from './commodities-metals/index';
 export * from './crypto-earnings-geopolitical/index';
 
 export * from './provider-api-gate';
+export * from './provider-adapter-resolver';
 export * from './provider-control/index';
 export * from './provider-cache/index';
 export * from './provider-resilience/index';

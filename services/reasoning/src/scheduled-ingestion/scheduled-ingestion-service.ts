@@ -3,26 +3,44 @@ import { CftcCotAdapter } from '../provider-sources/cot/cot-adapter';
 import { TiingoMarketDataAdapter } from '../provider-sources/tiingo/tiingo-adapter';
 import { IngestionPersistenceService, type IngestionPersistenceReport } from '../provider-sources/ingestion-persistence-service';
 import type { ScheduledIngestionRunRepository } from '../persistence/scheduled-ingestion-repository';
-import { deriveRetryStatus } from './retry-policy';
+import { computeBoundedProviderRetryAt, deriveRetryStatus, isRetryableProviderFailure } from './retry-policy';
 import { deriveStalenessStatus } from './staleness-policy';
 import { getScheduledIngestionPolicy } from './schedule-policies';
-import { resolveProviderRuntimeRequest, type ProviderActivationMode, type ProviderApiGatePolicy, type ProviderRuntimeResolverDecision, type ProviderRuntimeRequest, type ProviderRuntimeResponse } from '../provider-sources/provider-api-gate';
+import { executeProviderApiGateRequest, resolveProviderRuntimeRequest, type ProviderActivationMode, type ProviderApiGatePolicy, type ProviderRuntimeResolverDecision, type ProviderRuntimeRequest, type ProviderRuntimeResponse } from '../provider-sources/provider-api-gate';
+import type { TrustedProviderExecutionResolver } from '../provider-sources/provider-adapter-resolver';
 
 export type ScheduledIngestionGatePolicyResolver = (policy: ScheduledIngestionJobPolicy, runMode: ScheduledIngestionRunMode, requestedAt: string) => ProviderApiGatePolicy | undefined;
 
 export class ScheduledIngestionService {
-  constructor(private readonly ingestion: IngestionPersistenceService, private readonly runs: ScheduledIngestionRunRepository, private readonly gatePolicyResolver?: ScheduledIngestionGatePolicyResolver) {}
+  constructor(private readonly ingestion: IngestionPersistenceService, private readonly runs: ScheduledIngestionRunRepository, private readonly gatePolicyResolver?: ScheduledIngestionGatePolicyResolver, private readonly liveExecutionResolver?: TrustedProviderExecutionResolver, private readonly retryJitter:()=>number=()=>0.5) {}
 
   async runScheduledIngestionJob(jobId: string, modeOverride?: ScheduledIngestionRunMode, startedAt?: string): Promise<ScheduledIngestionRunReport> {
     const policy = getScheduledIngestionPolicy(jobId);
     const runMode = modeOverride ?? policy?.runMode ?? 'dry_run_fixture';
     const at = startedAt ?? new Date().toISOString();
     if (!policy) return this.persistSimple(jobId, runMode, at, 'skipped', 'unsupported_job_id');
-    if (runMode === 'production_live' || runMode === 'staging_live') {
+    if (runMode === 'production_live') {
       const gate = this.resolveGate(policy, runMode, at);
       return this.persistSimple(jobId, runMode, at, 'blocked', gate.reason, policy, gate);
     }
+    if (runMode === 'staging_live') return this.executeStagingLive(policy,at,`run-${jobId}-${at}`);
     return this.runScheduledIngestionDryRun(jobId, at);
+  }
+
+  private async executeStagingLive(policy:ScheduledIngestionJobPolicy,requestedAt:string,runId:string):Promise<ScheduledIngestionRunReport>{
+    const preflight=this.resolveGate(policy,'staging_live',requestedAt);
+    if(!preflight.allowed)return this.persistSimple(policy.jobId,'staging_live',requestedAt,'blocked',preflight.reason,policy,preflight);
+    const resolved=await this.liveExecutionResolver?.(policy,requestedAt);
+    if(!resolved)return this.persistSimple(policy.jobId,'staging_live',requestedAt,'blocked','trusted_provider_execution_missing',policy);
+    if(resolved.sourceId!==policy.providerId||resolved.capabilityId!==policy.capability||resolved.activationMode!=='staging_live_allowed')return this.persistSimple(policy.jobId,'staging_live',requestedAt,'blocked','trusted_provider_execution_mismatch',policy);
+    const gateRequest=this.buildGateRequest(policy,requestedAt,'staging_live_allowed',runId);
+    const result=await executeProviderApiGateRequest(gateRequest,resolved.adapter,resolved.context);
+    if(!result.decision.allowed||!result.response)return this.persistSimple(policy.jobId,'staging_live',requestedAt,'blocked',result.decision.reason,policy,result.decision);
+    const request=this.buildRequest(policy,requestedAt,policy.capability);request.requestId=gateRequest.requestId;request.paramsJson=JSON.stringify(gateRequest.providerRequestParams??{});
+    const report=await this.ingestion.persistProviderApiGateResult(resolved.adapter,request,result);
+    const errorCode=result.response.error?.category??null,retryable=isRetryableProviderFailure(errorCode),failed=result.response.payloadSchemaStatus!=='valid'||report.errors.length>0;
+    const run:ScheduledIngestionRunRecord={runId,jobId:policy.jobId,providerId:policy.providerId,capability:policy.capability,asset:policy.asset,region:policy.region,runMode:'staging_live',status:failed?'failed':'succeeded',startedAt:requestedAt,completedAt:requestedAt,requestId:request.requestId,responseStatus:report.responseStatus,payloadCount:report.payloadCount,persistedPayloadIds:report.persistedPayloadIds,errorCode:failed?(errorCode??'ingestion_error'):null,errorMessage:failed?(result.response.error?.message??report.errors[0]??'ingestion_error'):null,retryStatus:failed&&retryable&&policy.maxRetries>0?'retry_scheduled':failed?'exhausted':'not_needed',retryCount:0,nextRetryAt:failed&&retryable&&policy.maxRetries>0?computeBoundedProviderRetryAt(requestedAt,0,policy.retryBackoffSeconds,result.response.rateLimit?.retryAfterMs,this.retryJitter()):null,stalenessStatus:failed?'unknown':'fresh',warnings:[`provider_api_gate:${result.decision.providerCallMode}`],originalSourceRef:result.response.responseId};
+    await this.runs.saveRun(run);return this.buildScheduledIngestionRunReport(run);
   }
 
   async runScheduledIngestionDryRun(jobId: string, startedAt?: string): Promise<ScheduledIngestionRunReport> {
@@ -33,6 +51,12 @@ export class ScheduledIngestionService {
     const run = await this.executeFixtureDryRun(policy, at, `run-${jobId}-${at}`);
     await this.runs.saveRun(run);
     return this.buildScheduledIngestionRunReport(run);
+  }
+
+  async retryScheduledIngestionRun(runId:string,startedAt?:string):Promise<ScheduledIngestionRunReport>{
+    const prior=await this.runs.getRunById(runId),at=startedAt??new Date().toISOString();
+    if(!prior||prior.runMode!=='staging_live'||prior.retryStatus!=='retry_scheduled')return this.persistReplayBlocked('provider_retry_not_authorized',runId,'staging_live',at,prior??undefined);
+    return this.runScheduledIngestionJob(prior.jobId,'staging_live',at);
   }
 
   async replayScheduledIngestionRun(runId: string, replayMode: ScheduledIngestionRunMode = 'dry_run_fixture', startedAt?: string): Promise<ScheduledIngestionRunReport> {
@@ -148,7 +172,8 @@ export class ScheduledIngestionService {
   }
 
   private buildGateRequest(policy: ScheduledIngestionJobPolicy, requestedAt: string, activationMode: ProviderActivationMode, runId?: string, original?: ScheduledIngestionRunRecord): ProviderRuntimeRequest {
-    const gatePolicy = this.gatePolicyResolver?.(policy, activationMode === 'replay' ? 'dry_run_fixture' : policy.runMode, requestedAt);
+    const effectiveRunMode:ScheduledIngestionRunMode=activationMode==='staging_live_allowed'?'staging_live':activationMode==='production_live_allowed'?'production_live':'dry_run_fixture';
+    const gatePolicy = this.gatePolicyResolver?.(policy, effectiveRunMode, requestedAt);
     const replayPayload: ProviderRuntimeResponse | undefined = original ? { requestId: runId ?? `${policy.jobId}-${requestedAt}`, responseId: original.originalSourceRef ?? original.requestId ?? original.runId, sourceId: original.providerId, capabilityId: original.capability, adapterId: `${original.providerId}_${original.capability}_adapter`, receivedAt: original.completedAt ?? requestedAt, payload: { replayOfRunId: original.runId, persistedPayloadIds: original.persistedPayloadIds }, payloadSchemaStatus: 'valid', payloadSizeBytes: JSON.stringify(original.persistedPayloadIds).length, recordCount: original.payloadCount, provenance: { requestId: original.requestId ?? original.runId, sourceId: original.providerId }, error: null, rateLimit: null } : undefined;
     const request: ProviderRuntimeRequest = { requestId: runId ?? `${policy.jobId}-${requestedAt}`, sourceId: policy.providerId, capabilityId: gatePolicy?.requestCapabilityOverride ?? policy.capability, asset: policy.asset, region: policy.region, activationMode, provenance: { actor: 'scheduled_ingestion_service', purpose: 'scheduled_provider_orchestration' } };
     if (activationMode === 'replay') request.idempotencyKey = `replay:${original?.runId ?? runId}`;

@@ -60,7 +60,7 @@ export async function runTiingoAdapterTests(): Promise<void> {
   const livePayloads = await liveAdapter.normalize(liveFetched);
   if (livePayloads.some((x) => x.metadataJson.includes('fixture')) || livePayloads.some((x) => !x.metadataJson.includes('tiingo_live_staging'))) throw new Error('live provenance must be truthful');
 
-  for (const baseUrl of ['http://api.tiingo.com','https://example.com','https://api.tiingo.com.evil.example','https://evil.api.tiingo.com','https://user:pass@api.tiingo.com','https://api.tiingo.com:444','https://api.tiingo.com/path']) {
+  for (const baseUrl of ['http://api.tiingo.com','https://example.com','https://api.tiingo.com.evil.example','https://evil.example/api.tiingo.com','https://user:pass@api.tiingo.com','https://api.tiingo.com:444','https://api.tiingo.com/other','https://api.tiingo.com/?x=1','https://api.tiingo.com/#fragment']) {
     let calls=0;
     const adapter=new TiingoMarketDataAdapter({liveEnabled:true,mode:'live_enabled',apiKey:sentinel,baseUrl,fetchImpl:async()=>{calls++;return new Response('[]');}});
     const response=await adapter.fetch(req());
@@ -130,4 +130,12 @@ export async function runTiingoAdapterTests(): Promise<void> {
   });
   const timedOut = await timeoutAdapter.fetch(req());
   if (timedOut.errorCode !== 'tiingo_timeout') throw new Error('timeout should map to deterministic error');
+
+  const limited = await new TiingoMarketDataAdapter({liveEnabled:true,mode:'live_enabled',apiKey:sentinel,fetchImpl:async()=>new Response('',{status:429,headers:{'Retry-After':'120','X-Unsafe-Secret':sentinel}})}).fetch(req());
+  if(limited.errorCode!=='rate_limited'||limited.retryAfterMs!==120000||JSON.stringify(limited).includes(sentinel))throw new Error('429 must expose only bounded Retry-After');
+  const noRetryAfter = await new TiingoMarketDataAdapter({liveEnabled:true,mode:'live_enabled',apiKey:sentinel,fetchImpl:async()=>new Response('',{status:429})}).fetch(req());
+  if(noRetryAfter.retryAfterMs!==undefined)throw new Error('Retry-After must not be invented');
+  const serverFailure = await new TiingoMarketDataAdapter({liveEnabled:true,mode:'live_enabled',apiKey:sentinel,fetchImpl:async()=>new Response('',{status:503})}).fetch(req());
+  const authFailure = await new TiingoMarketDataAdapter({liveEnabled:true,mode:'live_enabled',apiKey:sentinel,fetchImpl:async()=>new Response('',{status:401})}).fetch(req());
+  if(serverFailure.errorCode!=='provider_5xx'||authFailure.errorCode!=='tiingo_auth_failed')throw new Error('transient and permanent HTTP failures must differ');
 }

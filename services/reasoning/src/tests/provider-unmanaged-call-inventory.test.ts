@@ -14,6 +14,9 @@ export function runProviderUnmanagedCallInventoryTests(){
   assert.deepEqual(remaining, []);
   const scheduled = rows.find((row) => row.file === 'services/reasoning/src/scheduled-ingestion/scheduled-ingestion-service.ts');
   assert.equal(scheduled?.classification, 'through_provider_api_gate');
+  const resolver = rows.find((row) => row.file === 'services/reasoning/src/provider-sources/provider-adapter-resolver.ts');
+  assert.equal(resolver?.classification, 'fixture_only_behind_gate');
+  assert.ok(readFileSync(join(repoRoot,'services/reasoning/src/scheduled-ingestion/scheduled-ingestion-service.ts'),'utf8').includes('executeProviderApiGateRequest(gateRequest'));
   assert.ok(rows.some((row) => row.classification === 'fixture_only_behind_gate'));
   for (const boundary of ['services/ingestion/src/facade/provider-suite-builder.ts','services/ingestion/src/adapters/build-provider-graph.ts']) {
     assert.equal(rows.find((row) => row.file === boundary)?.classification, 'legacy_construction_fail_closed');

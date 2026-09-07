@@ -1,3 +1,5 @@
 import type { ScheduledIngestionJobStatus, ScheduledIngestionRetryStatus } from '@elceo/types';
 export const computeNextRetryAt=(startedAt:string,retryCount:number,retryBackoffSeconds:number)=>new Date(Date.parse(startedAt)+((retryCount+1)*retryBackoffSeconds*1000)).toISOString();
+export const computeBoundedProviderRetryAt=(startedAt:string,retryCount:number,baseSeconds:number,retryAfterMs?:number,jitter=0)=>{const exponential=Math.min(15*60*1000,Math.max(1000,baseSeconds*1000)*(2**retryCount)),boundedJitter=Math.max(0,Math.min(1,jitter)),delay=Math.min(15*60*1000,Math.max(retryAfterMs??0,Math.round(exponential*(0.75+boundedJitter*0.5))));return new Date(Date.parse(startedAt)+delay).toISOString();};
+export const isRetryableProviderFailure=(code:string|null|undefined)=>new Set(['rate_limited','tiingo_timeout','tiingo_fetch_error','provider_5xx']).has(code??'');
 export const deriveRetryStatus=(status:ScheduledIngestionJobStatus,retryCount:number,maxRetries:number):ScheduledIngestionRetryStatus=>status==='succeeded'||status==='skipped'||status==='blocked'?'not_needed':retryCount<maxRetries?'retry_scheduled':'exhausted';

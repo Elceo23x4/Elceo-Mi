@@ -1,5 +1,13 @@
 # Provider Source and Normalization Architecture (C5-A3)
 
+## SEC-D canonical Tiingo boundary
+
+Tiingo staging execution has one authority: `executeProviderApiGateRequest`. Scheduled ingestion resolves the source, `market_price_history` capability, activation, adapter, and trusted server context through the canonical registry-backed resolver; it then normalizes the already-returned gate payload and persists it without refetching. Fixture/replay behavior remains deterministic and production-live remains blocked.
+
+The only approved Tiingo origin is `https://api.tiingo.com`. Credentials use `Authorization: Token …` and never URL parameters or persisted provenance. Direct staging support remains limited to EUR/USD, GBP/USD, USD/JPY, AUD/USD, USD/CHF, NZD/USD, USD/CAD, and BTC/USD; XAU/USD, Nasdaq 100, S&P 500, DE30, and other capabilities fail closed.
+
+Quota, rate, cost, concurrency, cache, and resilience authority comes from approved, versioned, account/pool-scoped server policies—not Tiingo website allowances. Timeouts, safe transport failures, 429, and provider 5xx are transient; invalid configuration/request/origin, authorization failures, unsupported requests, and structurally invalid successful payloads are permanent until corrected. A 429 carries only a bounded parsed `Retry-After` into PGS-3. Scheduled retries use bounded exponential backoff with deterministic injectable jitter, and every attempt re-enters all gate control planes. CI uses injected HTTP responses and does not claim a credentialed Tiingo call.
+
 C5-A3 defines source-contract and normalization foundations for public market evidence ingestion with no live fetching.
 
 ## Evidence-class coverage table

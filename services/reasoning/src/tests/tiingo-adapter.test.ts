@@ -4,7 +4,7 @@ import { getProviderDescriptor } from '../provider-sources/provider-capability-r
 import { getTiingoProviderHealth, TiingoMarketDataAdapter } from '../provider-sources/tiingo/index.js';
 
 const req = (overrides: Partial<ProviderSourceRequest> = {}): ProviderSourceRequest => ({
-  requestId: 'req-tiingo-1', providerId: 'tiingo_market_data', capability: 'market_price_history', asset: 'xau_usd', region: 'global', evidenceTypeId: 'market_price_history', requestedAt: '2026-01-10T00:00:00.000Z', paramsJson: '{}', ...overrides
+  requestId: 'req-tiingo-1', providerId: 'tiingo_market_data', capability: 'market_price_history', asset: 'eur_usd', region: 'global', evidenceTypeId: 'market_price_history', requestedAt: '2026-01-10T00:00:00.000Z', paramsJson: '{}', ...overrides
 });
 
 export async function runTiingoAdapterTests(): Promise<void> {
@@ -20,12 +20,18 @@ export async function runTiingoAdapterTests(): Promise<void> {
 
   const configuredHealth = getTiingoProviderHealth({ liveEnabled: true, mode: 'live_enabled', apiKey: 'fake-key' });
   if (configuredHealth.capabilityStatus !== 'configured' || !configuredHealth.hasApiKey) throw new Error('configured health expected');
+  const trailingSlashHealth = getTiingoProviderHealth({ liveEnabled: true, mode: 'live_enabled', apiKey: 'fake-key', baseUrl: 'https://api.tiingo.com/' });
+  if (trailingSlashHealth.capabilityStatus !== 'configured' || trailingSlashHealth.baseUrl !== 'https://api.tiingo.com') throw new Error('canonical Tiingo origin should accept and normalize a trailing slash');
+  const credentialBearingOrigin = 'https://health-user:health-password@api.tiingo.com/path?token=health-query-secret#health-fragment-secret';
+  const invalidOriginHealth = getTiingoProviderHealth({ liveEnabled: true, mode: 'live_enabled', apiKey: 'fake-key', baseUrl: credentialBearingOrigin });
+  if (invalidOriginHealth.capabilityStatus !== 'invalid_config' || invalidOriginHealth.baseUrl !== '[INVALID_ORIGIN]' || JSON.stringify(invalidOriginHealth).includes('health-password') || JSON.stringify(invalidOriginHealth).includes('health-query-secret') || JSON.stringify(invalidOriginHealth).includes('health-fragment-secret')) throw new Error('invalid Tiingo origin health must be sanitized');
 
   const fetchedFixture = await fixtureAdapter.fetch(req());
   if (fetchedFixture.status !== 'success' || fetchedFixture.rawPayloadJson === null) throw new Error('tiingo fixture fetch failed');
 
   const payloads = await fixtureAdapter.normalize(fetchedFixture);
   if (payloads.length === 0 || payloads.some((x) => !validateNormalizedMarketEvidencePayload(x).ok)) throw new Error('fixture normalize invalid');
+  if (payloads.some((x) => !x.metadataJson.includes('tiingo_fixture'))) throw new Error('fixture provenance expected');
 
   const disabledAdapter = new TiingoMarketDataAdapter();
   const disabledFetch = await disabledAdapter.fetch(req());
@@ -43,13 +49,70 @@ export async function runTiingoAdapterTests(): Promise<void> {
       fetchCalled = true;
       requestedUrl = String(input);
       authorization = new Headers(init?.headers).get('authorization') ?? '';
-      return new Response(JSON.stringify([{ date: '2026-01-01T00:00:00.000Z', open: 1, high: 2, low: 0.5, close: 1.5, volume: null, adjOpen: null, adjHigh: null, adjLow: null, adjClose: null, adjVolume: null, divCash: null, splitFactor: null }]), { status: 200 });
+      return new Response(JSON.stringify([{ ticker: 'EURUSD', date: '2026-01-01T00:00:00.000Z', open: 1, high: 2, low: 0.5, close: 1.5, volume: null, adjOpen: null, adjHigh: null, adjLow: null, adjClose: null, adjVolume: null, divCash: null, splitFactor: null }]), { status: 200 });
     }
   });
   const liveFetched = await liveAdapter.fetch(req());
   if (!fetchCalled || liveFetched.status !== 'success') throw new Error('live fake fetch should succeed');
   if (liveFetched.sourceUrl?.includes(sentinel) || requestedUrl.includes(sentinel)) throw new Error('tiingo token must not appear in URL provenance');
   if (authorization !== `Token ${sentinel}`) throw new Error('tiingo credential should use authorization header');
+  if (!requestedUrl.startsWith('https://api.tiingo.com/tiingo/fx/eurusd/prices?') || !requestedUrl.includes('resampleFreq=1day')) throw new Error(`EUR/USD FX route expected: ${requestedUrl}`);
+  const livePayloads = await liveAdapter.normalize(liveFetched);
+  if (livePayloads.some((x) => x.metadataJson.includes('fixture')) || livePayloads.some((x) => !x.metadataJson.includes('tiingo_live_staging'))) throw new Error('live provenance must be truthful');
+
+  for (const baseUrl of ['http://api.tiingo.com','https://example.com','https://api.tiingo.com.evil.example','https://evil.api.tiingo.com','https://user:pass@api.tiingo.com','https://api.tiingo.com:444','https://api.tiingo.com/path']) {
+    let calls=0;
+    const adapter=new TiingoMarketDataAdapter({liveEnabled:true,mode:'live_enabled',apiKey:sentinel,baseUrl,fetchImpl:async()=>{calls++;return new Response('[]');}});
+    const response=await adapter.fetch(req());
+    if(calls!==0||response.errorCode!=='tiingo_invalid_live_origin'||response.errorMessage?.includes(sentinel)||response.sourceUrl!==null)throw new Error(`invalid Tiingo origin must fail before fetch: ${baseUrl}`);
+  }
+
+  for (const asset of ['gbp_usd','usd_jpy','aud_usd','usd_chf','nzd_usd','usd_cad']) {
+    let url=''; const adapter=new TiingoMarketDataAdapter({liveEnabled:true,mode:'live_enabled',apiKey:'secret',fetchImpl:async(input)=>{url=String(input);return new Response('[]',{status:200});}});
+    const response=await adapter.fetch(req({asset}));
+    if(response.status!=='empty'||!url.includes(`/tiingo/fx/${asset.replace('_','')}/prices`))throw new Error(`FX routing failed for ${asset}`);
+  }
+
+  let cryptoUrl='';
+  const cryptoAdapter=new TiingoMarketDataAdapter({liveEnabled:true,mode:'live_enabled',apiKey:'secret',fetchImpl:async(input)=>{cryptoUrl=String(input);return new Response(JSON.stringify([{ticker:'btcusd',priceData:[{date:'2026-01-01T00:00:00.000Z',open:100,high:110,low:90,close:105}]}]),{status:200});}});
+  const crypto=await cryptoAdapter.fetch(req({asset:'btc_usd',paramsJson:JSON.stringify({startDate:'2026-01-01',endDate:'2026-01-02',frequency:'daily'})}));
+  if(crypto.status!=='success'||!cryptoUrl.includes('/tiingo/crypto/prices?tickers=btcusd')||!cryptoUrl.includes('resampleFreq=1day'))throw new Error(`crypto route failed: ${cryptoUrl}`);
+  if((await cryptoAdapter.normalize(crypto)).length!==1)throw new Error('nested crypto priceData should normalize');
+
+  for (const payload of [
+    [{ticker:'gbpusd',date:'2026-01-01T00:00:00.000Z',open:1,high:2,low:0.5,close:1.5}],
+    [{ticker:'eurusd',date:'2026-01-01T00:00:00.000Z',open:1,high:2,low:0.5,close:1.5},{ticker:'gbpusd',date:'2026-01-02T00:00:00.000Z',open:1,high:2,low:0.5,close:1.5}],
+    [{date:'2026-01-01T00:00:00.000Z',open:1,high:2,low:0.5,close:1.5}]
+  ]) {
+    const adapter=new TiingoMarketDataAdapter({liveEnabled:true,mode:'live_enabled',apiKey:'secret',fetchImpl:async()=>new Response(JSON.stringify(payload),{status:200})});
+    const response=await adapter.fetch(req());
+    if(response.errorCode!=='tiingo_fx_ticker_mismatch')throw new Error('wrong, mixed, and missing FX tickers must fail closed');
+  }
+
+  for (const [asset,code] of [['nasdaq_100','tiingo_live_unsupported_index_proxy_nasdaq_100'],['sp500','tiingo_live_unsupported_index_proxy_sp500'],['de30','tiingo_live_unsupported_unverified_de30'],['xau_usd','tiingo_live_unsupported_unverified_xau_usd']] as const) {
+    let calls=0;const adapter=new TiingoMarketDataAdapter({liveEnabled:true,mode:'live_enabled',apiKey:'secret',fetchImpl:async()=>{calls++;return new Response('[]');}});const response=await adapter.fetch(req({asset}));
+    if(calls!==0||response.errorCode!==code||response.sourceUrl!==null)throw new Error(`${asset} must fail closed before provider execution`);
+  }
+  for (const frequency of ['hourly','minute']) {
+    const unsupportedFrequency=await liveAdapter.fetch(req({paramsJson:JSON.stringify({frequency})}));
+    if(unsupportedFrequency.errorCode!=='tiingo_unsupported_frequency')throw new Error(`${frequency} frequency must fail closed`);
+  }
+  for (const [paramsJson,expected] of [
+    [JSON.stringify({startDate:'2025-02-29',endDate:'2025-03-01',frequency:'daily'}),'tiingo_invalid_date'],
+    [JSON.stringify({startDate:'2026-04-31',endDate:'2026-05-01',frequency:'daily'}),'tiingo_invalid_date'],
+    [JSON.stringify({startDate:'2026-13-01',endDate:'2026-13-02',frequency:'daily'}),'tiingo_invalid_date'],
+    [JSON.stringify({startDate:'2026-01-02',endDate:'2026-01-01',frequency:'daily'}),'tiingo_invalid_date_range']
+  ] as const) {
+    const response=await liveAdapter.fetch(req({paramsJson}));
+    if(response.errorCode!==expected)throw new Error(`invalid Gregorian date contract should return ${expected}`);
+  }
+  const validLeapDate=await liveAdapter.fetch(req({paramsJson:JSON.stringify({startDate:'2024-02-29',endDate:'2024-02-29',frequency:'daily'})}));
+  if(validLeapDate.status!=='success')throw new Error('valid Gregorian leap date should be accepted');
+
+  for (const [asset,payload] of [['eur_usd',{}],['eur_usd',[{ticker:'eurusd',date:'bad',open:1,high:2,low:0,close:1}]],['btc_usd',[{ticker:'btcusd'}]],['btc_usd',[{ticker:'other',priceData:[]}]],['btc_usd',[{ticker:'btcusd',priceData:[{date:'2026-01-01',open:1,high:0,low:2,close:1}]}]]] as const) {
+    const adapter=new TiingoMarketDataAdapter({liveEnabled:true,mode:'live_enabled',apiKey:sentinel,fetchImpl:async()=>new Response(JSON.stringify(payload),{status:200})});const response=await adapter.fetch(req({asset}));
+    if(response.errorCode!=='tiingo_malformed_live_payload'||response.errorMessage?.includes(sentinel)||response.sourceUrl?.includes(sentinel)||response.rawPayloadJson?.includes(sentinel))throw new Error(`malformed ${asset} payload must fail closed and redact credentials`);
+  }
 
   const timeoutAdapter = new TiingoMarketDataAdapter({
     liveEnabled: true,

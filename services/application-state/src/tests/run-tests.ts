@@ -3,6 +3,7 @@ async function main(): Promise<void> {
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process!.env ??= {};
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process!.env!.APP_STATE_REPOSITORY = 'memory';
 
+  const { runSecCPaymentCoreTests } = await import('./sec-c-payment-core.test.js');
   const { runApplicationStateTests } = await import('./application-state.test.js');
   const { runUserStateAccessTests } = await import('./user-state-access.test.js');
   const { runRouteEntitlementMapCoreTests } = await import('./route-entitlement-map-core.test.js');
@@ -71,6 +72,7 @@ async function main(): Promise<void> {
   runSeoProgrammaticFeedsTests();
   runObservabilityAuditCoreTests();
   await runPaymentCorrectnessCoreTests();
+  await runSecCPaymentCoreTests();
   await runPasswordCryptoTests();
   console.log('application-state tests passed');
 }

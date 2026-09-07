@@ -22,6 +22,9 @@ export async function runTiingoAdapterTests(): Promise<void> {
   if (configuredHealth.capabilityStatus !== 'configured' || !configuredHealth.hasApiKey) throw new Error('configured health expected');
   const trailingSlashHealth = getTiingoProviderHealth({ liveEnabled: true, mode: 'live_enabled', apiKey: 'fake-key', baseUrl: 'https://api.tiingo.com/' });
   if (trailingSlashHealth.capabilityStatus !== 'configured' || trailingSlashHealth.baseUrl !== 'https://api.tiingo.com') throw new Error('canonical Tiingo origin should accept and normalize a trailing slash');
+  const credentialBearingOrigin = 'https://health-user:health-password@api.tiingo.com/path?token=health-query-secret#health-fragment-secret';
+  const invalidOriginHealth = getTiingoProviderHealth({ liveEnabled: true, mode: 'live_enabled', apiKey: 'fake-key', baseUrl: credentialBearingOrigin });
+  if (invalidOriginHealth.capabilityStatus !== 'invalid_config' || invalidOriginHealth.baseUrl !== '[INVALID_ORIGIN]' || JSON.stringify(invalidOriginHealth).includes('health-password') || JSON.stringify(invalidOriginHealth).includes('health-query-secret') || JSON.stringify(invalidOriginHealth).includes('health-fragment-secret')) throw new Error('invalid Tiingo origin health must be sanitized');
 
   const fetchedFixture = await fixtureAdapter.fetch(req());
   if (fetchedFixture.status !== 'success' || fetchedFixture.rawPayloadJson === null) throw new Error('tiingo fixture fetch failed');

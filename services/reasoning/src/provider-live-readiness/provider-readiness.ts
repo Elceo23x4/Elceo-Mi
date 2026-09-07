@@ -12,11 +12,13 @@ export function evaluateProviderLiveReadiness(providerId: string, environment: P
   else {
     const health = getTiingoProviderHealth(config.tiingo ?? {});
     hasRequiredSecrets = health.hasApiKey;
-    const explicitEnabled = Boolean(config.liveEnabled) || health.liveEnabled;
-    allowLiveFetch = environment === 'staging' && explicitEnabled && hasRequiredSecrets;
+    const explicitEnabled = config.liveEnabled === true;
+    const adapterLiveStateConsistent = health.mode === 'live_enabled' && health.liveEnabled;
+    const adapterConfigured = health.capabilityStatus === 'configured';
+    allowLiveFetch = environment === 'staging' && explicitEnabled && hasRequiredSecrets && adapterLiveStateConsistent && adapterConfigured;
     if (environment === 'production') { activationStatus = 'production_blocked'; reasons.push('production_blocked_by_default'); }
     else if (allowLiveFetch) activationStatus = 'staging_ready';
-    else { activationStatus = health.capabilityStatus === 'invalid_config' ? 'invalid_config' : 'disabled'; reasons.push('staging_live_requirements_not_met'); if (!explicitEnabled) reasons.push('explicit_live_env_not_enabled'); if (!hasRequiredSecrets) reasons.push('missing_required_secret'); }
+    else { activationStatus = health.capabilityStatus === 'invalid_config' ? 'invalid_config' : 'disabled'; reasons.push('staging_live_requirements_not_met'); if (!explicitEnabled) reasons.push('explicit_live_env_not_enabled'); if (!hasRequiredSecrets) reasons.push('missing_required_secret'); if (!adapterLiveStateConsistent) reasons.push('tiingo_adapter_live_state_inconsistent'); if (!adapterConfigured) reasons.push(`tiingo_health_${health.capabilityStatus}`); }
     riskLevel = allowLiveFetch ? 'medium' : 'high';
   }
   if (!policy.productionBlockedByDefault) reasons.push('policy_violation_production_must_be_blocked');

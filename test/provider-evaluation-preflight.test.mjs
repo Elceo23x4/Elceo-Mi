@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { evaluateProviderStagingSmokePreflight } from '../scripts/provider-evaluation-preflight.mjs';
+
+const valid = { APP_ENV:'staging', NODE_ENV:'production', ELCEO_PROVIDER_MODE:'fixture', ELCEO_LIVE_PROVIDER_ACTIVATION:'false', ELCEO_ALLOW_LIVE_FETCHES:'false', TIINGO_LIVE_ENABLED:'false', ELCEO_PROVIDER_STAGING_SMOKE:'1', ELCEO_PROVIDER_EVALUATION_MODE:'evaluation_no_store', REDIS_URL:'redis://isolated.invalid', TIINGO_API_KEY:'sentinel-never-used' };
+const cases = [
+ ['APP_ENV', undefined, 'APP_ENV_must_be_staging'], ['APP_ENV','production','APP_ENV_must_be_staging'], ['NODE_ENV','test','NODE_ENV_must_be_production'], ['ELCEO_PROVIDER_MODE','live','normal_provider_mode_must_be_fixture'],
+ ['ELCEO_LIVE_PROVIDER_ACTIVATION',undefined,'ELCEO_LIVE_PROVIDER_ACTIVATION_must_be_false'], ['ELCEO_LIVE_PROVIDER_ACTIVATION','true','ELCEO_LIVE_PROVIDER_ACTIVATION_must_be_false'], ['ELCEO_ALLOW_LIVE_FETCHES',undefined,'ELCEO_ALLOW_LIVE_FETCHES_must_be_false'], ['ELCEO_ALLOW_LIVE_FETCHES','true','ELCEO_ALLOW_LIVE_FETCHES_must_be_false'], ['TIINGO_LIVE_ENABLED',undefined,'TIINGO_LIVE_ENABLED_must_be_false'], ['TIINGO_LIVE_ENABLED','true','TIINGO_LIVE_ENABLED_must_be_false'],
+ ['ELCEO_PROVIDER_STAGING_SMOKE','0','operator_opt_in_required'], ['ELCEO_PROVIDER_EVALUATION_MODE','persistent_cache','evaluation_no_store_required'], ['REDIS_URL',undefined,'REDIS_URL_required'], ['TIINGO_API_KEY',undefined,'TIINGO_API_KEY_required'], ['ELCEO_PROVIDER_SOURCE_ID','newsapi','provider_not_allowlisted'], ['ELCEO_PROVIDER_CAPABILITY_ID','news_search','capability_not_allowlisted'], ['ELCEO_PROVIDER_ASSET','btc_usd','asset_not_allowlisted'], ['ELCEO_PROVIDER_FREQUENCY','hourly','frequency_not_allowlisted'], ['ELCEO_PROVIDER_ACTIVATION_MODE','production_live_allowed','production_activation_not_approved'],
+];
+for (const [key,value,reason] of cases) test(`preflight refuses ${key}=${String(value)}`,()=>{let adapterCalls=0,networkCalls=0,payloads=0;const env={...valid};if(value===undefined)delete env[key];else env[key]=value;assert.deepEqual(evaluateProviderStagingSmokePreflight(env),{ok:false,reason});assert.deepEqual({adapterCalls,networkCalls,payloads},{adapterCalls:0,networkCalls:0,payloads:0});});
+test('preflight accepts only the P1B tuple',()=>assert.deepEqual(evaluateProviderStagingSmokePreflight(valid),{ok:true,provider:'tiingo_market_data',capability:'market_price_history',asset:'eur_usd',frequency:'daily'}));

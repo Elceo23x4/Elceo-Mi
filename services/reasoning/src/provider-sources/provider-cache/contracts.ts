@@ -5,6 +5,7 @@ import type {
 } from '../provider-api-gate';
 
 export type ProviderCachePolicyStatus = 'approved' | 'test_only' | 'disabled';
+export type ProviderPayloadStorageMode = 'persistent_cache' | 'evaluation_no_store';
 export type ProviderCachePolicy = {
   policyId: string;
   policyVersion: string;
@@ -22,6 +23,8 @@ export type ProviderCachePolicy = {
   followerWaitTimeoutMs: number;
   completionTtlMs: number;
   maxEntryBytes: number;
+  /** Omission preserves the pre-P1B persistent-cache contract. */
+  payloadStorageMode?: ProviderPayloadStorageMode;
 };
 export type ProviderCachePolicyResolver = {
   resolve(scope: {
@@ -61,11 +64,9 @@ export type ProviderCacheRead = {
   state: 'FRESH' | 'STALE_BUT_ELIGIBLE' | 'MISS' | 'INVALID';
   entry?: ProviderCacheEntry;
 };
-export type ProviderFlightCompletion = {
-  state: 'failure';
-  reason: ProviderSharedFailureReason;
-  completedAt: number;
-};
+export type ProviderFlightCompletion =
+  | { state: 'failure'; reason: ProviderSharedFailureReason; completedAt: number }
+  | { state: 'success_no_store'; completedAt: number; reason?: never };
 export type ProviderFlightState = {
   active: boolean;
   completion?: ProviderFlightCompletion;
@@ -91,6 +92,11 @@ export type ProviderCacheStore = {
     reason: ProviderSharedFailureReason,
     ttlMs: number,
   ): Promise<boolean>;
+  completeSuccessWithoutMaterial?(
+    identity: ProviderCacheIdentity,
+    ownerToken: string,
+    ttlMs: number,
+  ): Promise<boolean>;
   releaseOwnerSafely(identity: ProviderCacheIdentity, ownerToken: string): Promise<boolean>;
 };
 export type ProviderCacheIdentity = {
@@ -111,6 +117,7 @@ export type ProviderCacheSnapshot = {
   singleFlightRole: 'owner' | 'follower' | 'none';
   singleFlightOutcome: string;
   cachePolicyVersion: string;
+  payloadPersistence?: ProviderPayloadStorageMode;
 };
 export type ProviderSharedFailureReason =
   | 'provider_cache_control_unavailable'
@@ -134,6 +141,7 @@ export type ProviderSharedFailureReason =
   | 'provider_settlement_unconfirmed'
   | 'provider_singleflight_ownership_lost'
   | 'provider_singleflight_wait_timeout'
+  | 'provider_evaluation_result_not_shareable'
   | 'provider_validation_failed';
 export type ProviderCacheSharedOutcome = {
   material?: ProviderCachedMaterial;
@@ -142,6 +150,7 @@ export type ProviderCacheSharedOutcome = {
   freshness: 'fresh' | 'stale' | 'miss';
   role: 'owner' | 'follower' | 'none';
   entry?: ProviderCacheEntry;
+  completionState?: 'success_no_store';
 };
 export type ProviderCacheOwnerExecution = (signal: AbortSignal) => Promise<{
   response: ProviderRuntimeResponse | null;

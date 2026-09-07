@@ -42,6 +42,12 @@ const FAILURE = `
 if redis.call('GET',KEYS[1])~=ARGV[1] then return 0 end
 local t=redis.call('TIME'); local now=tonumber(t[1])*1000+math.floor(tonumber(t[2])/1000)
 redis.call('SET',KEYS[2],cjson.encode({state='failure',reason=ARGV[2],completedAt=now}),'PX',ARGV[3]); redis.call('DEL',KEYS[1]); return 1`;
+const SUCCESS_NO_STORE = `
+if redis.call('GET',KEYS[1])~=ARGV[1] then return 0 end
+local t=redis.call('TIME'); local now=tonumber(t[1])*1000+math.floor(tonumber(t[2])/1000)
+redis.call('DEL',KEYS[2])
+redis.call('SET',KEYS[3],cjson.encode({state='success_no_store',completedAt=now}),'PX',ARGV[2])
+redis.call('DEL',KEYS[1]); return 1`;
 
 function keys(identity: ProviderCacheIdentity, namespace: string) {
   const tag = `{${identity.hash}}`;
@@ -144,6 +150,13 @@ export class RedisProviderCacheStore implements ProviderCacheStore {
     await this.ensure();
     const scoped = keys(identity, this.namespace);
     return Number(await this.bounded(this.client.eval(FAILURE, { keys: [scoped.flight, scoped.completion], arguments: [token, reason, String(ttlMs)] }))) === 1;
+  }
+  async completeSuccessWithoutMaterial(identity: ProviderCacheIdentity, token: string, ttlMs: number): Promise<boolean> {
+    await this.ensure();
+    const scoped = keys(identity, this.namespace);
+    return Number(await this.bounded(this.client.eval(SUCCESS_NO_STORE, {
+      keys: [scoped.flight, scoped.cache, scoped.completion], arguments: [token, String(ttlMs)],
+    }))) === 1;
   }
   async releaseOwnerSafely(identity: ProviderCacheIdentity, token: string): Promise<boolean> {
     await this.ensure();

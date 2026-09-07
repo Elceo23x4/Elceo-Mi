@@ -12,7 +12,7 @@ type Readiness = { selectedRepositoryMode: 'sql' | 'memory' | 'unavailable'; dat
 type GiftCreateOutcome = SuperAdminFocusPlanGiftResult & { persistenceStatus: CommercialPersistenceStatus };
 type GiftRetractOutcome = SuperAdminRetractGiftResult & { persistenceStatus: CommercialPersistenceStatus };
 type RestrictionOutcome = SuperAdminUserRestrictionResult & { persistenceStatus: CommercialPersistenceStatus };
-type OutcomeByAction = { focus_plan_gift: GiftCreateOutcome; focus_plan_gift_retract: GiftRetractOutcome; user_restriction: RestrictionOutcome };
+type OutcomeByAction = { focus_plan_gift: GiftCreateOutcome; focus_plan_gift_retract: GiftRetractOutcome; user_restriction: RestrictionOutcome; focus_plan_price_update: RestrictionOutcome };
 
 type OperationContext<A extends SuperAdminCommercialActionKind> = {
   actor: string;

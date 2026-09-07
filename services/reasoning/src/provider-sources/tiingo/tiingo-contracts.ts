@@ -15,13 +15,18 @@ export type TiingoPriceBar = {
 };
 
 export type TiingoPriceHistoryRequest = {
+  requestId: string;
   asset: string;
   ticker: string;
   startDate: string | null;
   endDate: string | null;
   frequency: string | null;
   requestedAt: string;
+  sourceMode: 'fixture' | 'live_staging';
 };
+
+export type TiingoAssetFamily = 'fx' | 'crypto';
+export type TiingoLiveAsset = { family: TiingoAssetFamily; ticker: string };
 
 export type TiingoFixtureResponse = {
   request: TiingoPriceHistoryRequest;

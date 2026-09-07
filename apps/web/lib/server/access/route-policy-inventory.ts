@@ -197,7 +197,7 @@ export function classifyRoute(routePath: string, methods: string[]): DeclaredPol
     const providerWebhook = routePath.includes('/providers/') && routePath.endsWith('/webhook');
     classification = routePath.includes('/delivery/dispatch') ? 'internal_only' : providerWebhook ? 'no_product_entitlement_required' : 'notification_preference_owner_only'; ownerBoundary = routePath.includes('/delivery/dispatch') ? 'internal_operator' : providerWebhook ? 'not_applicable' : 'required'; productEntitlement = routePath.includes('/delivery/dispatch') ? 'none' : providerWebhook ? 'provider_webhook_signature' : 'notification_preferences'; internalToken = routePath.includes('/delivery/dispatch') ? 'required' : 'not_required'; commercialRestrictionFirst = routePath.includes('/summary') ? 'required' : 'not_required';
     if (providerWebhook) runtimeExpectation = 'environment_verification_required';
-  } else if (routePath === '/api/billing/webhook') {
+  } else if (routePath.startsWith('/api/billing/webhook')) {
     classification = 'payment_readiness_required'; runtimeExpectation = 'environment_verification_required'; internalToken = 'not_required'; adminPermission = 'not_required'; ownerBoundary = 'not_applicable'; productEntitlement = 'provider_webhook_signature';
   } else if (routePath.startsWith('/api/billing/') || routePath.startsWith('/api/account/billing')) {
     classification = 'payment_readiness_required'; ownerBoundary = 'required'; productEntitlement = 'payment_readiness';

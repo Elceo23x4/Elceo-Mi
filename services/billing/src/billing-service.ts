@@ -53,3 +53,6 @@ export class BillingService {
     };
   }
 }
+
+/** @deprecated Compatibility-only event translation. This service does not persist subscriptions or grant entitlement; callers must use InternalPaymentRuntime. */
+export const LEGACY_BILLING_AUTHORITY_DISABLED = true as const;

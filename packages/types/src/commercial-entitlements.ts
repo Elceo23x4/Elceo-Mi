@@ -14,7 +14,7 @@ export type CommercialPlanDescriptor = {
   billingIntervals: CommercialBillingInterval[];
 };
 export type KickOffTrialDescriptor = CommercialPlanDescriptor & { planCode: 'kick_off'; trialDurationDays: 3; featureAllowlist: Extract<CommercialFeatureKey, 'dashboard.chart' | 'dashboard.evidence_score' | 'dashboard.macro_headlines' | 'journal.page'>[] };
-export type FocusPlanDescriptor = CommercialPlanDescriptor & { planCode: 'focus_plan'; monthlyPrice: { amount: 70; currency: 'USD' }; quarterlyPrice: { status: 'pending_price_config' }; yearlyPrice: { status: 'pending_price_config' } };
+export type FocusPlanDescriptor = CommercialPlanDescriptor & { planCode:'focus_plan'; pricingAuthority:'commercial_price_versions'; priceConfiguredAtCheckout:true };
 export type CommercialPlanCatalog = { plans: [KickOffTrialDescriptor, FocusPlanDescriptor] };
 
 export type CommercialProfileSocialIdentifier = { kind: CommercialProfileSocialIdentifierKind; value: string };

@@ -4,7 +4,7 @@ import { validateCommercialProfileSocialIdentifier as validateCommercialProfileS
 const kickOffFeatures: Array<Extract<CommercialFeatureKey,'dashboard.chart'|'dashboard.evidence_score'|'dashboard.macro_headlines'|'journal.page'>>=['dashboard.chart','dashboard.evidence_score','dashboard.macro_headlines','journal.page'];
 
 export const getKickOffTrialDescriptor=():KickOffTrialDescriptor=>({planCode:'kick_off',displayName:'Kick off',billingIntervals:['monthly','quarterly','yearly'],trialDurationDays:3,featureAllowlist:[...kickOffFeatures]});
-export const getFocusPlanDescriptor=():FocusPlanDescriptor=>({planCode:'focus_plan',displayName:'Focus Plan',billingIntervals:['monthly','quarterly','yearly'],monthlyPrice:{amount:70,currency:'USD'},quarterlyPrice:{status:'pending_price_config'},yearlyPrice:{status:'pending_price_config'}});
+export const getFocusPlanDescriptor=():FocusPlanDescriptor=>({planCode:'focus_plan',displayName:'Focus Plan',billingIntervals:['monthly','quarterly','yearly'],pricingAuthority:'commercial_price_versions',priceConfiguredAtCheckout:true});
 export const getCommercialPlanCatalog=():CommercialPlanCatalog=>({plans:[getKickOffTrialDescriptor(),getFocusPlanDescriptor()]});
 export const getCommercialFeatureAllowlistForPlan=(planCode:CommercialPlanCode):CommercialFeatureKey[]=>planCode==='kick_off'?[...kickOffFeatures]:['premium.full_access'];
 

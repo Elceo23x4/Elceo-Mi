@@ -14,7 +14,7 @@ export type SubscriptionLifecycleEvent = {
 };
 const accessState=(kind:CanonicalSubscriptionLifecycleKind,state:CanonicalSubscriptionState|null,existing:string|null)=>
   kind==='subscription_deleted'?'canceled':kind==='renewal_failed'?(state==='unpaid'?'unpaid':'past_due'):kind==='renewal_succeeded'?(existing==='active'||existing==='trialing'?existing:'active'):state;
-const active=(state:string|null)=>state==='active'||state==='trialing';
+const active=(state:string|null)=>state==='active';
 
 /** Event-ID-idempotent recurring lifecycle layer, independent from initial grant effects. */
 export async function applyCanonicalSubscriptionLifecycleEvent(event:SubscriptionLifecycleEvent){

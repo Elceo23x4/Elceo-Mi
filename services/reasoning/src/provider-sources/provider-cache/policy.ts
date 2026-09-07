@@ -18,6 +18,10 @@ export function hashProviderCachePolicy(
 }
 
 export function validateProviderCachePolicy(policy: ProviderCachePolicy, now = Date.now()): void {
+  const storageMode = policy.payloadStorageMode ?? 'persistent_cache';
+  if (storageMode !== 'persistent_cache' && storageMode !== 'evaluation_no_store') {
+    throw new Error('provider_cache_policy_invalid_storage_mode');
+  }
   for (const value of [
     policy.policyId,
     policy.policyVersion,
@@ -38,17 +42,22 @@ export function validateProviderCachePolicy(policy: ProviderCachePolicy, now = D
     throw new Error('provider_cache_policy_inactive');
   }
   const positive = [
-    policy.freshTtlMs,
     policy.flightLeaseMs,
     policy.followerWaitTimeoutMs,
     policy.completionTtlMs,
-    policy.maxEntryBytes,
   ];
   if (
     positive.some((value) => !Number.isSafeInteger(value) || value <= 0) ||
     !Number.isSafeInteger(policy.staleIfErrorTtlMs) ||
     policy.staleIfErrorTtlMs < 0
   ) {
+    throw new Error('provider_cache_policy_invalid_integer');
+  }
+  if (storageMode === 'evaluation_no_store') {
+    if (policy.freshTtlMs !== 0 || policy.staleIfErrorTtlMs !== 0 || policy.maxEntryBytes !== 0) {
+      throw new Error('provider_cache_policy_no_store_requires_zero_payload_storage');
+    }
+  } else if (policy.freshTtlMs <= 0 || policy.maxEntryBytes <= 0) {
     throw new Error('provider_cache_policy_invalid_integer');
   }
   if (

@@ -5,6 +5,7 @@ import {
   createProviderCacheRedisClient,
   hashProviderCachedMaterial,
   ProviderCacheCoordinator,
+  ProviderL1Cache,
   RedisProviderCacheStore,
   type ProviderCachedMaterial,
   type ProviderCacheStore,
@@ -15,6 +16,7 @@ import { buildTestProviderCachePolicy } from './provider-cache.test.js';
 import { buildTestProviderControlPolicy } from './provider-control.test.js';
 import { createProviderResilienceRedisClient, providerResilienceKeys, RedisProviderResilienceStore, type ProviderProbeLease, type ProviderResilienceOutcome } from '../provider-sources/provider-resilience/index.js';
 import { buildTestProviderResiliencePolicy } from './provider-resilience.test.js';
+import { evaluationCachePolicyResolver, evaluationProviderControlPolicyResolver, evaluationResiliencePolicyResolver, TIINGO_EVALUATION_CACHE_POLICY, TIINGO_EVALUATION_CONTROL_POLICY, TIINGO_EVALUATION_RESILIENCE_POLICY } from '../provider-sources/provider-evaluation-certification.js';
 
 function liveRequest(requestId: string, asset = 'eur_usd', carried?: ProviderRuntimeResponse): ProviderRuntimeRequest {
   return {
@@ -507,6 +509,43 @@ export async function runProviderCacheRedisIntegrationTests(): Promise<void> {
     await runBlockedStaleGate('probe-limit', false);
     await runBlockedStaleGate('probe-limit', true);
     await runBlockedStaleGate('outage', true);
+
+    const evaluationNamespace = `${namespace}:evaluation:p1b-v1`;
+    const evaluationCacheStores = [new RedisProviderCacheStore(cacheClients[0]!, `${evaluationNamespace}:cache`), new RedisProviderCacheStore(cacheClients[1]!, `${evaluationNamespace}:cache`)];
+    const evaluationControlStores = [new RedisProviderControlStore(controlClients[0]!, `${evaluationNamespace}:control`), new RedisProviderControlStore(controlClients[1]!, `${evaluationNamespace}:control`)];
+    const evaluationResilienceStores = [new RedisProviderResilienceStore(resilienceClients[0]!, `${evaluationNamespace}:resilience`), new RedisProviderResilienceStore(resilienceClients[1]!, `${evaluationNamespace}:resilience`)];
+    const evaluationL1 = [new ProviderL1Cache(), new ProviderL1Cache()];
+    let evaluationAdapterCalls = 0;
+    const payloadSentinel = 'P1B_RAW_PROVIDER_SENTINEL_7f31';
+    const apiKeySentinel = 'P1B_API_KEY_SENTINEL_NEVER_PERSIST';
+    const ohlcSentinel = 918273.645;
+    const evaluationAdapter = { ...adapter, fetchManaged: async (request: never) => {
+      evaluationAdapterCalls += 1;
+      await new Promise(resolve => setTimeout(resolve, 75));
+      const response=await fixture.fetch(request);
+      return {...response,status:'success' as const,rawPayloadJson:JSON.stringify({sentinel:payloadSentinel,apiKeyLeak:apiKeySentinel,bars:[{open:ohlcSentinel,high:ohlcSentinel+1,low:ohlcSentinel-1,close:ohlcSentinel}]})};
+    } };
+    const evaluationContexts = [0,1].map(index=>({cacheCoordinator:new ProviderCacheCoordinator(evaluationCacheStores[index]!,evaluationL1[index]!),cachePolicyResolver:evaluationCachePolicyResolver,providerControlStore:evaluationControlStores[index]!,policyResolver:evaluationProviderControlPolicyResolver,resilienceStore:evaluationResilienceStores[index]!,resiliencePolicyResolver:evaluationResiliencePolicyResolver,credentialPoolId:'evaluation_free'}));
+    const evaluationRequest = (requestId:string):ProviderRuntimeRequest=>({...liveRequest(requestId),region:'p1b-evaluation-isolated'});
+    const evaluationResults = await Promise.all([executeProviderApiGateRequest(evaluationRequest('redis-evaluation-a'),evaluationAdapter,evaluationContexts[0]!),executeProviderApiGateRequest(evaluationRequest('redis-evaluation-b'),evaluationAdapter,evaluationContexts[1]!)]);
+    assert.equal(evaluationAdapterCalls,1);
+    const evaluationOwner=evaluationResults.find(result=>result.cacheSnapshot?.singleFlightRole==='owner')!;
+    const evaluationFollower=evaluationResults.find(result=>result.cacheSnapshot?.singleFlightRole==='follower')!;
+    assert.ok(evaluationOwner.response); assert.equal(evaluationOwner.settlementState,'settled_committed');
+    assert.equal(evaluationFollower.response,null); assert.equal(evaluationFollower.decision.reason,'provider_evaluation_result_not_shareable');
+    assert.equal(evaluationFollower.cacheSnapshot?.singleFlightOutcome,'provider_evaluation_result_not_shareable');
+    assert.deepEqual(evaluationL1.map(value=>value.size),[0,0]);
+    const evaluationIdentity=buildProviderCacheIdentity(evaluationRequest('redis-evaluation-inspect'),TIINGO_EVALUATION_CACHE_POLICY,'evaluation_free',buildProviderRequestFingerprint(evaluationRequest('redis-evaluation-inspect')));
+    assert.equal(await cacheClients[0]!.exists(`${evaluationNamespace}:cache:{${evaluationIdentity.hash}}:cache`),0);
+    const completionRaw=await cacheClients[0]!.get(`${evaluationNamespace}:cache:{${evaluationIdentity.hash}}:completion`);
+    assert.ok(completionRaw); assert.deepEqual(Object.keys(JSON.parse(completionRaw)).sort(),['completedAt','state']); assert.equal(JSON.parse(completionRaw).state,'success_no_store');
+    const isolatedKeys=await cacheClients[0]!.keys(`${evaluationNamespace}:*`);
+    const isolatedValues:string[]=[];
+    for(const key of isolatedKeys){const type=await cacheClients[0]!.type(key);if(type==='string')isolatedValues.push((await cacheClients[0]!.get(key))??'');else if(type==='hash')isolatedValues.push(JSON.stringify(await cacheClients[0]!.hGetAll(key)));else if(type==='zset')isolatedValues.push(JSON.stringify(await cacheClients[0]!.zRangeWithScores(key,0,-1)));}
+    const durableState=isolatedValues.join('\n');
+    for(const forbidden of [payloadSentinel,apiKeySentinel,String(ohlcSentinel),'provider_cached_material_v1'])assert.equal(durableState.includes(forbidden),false,`isolated Redis state contained ${forbidden}`);
+    assert.equal((await evaluationCacheStores[0]!.read(evaluationIdentity,TIINGO_EVALUATION_CACHE_POLICY)).state,'MISS');
+    assert.equal(TIINGO_EVALUATION_CONTROL_POLICY.credentialPoolId,'evaluation_free'); assert.equal(TIINGO_EVALUATION_RESILIENCE_POLICY.allowStaleWhileOpen,false);
 
     console.log(`provider cache Redis integration passed: local_requests=1000 cross_requests=200 adapter_calls=${adapterCalls} admits=${admits} claims=${claims} freshness=FRESH>STALE>MISS byte_limit=exact completion=sanitized generation=clean`);
   } finally {

@@ -24,6 +24,7 @@ import { buildProviderRequestFingerprint, MemoryProviderControlStore, type Provi
 import { buildTestProviderControlPolicy } from './provider-control.test.js';
 import { MemoryProviderResilienceStore, type ProviderProbeLease, type ProviderResilienceOutcome, type ProviderResiliencePolicy, type ProviderResilienceStore } from '../provider-sources/provider-resilience/index.js';
 import { buildTestProviderResiliencePolicy } from './provider-resilience.test.js';
+import { evaluationCachePolicyResolver, evaluationProviderControlPolicyResolver, evaluationResiliencePolicyResolver, resolveProviderEvaluationProfile, TIINGO_EVALUATION_CACHE_POLICY } from '../provider-sources/provider-evaluation-certification.js';
 
 class TestRedisResilienceStore implements ProviderResilienceStore {
   readonly kind = 'redis' as const;
@@ -113,6 +114,13 @@ class TestCacheStore implements ProviderCacheStore {
     this.token = undefined;
     return true;
   }
+  async completeSuccessWithoutMaterial(_identity: ProviderCacheIdentity, token: string): Promise<boolean> {
+    if (this.token !== token) return false;
+    this.entry = undefined;
+    this.completion = { state: 'success_no_store', completedAt: Date.now() };
+    this.token = undefined;
+    return true;
+  }
   async releaseOwnerSafely(_identity: ProviderCacheIdentity, token: string): Promise<boolean> {
     if (this.token !== token) return false;
     this.token = undefined;
@@ -149,6 +157,31 @@ function compatibilityResponse(requestId: string, marker: string): ProviderRunti
 }
 
 export async function runProviderCacheTests(): Promise<void> {
+  assert.equal(resolveProviderEvaluationProfile('tiingo_market_data', 'market_price_history', 'eur_usd')?.credentialPoolId, 'evaluation_free');
+  assert.equal(resolveProviderEvaluationProfile('newsapi', 'market_price_history', 'eur_usd'), null);
+  assertProviderCachePolicyAuthority(TIINGO_EVALUATION_CACHE_POLICY, { sourceId: 'tiingo_market_data', capabilityId: 'market_price_history' }, 'evaluation_free');
+  for (const overrides of [{ freshTtlMs: 1 }, { staleIfErrorTtlMs: 1 }, { maxEntryBytes: 1 }]) {
+    assert.throws(() => assertProviderCachePolicyAuthority(buildTestProviderCachePolicy({ payloadStorageMode: 'evaluation_no_store', freshTtlMs: 0, staleIfErrorTtlMs: 0, maxEntryBytes: 0, ...overrides }), { sourceId: 'tiingo_market_data', capabilityId: 'market_price_history' }, 'primary'), /zero_payload_storage/);
+  }
+  const evaluationStore = new TestCacheStore();
+  const evaluationL1 = new ProviderL1Cache();
+  const evaluationCoordinator = new ProviderCacheCoordinator(evaluationStore, evaluationL1);
+  const evaluationControlMemory = new MemoryProviderControlStore();
+  let evaluationAdmits = 0, evaluationSettles = 0, evaluationObservations = 0, evaluationAdapterCalls = 0;
+  const evaluationControl: ProviderControlStore = { kind:'redis', isReady:()=>true, admit:async value=>{evaluationAdmits += 1;return evaluationControlMemory.admit(value);}, claimExecution:(reservation,token)=>evaluationControlMemory.claimExecution(reservation,token), settle:async(reservation,status)=>{evaluationSettles += 1;return evaluationControlMemory.settle(reservation,status);}, close:()=>evaluationControlMemory.close() };
+  const evaluationResilienceDelegate = new TestRedisResilienceStore();
+  const evaluationResilience: ProviderResilienceStore = { kind:'redis',isReady:()=>true,acquire:(policy,token)=>evaluationResilienceDelegate.acquire(policy,token),observe:async(policy,outcome,probe)=>{evaluationObservations += 1;return evaluationResilienceDelegate.observe(policy,outcome,probe);},releaseProbe:(policy,probe)=>evaluationResilienceDelegate.releaseProbe(policy,probe),close:()=>Promise.resolve() };
+  const evaluationFixture = new TiingoMarketDataAdapter({mode:'fixture'});
+  const evaluationAdapter = { descriptor:evaluationFixture.descriptor,fetch:async()=>{throw new Error('unmanaged_fetch_forbidden');},fetchManaged:async(request:never)=>{evaluationAdapterCalls += 1;await new Promise(resolve=>setTimeout(resolve,25));return evaluationFixture.fetch(request);},normalize:async()=>[] };
+  const evaluationContext = { cacheCoordinator:evaluationCoordinator,cachePolicyResolver:evaluationCachePolicyResolver,providerControlStore:evaluationControl,policyResolver:evaluationProviderControlPolicyResolver,resilienceStore:evaluationResilience,resiliencePolicyResolver:evaluationResiliencePolicyResolver,credentialPoolId:'evaluation_free' };
+  const evaluationWave = await Promise.all([executeProviderApiGateRequest(liveRequest('evaluation-owner'),evaluationAdapter,evaluationContext),executeProviderApiGateRequest(liveRequest('evaluation-follower'),evaluationAdapter,evaluationContext)]);
+  const evaluationOwner = evaluationWave.find(result=>result.cacheSnapshot?.singleFlightRole==='owner')!;
+  const evaluationFollower = evaluationWave.find(result=>result.cacheSnapshot?.singleFlightRole==='follower')!;
+  assert.equal(evaluationAdapterCalls,1); assert.ok(evaluationOwner.response); assert.equal(evaluationOwner.settlementState,'settled_committed');
+  assert.equal(evaluationFollower.response,null); assert.equal(evaluationFollower.decision.reason,'provider_evaluation_result_not_shareable');
+  assert.equal(JSON.stringify(evaluationFollower).includes('bars'),false); assert.equal(evaluationL1.size,0); assert.equal(evaluationStore.entry,undefined);
+  assert.deepEqual({evaluationAdmits,evaluationSettles,evaluationObservations},{evaluationAdmits:1,evaluationSettles:1,evaluationObservations:1});
+
   const policy = buildTestProviderCachePolicy();
   assertProviderCachePolicyAuthority(policy, { sourceId: policy.sourceId, capabilityId: policy.capabilityId }, 'primary');
   for (const bad of [buildTestProviderCachePolicy({ status: 'test_only' }), buildTestProviderCachePolicy({ status: 'disabled' })]) {

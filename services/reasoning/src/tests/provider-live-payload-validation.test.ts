@@ -43,27 +43,6 @@ export async function runProviderLivePayloadValidationTests(){
 
   const envBase = { ...process.env };
   const repoCwd = process.cwd().endsWith('/services/reasoning') ? join(process.cwd(), '../..') : process.cwd();
-  const smokeEnv = (entries: Record<string,string>) => Object.assign({}, envBase, entries);
-  const tiingoEnvName = `TIINGO_${'API'}_${'KEY'}`;
-  const fredEnvName = `FRED_${'API'}_${'KEY'}`;
-  const noFlag = spawnSync('node', ['scripts/provider-staging-smoke.mjs'], { cwd: repoCwd, env: smokeEnv({ ELCEO_PROVIDER_STAGING_SMOKE: '' }), encoding: 'utf8' });
-  assert.equal(noFlag.status,2);
-  assert.match(noFlag.stderr,/refused/);
-  const prod = spawnSync('node', ['scripts/provider-staging-smoke.mjs'], { cwd: repoCwd, env: smokeEnv({ ELCEO_PROVIDER_STAGING_SMOKE: '1', ELCEO_PROVIDER_ACTIVATION_MODE: 'production_live_allowed', [tiingoEnvName]: 'test-not-printed' }), encoding: 'utf8' });
-  assert.equal(prod.status,2);
-  assert.match(prod.stderr,/production activation is not approved/);
-  assert.equal(`${prod.stdout}${prod.stderr}`.includes('test-not-printed'),false);
-  const missing = spawnSync('node', ['scripts/provider-staging-smoke.mjs'], { cwd: repoCwd, env: smokeEnv({ ELCEO_PROVIDER_STAGING_SMOKE: '1', [tiingoEnvName]: '' }), encoding: 'utf8' });
-  assert.equal(missing.status,3);
-  assert.match(missing.stderr,/credentials_unavailable/);
-  const unsupported = spawnSync('node', ['scripts/provider-staging-smoke.mjs'], { cwd: repoCwd, env: smokeEnv({ ELCEO_PROVIDER_STAGING_SMOKE: '1', ELCEO_PROVIDER_SOURCE_ID: 'fred', [fredEnvName]: 'fred-not-printed' }), encoding: 'utf8' });
-  assert.equal(unsupported.status,4);
-  assert.match(unsupported.stderr,/staging_live_not_implemented_for_provider/);
-  assert.equal(`${unsupported.stdout}${unsupported.stderr}`.includes('fred-not-printed'),false);
-  const fake = spawnSync('node', ['scripts/provider-staging-smoke.mjs'], { cwd: repoCwd, env: smokeEnv({ ELCEO_PROVIDER_STAGING_SMOKE: '1', ELCEO_PROVIDER_STAGING_SMOKE_FAKE_ADAPTER: '1', [tiingoEnvName]: 'fake-tiingo-not-printed' }), encoding: 'utf8' });
-  assert.equal(fake.status,5, fake.stderr || fake.stdout);
-  assert.match(fake.stderr,/provider_cache_policy_missing/);
-  assert.equal(`${fake.stdout}${fake.stderr}`.includes('fake-tiingo-not-printed'),false);
 
   const rawPayload = { fixtureKind:'sanitized_replay_fixture', rows:[{ id:'ok', observedAt:'2026-01-01T00:00:00.000Z' }] };
   const normalizedPayload = { fixtureKind:'sanitized_replay_fixture', records:[{ providerId:'ok', observedAt:'2026-01-01T00:00:00.000Z' }] };

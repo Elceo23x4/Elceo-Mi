@@ -40,6 +40,11 @@ export * from './security';
 export * from './runtime/canonical-security-boundary';
 
 export * from './commercial-entitlements';
+export * from './commercial-pricing';
+export * from './payment-providers/korapay-adapter';
+export * from './payment-providers/kora-money';
+export * from './payment-providers/production-activation';
+export * from './payment-providers/provider-reconciliation';
 
 export * from './super-admin-commercial-controls';
 
@@ -52,3 +57,7 @@ export * from './observability-audit';
 
 export * from './route-entitlement-map';
 export * from './authentication';
+
+export * from './payment-providers/stripe-reconciliation';
+
+export * from './billing/checkout-resume';

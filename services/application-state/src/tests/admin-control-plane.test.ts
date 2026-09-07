@@ -49,9 +49,20 @@ export async function runAdminControlPlaneTests(): Promise<void> {
   assert.equal(ops.failedRecentRuns, 1); assert.equal(ops.blockedRecentRuns, 1);
   assert.equal(ops.mostRecentFailureJobKind, 'snapshot_refresh');
 
-  const providers = getAdminProviderCapabilitySummary({ FINNHUB_API_KEY: 'k', NOTIFICATION_EMAIL_PROVIDER: 'disabled' });
+  const providerEnv: Record<string, string> = { APP_ENV: 'staging', NOTIFICATION_EMAIL_PROVIDER: 'disabled' };
+  providerEnv.FINNHUB_API_KEY = ['PROV', 'P0', 'ADMIN', 'SENTINEL'].join('_');
+  providerEnv.TIINGO_API_KEY = ['PROV', 'P0', 'TIINGO', 'SENTINEL'].join('_');
+  const providers = getAdminProviderCapabilitySummary(providerEnv);
   assert.equal(providers.notificationProviders[0]?.providerKind, 'email');
   assert.equal(providers.ingestionProviders[0]?.category, 'geopolitics');
+  const finnhub = providers.ingestionProviders.find((provider) => provider.providerName === 'finnhub');
+  assert.equal(finnhub?.credentialPresent, true);
+  assert.equal(finnhub?.configured, true);
+  assert.equal(finnhub?.enabled, false);
+  assert.equal(finnhub?.stagingLiveAuthorized, false);
+  assert.equal(finnhub?.stagingLiveValidated, false);
+  assert.notEqual(finnhub?.capabilityStatus, 'healthy');
+  assert.equal(JSON.stringify(providers).includes('PROV_P0_ADMIN_SENTINEL'), false);
 
   const timeline = await getAdminAuditTimeline(refreshRepo, opsRunRepo, 2);
   assert.equal(timeline.events.length, 2);

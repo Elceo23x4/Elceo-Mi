@@ -23,18 +23,7 @@ export class GdeltEventAdapter implements GeopoliticsProvider {
         })
       );
     } catch {
-      return [
-        ensureUtc({
-          type: 'geopolitical_event',
-          provider: 'gdelt',
-          eventId: `gdelt-${query.toLowerCase()}`,
-          title: `GDELT cluster for ${query}`,
-          summary: 'Fallback geopolitical event clustering output.',
-          regionTags: ['global'],
-          occurredAtUtc: new Date().toISOString(),
-          dedupeKey: `${query.toLowerCase()}::${new Date().toISOString().slice(0, 13)}`
-        })
-      ];
+      return [];
     }
   }
 }

@@ -32,17 +32,24 @@ export async function runTiingoAdapterTests(): Promise<void> {
   if (disabledFetch.errorCode !== 'tiingo_live_disabled') throw new Error('live disabled deterministic failure expected');
 
   let fetchCalled = false;
+  let requestedUrl = '';
+  let authorization = '';
+  const sentinel = 'PROV_P0_TIINGO_SENTINEL_SECRET';
   const liveAdapter = new TiingoMarketDataAdapter({
     liveEnabled: true,
     mode: 'live_enabled',
-    apiKey: 'fake-key',
-    fetchImpl: async () => {
+    apiKey: sentinel,
+    fetchImpl: async (input, init) => {
       fetchCalled = true;
+      requestedUrl = String(input);
+      authorization = new Headers(init?.headers).get('authorization') ?? '';
       return new Response(JSON.stringify([{ date: '2026-01-01T00:00:00.000Z', open: 1, high: 2, low: 0.5, close: 1.5, volume: null, adjOpen: null, adjHigh: null, adjLow: null, adjClose: null, adjVolume: null, divCash: null, splitFactor: null }]), { status: 200 });
     }
   });
   const liveFetched = await liveAdapter.fetch(req());
   if (!fetchCalled || liveFetched.status !== 'success') throw new Error('live fake fetch should succeed');
+  if (liveFetched.sourceUrl?.includes(sentinel) || requestedUrl.includes(sentinel)) throw new Error('tiingo token must not appear in URL provenance');
+  if (authorization !== `Token ${sentinel}`) throw new Error('tiingo credential should use authorization header');
 
   const timeoutAdapter = new TiingoMarketDataAdapter({
     liveEnabled: true,

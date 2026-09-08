@@ -20,11 +20,28 @@ type QueryRow = Record<string, unknown>;
 type ClientLike = { query: (sql: string, params?: unknown[]) => Promise<{ rows: QueryRow[] }>; release?: () => void };
 type PoolLike = ClientLike & { connect: () => Promise<ClientLike>; end?: () => Promise<void> };
 let poolPromise: Promise<PoolLike> | null = null;
+let tenantPoolPromise: Promise<PoolLike> | null = null;
 const transactionClient = new AsyncLocalStorage<ClientLike>();
 async function getPool(): Promise<PoolLike> { if (!poolPromise) poolPromise = (async () => { const module = await import('pg'); return new module.Pool({ connectionString: runtimeEnv().DATABASE_URL }) as unknown as PoolLike; })(); return poolPromise; }
-export async function __closeSqlNotificationPoolForTests(): Promise<void> { const pool = await poolPromise; poolPromise = null; await pool?.end?.(); }
+export async function __closeSqlNotificationPoolForTests(): Promise<void> { const pool = await poolPromise; const tenant = await tenantPoolPromise; poolPromise = null; tenantPoolPromise = null; await pool?.end?.(); await tenant?.end?.(); }
 export const closeNotificationDbPool = __closeSqlNotificationPoolForTests;
 async function queryDb<T extends QueryRow = QueryRow>(sql: string, params: unknown[] = []): Promise<T[]> { const connection = transactionClient.getStore() ?? await getPool(); const result = await connection.query(sql, params); return result.rows as T[]; }
+export async function withNotificationTenantTransaction<T>(subject: { subjectKind: 'user'; subjectId: string }, operation: () => Promise<T>): Promise<T> {
+  if (!subject.subjectId) throw new Error('verified_subject_required');
+  const configured = runtimeEnv().TENANT_DATABASE_URL;
+  if (!configured) throw new Error('tenant_database_url_required');
+  if (!tenantPoolPromise) tenantPoolPromise = import('pg').then(({ Pool }) => new Pool({ connectionString: configured }) as unknown as PoolLike);
+  const client = await (await tenantPoolPromise).connect();
+  try {
+    await client.query('BEGIN');
+    const authority = await client.query(`SELECT r.rolsuper, r.rolbypassrls, EXISTS (SELECT 1 FROM pg_class c WHERE c.relname = ANY($1::text[]) AND pg_get_userbyid(c.relowner)=current_user) AS owns_protected FROM pg_roles r WHERE r.rolname=current_user`, [['app_notification_targets','app_notification_subscriptions','app_notification_verifications','app_portfolio_watchlist_entries','app_portfolio_positions','app_portfolio_action_items','app_portfolio_snapshots','app_portfolio_revisions','app_journal_cases','app_journal_influence_snapshots','app_journal_case_revisions']]);
+    if (!authority.rows[0] || authority.rows[0].rolsuper || authority.rows[0].rolbypassrls || authority.rows[0].owns_protected) throw new Error('tenant_database_role_unsafe');
+    await client.query(`SELECT set_config('elceo.tenant_subject_id',$1,true)`, [subject.subjectId]);
+    const result = await transactionClient.run(client, operation);
+    await client.query('COMMIT'); return result;
+  } catch (error) { await client.query('ROLLBACK').catch(() => undefined); throw error; }
+  finally { client.release?.(); }
+}
 export function canonicalSqlTimestamp(value: unknown): string {
   const date = value instanceof Date ? value : new Date(String(value));
   if (!Number.isFinite(date.getTime())) throw new Error('invalid_sql_timestamp');

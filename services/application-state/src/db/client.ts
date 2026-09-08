@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 function runtimeEnv(): Record<string, string | undefined> {
   return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
 }
@@ -20,6 +21,8 @@ type PoolLike = DbPoolLike;
 
 let testPoolFactory: (() => Promise<PoolLike> | PoolLike) | null = null;
 let poolPromise: Promise<PoolLike> | null = null;
+let tenantPoolPromise: Promise<PoolLike> | null = null;
+const tenantTransaction = new AsyncLocalStorage<DbTransactionClient>();
 
 export function __setDbPoolFactoryForTests(factory: (() => Promise<PoolLike> | PoolLike) | null): void {
   testPoolFactory = factory;
@@ -48,14 +51,18 @@ async function getPool(): Promise<PoolLike> {
 export async function closeDbPool(): Promise<void> {
   const current = poolPromise;
   poolPromise = null;
-  if (!current) return;
-  const pool = await current;
-  if (typeof pool.end === 'function') await pool.end();
+  if (current) {
+    const pool = await current;
+    if (typeof pool.end === 'function') await pool.end();
+  }
+  const tenant = tenantPoolPromise;
+  tenantPoolPromise = null;
+  if (tenant) await (await tenant).end?.();
 }
 
 export async function queryDb<T extends QueryResultRow = QueryResultRow>(sql: string, params: unknown[] = []): Promise<T[]> {
-  const pool = await getPool();
-  const result = await pool.query(sql, params);
+  const connection = tenantTransaction.getStore() ?? await getPool();
+  const result = await connection.query(sql, params);
   return result.rows as T[];
 }
 
@@ -93,8 +100,24 @@ export async function withDbTransaction<T>(callback: (transaction: DbTransaction
 /** Establish RLS context only from a server-verified user subject and only for this transaction. */
 export function withTenantDbTransaction<T>(subject: { readonly subjectKind: 'user'; readonly subjectId: string }, callback: (transaction: DbTransactionClient) => Promise<T>): Promise<T> {
   if (!subject.subjectId) return Promise.reject(new Error('verified_subject_required'));
-  return withDbTransaction(async (transaction) => {
-    await transaction.query(`SELECT set_config('app.authenticated_subject_id', $1, true)`, [subject.subjectId]);
-    return callback(transaction);
-  });
+  return (async () => {
+    const configured = runtimeEnv().TENANT_DATABASE_URL;
+    if (!configured) throw new Error('tenant_database_url_required');
+    if (!tenantPoolPromise) {
+      tenantPoolPromise = import('pg').then(({ Pool }) => new Pool({ connectionString: configured }) as unknown as PoolLike);
+    }
+    const client = await (await tenantPoolPromise).connect();
+    try {
+      await client.query('BEGIN');
+      const authority = await client.query(`SELECT r.rolsuper, r.rolbypassrls, EXISTS (SELECT 1 FROM pg_class c WHERE c.relname = ANY($1::text[]) AND pg_get_userbyid(c.relowner)=current_user) AS owns_protected FROM pg_roles r WHERE r.rolname=current_user`, [['app_notification_targets','app_notification_subscriptions','app_notification_verifications','app_portfolio_watchlist_entries','app_portfolio_positions','app_portfolio_action_items','app_portfolio_snapshots','app_portfolio_revisions','app_journal_cases','app_journal_influence_snapshots','app_journal_case_revisions']]);
+      if (!authority.rows[0] || authority.rows[0].rolsuper || authority.rows[0].rolbypassrls || authority.rows[0].owns_protected) throw new Error('tenant_database_role_unsafe');
+      await client.query(`SELECT set_config('elceo.tenant_subject_id', $1, true)`, [subject.subjectId]);
+      const result = await tenantTransaction.run(client, () => callback(client));
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      throw error;
+    } finally { client.release(); }
+  })();
 }

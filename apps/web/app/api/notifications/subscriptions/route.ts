@@ -1,12 +1,12 @@
 import { parseJsonBody, unwrapValidation, withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
 import { requireAuthenticatedSubject } from '@/lib/server/auth';
-import { getNotificationRuntimes } from '@/lib/server/composition';
+import { getTenantNotificationRuntimes } from '@/lib/server/composition';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 import { validateSubscriptionCreateRequest } from '@elceo/schemas';
 
 export const GET = withApiErrorBoundary(async () => {
   const subject = await requireAuthenticatedSubject();
-  const subscriptions = await getNotificationRuntimes().management.listSubscriptionsForSubjectDetailed(subject.subjectKind, subject.subjectId);
+  const subscriptions = await getTenantNotificationRuntimes(subject).management.listSubscriptionsForSubjectDetailed(subject.subjectKind, subject.subjectId);
   return jsonSuccess({ subscriptions });
 });
 
@@ -17,7 +17,7 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   const security = await requireSecurityDecision({ request, routePath: '/api/notifications/subscriptions', method: 'POST', actionKind: 'notification_subscription_write', actor, subjectId: subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;
   try {
-    const subscription = await getNotificationRuntimes().management.registerOrUpdateSubscription({
+    const subscription = await getTenantNotificationRuntimes(subject).management.registerOrUpdateSubscription({
       subjectKind: subject.subjectKind,
       subjectId: subject.subjectId,
       channel: body.channel,

@@ -1,6 +1,6 @@
 import { parseJsonBody, unwrapValidation, withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
 import { requireAuthenticatedSubject } from '@/lib/server/auth';
-import { getNotificationRuntimes } from '@/lib/server/composition';
+import { getTenantNotificationRuntimes } from '@/lib/server/composition';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 import { validateVerificationIssueRequest } from '@elceo/schemas';
 import { toPublicVerificationIssue } from '@/lib/server/notifications/public-verification';
@@ -12,7 +12,7 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   const security = await requireSecurityDecision({ request, routePath: '/api/notifications/verification/issue', method: 'POST', actionKind: 'notification_verification_issue', actor, subjectId: subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;
   try {
-    const internalVerification = await getNotificationRuntimes().verification.issueTargetVerificationForSubject('user', subject.subjectId, body.targetId);
+    const internalVerification = await getTenantNotificationRuntimes(subject).verification.issueTargetVerificationForSubject('user', subject.subjectId, body.targetId);
     const verification = toPublicVerificationIssue(internalVerification);
     const envelope = { ok: true as const, data: { verification } };
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { verification }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });

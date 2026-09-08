@@ -1,6 +1,6 @@
 import { parseSearchParams, withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
 import { requireAuthenticatedSubject } from '@/lib/server/auth';
-import { getApplicationStateRuntime } from '@/lib/server/composition';
+import { getTenantApplicationStateRuntime } from '@/lib/server/composition';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 
 export const POST = withApiErrorBoundary(async (request: Request) => {
@@ -13,7 +13,7 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   const security = await requireSecurityDecision({ request, routePath: '/api/journal/influence/generate', method: 'POST', actionKind: 'journal_influence_generate', actor, subjectId: subject.subjectId, requestBody });
   if (!security.ok) return security.response;
   try {
-    const snapshot = await getApplicationStateRuntime().journalInfluence.generateJournalInfluenceSnapshot({ subjectKind: subject.subjectKind, subjectId: subject.subjectId, assetScope, timeframeScope });
+    const snapshot = await getTenantApplicationStateRuntime(subject).journalInfluence.generateJournalInfluenceSnapshot({ subjectKind: subject.subjectKind, subjectId: subject.subjectId, assetScope, timeframeScope });
     const envelope = { ok: true as const, data: { snapshot } };
 
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { snapshot }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });

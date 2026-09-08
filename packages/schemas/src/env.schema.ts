@@ -3,6 +3,7 @@ export type ProviderEnv = {
   APP_ENV?: 'development' | 'test' | 'staging' | 'production';
   NODE_ENV?: string;
   DATABASE_URL?: string;
+  TENANT_DATABASE_URL?: string;
   REDIS_URL?: string;
   FINNHUB_API_KEY?: string;
   ALPHAVANTAGE_API_KEY?: string;
@@ -87,6 +88,7 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   if (env.APP_ENV === 'development' || env.APP_ENV === 'test' || env.APP_ENV === 'staging' || env.APP_ENV === 'production') out.APP_ENV = env.APP_ENV;
   if (env.NODE_ENV) out.NODE_ENV=env.NODE_ENV;
   if (env.DATABASE_URL) out.DATABASE_URL=env.DATABASE_URL;
+  if (env.TENANT_DATABASE_URL) out.TENANT_DATABASE_URL=env.TENANT_DATABASE_URL;
   if (env.REDIS_URL) out.REDIS_URL=env.REDIS_URL;
   if (env.FINNHUB_API_KEY) out.FINNHUB_API_KEY = env.FINNHUB_API_KEY;
   if (env.ALPHAVANTAGE_API_KEY) out.ALPHAVANTAGE_API_KEY = env.ALPHAVANTAGE_API_KEY;
@@ -145,6 +147,7 @@ export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
   // APP_ENV may be absent during compilation; NODE_ENV alone is not deployed identity.
   if (deployed && env.NODE_ENV !== 'production') errors.push('deployed APP_ENV requires NODE_ENV=production');
   if (deployed && (env.APP_STATE_REPOSITORY !== 'sql' || !env.DATABASE_URL)) errors.push('deployed APP_STATE_REPOSITORY=sql and DATABASE_URL are required');
+  if (deployed && !env.TENANT_DATABASE_URL) errors.push('deployed TENANT_DATABASE_URL restricted runtime principal is required');
   if (deployed && env.NOTIFICATIONS_PERSISTENCE_BACKEND !== 'sql') errors.push('deployed NOTIFICATIONS_PERSISTENCE_BACKEND=sql is required');
   if (deployed && env.ANALYTICS_PERSISTENCE_BACKEND !== 'sql') errors.push('deployed ANALYTICS_PERSISTENCE_BACKEND=sql is required');
   if (deployed && !env.PAYMENT_PROVIDER_MODE) errors.push('deployed PAYMENT_PROVIDER_MODE is required');

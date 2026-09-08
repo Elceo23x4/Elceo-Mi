@@ -1,13 +1,13 @@
 import { parseJsonBody, parsePositiveInt, parseSearchParams, unwrapValidation, withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
 import { requireAuthenticatedSubject } from '@/lib/server/auth';
-import { getApplicationStateRuntime } from '@/lib/server/composition';
+import { getTenantApplicationStateRuntime } from '@/lib/server/composition';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 import { validateJournalCreateDraftRequest } from '@elceo/schemas';
 
 export const GET = withApiErrorBoundary(async (request: Request) => {
   const subject = await requireAuthenticatedSubject();
   const params = parseSearchParams(request.url);
-  const cases = await getApplicationStateRuntime().journal.listJournalCases({
+  const cases = await getTenantApplicationStateRuntime(subject).journal.listJournalCases({
     subjectKind: subject.subjectKind,
     subjectId: subject.subjectId,
     asset: params.get('asset') ?? undefined,
@@ -24,7 +24,7 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   const actor = { actorKind: 'user' as const, actorId: subject.userId, subjectId: subject.subjectId };
   const security = await requireSecurityDecision({ request, routePath: '/api/journal/cases', method: 'POST', actionKind: 'journal_case_write', actor, subjectId: subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;
-  const journal = getApplicationStateRuntime().journal;
+  const journal = getTenantApplicationStateRuntime(subject).journal;
 
   try {
     const created = body.linkedReasoningRunId

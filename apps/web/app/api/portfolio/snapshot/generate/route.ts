@@ -1,5 +1,5 @@
 import { withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
-import { getApplicationStateRuntime } from '@/lib/server/composition';
+import { getTenantApplicationStateRuntime } from '@/lib/server/composition';
 import { maybeIncrementUsage, requireFeatureAccess } from '@/lib/server/access';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 
@@ -10,7 +10,7 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   const security = await requireSecurityDecision({ request, routePath: '/api/portfolio/snapshot/generate', method: 'POST', actionKind: 'portfolio_snapshot_generate', actor, subjectId: access.subject.subjectId, requestBody: {} });
   if (!security.ok) return security.response;
   try {
-    const snapshot = await getApplicationStateRuntime().portfolio.generatePortfolioSnapshot(access.subject.subjectKind, access.subject.subjectId);
+    const snapshot = await getTenantApplicationStateRuntime(access.subject).portfolio.generatePortfolioSnapshot(access.subject.subjectKind, access.subject.subjectId);
     await maybeIncrementUsage('portfolio.snapshot.generate', { request });
     const envelope = { ok: true as const, data: { snapshot } };
 

@@ -1,6 +1,6 @@
 import { withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
 import { requireAuthenticatedSubject } from '@/lib/server/auth';
-import { getApplicationStateRuntime } from '@/lib/server/composition';
+import { getTenantApplicationStateRuntime } from '@/lib/server/composition';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 
 export const POST = withApiErrorBoundary(async (request: Request, context: { params: Promise<{ actionId: string }> }) => {
@@ -10,7 +10,7 @@ export const POST = withApiErrorBoundary(async (request: Request, context: { par
   const security = await requireSecurityDecision({ request, routePath: '/api/portfolio/actions/[actionId]/complete', method: 'POST', actionKind: 'portfolio_action_write', actor, subjectId: subject.subjectId, requestBody: {} });
   if (!security.ok) return security.response;
   try {
-    const action = await getApplicationStateRuntime().portfolio.completeActionItem('user', subject.subjectId, actionId, new Date().toISOString(), { actorKind: 'user', actorId: subject.userId });
+    const action = await getTenantApplicationStateRuntime(subject).portfolio.completeActionItem('user', subject.subjectId, actionId, new Date().toISOString(), { actorKind: 'user', actorId: subject.userId });
       const envelope = { ok: true as const, data: { action } };
 
       await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { action }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });

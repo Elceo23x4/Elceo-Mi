@@ -47,7 +47,7 @@ import {
   CanonicalSecurityBoundaryService
 } from '@elceo/application-state';
 import { CanonicalAnalyticsBoundaryService, CanonicalCoachingBoundaryService } from '@elceo/analytics';
-import { CanonicalMarketIntelligenceBoundaryService, createReasoningPersistenceRepository, MemoryMarketEvidenceRegistrySnapshotRepository, MemoryNormalizedMarketEvidencePayloadRepository, MemoryProviderSourceRequestRepository, MemoryProviderSourceResponseRepository, MemorySeoContentArchitectureSnapshotRepository, SqlMarketEvidenceRegistrySnapshotRepository, SqlNormalizedMarketEvidencePayloadRepository, SqlProviderSourceRequestRepository, SqlProviderSourceResponseRepository, SqlSeoContentArchitectureSnapshotRepository } from '@elceo/reasoning';
+import { CanonicalMarketIntelligenceBoundaryService, createReasoningPersistenceRepository, MemoryMarketEvidenceRegistrySnapshotRepository, MemoryNormalizedMarketEvidencePayloadRepository, MemoryProviderSourceRequestRepository, MemoryProviderSourceResponseRepository, MemoryScheduledIngestionRunRepository, MemorySeoContentArchitectureSnapshotRepository, SQLScheduledIngestionRunRepository, SqlMarketEvidenceRegistrySnapshotRepository, SqlNormalizedMarketEvidencePayloadRepository, SqlProviderSourceRequestRepository, SqlProviderSourceResponseRepository, SqlSeoContentArchitectureSnapshotRepository, type ScheduledIngestionExecutionOptions } from '@elceo/reasoning';
 import {
   CanonicalNotificationDeliveryBoundaryService,
   CanonicalNotificationFeedbackBoundaryService,
@@ -169,7 +169,7 @@ export function getReasoningRuntime(): ReasoningRuntime {
   return reasoningRuntime;
 }
 
-export function getMarketIntelligenceRuntime() {
+export function getMarketIntelligenceRuntime(trustedScheduledAuthority?:ScheduledIngestionExecutionOptions) {
   if (marketIntelligenceRuntime) return marketIntelligenceRuntime;
   if (env.DATABASE_URL) {
     marketIntelligenceRuntime = new CanonicalMarketIntelligenceBoundaryService(
@@ -177,7 +177,9 @@ export function getMarketIntelligenceRuntime() {
       new SqlSeoContentArchitectureSnapshotRepository(),
       new SqlProviderSourceRequestRepository(),
       new SqlProviderSourceResponseRepository(),
-      new SqlNormalizedMarketEvidencePayloadRepository()
+      new SqlNormalizedMarketEvidencePayloadRepository(),
+      new SQLScheduledIngestionRunRepository(),
+      trustedScheduledAuthority
     );
     return marketIntelligenceRuntime;
   }
@@ -186,7 +188,9 @@ export function getMarketIntelligenceRuntime() {
     new MemorySeoContentArchitectureSnapshotRepository(),
     new MemoryProviderSourceRequestRepository(),
     new MemoryProviderSourceResponseRepository(),
-    new MemoryNormalizedMarketEvidencePayloadRepository()
+    new MemoryNormalizedMarketEvidencePayloadRepository(),
+    new MemoryScheduledIngestionRunRepository(),
+    trustedScheduledAuthority
   );
   return marketIntelligenceRuntime;
 }

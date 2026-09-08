@@ -738,7 +738,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   securityDecisionMode = 'idempotency_conflict';
   assert.deepEqual(await readJson(await positionsRoute.POST(request('https://x/api/portfolio/positions', { method: 'POST', headers: { 'Idempotency-Key': 'pos-conflict' }, body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', direction: 'long' }) }))), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
   securityDecisionMode = 'allowed';
-  assert.equal((await readJson(await positionsRoute.POST(request('https://x/api/portfolio/positions', { method: 'POST', headers: { 'Idempotency-Key': 'pos-ok' }, body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', direction: 'long' }) })))).ok, true);
+  assert.equal((await readJson(await positionsRoute.POST(request('https://x/api/portfolio/positions', { method: 'POST', headers: { 'Idempotency-Key': 'position-ok' }, body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', direction: 'long' }) })))).ok, true);
   assert.equal(latestSecurityActionKind, 'portfolio_position_write');
   assert.equal(securityAuditCount > 0, true);
 
@@ -1235,7 +1235,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   const reconcileRateLimited = await internalBillingReconcileRoute.POST(request('https://x/api/internal/billing/reconcile', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'stripe', sourceEventId: 'evt-1', subjectId: 'user-2' }) }));
   assert.deepEqual(await readJson(reconcileRateLimited), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
   securityDecisionMode = 'idempotency_conflict';
-  const reconcileIdempotencyConflict = await internalBillingReconcileRoute.POST(request('https://x/api/internal/billing/reconcile', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'idem-1' }, body: JSON.stringify({ providerKind: 'stripe', sourceEventId: 'evt-1', subjectId: 'user-2' }) }));
+  const reconcileIdempotencyConflict = await internalBillingReconcileRoute.POST(request('https://x/api/internal/billing/reconcile', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'idem-reconcile-1' }, body: JSON.stringify({ providerKind: 'stripe', sourceEventId: 'evt-1', subjectId: 'user-2' }) }));
   assert.deepEqual(await readJson(reconcileIdempotencyConflict), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
   securityDecisionMode = 'allowed';
   assert.deepEqual(await readJson(await internalBillingPolicyEvaluateRoute.POST(request('https://x/api/internal/billing/policy/evaluate', { method: 'POST', body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });

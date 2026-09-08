@@ -89,3 +89,12 @@ export async function withDbTransaction<T>(callback: (transaction: DbTransaction
   if (releaseError !== undefined) throw releaseError;
   return result as T;
 }
+
+/** Establish RLS context only from a server-verified user subject and only for this transaction. */
+export function withTenantDbTransaction<T>(subject: { readonly subjectKind: 'user'; readonly subjectId: string }, callback: (transaction: DbTransactionClient) => Promise<T>): Promise<T> {
+  if (!subject.subjectId) return Promise.reject(new Error('verified_subject_required'));
+  return withDbTransaction(async (transaction) => {
+    await transaction.query(`SELECT set_config('app.authenticated_subject_id', $1, true)`, [subject.subjectId]);
+    return callback(transaction);
+  });
+}

@@ -75,7 +75,9 @@
     "test:sec-b-auth-postgres": "npm run -w services/application-state test && npm run -w apps/web test && node scripts/test-sec-b-auth-postgres.mjs",
     "test:sec-c-postgres": "node scripts/test-sec-c-postgres.mjs",
     "test:sec-d-postgres": "npm run -w services/reasoning test && node scripts/test-sec-d-provider-postgres.mjs",
-    "test:sec-e": "node scripts/check-sec-e-boundaries.mjs && npm run -w apps/web test"
+    "test:sec-e": "node scripts/check-sec-e-boundaries.mjs && npm run -w apps/web test",
+    "test:sec-f": "npm run -w @elceo/config build && npm run -w @elceo/schemas build && npm run -w apps/web test && node scripts/test-sec-f-runtime.mjs && node scripts/check-sec-f.mjs",
+    "test:sec-f-postgres": "node scripts/test-sec-f-postgres.mjs"
   },
   "engines": {
     "node": "24.x",

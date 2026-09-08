@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const middleware=await readFile('apps/web/middleware.ts','utf8');
+const config=await readFile('apps/web/next.config.mjs','utf8');
+const migration=await readFile('infra/db/schema/0058_sec_f_tenant_rls.sql','utf8');
+assert(!config.includes("script-src 'self' 'unsafe-inline'"));
+for(const directive of ["object-src 'none'","base-uri 'self'","frame-ancestors 'none'","form-action 'self'","script-src 'self' 'nonce-","style-src-attr 'unsafe-inline'","https://cdn.onesignal.com","https://api.onesignal.com"])assert(middleware.includes(directive),directive);
+assert(!middleware.match(/script-src[^;]*unsafe-inline/));
+assert(!middleware.match(/productionCsp[^]*?script-src[^;]*unsafe-eval/));
+assert(migration.includes("set_config('app.authenticated_subject_id'"));
+assert(migration.includes('ENABLE ROW LEVEL SECURITY'));
+console.log('SEC-F static CSP, route boundary, and RLS contract checks passed');

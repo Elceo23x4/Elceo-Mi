@@ -10,7 +10,8 @@ const requiredFiles = [
   'docs/production-secrets-and-config-checklist.md',
   'scripts/security-gate.mjs',
   '.github/workflows/ci.yml',
-  'apps/web/next.config.mjs'
+  'apps/web/next.config.mjs',
+  'apps/web/middleware.ts'
 ];
 
 const mustMention = [
@@ -29,7 +30,7 @@ if (existsSync(resolve('.github/workflows/ci.yml'))) {
 }
 
 if (existsSync(resolve('apps/web/next.config.mjs'))) {
-  const config = readFileSync(resolve('apps/web/next.config.mjs'), 'utf8').toLowerCase();
+  const config = `${readFileSync(resolve('apps/web/next.config.mjs'), 'utf8')}\n${readFileSync(resolve('apps/web/middleware.ts'), 'utf8')}`.toLowerCase();
   const requiredHeaderTokens = [
     'strict-transport-security',
     'x-content-type-options',
@@ -39,7 +40,7 @@ if (existsSync(resolve('apps/web/next.config.mjs'))) {
     'content-security-policy'
   ];
   for (const token of requiredHeaderTokens) {
-    if (!config.includes(token)) findings.push(`Missing required header token in next config: ${token}`);
+    if (!config.includes(token)) findings.push(`Missing required emitted security header token: ${token}`);
   }
 }
 

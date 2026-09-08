@@ -41,6 +41,8 @@ export type ProviderEnv = {
   ONESIGNAL_APP_API_KEY?: string;
   ONESIGNAL_WEBHOOK_CORRELATION_SECRET?: string;
   NEXT_PUBLIC_APP_BASE_URL?: string;
+  APP_BASE_URL?: string;
+  INTERNAL_API_BASE_URL?: string;
   BILLING_PROVIDER?: 'mock' | 'stripe';
   BILLING_WEBHOOK_SECRET?: string;
   STRIPE_SECRET_KEY?: string;
@@ -111,6 +113,8 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   for (const key of ['NOTIFICATION_EMAIL_FROM_ADDRESS','NOTIFICATION_EMAIL_FROM_NAME','NOTIFICATION_EMAIL_REPLY_TO','RESEND_API_KEY','RESEND_WEBHOOK_SECRET','POSTMARK_SERVER_TOKEN','POSTMARK_WEBHOOK_USERNAME','POSTMARK_WEBHOOK_PASSWORD','POSTMARK_MESSAGE_STREAM','ONESIGNAL_APP_ID','NEXT_PUBLIC_ONESIGNAL_APP_ID','ONESIGNAL_APP_API_KEY','ONESIGNAL_WEBHOOK_CORRELATION_SECRET'] as const) if (env[key]) out[key]=env[key];
   if (env.NOTIFICATION_PUSH_PROVIDER === 'onesignal_web_push') out.NOTIFICATION_PUSH_PROVIDER=env.NOTIFICATION_PUSH_PROVIDER;
   if (env.NEXT_PUBLIC_APP_BASE_URL) out.NEXT_PUBLIC_APP_BASE_URL = env.NEXT_PUBLIC_APP_BASE_URL;
+  if (env.APP_BASE_URL) out.APP_BASE_URL = env.APP_BASE_URL;
+  if (env.INTERNAL_API_BASE_URL) out.INTERNAL_API_BASE_URL = env.INTERNAL_API_BASE_URL;
   if (env.BILLING_PROVIDER === 'mock' || env.BILLING_PROVIDER === 'stripe') out.BILLING_PROVIDER = env.BILLING_PROVIDER;
   if (env.BILLING_WEBHOOK_SECRET) out.BILLING_WEBHOOK_SECRET = env.BILLING_WEBHOOK_SECRET;
   if (env.STRIPE_SECRET_KEY) out.STRIPE_SECRET_KEY = env.STRIPE_SECRET_KEY;
@@ -169,7 +173,13 @@ export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
   } else if (!isValidAbsoluteHttpUrl(env.NEXT_PUBLIC_APP_BASE_URL)) {
     errors.push('NEXT_PUBLIC_APP_BASE_URL must be an absolute http(s) URL');
   }
-
+  if (deployed) {
+    for (const [name, value] of [['NEXT_PUBLIC_APP_BASE_URL', env.NEXT_PUBLIC_APP_BASE_URL], ['APP_BASE_URL', env.APP_BASE_URL], ['INTERNAL_API_BASE_URL', env.INTERNAL_API_BASE_URL]] as const) {
+      if (!value) continue;
+      try { if (new URL(value).protocol !== 'https:') errors.push(`${name} must use HTTPS in deployed environments`); }
+      catch { errors.push(`${name} must be an absolute HTTPS URL in deployed environments`); }
+    }
+  }
   if (appEnv === 'production' && env.AUTH_CREDENTIALS_ENABLED === 'true') {
     let secureBase = false; try { secureBase = new URL(env.NEXT_PUBLIC_APP_BASE_URL ?? '').protocol === 'https:'; } catch { /* Report below. */ }
     if (!secureBase) errors.push('production credentials require an HTTPS NEXT_PUBLIC_APP_BASE_URL');

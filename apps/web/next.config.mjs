@@ -1,8 +1,7 @@
-import { sentryBrowserBuildEnv, sentryConnectSources } from './lib/sentry-dsn.mjs';
+import { sentryBrowserBuildEnv } from './lib/sentry-dsn.mjs';
 import { sentrySourceMapBuildOptions } from './lib/sentry-build-config.mjs';
 import { withSentryConfig } from '@sentry/nextjs/config';
 
-const connectSources = sentryConnectSources(process.env);
 const sentryBrowserEnv = sentryBrowserBuildEnv(process.env);
 const sentryBuildOptions = sentrySourceMapBuildOptions(process.env);
 
@@ -15,11 +14,7 @@ const securityHeaders = [
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
   { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
-  {
-    key: 'Content-Security-Policy',
-    value:
-      `default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://cdn.onesignal.com; worker-src 'self' blob: https://cdn.onesignal.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src ${connectSources.join(' ')};`
-  }
+  // Per-request nonce CSP is emitted by middleware; static security headers remain cacheable here.
 ];
 
 const nextConfig = {

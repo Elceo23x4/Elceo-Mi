@@ -168,6 +168,12 @@ jobs:
         run: npm run test:sec-d-postgres
       - name: SEC-E canonical API boundary acceptance
         run: npm run test:sec-e
+      - name: SEC-F residual security acceptance
+        env:
+          DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3
+        run: |
+          npm run test:sec-f
+          npm run test:sec-f-postgres
       - name: Production build
         run: npm run build
       - name: Notification browser bundle secret boundary

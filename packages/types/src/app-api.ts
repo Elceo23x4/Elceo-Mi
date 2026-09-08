@@ -23,6 +23,7 @@ export const API_ERROR_CODES = [
   'conflict',
   'unprocessable_entity',
   'dependency_failed',
+  'payload_too_large',
   'internal_error'
 ] as const;
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
@@ -34,6 +35,12 @@ export type ApiErrorEnvelope = {
     message: string;
     details?: string[];
   };
+};
+
+export type AccountBillingSnapshotDto = {
+  generatedAt: string;
+  plan: { kind: ElceoPlanKind; accountState: ElceoAccountState; startedAt: string | null; endsAt: string | null; trialEndsAt: string | null };
+  subscription: null | { state: string; currentPeriodStart: string | null; currentPeriodEnd: string | null; trialEndsAt: string | null; canceledAt: string | null; willCancelAtPeriodEnd: boolean };
 };
 
 export type WorkspaceRefreshRequest = { triggerKind: SnapshotRefreshTriggerKind };

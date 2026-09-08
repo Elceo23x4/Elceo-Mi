@@ -13,7 +13,7 @@ export const GET = withApiErrorBoundary(async (request: Request) => {
 
 export const POST = withApiErrorBoundary(async (request: Request) => {
   const subject = await requireAuthenticatedSubject();
-  const body = unwrapValidation(validatePositionCreateRequest(await parseJsonBody(request)));
+  const body = unwrapValidation(validatePositionCreateRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));
   const actor = { actorKind: 'user' as const, actorId: subject.userId, subjectId: subject.subjectId };
   const security = await requireSecurityDecision({ request, routePath: '/api/portfolio/positions', method: 'POST', actionKind: 'portfolio_position_write', actor, subjectId: subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;

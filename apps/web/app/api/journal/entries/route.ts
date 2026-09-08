@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/server/api';
 import { NextResponse } from 'next/server';
 import { ApplicationStateService } from '@elceo/application-state';
 import { requireAppUserState } from '../../../../lib/auth/session';
@@ -18,7 +19,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const { appState: state } = await requireAppUserState();
-    const payload = (await request.json()) as TradeJournalCreateInput;
+    const payload = (await parseJsonBody(request,{maxBytes:64*1024})) as TradeJournalCreateInput;
     const created = await appState.createTradeJournalEntry(state.profile.id, payload);
     return NextResponse.json(created, { status: 201 });
   } catch (error) {

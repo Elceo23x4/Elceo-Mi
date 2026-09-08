@@ -2,12 +2,12 @@ import { parseJsonBody, unwrapValidation, withApiErrorBoundary, jsonSuccess } fr
 import { requireInternalRouteAccess } from '@/lib/server/auth';
 import { validateAdminEntitlementPlanRequest } from '@elceo/schemas';
 import { getEntitlementsRuntime } from '@/lib/server/composition';
-import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, getSecurityActorFromRequest, requireSecurityDecision } from '@/lib/server/security';
+import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, securityActorFromVerifiedPrincipal, requireSecurityDecision } from '@/lib/server/security';
 
 export const POST = withApiErrorBoundary(async (request: Request) => {
-  requireInternalRouteAccess(request);
-  const body = unwrapValidation(validateAdminEntitlementPlanRequest(await parseJsonBody(request)));
-  const actor = getSecurityActorFromRequest(request, 'admin');
+  const principal = requireInternalRouteAccess(request);
+  const body = unwrapValidation(validateAdminEntitlementPlanRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));
+  const actor = securityActorFromVerifiedPrincipal(principal, 'admin');
   const security = await requireSecurityDecision({ request, routePath: '/api/admin/entitlements/plan', method: 'POST', actionKind: 'admin_write', actor, subjectId: body.subjectId, requestBody: body });
   if (!security.ok) return security.response;
   try {

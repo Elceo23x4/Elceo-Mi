@@ -7,7 +7,7 @@ import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, 
 export const POST = withApiErrorBoundary(async (request: Request) => {
   const access = await requireFeatureAccess('workspace.refresh', { request });
   if (!access.ok) return access.response;
-  const body = unwrapValidation(validateWorkspaceRefreshRequest(await parseJsonBody(request)));
+  const body = unwrapValidation(validateWorkspaceRefreshRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));
   const actor = { actorKind: 'user' as const, actorId: access.subject.subjectId, subjectId: access.subject.subjectId };
   const security = await requireSecurityDecision({ request, routePath: '/api/workspace/refresh', method: 'POST', actionKind: 'workspace_refresh', actor, subjectId: access.subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;

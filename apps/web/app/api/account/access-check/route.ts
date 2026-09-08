@@ -5,7 +5,7 @@ import { getEntitlementsRuntime } from '@/lib/server/composition';
 
 export const POST = withApiErrorBoundary(async (request: Request) => {
   const subject = await requireAuthenticatedSubject();
-  const body = unwrapValidation(validateAccountAccessCheckRequest(await parseJsonBody(request)));
+  const body = unwrapValidation(validateAccountAccessCheckRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));
   const decision = await getEntitlementsRuntime().decideFeatureAccess(subject.subjectKind, subject.subjectId, body.feature);
   return jsonSuccess({ decision });
 });

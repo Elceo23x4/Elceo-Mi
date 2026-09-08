@@ -1,11 +1,11 @@
 import { withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
 import { requireInternalRouteAccess } from '@/lib/server/auth';
 import { getNotificationRuntimes } from '@/lib/server/composition';
-import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, getSecurityActorFromRequest, requireSecurityDecision } from '@/lib/server/security';
+import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, securityActorFromVerifiedPrincipal, requireSecurityDecision } from '@/lib/server/security';
 
 export const POST = withApiErrorBoundary(async (request: Request) => {
-  requireInternalRouteAccess(request);
-  const actor = getSecurityActorFromRequest(request, 'internal');
+  const principal = requireInternalRouteAccess(request);
+  const actor = securityActorFromVerifiedPrincipal(principal, 'internal');
   const security = await requireSecurityDecision({ request, routePath: '/api/notifications/delivery/dispatch', method: 'POST', actionKind: 'notification_dispatch', actor, requestBody: {} });
   if (!security.ok) return security.response;
   try {

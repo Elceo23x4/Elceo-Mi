@@ -20,7 +20,7 @@ export const GET = withApiErrorBoundary(async (request: Request) => {
 
 export const POST = withApiErrorBoundary(async (request: Request) => {
   const subject = await requireAuthenticatedSubject();
-  const body = unwrapValidation(validateJournalCreateDraftRequest(await parseJsonBody(request)));
+  const body = unwrapValidation(validateJournalCreateDraftRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));
   const actor = { actorKind: 'user' as const, actorId: subject.userId, subjectId: subject.subjectId };
   const security = await requireSecurityDecision({ request, routePath: '/api/journal/cases', method: 'POST', actionKind: 'journal_case_write', actor, subjectId: subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;

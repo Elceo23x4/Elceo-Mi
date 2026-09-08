@@ -8,7 +8,7 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   requireInternalRouteAccess(request);
   const access = await requireFeatureAccess('admin.ops', { request });
   if (!access.ok) return access.response;
-  const body = unwrapValidation(validateBillingProviderEventReplayRequest(await parseJsonBody(request)));
+  const body = unwrapValidation(validateBillingProviderEventReplayRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));
   const results = await getPaymentProviderRuntime().replayUnprocessedEvents(body.limit);
   return jsonSuccess({ results });
 });

@@ -9,7 +9,7 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   const access = await requireFeatureAccess('admin.ops', { request });
   if (!access.ok) return access.response;
 
-  const body = (await parseJsonBody(request)) as Record<string, unknown>;
+  const body = (await parseJsonBody(request, { maxBytes: 64 * 1024 })) as Record<string, unknown>;
   const parsed = validateSuperAdminStepUpVerificationRequest({
     challengeId: body.challengeId,
     providerKind: body.providerKind,

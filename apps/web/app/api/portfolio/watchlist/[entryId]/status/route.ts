@@ -6,7 +6,7 @@ import { validateWatchlistStatusRequest } from '@elceo/schemas';
 
 export const POST = withApiErrorBoundary(async (request: Request, context: { params: Promise<{ entryId: string }> }) => {
   const subject = await requireAuthenticatedSubject();
-  const body = unwrapValidation(validateWatchlistStatusRequest(await parseJsonBody(request)));
+  const body = unwrapValidation(validateWatchlistStatusRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));
   const { entryId } = await context.params;
   const actor = { actorKind: 'user' as const, actorId: subject.userId, subjectId: subject.subjectId };
   const security = await requireSecurityDecision({ request, routePath: '/api/portfolio/watchlist/[entryId]/status', method: 'POST', actionKind: 'portfolio_watchlist_write', actor, subjectId: subject.subjectId, requestBody: body });

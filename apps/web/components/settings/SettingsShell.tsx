@@ -32,7 +32,7 @@ export function SettingsShell({ initialState, billing }: SettingsShellProps) {
   const save = async (next: ElceoUserState) => {
     setPersistError(null);
 
-    const response = await fetch('/api/app-state/settings', {
+    const response = await fetch('/api/account/preferences', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

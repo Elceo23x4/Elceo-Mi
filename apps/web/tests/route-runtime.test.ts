@@ -95,6 +95,7 @@ import * as adminEntitlementStateRoute from '../app/api/admin/entitlements/state
 import * as adminEntitlementOverrideRoute from '../app/api/admin/entitlements/override/route';
 
 import * as accountBillingRoute from '../app/api/account/billing/route';
+import { toAccountBillingSnapshotDto } from '../lib/server/account/billing-dto';
 import * as accountBillingPolicyRoute from '../app/api/account/billing/policy/route';
 import * as accountBillingPolicyTransitionsRoute from '../app/api/account/billing/policy/transitions/route';
 import * as accountBillingReconciliationRunsRoute from '../app/api/account/billing/reconciliation-runs/route';
@@ -888,7 +889,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal(accountBillingUnauthorized.status, 401);
   assert.deepEqual(await readJson(accountBillingUnauthorized), { ok: false, error: { code: 'unauthorized', message: 'Unauthorized' } });
   installMocks();
-  assert.deepEqual(await readJson(await accountBillingRoute.GET()), { ok: true, data: { snapshot: await mockApplicationStateRuntime.billingLifecycle.getBillingLifecycleSnapshot('user', 'user-1') } });
+  assert.deepEqual(await readJson(await accountBillingRoute.GET()), { ok: true, data: { snapshot: toAccountBillingSnapshotDto(await mockApplicationStateRuntime.billingLifecycle.getBillingLifecycleSnapshot('user', 'user-1')) } });
   setAuthTestOverrides({ subjectResolver: async () => null });
   assert.deepEqual(await readJson(await accountBillingPolicyRoute.GET()), { ok: false, error: { code: 'unauthorized', message: 'Unauthorized' } });
   installMocks();

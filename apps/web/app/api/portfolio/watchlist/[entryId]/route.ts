@@ -15,7 +15,7 @@ export const GET = withApiErrorBoundary(async (_request: Request, context: { par
 export const PATCH = withApiErrorBoundary(async (request: Request, context: { params: Promise<{ entryId: string }> }) => {
   const subject = await requireAuthenticatedSubject();
   const { entryId } = await context.params;
-  const patch = unwrapValidation(validateWatchlistUpdateRequest(await parseJsonBody(request)));
+  const patch = unwrapValidation(validateWatchlistUpdateRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));
   const actor = { actorKind: 'user' as const, actorId: subject.userId, subjectId: subject.subjectId };
   const security = await requireSecurityDecision({ request, routePath: '/api/portfolio/watchlist/[entryId]', method: 'PATCH', actionKind: 'portfolio_watchlist_write', actor, subjectId: subject.subjectId, requestBody: patch });
   if (!security.ok) return security.response;

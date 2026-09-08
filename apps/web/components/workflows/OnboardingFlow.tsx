@@ -52,7 +52,7 @@ export function OnboardingFlow({ initialState, subscriptionEligibleForPremium }:
   const saveAndFinish = async () => {
     setPersistError(null);
 
-    const response = await fetch('/api/app-state/onboarding', {
+    const response = await fetch('/api/account/onboarding', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -69,10 +69,10 @@ export function OnboardingFlow({ initialState, subscriptionEligibleForPremium }:
       return;
     }
 
-    const persisted = (await response.json()) as {
+    const { data: persisted } = (await response.json()) as { data: {
       profile: { onboardingCompletedAt: string | null };
       watchlist: { assets: string[] };
-    };
+    } };
 
     localStorage.setItem(
       STORAGE_KEY,

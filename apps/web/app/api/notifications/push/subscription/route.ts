@@ -14,7 +14,7 @@ function parseBody(value: unknown): { subscriptionId: string } {
 
 async function mutate(request: Request, operation: 'bind' | 'unbind'): Promise<Response> {
   const subject = await requireAuthenticatedSubject();
-  const body = parseBody(await parseJsonBody(request));
+  const body = parseBody(await parseJsonBody(request, { maxBytes: 64 * 1024 }));
   const opaqueKey = `push-${operation}-${createHash('sha256').update(`${subject.subjectId}:${operation}:${body.subscriptionId.trim().toLowerCase()}`).digest('hex')}`;
   const securedRequest = new Request(request.url, { method: request.method, headers: new Headers(request.headers) });
   securedRequest.headers.set('Idempotency-Key', opaqueKey);

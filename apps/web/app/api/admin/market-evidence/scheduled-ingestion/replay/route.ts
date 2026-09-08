@@ -2,7 +2,7 @@ import { jsonSuccess, parseJsonBody, unwrapValidation, withApiErrorBoundary } fr
 import { requireFeatureAccess } from '@/lib/server/access';
 import { requireInternalRouteAccess } from '@/lib/server/auth';
 import { getMarketIntelligenceRuntime } from '@/lib/server/composition';
-import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, getSecurityActorFromRequest, requireSecurityDecision } from '@/lib/server/security';
+import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, securityActorFromVerifiedPrincipal, requireSecurityDecision } from '@/lib/server/security';
 import { parseScheduledIngestionReplayQuery, validateInternalScheduledIngestionReplayRequest } from '@elceo/schemas';
 
 export const GET = withApiErrorBoundary(async (request: Request) => {
@@ -17,8 +17,8 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   requireInternalRouteAccess(request);
   const access = await requireFeatureAccess('admin.ops', { request });
   if (!access.ok) return access.response;
-  const body = unwrapValidation(validateInternalScheduledIngestionReplayRequest(await parseJsonBody(request)));
-  const actor = getSecurityActorFromRequest(request, 'internal');
+  const body = unwrapValidation(validateInternalScheduledIngestionReplayRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));
+  const actor = securityActorFromVerifiedPrincipal(principal, 'internal');
   const security = await requireSecurityDecision({ request, routePath: '/api/admin/market-evidence/scheduled-ingestion/replay', method: 'POST', actionKind: 'internal_mutation', actor, subjectId: access.subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;
   try {

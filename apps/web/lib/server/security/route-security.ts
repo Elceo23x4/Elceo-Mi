@@ -3,21 +3,43 @@ import { createHash } from 'node:crypto';
 import type { SecurityActionKind, SecurityActorKind, SecurityBlockReason, SecurityDecision } from '@elceo/types';
 import { jsonError } from '@/lib/server/api';
 import { getSecurityRuntime } from '@/lib/server/composition';
+import type { VerifiedInternalPrincipal } from '@/lib/server/auth';
 
 export type SecurityActor = { actorKind: SecurityActorKind; actorId: string; subjectId: string | null };
 
-export function getSecurityActorFromRequest(request: Request, mode: 'internal' | 'admin' | 'user' = 'internal'): SecurityActor {
-  const internalToken = request.headers.get('x-elceo-internal-token');
-  if (internalToken) return { actorKind: mode === 'admin' ? 'admin' : 'internal', actorId: 'internal-api', subjectId: null };
-  return { actorKind: 'system', actorId: 'missing', subjectId: null };
+export function securityActorFromVerifiedPrincipal(principal: VerifiedInternalPrincipal, mode: 'internal' | 'admin' = 'internal'): SecurityActor {
+  return { actorKind: mode, actorId: principal.id, subjectId: null };
 }
 
 export function getIdempotencyKeyFromRequest(request: Request): string | null {
-  return request.headers.get('Idempotency-Key') ?? request.headers.get('x-idempotency-key');
+  const value = request.headers.get('Idempotency-Key') ?? request.headers.get('x-idempotency-key');
+  if (value !== null && (value.length < 8 || value.length > 255 || !/^[A-Za-z0-9._:-]+$/.test(value))) throw new Error('validation_error:idempotency_key');
+  return value;
+}
+
+export function canonicalJson(value: unknown): string {
+  const ancestors = new Set<object>();
+  const visit = (candidate: unknown): string => {
+    if (candidate === null) return 'null';
+    if (typeof candidate === 'string' || typeof candidate === 'boolean') return JSON.stringify(candidate);
+    if (typeof candidate === 'number') {
+      if (!Number.isFinite(candidate)) throw new TypeError('canonical_json_unsupported_number');
+      return JSON.stringify(candidate);
+    }
+    if (typeof candidate !== 'object') throw new TypeError('canonical_json_unsupported_value');
+    if (ancestors.has(candidate)) throw new TypeError('canonical_json_cycle');
+    ancestors.add(candidate);
+    try {
+      if (Array.isArray(candidate)) return `[${candidate.map(visit).join(',')}]`;
+      if (Object.getPrototypeOf(candidate) !== Object.prototype && Object.getPrototypeOf(candidate) !== null) throw new TypeError('canonical_json_unsupported_object');
+      return `{${Object.keys(candidate).sort().map((key) => `${JSON.stringify(key)}:${visit((candidate as Record<string, unknown>)[key])}`).join(',')}}`;
+    } finally { ancestors.delete(candidate); }
+  };
+  return visit(value);
 }
 
 export function buildSecurityRequestHash(requestBody: unknown): string {
-  const stable = JSON.stringify(requestBody ?? {}, Object.keys((requestBody ?? {}) as Record<string, unknown>).sort());
+  const stable = canonicalJson(requestBody ?? {});
   return createHash('sha256').update(stable).digest('hex');
 }
 

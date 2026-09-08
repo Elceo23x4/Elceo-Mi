@@ -45,6 +45,7 @@ import {
   SQLBillingOrchestrationRunRepository,
   PaymentProviderTranslator,
   CanonicalSecurityBoundaryService
+  ,ApplicationStateService
 } from '@elceo/application-state';
 import { CanonicalAnalyticsBoundaryService, CanonicalCoachingBoundaryService } from '@elceo/analytics';
 import { CanonicalMarketIntelligenceBoundaryService, createReasoningPersistenceRepository, MemoryMarketEvidenceRegistrySnapshotRepository, MemoryNormalizedMarketEvidencePayloadRepository, MemoryProviderSourceRequestRepository, MemoryProviderSourceResponseRepository, MemoryScheduledIngestionRunRepository, MemorySeoContentArchitectureSnapshotRepository, SQLScheduledIngestionRunRepository, SqlMarketEvidenceRegistrySnapshotRepository, SqlNormalizedMarketEvidencePayloadRepository, SqlProviderSourceRequestRepository, SqlProviderSourceResponseRepository, SqlSeoContentArchitectureSnapshotRepository, type ScheduledIngestionExecutionOptions } from '@elceo/reasoning';
@@ -105,6 +106,12 @@ type NotificationRuntime = {
 };
 
 let applicationStateRuntime: ApplicationStateRuntime | null = null;
+let accountStateRuntime: ApplicationStateService | null = null;
+
+/** Process-owned compatibility domain facade used only by canonical account APIs. */
+export function getAccountStateRuntime(): ApplicationStateService {
+  return accountStateRuntime ??= new ApplicationStateService();
+}
 let analyticsRuntime: AnalyticsRuntime | null = null;
 let reasoningRuntime: ReasoningRuntime | null = null;
 let marketIntelligenceRuntime: CanonicalMarketIntelligenceBoundaryService | null = null;

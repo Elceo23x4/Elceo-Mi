@@ -8,7 +8,7 @@ import { validateJournalReviewRequest } from '@elceo/schemas';
 export const POST = withApiErrorBoundary(async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
   const subject = await requireAuthenticatedSubject();
   const { caseId } = await context.params;
-  const patch = unwrapValidation(validateJournalReviewRequest(await parseJsonBody(request)));
+  const patch = unwrapValidation(validateJournalReviewRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));
   const actor = { actorKind: 'user' as const, actorId: subject.userId, subjectId: subject.subjectId };
   const security = await requireSecurityDecision({ request, routePath: '/api/journal/cases/[caseId]/review', method: 'POST', actionKind: 'journal_case_lifecycle', actor, subjectId: subject.subjectId, requestBody: patch });
   if (!security.ok) return security.response;

@@ -73,8 +73,9 @@
     "test:kick-off-production-integration": "KICK_OFF_PRODUCTION_INTEGRATION=1 npm run -w services/reasoning test",
     "test:sec-a1-postgres": "npm run -w services/application-state test && npm run -w services/notifications test && node scripts/test-sec-a1-postgres.mjs",
     "test:sec-b-auth-postgres": "npm run -w services/application-state test && npm run -w apps/web test && node scripts/test-sec-b-auth-postgres.mjs",
-    "test:sec-c-postgres": "node scripts/test-sec-c-postgres.mjs"
-    ,"test:sec-d-postgres": "npm run -w services/reasoning test && node scripts/test-sec-d-provider-postgres.mjs"
+    "test:sec-c-postgres": "node scripts/test-sec-c-postgres.mjs",
+    "test:sec-d-postgres": "npm run -w services/reasoning test && node scripts/test-sec-d-provider-postgres.mjs",
+    "test:sec-e": "node scripts/check-sec-e-boundaries.mjs && npm run -w apps/web test"
   },
   "engines": {
     "node": "24.x",

@@ -8,7 +8,7 @@ export const POST = withApiErrorBoundary(async (request: Request, context: { par
   const subject = await requireAuthenticatedSubject();
   const actor = { actorKind: 'user' as const, actorId: subject.userId, subjectId: subject.subjectId };
   const { positionId } = await context.params;
-  unwrapValidation(validatePositionCancelRequest(await parseJsonBody(request)));
+  unwrapValidation(validatePositionCancelRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));
     const security = await requireSecurityDecision({ request, routePath: '/api/portfolio/positions/[positionId]/cancel', method: 'POST', actionKind: 'portfolio_position_write', actor, subjectId: subject.subjectId, requestBody: {} });
   if (!security.ok) return security.response;
   try {

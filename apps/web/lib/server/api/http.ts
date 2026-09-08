@@ -13,6 +13,7 @@ const STATUS_BY_CODE: Record<ApiErrorCode, number> = {
   conflict: 409,
   unprocessable_entity: 422,
   dependency_failed: 424,
+  payload_too_large: 413,
   internal_error: 500
 };
 
@@ -25,10 +26,36 @@ export function jsonError(code: ApiErrorCode, message: string, details?: string[
   return NextResponse.json(body, { status: status ?? STATUS_BY_CODE[code] });
 }
 
-export async function parseJsonBody(request: Request): Promise<unknown> {
+export const JSON_BODY_LIMITS = {
+  standard: 64 * 1024,
+  compact: 16 * 1024,
+  authentication: 8 * 1024
+} as const;
+
+export async function parseJsonBody(request: Request, policy: { maxBytes: number }): Promise<unknown> {
+  if (!Number.isSafeInteger(policy.maxBytes) || policy.maxBytes < 1) throw new Error('internal_error:invalid_body_policy');
+  const declared = request.headers.get('content-length');
+  if (declared && /^\d+$/.test(declared) && Number(declared) > policy.maxBytes) throw new Error('payload_too_large');
   try {
-    return await request.json();
-  } catch {
+    if (!request.body) throw new Error('bad_request:invalid_json');
+    const reader = request.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let bytes = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > policy.maxBytes) {
+        await reader.cancel();
+        throw new Error('payload_too_large');
+      }
+      chunks.push(value);
+    }
+    const body = new Uint8Array(bytes); let offset = 0;
+    for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.byteLength; }
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body)) as unknown;
+  } catch (error) {
+    if (error instanceof Error && error.message === 'payload_too_large') throw error;
     throw new Error('bad_request:invalid_json');
   }
 }
@@ -39,9 +66,10 @@ export function parseSearchParams(url: string): URLSearchParams {
 
 export function parsePositiveInt(value: string | null, fallback: number, max = 100): number {
   if (!value) return fallback;
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed < 1) throw new Error('bad_request:invalid_limit');
-  return Math.min(parsed, max);
+  if (!/^[1-9]\d*$/.test(value)) throw new Error('bad_request:invalid_limit');
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed > max) throw new Error('bad_request:invalid_limit');
+  return parsed;
 }
 
 export function requireMethod(method: string, ...accepted: string[]): void {
@@ -59,6 +87,7 @@ function mapError(error: unknown): { code: ApiErrorCode; message: string; detail
   if (message.includes('forbidden')) return { code: 'forbidden', message: 'Forbidden' };
   if (message.startsWith('bad_request:')) return { code: 'bad_request', message: 'Bad request', details: [message.slice(12)] };
   if (message.startsWith('validation_error:')) return { code: 'validation_error', message: 'Validation failed', details: message.slice(17).split('|') };
+  if (message === 'payload_too_large') return { code: 'payload_too_large', message: 'Payload too large' };
   if (message.includes('not_found')) return { code: 'not_found', message: 'Not found' };
   if (message.includes('conflict')) return { code: 'conflict', message: 'Conflict' };
   if (message.includes('invalid_transition')) return { code: 'unprocessable_entity', message: 'Invalid transition' };

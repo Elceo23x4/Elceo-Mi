@@ -56,7 +56,7 @@ export function PortfolioShell({ initialState, trackedAssetLimit, subscriptionEl
 
     setPersistError(null);
 
-    const response = await fetch('/api/app-state/watchlist', {
+    const response = await fetch('/api/account/watchlist', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ assets: proposed })
@@ -68,7 +68,7 @@ export function PortfolioShell({ initialState, trackedAssetLimit, subscriptionEl
       return;
     }
 
-    const data = (await response.json()) as { watchlist: { assets: string[] }; entitlement: { trackedAssetLimit: number } };
+    const { data } = (await response.json()) as { data: { watchlist: { assets: string[] }; entitlement: { trackedAssetLimit: number } } };
 
     const next = { ...state, selectedAssets: data.watchlist.assets };
     setState(next);

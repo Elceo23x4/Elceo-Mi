@@ -23,6 +23,8 @@ import('./route-runtime.test.js').then(({ runRouteRuntimeTests }) => runRouteRun
   .then(({ runSentryBuildConfigTests }) => runSentryBuildConfigTests())
   .then(() => import('./credentials-security-contract.test.js'))
   .then(({ runCredentialsSecurityContractTests }) => runCredentialsSecurityContractTests())
+  .then(() => import('./sec-e-boundary.test.js'))
+  .then(({ runSecEBoundaryTests }) => runSecEBoundaryTests())
   .then(() => {
     console.log('web route runtime tests passed');
   })

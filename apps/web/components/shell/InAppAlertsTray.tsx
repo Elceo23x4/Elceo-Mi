@@ -8,23 +8,27 @@ export function InAppAlertsTray() {
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    void fetch('/api/app-state/alerts')
-      .then((response) => response.json())
-      .then((payload: { alerts?: InAppAlert[] }) => setAlerts(payload.alerts ?? []))
+    void fetch('/api/notifications/alerts')
+      .then(async (response) => {
+        if (!response.ok) throw new Error('alerts_request_failed');
+        const payload = await response.json() as { ok: true; data: { alerts: InAppAlert[] } };
+        return payload.data.alerts;
+      })
+      .then(setAlerts)
       .catch(() => setAlerts([]));
   }, []);
 
   const unread = useMemo(() => alerts.filter((alert) => !alert.read_at_utc), [alerts]);
 
   const markRead = async (alertId: string) => {
-    const response = await fetch('/api/app-state/alerts', {
+    const response = await fetch('/api/notifications/alerts', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ alertId })
     });
     if (!response.ok) return;
-    const payload = (await response.json()) as { alerts: InAppAlert[] };
-    setAlerts(payload.alerts);
+    const payload = (await response.json()) as { ok: true; data: { alerts: InAppAlert[] } };
+    setAlerts(payload.data.alerts);
   };
 
   return (

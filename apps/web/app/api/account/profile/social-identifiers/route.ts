@@ -22,7 +22,7 @@ export const GET = withApiErrorBoundary(async () => {
 
 export const PATCH = withApiErrorBoundary(async (request: Request) => {
   const subject = await requireAuthenticatedSubject();
-  const body = unwrapValidation(validateUpdateUserSocialIdentifiersRequest(await parseJsonBody(request)));
+  const body = unwrapValidation(validateUpdateUserSocialIdentifiersRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));
   if (!assertRouteSubjectOwnership({ authenticatedSubjectId: subject.subjectId, routeSubjectId: subject.subjectId })) return buildOwnerAccessDeniedResponse();
   try { const snapshot = await setUserSocialIdentifiers(subject.subjectId, toIdentifierSet(body)); return jsonSuccess(snapshot); } catch (error) { if (error && typeof error === 'object' && (error as { code?: unknown }).code === 'commercial_persistence_unavailable') return Response.json({ ok: false, error: { code: 'service_unavailable', message: 'Commercial persistence unavailable', details: ['commercial_persistence_unavailable'] } }, { status: 503 }); throw error; }
 });

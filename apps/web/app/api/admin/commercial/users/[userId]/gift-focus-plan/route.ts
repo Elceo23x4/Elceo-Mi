@@ -1,7 +1,7 @@
 import { jsonError, jsonSuccess, parseJsonBody, withApiErrorBoundary } from '@/lib/server/api';
 import { requireInternalRouteAccess } from '@/lib/server/auth';
 import { requireFeatureAccess } from '@/lib/server/access';
-import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, getSecurityActorFromRequest, requireSecurityDecision } from '@/lib/server/security';
+import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, securityActorFromVerifiedPrincipal, requireSecurityDecision } from '@/lib/server/security';
 import { giftFocusPlanToUser, getSuperAdminCommercialRouteScope } from '@elceo/application-state';
 
 const commercialActionKind = 'focus_plan_gift' as const;
@@ -12,17 +12,17 @@ const commercialUnavailableEnvelope = { ok: false as const, error: { code: 'serv
 const requireChallengeId = (body: Record<string, unknown>) => typeof body.stepUpChallengeId === 'string' && body.stepUpChallengeId.trim() !== '' ? body.stepUpChallengeId.trim() : null;
 
 export const POST = withApiErrorBoundary(async (request: Request, context: { params: Promise<{ userId: string }> }) => {
-  requireInternalRouteAccess(request);
+  const principal = requireInternalRouteAccess(request);
   const access = await requireFeatureAccess('admin.ops', { request });
   if (!access.ok) return access.response;
   const { userId } = await context.params;
-  const body = (await parseJsonBody(request)) as Record<string, unknown>;
+  const body = (await parseJsonBody(request, { maxBytes: 64 * 1024 })) as Record<string, unknown>;
   const stepUpChallengeId = requireChallengeId(body);
   if (!stepUpChallengeId) return jsonError('forbidden', 'Step-up required', ['step_up_required'], 403);
   const duration = body.duration;
   if (duration !== 'two_weeks' && duration !== 'one_month') return jsonError('validation_error', 'Validation failed', ['invalid_duration'], 400);
   const operatorNote = typeof body.operatorNote === 'string' ? body.operatorNote : '';
-  const actor = getSecurityActorFromRequest(request, 'admin');
+  const actor = securityActorFromVerifiedPrincipal(principal, 'admin');
   const securityRequest = { actorSuperAdminId: access.subject.userId, commercialActionKind, canonicalRouteScope: routePath, targetUserId: userId, duration, reasonCode: 'commercial_support', operatorNote };
   const security = await requireSecurityDecision({ request, routePath, method: 'POST', actionKind: 'admin_write', actor, subjectId: access.subject.subjectId, requestBody: securityRequest });
   if (!security.ok) return security.response;

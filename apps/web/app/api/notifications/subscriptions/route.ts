@@ -12,7 +12,7 @@ export const GET = withApiErrorBoundary(async () => {
 
 export const POST = withApiErrorBoundary(async (request: Request) => {
   const subject = await requireAuthenticatedSubject();
-  const body = unwrapValidation(validateSubscriptionCreateRequest(await parseJsonBody(request)));
+  const body = unwrapValidation(validateSubscriptionCreateRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));
   const actor = { actorKind: 'user' as const, actorId: subject.userId, subjectId: subject.subjectId };
   const security = await requireSecurityDecision({ request, routePath: '/api/notifications/subscriptions', method: 'POST', actionKind: 'notification_subscription_write', actor, subjectId: subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;

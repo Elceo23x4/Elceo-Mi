@@ -1,16 +1,16 @@
 import { jsonSuccess, parseJsonBody, unwrapValidation, withApiErrorBoundary } from '@/lib/server/api';
 import { requireFeatureAccess } from '@/lib/server/access';
 import { requireInternalRouteAccess } from '@/lib/server/auth';
-import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, getSecurityActorFromRequest, requireSecurityDecision } from '@/lib/server/security';
+import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, securityActorFromVerifiedPrincipal, requireSecurityDecision } from '@/lib/server/security';
 import { getBillingOrchestrationRuntime } from '@/lib/server/composition';
 import { validateInternalBillingOrchestrationRetryRequest } from '@elceo/schemas';
 
 export const POST = withApiErrorBoundary(async (request: Request) => {
-  requireInternalRouteAccess(request);
+  const principal = requireInternalRouteAccess(request);
   const access = await requireFeatureAccess('admin.ops', { request });
   if (!access.ok) return access.response;
-  const body = unwrapValidation(validateInternalBillingOrchestrationRetryRequest(await parseJsonBody(request)));
-  const actor = getSecurityActorFromRequest(request, 'internal');
+  const body = unwrapValidation(validateInternalBillingOrchestrationRetryRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));
+  const actor = securityActorFromVerifiedPrincipal(principal, 'internal');
   const security = await requireSecurityDecision({ request, routePath: '/api/internal/billing/orchestration/retry', method: 'POST', actionKind: 'billing_orchestration_retry', actor, subjectId: body.subjectId, requestBody: body });
   if (!security.ok) return security.response;
   try { const run = await getBillingOrchestrationRuntime().runRetryForSubject('user', body.subjectId);

@@ -23,7 +23,7 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   const subject = access.subject;
   const commercial = guardRouteCommercialEntitlement({ routePath: '/api/portfolio/watchlist', method: 'POST', featureKey: 'premium.full_access', snapshot: await resolveUserCommercialEntitlementSnapshot(subject.userId) });
   if (!commercial.allowed) return commercial.response;
-  const body = unwrapValidation(validateWatchlistCreateRequest(await parseJsonBody(request)));
+  const body = unwrapValidation(validateWatchlistCreateRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));
   const actor = { actorKind: 'user' as const, actorId: subject.userId, subjectId: subject.subjectId };
   const security = await requireSecurityDecision({ request, routePath: '/api/portfolio/watchlist', method: 'POST', actionKind: 'portfolio_watchlist_write', actor, subjectId: subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;

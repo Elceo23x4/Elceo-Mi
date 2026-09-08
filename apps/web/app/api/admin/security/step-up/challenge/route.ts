@@ -9,7 +9,7 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   const access = await requireFeatureAccess('admin.ops', { request });
   if (!access.ok) return access.response;
 
-  const body = (await parseJsonBody(request)) as Record<string, unknown>;
+  const body = (await parseJsonBody(request, { maxBytes: 64 * 1024 })) as Record<string, unknown>;
   if (!isSuperAdminCommercialActionKind(body.actionKind)) return jsonError('validation_error', 'Validation failed', ['unsupported_action_kind'], 400);
   const routeScope = getSuperAdminCommercialRouteScope(body.actionKind);
   if (Object.prototype.hasOwnProperty.call(body, 'routeScope') && body.routeScope !== routeScope) return jsonError('validation_error', 'Validation failed', ['route_scope_mismatch'], 400);

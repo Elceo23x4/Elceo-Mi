@@ -8,7 +8,7 @@ import { validateSubscriptionUpdateRequest } from '@elceo/schemas';
 export const PATCH = withApiErrorBoundary(async (request: Request, context: { params: Promise<{ subscriptionId: string }> }) => {
   const subject = await requireAuthenticatedSubject();
   const { subscriptionId } = await context.params;
-  const body = unwrapValidation(validateSubscriptionUpdateRequest(await parseJsonBody(request)));
+  const body = unwrapValidation(validateSubscriptionUpdateRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));
   const actor = { actorKind: 'user' as const, actorId: subject.userId, subjectId: subject.subjectId };
   const security = await requireSecurityDecision({ request, routePath: '/api/notifications/subscriptions/[subscriptionId]', method: 'PATCH', actionKind: 'notification_subscription_write', actor, subjectId: subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;

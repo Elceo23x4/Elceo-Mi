@@ -2,18 +2,18 @@ import { parseJsonBody, withApiErrorBoundary, jsonSuccess } from '@/lib/server/a
 import { requireInternalRouteAccess } from '@/lib/server/auth';
 import { getNotificationRuntimes } from '@/lib/server/composition';
 import { requireFeatureAccess } from '@/lib/server/access';
-import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, getSecurityActorFromRequest, requireSecurityDecision } from '@/lib/server/security';
+import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, securityActorFromVerifiedPrincipal, requireSecurityDecision } from '@/lib/server/security';
 
 type FeedbackChannel = 'in_app' | 'email' | 'push' | 'sms' | 'webhook';
 type FeedbackBody = { providerKind?: string; channel?: FeedbackChannel; rawEvent?: unknown };
 
 export const POST = withApiErrorBoundary(async (request: Request) => {
-  requireInternalRouteAccess(request);
+  const principal = requireInternalRouteAccess(request);
   const access = await requireFeatureAccess('admin.ops', { request });
   if (!access.ok) return access.response;
-  const body = await parseJsonBody(request) as FeedbackBody;
+  const body = await parseJsonBody(request, { maxBytes: 64 * 1024 }) as FeedbackBody;
   if (!body.providerKind || !body.channel) throw new Error('validation_error:providerKind and channel required');
-  const actor = getSecurityActorFromRequest(request, 'internal');
+  const actor = securityActorFromVerifiedPrincipal(principal, 'internal');
   const security = await requireSecurityDecision({ request, routePath: '/api/ops/notifications/process-feedback', method: 'POST', actionKind: 'internal_mutation', actor, requestBody: body });
   if (!security.ok) return security.response;
   try {

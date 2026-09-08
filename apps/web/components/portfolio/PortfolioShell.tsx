@@ -56,19 +56,19 @@ export function PortfolioShell({ initialState, trackedAssetLimit, subscriptionEl
 
     setPersistError(null);
 
-    const response = await fetch('/api/app-state/watchlist', {
+    const response = await fetch('/api/account/watchlist', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ assets: proposed })
     });
 
     if (!response.ok) {
-      const failure = (await response.json().catch(() => ({ error: 'Failed to persist watchlist' }))) as { error?: string };
-      setPersistError(failure.error ?? 'Failed to persist watchlist');
+      const failure = (await response.json().catch(() => null)) as { ok: false; error: { message: string } } | null;
+      setPersistError(failure?.error.message ?? 'Failed to persist watchlist');
       return;
     }
 
-    const data = (await response.json()) as { watchlist: { assets: string[] }; entitlement: { trackedAssetLimit: number } };
+    const { data } = (await response.json()) as { ok: true; data: { watchlist: { assets: string[] }; entitlement: { trackedAssetLimit: number } } };
 
     const next = { ...state, selectedAssets: data.watchlist.assets };
     setState(next);

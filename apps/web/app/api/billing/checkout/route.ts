@@ -1,3 +1,4 @@
+import { parseJsonBody } from '@/lib/server/api';
 import { NextResponse } from 'next/server';
 import { KoraPayAdapter, StripeSandboxPaymentProviderAdapter, assertProductionPaymentActivation, shouldResumeProviderCheckout, reconcileStripePaymentOperation, reconcileProviderPaymentOperation, internalPaymentRuntime, normalizeProviderError, type FakeProviderOutcome } from '@elceo/application-state';
 import { requireAppUserState } from '../../../../lib/auth/session';
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
   const requestId = getRequestId(request);
   try {
     const { session } = await requireAppUserState();
-    const body = (await request.json()) as { targetPlan?: string; billingInterval?: string; idempotencyKey?: string; provider?: 'stripe'|'korapay'; currency?: string; rail?: string; fakeProviderOutcome?: FakeProviderOutcome };
+    const body = (await parseJsonBody(request,{maxBytes:16*1024})) as { targetPlan?: string; billingInterval?: string; idempotencyKey?: string; provider?: 'stripe'|'korapay'; currency?: string; rail?: string; fakeProviderOutcome?: FakeProviderOutcome };
     if (body.targetPlan !== 'focus_plan') throw new Error('Unsupported target plan for checkout');
     const interval = body.billingInterval === 'quarterly' || body.billingInterval === 'yearly' ? body.billingInterval : 'monthly';
     const snapshot = await resolveUserCommercialEntitlementSnapshot(session.user.id);

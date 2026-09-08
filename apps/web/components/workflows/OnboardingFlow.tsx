@@ -52,7 +52,7 @@ export function OnboardingFlow({ initialState, subscriptionEligibleForPremium }:
   const saveAndFinish = async () => {
     setPersistError(null);
 
-    const response = await fetch('/api/app-state/onboarding', {
+    const response = await fetch('/api/account/onboarding', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -64,15 +64,15 @@ export function OnboardingFlow({ initialState, subscriptionEligibleForPremium }:
     });
 
     if (!response.ok) {
-      const failure = (await response.json().catch(() => ({ error: 'Failed to persist onboarding state' }))) as { error?: string };
-      setPersistError(failure.error ?? 'Failed to persist onboarding state');
+      const failure = (await response.json().catch(() => null)) as { ok: false; error: { message: string } } | null;
+      setPersistError(failure?.error.message ?? 'Failed to persist onboarding state');
       return;
     }
 
-    const persisted = (await response.json()) as {
+    const { data: persisted } = (await response.json()) as { ok: true; data: {
       profile: { onboardingCompletedAt: string | null };
       watchlist: { assets: string[] };
-    };
+    } };
 
     localStorage.setItem(
       STORAGE_KEY,

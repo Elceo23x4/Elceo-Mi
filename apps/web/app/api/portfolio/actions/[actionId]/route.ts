@@ -16,7 +16,7 @@ export const PATCH = withApiErrorBoundary(async (request: Request, context: { pa
   const subject = await requireAuthenticatedSubject();
   const actor = { actorKind: 'user' as const, actorId: subject.userId, subjectId: subject.subjectId };
   const { actionId } = await context.params;
-  const patch = unwrapValidation(validateActionUpdateRequest(await parseJsonBody(request)));
+  const patch = unwrapValidation(validateActionUpdateRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));
   const security = await requireSecurityDecision({ request, routePath: '/api/portfolio/actions/[actionId]', method: 'PATCH', actionKind: 'portfolio_action_write', actor, subjectId: subject.subjectId, requestBody: patch });
   if (!security.ok) return security.response;
   try {

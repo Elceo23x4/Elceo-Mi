@@ -61,7 +61,7 @@ export function giftFocusPlanToUser(input: { actorSuperAdminId: string; targetUs
   commercialMutationCounts.gift += 1;
   gifts.set(input.targetUserId, giftRecord);
   if (commercialPersistenceFailureMode === 'finalize-once' && finalizeOnceRemaining > 0) { finalizeOnceRemaining -= 1; throw commercialPersistenceError(); }
-  return { status: 'success' as const, giftRecord, resultingEntitlementState: { planKind: 'focus' } };
+  return { status: 'success' as const, giftRecord, resultingEntitlementState: { planKind: 'focus' }, persistenceStatus: 'memory_fallback' as const };
 }
 
 export function retractFocusPlanGift(input: { actorSuperAdminId: string; targetUserId: string; giftRecordId: string; stepUpChallengeId: string; requestedAt?: string }) {
@@ -72,14 +72,14 @@ export function retractFocusPlanGift(input: { actorSuperAdminId: string; targetU
   const giftRecord = { ...found, status: 'retracted' as const };
   commercialMutationCounts.retract += 1;
   gifts.set(input.targetUserId, giftRecord);
-  return { status: 'success' as const, giftRecord, resultingEntitlementState: { planKind: 'free' } };
+  return { status: 'success' as const, giftRecord, resultingEntitlementState: { planKind: 'free' }, persistenceStatus: 'memory_fallback' as const };
 }
 
 export function restrictUserAccount(input: { actorSuperAdminId: string; targetUserId: string; restrictionKind: 'suspended' | 'banned'; stepUpChallengeId: string; requestedAt?: string }) {
   if (stepUpPersistenceFailureMode === 'consume') return { status: 'blocked' as const, failureReason: 'step_up_persistence_unavailable' as const };
   if (!consume({ ...input, actionKind: 'user_restriction' })) return { status: 'blocked' as const };
   commercialMutationCounts.restrict += 1;
-  return { status: 'success' as const, restrictionRecord: { restrictionKind: input.restrictionKind, status: 'active' as const }, resultingEntitlementState: { accountState: 'restricted' } };
+  return { status: 'success' as const, restrictionRecord: { restrictionKind: input.restrictionKind, status: 'active' as const }, resultingEntitlementState: { accountState: 'restricted' }, persistenceStatus: 'memory_fallback' as const };
 }
 
 export function getSuperAdminCommercialControlSnapshot(userId?: string) {

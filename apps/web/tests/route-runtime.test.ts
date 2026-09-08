@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHmac } from 'node:crypto';
+import type { BillingLifecycleSnapshot } from '@elceo/types';
 import { guardRouteCommercialEntitlement } from '../lib/server/access/route-entitlement';
 import { buildRouteInventory, type RuntimeEnforcementExpectation, type RouteRuntimeAssertion } from '../lib/server/access/route-policy-inventory';
 import { clearAuthTestOverrides, setAuthTestOverrides } from '../lib/server/auth/subject';
@@ -95,6 +96,7 @@ import * as adminEntitlementStateRoute from '../app/api/admin/entitlements/state
 import * as adminEntitlementOverrideRoute from '../app/api/admin/entitlements/override/route';
 
 import * as accountBillingRoute from '../app/api/account/billing/route';
+import { toAccountBillingSnapshotDto } from '../lib/server/account/billing-dto';
 import * as accountBillingPolicyRoute from '../app/api/account/billing/policy/route';
 import * as accountBillingPolicyTransitionsRoute from '../app/api/account/billing/policy/transitions/route';
 import * as accountBillingReconciliationRunsRoute from '../app/api/account/billing/reconciliation-runs/route';
@@ -245,7 +247,7 @@ const mockApplicationStateRuntime = {
     listSnapshotRefreshRuns: async () => []
   },
   billingLifecycle: {
-    getBillingLifecycleSnapshot: async (_kind: 'user', sid: string) => ({ generatedAt: '2026-01-01T00:00:00.000Z', subjectKind: 'user', subjectId: sid, customer: null, subscription: null, entitlementState: { subjectKind: 'user', subjectId: sid, planKind: 'premium', accountState: 'active', internalOverride: false }, latestReconciliationRunId: 'run-1' }),
+    getBillingLifecycleSnapshot: async (_kind: 'user', sid: string): Promise<BillingLifecycleSnapshot> => ({ generatedAt: '2026-01-01T00:00:00.000Z', subjectKind: 'user', subjectId: sid, customer: null, subscription: null, entitlementState: { subjectKind: 'user', subjectId: sid, planKind: 'premium', accountState: 'active', planStartedAt: null, planEndsAt: null, trialEndsAt: null, internalOverride: false, updatedAt: '2026-01-01T00:00:00.000Z' }, latestReconciliationRunId: 'run-1' }),
     listRecentBillingReconciliationRuns: async (_kind: 'user', sid: string) => ([{ runId: 'run-1', providerKind: 'stripe', sourceEventId: 'evt-1', subjectKind: 'user', subjectId: sid, status: 'success', summary: 'ok', customerChanged: true, subscriptionChanged: true, entitlementChanged: true, previousPlanKind: 'free', nextPlanKind: 'premium', startedAt: '2026-01-01T00:00:00.000Z', endedAt: '2026-01-01T00:00:01.000Z', createdAt: '2026-01-01T00:00:01.000Z' }]),
     reconcileProviderEvent: async (providerKind: string, sourceEventId: string, subjectId?: string) => ({ runId: 'run-2', providerKind, sourceEventId, subjectKind: 'user', subjectId: subjectId ?? 'user-1', status: 'success', summary: 'ok', customerChanged: false, subscriptionChanged: true, entitlementChanged: true, previousPlanKind: 'free', nextPlanKind: 'premium', startedAt: '2026-01-01T00:00:00.000Z', endedAt: '2026-01-01T00:00:01.000Z', createdAt: '2026-01-01T00:00:01.000Z' })
   },
@@ -736,7 +738,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   securityDecisionMode = 'idempotency_conflict';
   assert.deepEqual(await readJson(await positionsRoute.POST(request('https://x/api/portfolio/positions', { method: 'POST', headers: { 'Idempotency-Key': 'pos-conflict' }, body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', direction: 'long' }) }))), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
   securityDecisionMode = 'allowed';
-  assert.equal((await readJson(await positionsRoute.POST(request('https://x/api/portfolio/positions', { method: 'POST', headers: { 'Idempotency-Key': 'pos-ok' }, body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', direction: 'long' }) })))).ok, true);
+  assert.equal((await readJson(await positionsRoute.POST(request('https://x/api/portfolio/positions', { method: 'POST', headers: { 'Idempotency-Key': 'position-ok' }, body: JSON.stringify({ asset: 'XAU/USD', timeframe: 'H1', direction: 'long' }) })))).ok, true);
   assert.equal(latestSecurityActionKind, 'portfolio_position_write');
   assert.equal(securityAuditCount > 0, true);
 
@@ -888,7 +890,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   assert.equal(accountBillingUnauthorized.status, 401);
   assert.deepEqual(await readJson(accountBillingUnauthorized), { ok: false, error: { code: 'unauthorized', message: 'Unauthorized' } });
   installMocks();
-  assert.deepEqual(await readJson(await accountBillingRoute.GET()), { ok: true, data: { snapshot: await mockApplicationStateRuntime.billingLifecycle.getBillingLifecycleSnapshot('user', 'user-1') } });
+  assert.deepEqual(await readJson(await accountBillingRoute.GET()), { ok: true, data: { snapshot: toAccountBillingSnapshotDto(await mockApplicationStateRuntime.billingLifecycle.getBillingLifecycleSnapshot('user', 'user-1')) } });
   setAuthTestOverrides({ subjectResolver: async () => null });
   assert.deepEqual(await readJson(await accountBillingPolicyRoute.GET()), { ok: false, error: { code: 'unauthorized', message: 'Unauthorized' } });
   installMocks();
@@ -1233,7 +1235,7 @@ export async function runRouteRuntimeTests(): Promise<void> {
   const reconcileRateLimited = await internalBillingReconcileRoute.POST(request('https://x/api/internal/billing/reconcile', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token' }, body: JSON.stringify({ providerKind: 'stripe', sourceEventId: 'evt-1', subjectId: 'user-2' }) }));
   assert.deepEqual(await readJson(reconcileRateLimited), { ok: false, error: { code: 'bad_request', message: 'Rate limit exceeded', details: ['rate_limit_exceeded'] } });
   securityDecisionMode = 'idempotency_conflict';
-  const reconcileIdempotencyConflict = await internalBillingReconcileRoute.POST(request('https://x/api/internal/billing/reconcile', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'idem-1' }, body: JSON.stringify({ providerKind: 'stripe', sourceEventId: 'evt-1', subjectId: 'user-2' }) }));
+  const reconcileIdempotencyConflict = await internalBillingReconcileRoute.POST(request('https://x/api/internal/billing/reconcile', { method: 'POST', headers: { 'x-elceo-internal-token': 'internal-token', 'Idempotency-Key': 'idem-reconcile-1' }, body: JSON.stringify({ providerKind: 'stripe', sourceEventId: 'evt-1', subjectId: 'user-2' }) }));
   assert.deepEqual(await readJson(reconcileIdempotencyConflict), { ok: false, error: { code: 'conflict', message: 'Idempotency conflict', details: ['idempotency_conflict'] } });
   securityDecisionMode = 'allowed';
   assert.deepEqual(await readJson(await internalBillingPolicyEvaluateRoute.POST(request('https://x/api/internal/billing/policy/evaluate', { method: 'POST', body: JSON.stringify({ subjectId: 'user-2' }) }))), { ok: false, error: { code: 'forbidden', message: 'Forbidden' } });

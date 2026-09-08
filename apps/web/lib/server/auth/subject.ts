@@ -6,6 +6,13 @@ export type AuthenticatedSubject = {
   userId: string;
 };
 
+declare const verifiedInternalPrincipalBrand: unique symbol;
+export type VerifiedInternalPrincipal = {
+  readonly kind: 'internal';
+  readonly id: 'internal-api';
+  readonly [verifiedInternalPrincipalBrand]: true;
+};
+
 let testSubjectResolver: null | (() => Promise<AuthenticatedSubject | null>) = null;
 let testInternalToken: string | null = null;
 
@@ -41,8 +48,9 @@ export async function requireAuthenticatedSubject(): Promise<AuthenticatedSubjec
   return subject;
 }
 
-export function requireInternalRouteAccess(request: Request): void {
+export function requireInternalRouteAccess(request: Request): VerifiedInternalPrincipal {
   const token = request.headers.get('x-elceo-internal-token');
   const expected = testInternalToken ?? (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.ELCEO_INTERNAL_API_TOKEN;
   if (!expected || token !== expected) throw new Error('forbidden');
+  return { kind: 'internal', id: 'internal-api' } as VerifiedInternalPrincipal;
 }

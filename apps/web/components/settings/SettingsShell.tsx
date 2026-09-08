@@ -32,7 +32,7 @@ export function SettingsShell({ initialState, billing }: SettingsShellProps) {
   const save = async (next: ElceoUserState) => {
     setPersistError(null);
 
-    const response = await fetch('/api/app-state/settings', {
+    const response = await fetch('/api/account/preferences', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -43,10 +43,13 @@ export function SettingsShell({ initialState, billing }: SettingsShellProps) {
     });
 
     if (!response.ok) {
-      const failure = (await response.json().catch(() => ({ error: 'Failed to persist settings' }))) as { error?: string };
-      setPersistError(failure.error ?? 'Failed to persist settings');
+      const failure = (await response.json().catch(() => null)) as { ok: false; error: { message: string } } | null;
+      setPersistError(failure?.error.message ?? 'Failed to persist settings');
       return;
     }
+
+    const payload = await response.json() as { ok: true; data: { notifications: unknown } };
+    if (!payload.ok) return;
 
     setState(next);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));

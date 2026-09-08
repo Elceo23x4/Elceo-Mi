@@ -1,4 +1,4 @@
-import { parseJsonBody } from '../server/api';
+import { parseJsonBody } from '@/lib/server/api';
 import { NextResponse } from 'next/server';
 import type { CredentialAuthenticationService, PasswordResetDelivery } from '@elceo/application-state';
 

@@ -14,7 +14,7 @@ export const GET = withApiErrorBoundary(async (request: Request) => {
 });
 
 export const POST = withApiErrorBoundary(async (request: Request) => {
-  requireInternalRouteAccess(request);
+  const principal = requireInternalRouteAccess(request);
   const access = await requireFeatureAccess('admin.ops', { request });
   if (!access.ok) return access.response;
   const body = unwrapValidation(validateInternalScheduledIngestionReplayRequest(await parseJsonBody(request, { maxBytes: 64 * 1024 })));

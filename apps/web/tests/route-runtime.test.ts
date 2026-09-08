@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHmac } from 'node:crypto';
+import type { BillingLifecycleSnapshot } from '@elceo/types';
 import { guardRouteCommercialEntitlement } from '../lib/server/access/route-entitlement';
 import { buildRouteInventory, type RuntimeEnforcementExpectation, type RouteRuntimeAssertion } from '../lib/server/access/route-policy-inventory';
 import { clearAuthTestOverrides, setAuthTestOverrides } from '../lib/server/auth/subject';
@@ -246,7 +247,7 @@ const mockApplicationStateRuntime = {
     listSnapshotRefreshRuns: async () => []
   },
   billingLifecycle: {
-    getBillingLifecycleSnapshot: async (_kind: 'user', sid: string) => ({ generatedAt: '2026-01-01T00:00:00.000Z', subjectKind: 'user', subjectId: sid, customer: null, subscription: null, entitlementState: { subjectKind: 'user', subjectId: sid, planKind: 'premium', accountState: 'active', internalOverride: false }, latestReconciliationRunId: 'run-1' }),
+    getBillingLifecycleSnapshot: async (_kind: 'user', sid: string): Promise<BillingLifecycleSnapshot> => ({ generatedAt: '2026-01-01T00:00:00.000Z', subjectKind: 'user', subjectId: sid, customer: null, subscription: null, entitlementState: { subjectKind: 'user', subjectId: sid, planKind: 'premium', accountState: 'active', planStartedAt: null, planEndsAt: null, trialEndsAt: null, internalOverride: false, updatedAt: '2026-01-01T00:00:00.000Z' }, latestReconciliationRunId: 'run-1' }),
     listRecentBillingReconciliationRuns: async (_kind: 'user', sid: string) => ([{ runId: 'run-1', providerKind: 'stripe', sourceEventId: 'evt-1', subjectKind: 'user', subjectId: sid, status: 'success', summary: 'ok', customerChanged: true, subscriptionChanged: true, entitlementChanged: true, previousPlanKind: 'free', nextPlanKind: 'premium', startedAt: '2026-01-01T00:00:00.000Z', endedAt: '2026-01-01T00:00:01.000Z', createdAt: '2026-01-01T00:00:01.000Z' }]),
     reconcileProviderEvent: async (providerKind: string, sourceEventId: string, subjectId?: string) => ({ runId: 'run-2', providerKind, sourceEventId, subjectKind: 'user', subjectId: subjectId ?? 'user-1', status: 'success', summary: 'ok', customerChanged: false, subscriptionChanged: true, entitlementChanged: true, previousPlanKind: 'free', nextPlanKind: 'premium', startedAt: '2026-01-01T00:00:00.000Z', endedAt: '2026-01-01T00:00:01.000Z', createdAt: '2026-01-01T00:00:01.000Z' })
   },

@@ -64,12 +64,12 @@ export function OnboardingFlow({ initialState, subscriptionEligibleForPremium }:
     });
 
     if (!response.ok) {
-      const failure = (await response.json().catch(() => ({ error: 'Failed to persist onboarding state' }))) as { error?: string };
-      setPersistError(failure.error ?? 'Failed to persist onboarding state');
+      const failure = (await response.json().catch(() => null)) as { ok: false; error: { message: string } } | null;
+      setPersistError(failure?.error.message ?? 'Failed to persist onboarding state');
       return;
     }
 
-    const { data: persisted } = (await response.json()) as { data: {
+    const { data: persisted } = (await response.json()) as { ok: true; data: {
       profile: { onboardingCompletedAt: string | null };
       watchlist: { assets: string[] };
     } };

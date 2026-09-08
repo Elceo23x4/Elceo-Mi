@@ -9,8 +9,12 @@ export function InAppAlertsTray() {
 
   useEffect(() => {
     void fetch('/api/notifications/alerts')
-      .then((response) => response.json())
-      .then((payload: { data?: { alerts?: InAppAlert[] } }) => setAlerts(payload.data?.alerts ?? []))
+      .then(async (response) => {
+        if (!response.ok) throw new Error('alerts_request_failed');
+        const payload = await response.json() as { ok: true; data: { alerts: InAppAlert[] } };
+        return payload.data.alerts;
+      })
+      .then(setAlerts)
       .catch(() => setAlerts([]));
   }, []);
 
@@ -23,7 +27,7 @@ export function InAppAlertsTray() {
       body: JSON.stringify({ alertId })
     });
     if (!response.ok) return;
-    const payload = (await response.json()) as { data: { alerts: InAppAlert[] } };
+    const payload = (await response.json()) as { ok: true; data: { alerts: InAppAlert[] } };
     setAlerts(payload.data.alerts);
   };
 

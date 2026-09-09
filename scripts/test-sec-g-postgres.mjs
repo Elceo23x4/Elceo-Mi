@@ -1,0 +1,5 @@
+import pg from 'pg'; import { mkdir, writeFile } from 'node:fs/promises';
+if(!process.env.DATABASE_URL) throw new Error('DATABASE_URL_required');
+const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,max:2});
+const scale=Number(process.env.SEC_G_DATASET_SCALE ?? 1000), output={scale,plans:{}};
+try { for(const [name,sql] of Object.entries({ingestion_due:`SELECT outbox_id FROM app_ingestion_outbox WHERE status IN ('pending','failed') AND available_at<=now() ORDER BY available_at,created_at,outbox_id LIMIT 100`,notification_due:`SELECT outbox_id FROM app_notification_outbox WHERE status IN ('staged','failed') AND available_at<=now() ORDER BY available_at,created_at,outbox_id LIMIT 100`,ops_recent:`SELECT run_id FROM app_ops_job_runs WHERE status='failed' ORDER BY created_at DESC LIMIT 100`})){ const r=await pool.query(`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${sql}`); output.plans[name]=r.rows[0]['QUERY PLAN']; } await mkdir('artifacts/sec-g',{recursive:true});await writeFile('artifacts/sec-g/explain-plans.json',JSON.stringify(output,null,2));console.log(JSON.stringify({plans:Object.keys(output.plans),scale})); } finally {await pool.end();}

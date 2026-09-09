@@ -31,9 +31,8 @@ export function __setDbPoolFactoryForTests(factory: (() => Promise<PoolLike> | P
 
 async function initializePool(): Promise<PoolLike> {
   if (testPoolFactory) return testPoolFactory();
-  const module = await import('pg');
-  const PoolCtor = module.Pool;
-  return new PoolCtor({ connectionString: runtimeEnv().DATABASE_URL }) as unknown as PoolLike;
+  const { getRuntimePool } = await import('@elceo/db-runtime');
+  return await getRuntimePool('system') as unknown as PoolLike;
 }
 
 export async function getDbPoolForTests(): Promise<PoolLike> { return getPool(); }
@@ -104,7 +103,7 @@ export function withTenantDbTransaction<T>(subject: { readonly subjectKind: 'use
     const configured = runtimeEnv().TENANT_DATABASE_URL;
     if (!configured) throw new Error('tenant_database_url_required');
     if (!tenantPoolPromise) {
-      tenantPoolPromise = import('pg').then(({ Pool }) => new Pool({ connectionString: configured }) as unknown as PoolLike);
+      tenantPoolPromise = import('@elceo/db-runtime').then((module) => module.getRuntimePool('tenant') as Promise<unknown> as Promise<PoolLike>);
     }
     const client = await (await tenantPoolPromise).connect();
     try {

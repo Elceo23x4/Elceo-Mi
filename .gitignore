@@ -11,3 +11,6 @@ dist-test
 dist-test-cjs
 dist-operator
 dist-operator-cjs
+
+# SEC-G locally generated empirical evidence
+artifacts/sec-g/

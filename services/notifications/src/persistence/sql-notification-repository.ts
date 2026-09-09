@@ -22,7 +22,7 @@ type PoolLike = ClientLike & { connect: () => Promise<ClientLike>; end?: () => P
 let poolPromise: Promise<PoolLike> | null = null;
 let tenantPoolPromise: Promise<PoolLike> | null = null;
 const transactionClient = new AsyncLocalStorage<ClientLike>();
-async function getPool(): Promise<PoolLike> { if (!poolPromise) poolPromise = (async () => { const module = await import('pg'); return new module.Pool({ connectionString: runtimeEnv().DATABASE_URL }) as unknown as PoolLike; })(); return poolPromise; }
+async function getPool(): Promise<PoolLike> { if (!poolPromise) poolPromise = (async () => { const { getRuntimePool } = await import('@elceo/db-runtime'); return await getRuntimePool('system') as unknown as PoolLike; })(); return poolPromise; }
 export async function __closeSqlNotificationPoolForTests(): Promise<void> { const pool = await poolPromise; const tenant = await tenantPoolPromise; poolPromise = null; tenantPoolPromise = null; await pool?.end?.(); await tenant?.end?.(); }
 export const closeNotificationDbPool = __closeSqlNotificationPoolForTests;
 async function queryDb<T extends QueryRow = QueryRow>(sql: string, params: unknown[] = []): Promise<T[]> { const connection = transactionClient.getStore() ?? await getPool(); const result = await connection.query(sql, params); return result.rows as T[]; }
@@ -30,7 +30,7 @@ export async function withNotificationTenantTransaction<T>(subject: { subjectKin
   if (!subject.subjectId) throw new Error('verified_subject_required');
   const configured = runtimeEnv().TENANT_DATABASE_URL;
   if (!configured) throw new Error('tenant_database_url_required');
-  if (!tenantPoolPromise) tenantPoolPromise = import('pg').then(({ Pool }) => new Pool({ connectionString: configured }) as unknown as PoolLike);
+  if (!tenantPoolPromise) tenantPoolPromise = import('@elceo/db-runtime').then((m) => m.getRuntimePool('tenant') as Promise<unknown> as Promise<PoolLike>);
   const client = await (await tenantPoolPromise).connect();
   try {
     await client.query('BEGIN');

@@ -290,3 +290,36 @@ jobs:
           if docker run --rm -e RESTORE_CONFIRMATION=WRONG elceo-postgres-r2-restore-rehearsal:test >incorrect.log 2>&1; then exit 1; fi
           grep -F 'error=restore_confirmation_required' incorrect.log
           ! grep -Eq 'Permission denied|not found' incorrect.log
+
+  sec-g-empirical-scale:
+    name: SEC-G empirical scale acceptance
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: elceo, POSTGRES_HOST_AUTH_METHOD: trust, POSTGRES_DB: elceo_sec_g }
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U elceo -d elceo_sec_g" --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:8-alpine
+        ports: ['6379:6379']
+        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24.19.0', cache: npm }
+      - run: npm install --global npm@10.8.2 && npm ci
+      - name: SEC-G correctness
+        run: npm run test:sec-g
+      - name: Migrate and capture PostgreSQL plans
+        env:
+          DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_sec_g
+          SEC_G_DATASET_SCALE: '1000'
+        run: npm run check:migrations && npm run test:sec-g-postgres
+      - uses: grafana/setup-k6-action@v1
+        with: { k6-version: '2.2.0' }
+      - name: Validate pinned k6 harness
+        run: k6 inspect load/sec-g.k6.js > artifacts/sec-g/k6-inspect.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: sec-g-empirical-${{ github.sha }}, path: artifacts/sec-g, if-no-files-found: error }

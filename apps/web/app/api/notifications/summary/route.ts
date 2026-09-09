@@ -13,7 +13,7 @@ export const GET = withApiErrorBoundary(async (request: Request) => {
   const runtime = getTenantNotificationRuntimes(subject);
   const [managementSummary, feedbackSummary] = await Promise.all([
     runtime.management.getNotificationOperationalSummaryForSubject(subject.subjectKind, subject.subjectId),
-    runtime.feedback.getNotificationFeedbackSummary()
+    runtime.feedback.getNotificationFeedbackSummaryForSubject(subject.subjectKind, subject.subjectId)
   ]);
   return jsonSuccess({ managementSummary, feedbackSummary, inboxUnreadCount: managementSummary.inboxUnreadCount });
 });

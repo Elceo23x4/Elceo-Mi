@@ -18,5 +18,13 @@ for(const file of await routes('apps/web/app/api')){
 }
 const appDb=await readFile('services/application-state/src/db/client.ts','utf8');
 const notificationDb=await readFile('services/notifications/src/persistence/sql-notification-repository.ts','utf8');
+const summaryRoute=await readFile('apps/web/app/api/notifications/summary/route.ts','utf8');
+const healthRoute=await readFile('apps/web/app/api/notifications/health/route.ts','utf8');
+const composition=await readFile('apps/web/lib/server/composition/runtime.ts','utf8');
+assert(summaryRoute.includes('getNotificationFeedbackSummaryForSubject(subject.subjectKind, subject.subjectId)'), 'summary must use verified subject scope');
+assert(healthRoute.includes('listTargetsWithDegradedHealthForSubject(subject.subjectKind, subject.subjectId'), 'health targets must use verified subject scope');
+assert(healthRoute.includes('listRecentCriticalReceiptsForSubject(subject.subjectKind, subject.subjectId'), 'health receipts must use verified subject scope');
+const tenantFeedbackType=composition.slice(composition.indexOf('type TenantNotificationFeedback'), composition.indexOf('function transactionalProxy'));
+for(const unsafe of ['processProviderEvent','getProviderEventReplayById','getDeliveryReceiptReplayById','listReceiptReplayForTarget','listProviderEventReplayForTarget'])assert(!tenantFeedbackType.includes(unsafe), `tenant composition exposes system feedback method ${unsafe}`);
 for(const source of [appDb,notificationDb])for(const proof of ['TENANT_DATABASE_URL','rolsuper','rolbypassrls','owns_protected',"set_config('elceo.tenant_subject_id'"])assert(source.includes(proof),proof);
 console.log('SEC-F static CSP, route boundary, and RLS contract checks passed');

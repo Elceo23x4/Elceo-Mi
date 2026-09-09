@@ -173,16 +173,23 @@ export function getNotificationRuntimes(): NotificationRuntime {
 }
 
 type VerifiedUserSubject = { subjectKind: 'user'; subjectId: string; userId: string };
+type TenantNotificationFeedback = Pick<CanonicalNotificationFeedbackBoundaryService,
+  'getNotificationFeedbackSummaryForSubject' | 'listTargetsWithDegradedHealthForSubject' | 'listRecentCriticalReceiptsForSubject'>;
 function transactionalProxy<T extends object>(target: T, transaction: <R>(operation: () => Promise<R>) => Promise<R>): T {
   return new Proxy(target, { get(object, property, receiver) { const value = Reflect.get(object, property, receiver); return typeof value === 'function' ? (...args: unknown[]) => transaction(() => Reflect.apply(value, object, args)) : value; } });
 }
 
 /** User-facing notification composition: every repository call runs on the restricted tenant connection. */
-export function getTenantNotificationRuntimes(subject: VerifiedUserSubject): Pick<NotificationRuntime, 'management' | 'verification' | 'feedback'> {
+export function getTenantNotificationRuntimes(subject: VerifiedUserSubject): Pick<NotificationRuntime, 'management' | 'verification'> & { feedback: TenantNotificationFeedback } {
   const runtime = getNotificationRuntimes();
-  if (env.NOTIFICATIONS_PERSISTENCE_BACKEND !== 'sql') return { management: runtime.management, verification: runtime.verification, feedback: runtime.feedback };
+  const feedback: TenantNotificationFeedback = {
+    getNotificationFeedbackSummaryForSubject: runtime.feedback.getNotificationFeedbackSummaryForSubject.bind(runtime.feedback),
+    listTargetsWithDegradedHealthForSubject: runtime.feedback.listTargetsWithDegradedHealthForSubject.bind(runtime.feedback),
+    listRecentCriticalReceiptsForSubject: runtime.feedback.listRecentCriticalReceiptsForSubject.bind(runtime.feedback)
+  };
+  if (env.NOTIFICATIONS_PERSISTENCE_BACKEND !== 'sql') return { management: runtime.management, verification: runtime.verification, feedback };
   const run = <T>(operation: () => Promise<T>) => withNotificationTenantTransaction(subject, operation);
-  return { management: transactionalProxy(runtime.management, run), verification: transactionalProxy(runtime.verification, run), feedback: transactionalProxy(runtime.feedback, run) };
+  return { management: transactionalProxy(runtime.management, run), verification: transactionalProxy(runtime.verification, run), feedback: transactionalProxy(feedback, run) };
 }
 
 export function getReasoningRuntime(): ReasoningRuntime {

@@ -6,6 +6,7 @@ import type {
   NotificationProviderEventKind,
   NotificationReceiptSeverity,
   NotificationSubscriptionRecord,
+  NotificationSubjectKind,
   NotificationTargetChannelStatus,
   NotificationTargetHealthRecord,
   NotificationTargetRecord,
@@ -216,6 +217,9 @@ export type NotificationDeliveryReceiptRepository = {
   listReceiptsForDecision(decisionId: string, limit?: number): Promise<PersistedNotificationDeliveryReceiptRecord[]>;
   listReceiptsForOutbox(outboxId: string, limit?: number): Promise<PersistedNotificationDeliveryReceiptRecord[]>;
   listRecentReceipts(eventKind?: NotificationProviderEventKind, limit?: number): Promise<PersistedNotificationDeliveryReceiptRecord[]>;
+  listRecentReceiptsForSubject(subjectKind: NotificationSubjectKind, subjectId: string, eventKind?: NotificationProviderEventKind, limit?: number): Promise<PersistedNotificationDeliveryReceiptRecord[]>;
+  getReceiptByIdForSubject(subjectKind: NotificationSubjectKind, subjectId: string, receiptId: string): Promise<PersistedNotificationDeliveryReceiptRecord | null>;
+  listReceiptsForTargetForSubject(subjectKind: NotificationSubjectKind, subjectId: string, targetId: string, limit?: number): Promise<PersistedNotificationDeliveryReceiptRecord[]>;
 };
 
 export type NotificationTargetHealthRepository = {

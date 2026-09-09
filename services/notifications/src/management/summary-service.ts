@@ -123,6 +123,25 @@ export class NotificationOperationalSummaryService {
     };
   }
 
+  async getNotificationFeedbackSummaryForSubject(subjectKind: NotificationSubjectKind, subjectId: string, asOfIso = new Date().toISOString(), lookbackHours = 24) {
+    const allReceipts = this.deps.receiptRepository ? await this.deps.receiptRepository.listRecentReceiptsForSubject(subjectKind, subjectId, undefined, 5000) : [];
+    const asOfMs = Date.parse(asOfIso), minMs = asOfMs - lookbackHours * 60 * 60 * 1000;
+    const inWindow = allReceipts.filter((row) => { const occurredMs = Date.parse(row.occurredAt); return occurredMs <= asOfMs && occurredMs >= minMs; });
+    const degraded = await this.listTargetsWithDegradedHealthForSubject(subjectKind, subjectId, 5000);
+    return {
+      acceptedCount: inWindow.filter((row) => row.eventKind === 'accepted').length,
+      deliveredCount: inWindow.filter((row) => row.eventKind === 'delivered').length,
+      bouncedCount: inWindow.filter((row) => row.eventKind === 'bounced').length,
+      complainedCount: inWindow.filter((row) => row.eventKind === 'complained').length,
+      unsubscribedCount: inWindow.filter((row) => row.eventKind === 'unsubscribed').length,
+      invalidTargetCount: inWindow.filter((row) => row.eventKind === 'invalid_target').length,
+      providerFailedCount: inWindow.filter((row) => row.eventKind === 'provider_failed').length,
+      unknownCount: inWindow.filter((row) => row.eventKind === 'unknown').length,
+      disabledTargetCount: degraded.filter((row) => row.healthState === 'disabled').length,
+      degradedTargetCount: degraded.filter((row) => row.healthState === 'degraded').length
+    };
+  }
+
   async listTargetsWithDegradedHealth(limit = 100) {
     if (!this.deps.targetHealthRepository) return [];
     const targets = await this.deps.targetRepository.listActiveTargetsForChannel('email');
@@ -134,6 +153,18 @@ export class NotificationOperationalSummaryService {
     if (!this.deps.receiptRepository) return [];
     const rows = await this.deps.receiptRepository.listRecentReceipts(undefined, 1000);
     return rows.filter((row) => row.severity === 'critical').sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt) || a.receiptId.localeCompare(b.receiptId)).slice(0, limit);
+  }
+
+  async listTargetsWithDegradedHealthForSubject(subjectKind: NotificationSubjectKind, subjectId: string, limit = 100) {
+    if (!this.deps.targetHealthRepository) return [];
+    const rows = await this.deps.targetHealthRepository.listTargetHealthForSubject(subjectKind, subjectId);
+    return rows.filter((row) => row.healthState === 'degraded' || row.healthState === 'disabled').slice(0, limit);
+  }
+
+  async listRecentCriticalReceiptsForSubject(subjectKind: NotificationSubjectKind, subjectId: string, limit = 100) {
+    if (!this.deps.receiptRepository) return [];
+    const rows = await this.deps.receiptRepository.listRecentReceiptsForSubject(subjectKind, subjectId, undefined, 1000);
+    return rows.filter((row) => row.severity === 'critical').slice(0, limit);
   }
 
   private async listSubjectInboxAcrossTargets(targetIds: string[]) {

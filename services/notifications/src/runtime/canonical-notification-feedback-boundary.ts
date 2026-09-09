@@ -37,4 +37,7 @@ export class CanonicalNotificationFeedbackBoundaryService {
   getNotificationFeedbackSummary(asOfIso?: string, lookbackHours?: number) { return this.summaryService.getNotificationFeedbackSummary(asOfIso, lookbackHours); }
   listTargetsWithDegradedHealth(limit?: number) { return this.summaryService.listTargetsWithDegradedHealth(limit); }
   listRecentCriticalReceipts(limit?: number) { return this.summaryService.listRecentCriticalReceipts(limit); }
+  getNotificationFeedbackSummaryForSubject(subjectKind: 'user', subjectId: string, asOfIso?: string, lookbackHours?: number) { return this.summaryService.getNotificationFeedbackSummaryForSubject(subjectKind, subjectId, asOfIso, lookbackHours); }
+  listTargetsWithDegradedHealthForSubject(subjectKind: 'user', subjectId: string, limit?: number) { return this.summaryService.listTargetsWithDegradedHealthForSubject(subjectKind, subjectId, limit); }
+  listRecentCriticalReceiptsForSubject(subjectKind: 'user', subjectId: string, limit?: number) { return this.summaryService.listRecentCriticalReceiptsForSubject(subjectKind, subjectId, limit); }
 }

@@ -389,6 +389,9 @@ const mockNotificationRuntime = {
     getNotificationFeedbackSummary: async () => ({ summary: true }),
     listTargetsWithDegradedHealth: async () => [],
     listRecentCriticalReceipts: async () => [],
+    getNotificationFeedbackSummaryForSubject: async (subjectKind: string, subjectId: string) => ({ summary: true, subjectKind, subjectId }),
+    listTargetsWithDegradedHealthForSubject: async () => [],
+    listRecentCriticalReceiptsForSubject: async () => [],
     processProviderEvent: async (_providerKind?: string, _channel?: string, rawEvent?: unknown) => { const id=(rawEvent as {eventId?:string})?.eventId ?? 'none'; if(!webhookEventIds.has(id)){webhookEventIds.add(id);webhookFeedbackMutations++;} return { accepted: true, providerEventId:id }; }
   }
 };

@@ -278,12 +278,16 @@ export class MemoryNotificationDeliveryReceiptRepository implements Notification
   async listReceiptsForDecision(decisionId: string, limit = 100): Promise<PersistedNotificationDeliveryReceiptRecord[]> { return this.filter({ decisionId }, limit); }
   async listReceiptsForOutbox(outboxId: string, limit = 100): Promise<PersistedNotificationDeliveryReceiptRecord[]> { return this.filter({ outboxId }, limit); }
   async listRecentReceipts(eventKind?: import('@elceo/types').NotificationProviderEventKind, limit = 100): Promise<PersistedNotificationDeliveryReceiptRecord[]> { return this.filter(eventKind ? { eventKind } : {}, limit); }
-  private async filter(params: { targetId?: string; decisionId?: string; outboxId?: string; eventKind?: import('@elceo/types').NotificationProviderEventKind }, limit: number): Promise<PersistedNotificationDeliveryReceiptRecord[]> {
+  async listRecentReceiptsForSubject(subjectKind: import('@elceo/types').NotificationSubjectKind, subjectId: string, eventKind?: import('@elceo/types').NotificationProviderEventKind, limit = 100) { return this.filter({ subjectKind, subjectId, ...(eventKind ? { eventKind } : {}) }, limit); }
+  async getReceiptByIdForSubject(subjectKind: import('@elceo/types').NotificationSubjectKind, subjectId: string, receiptId: string) { const row = this.byId.get(receiptId); return row?.subjectKind === subjectKind && row.subjectId === subjectId ? row : null; }
+  async listReceiptsForTargetForSubject(subjectKind: import('@elceo/types').NotificationSubjectKind, subjectId: string, targetId: string, limit = 100) { return this.filter({ subjectKind, subjectId, targetId }, limit); }
+  private async filter(params: { targetId?: string; decisionId?: string; outboxId?: string; eventKind?: import('@elceo/types').NotificationProviderEventKind; subjectKind?: import('@elceo/types').NotificationSubjectKind; subjectId?: string }, limit: number): Promise<PersistedNotificationDeliveryReceiptRecord[]> {
     return [...this.byId.values()]
       .filter((row) => (params.targetId ? row.targetId === params.targetId : true))
       .filter((row) => (params.decisionId ? row.decisionId === params.decisionId : true))
       .filter((row) => (params.outboxId ? row.outboxId === params.outboxId : true))
       .filter((row) => (params.eventKind ? row.eventKind === params.eventKind : true))
+      .filter((row) => (params.subjectKind ? row.subjectKind === params.subjectKind && row.subjectId === params.subjectId : true))
       .sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt) || a.receiptId.localeCompare(b.receiptId))
       .slice(0, limit);
   }

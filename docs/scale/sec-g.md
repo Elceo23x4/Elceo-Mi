@@ -16,6 +16,8 @@ Migration 0062 adds ingestion/notification claim token, monotonically advancing 
 
 Scheduler acquisition returns token/generation, takeover increments generation, current-owner checks guard execution/finalization, renew is fenced, and release is fenced. Ops acquisition is database-atomic, generations advance by scope, success persistence requires current ownership, and renew/release are fenced.
 
+Notification outbox claims now use bounded `SKIP LOCKED` batches with expiring token/generation ownership. Delivered, failed, dead, and ambiguous transitions are fenced; expired dispatching work is reclaimable. Resend and OneSignal identities remain functions of `outboxId`, while Postmark `provider_ambiguous` becomes a non-retryable `ambiguous` row for manual reconciliation.
+
 The authenticated SQL notification inbox path uses one bounded join to subject-owned targets. Unread/archive/optional-target predicates execute in SQL and ordering is `(created_at DESC, inbox_id DESC)`; the memory repository retains its multi-call fallback only for unit-test composition.
 
 The k6 file maps ten named scenarios to canonical routes and dispatches by `exec.scenario.name`. Smoke/CI use constant VUs; capacity discovery uses an actual bounded `ramping-vus` executor. It accepts a legitimate session cookie and contains no fixture authentication bypass.
@@ -26,4 +28,4 @@ The k6 file maps ten named scenarios to canonical routes and dispatches by `exec
 
 ## Still required before SEC-G acceptance
 
-Notification transport claim fencing and provider-specific Postmark ambiguous execution, full set-based high-cardinality seeding/plans, Redis stop/restart and adaptive kill/takeover, process-death backlog tests, composition-root shutdown wiring, authenticated Next runtime startup, actual k6 execution, repeated resource samples, and exact-head green Actions evidence remain acceptance requirements. Until those executable artifacts exist, this PR remains HOLD and no empirical business floor is set.
+Full end-to-end SQL crash injection beyond the deterministic repository tests, Redis stop/restart and adaptive kill/takeover, process-death backlog tests, authenticated Next runtime startup, actual k6 execution, repeated resource samples, and exact-head green Actions evidence remain acceptance requirements. Until those executable artifacts exist, this PR remains HOLD and no empirical business floor is set.

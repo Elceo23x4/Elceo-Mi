@@ -4,9 +4,10 @@ import type { NotificationOutboxAttemptRecord } from './outbox-contracts';
 import type { NotificationDeliveryTransport, NotificationTransportResult } from './transport';
 import { deserializeTargetAwareNotificationPayload } from './replay-delivery';
 import { safeNotificationChecksum } from '../management/redaction';
+import { randomUUID } from 'node:crypto';
 
-export type NotificationOutboxDispatchItemReport = { outboxId: string; channel: NotificationChannel; status: 'delivered' | 'failed' | 'dead'; attemptCount: number; errorCode: string | null; errorMessage: string | null };
-export type NotificationOutboxDispatchReport = { asOf: string; examinedCount: number; dispatchedCount: number; deliveredCount: number; failedCount: number; deadCount: number; reports: NotificationOutboxDispatchItemReport[] };
+export type NotificationOutboxDispatchItemReport = { outboxId: string; channel: NotificationChannel; status: 'delivered' | 'failed' | 'dead' | 'ambiguous'; attemptCount: number; errorCode: string | null; errorMessage: string | null };
+export type NotificationOutboxDispatchReport = { asOf: string; examinedCount: number; dispatchedCount: number; deliveredCount: number; failedCount: number; deadCount: number; ambiguousCount: number; reports: NotificationOutboxDispatchItemReport[] };
 export const buildNotificationRetryAvailableAt = (attemptedAt: string, attemptCountAfterFailure: number, reasonCode?: string | null): string => {
   const baseMinutes = reasonCode === 'rate_limited' ? 30 : 5;
   const capped = Math.min(6, Math.max(1, attemptCountAfterFailure));
@@ -17,13 +18,11 @@ const isTerminalFailure = (result: NotificationTransportResult): boolean => resu
 const normalizedReceiptStatus = (result: NotificationTransportResult): string => result.outcome ?? (result.success ? 'accepted' : 'temporary_failure');
 
 export async function dispatchDueNotificationOutbox(asOfIso: string, limit: number, repositories: { outboxRepository: NotificationOutboxRepository; outboxAttemptRepository: NotificationOutboxAttemptRepository; targetRepository: NotificationTargetRepository; subscriptionRepository?: NotificationSubscriptionRepository }, transport: NotificationDeliveryTransport): Promise<NotificationOutboxDispatchReport> {
-  const due = await repositories.outboxRepository.listDueOutboxItems(asOfIso, limit);
+  const due = await repositories.outboxRepository.claimDueOutboxItems(asOfIso, new Date(Date.parse(asOfIso)+30_000).toISOString(), limit, randomUUID());
   const reports: NotificationOutboxDispatchItemReport[] = [];
 
   for (const item of due) {
-    const claimedItem = await repositories.outboxRepository.claimDueOutboxItem(item.outboxId, asOfIso);
-    if (!claimedItem) continue;
-    const itemForDispatch = claimedItem;
+    const itemForDispatch = item;
     let sendResult: NotificationTransportResult;
     try {
       const envelope = deserializeTargetAwareNotificationPayload(itemForDispatch.payloadJson);
@@ -64,19 +63,22 @@ export async function dispatchDueNotificationOutbox(asOfIso: string, limit: numb
     await repositories.outboxAttemptRepository.saveAttempt(attemptRecord);
 
     if (sendResult.success) {
-      await repositories.outboxRepository.markDelivered(itemForDispatch.outboxId, asOfIso);
+      await repositories.outboxRepository.markClaimDelivered(itemForDispatch, asOfIso);
       reports.push({ outboxId: itemForDispatch.outboxId, channel: itemForDispatch.channel, status: 'delivered', attemptCount: itemForDispatch.attemptCount + 1, errorCode: null, errorMessage: null });
       continue;
     }
     const attemptCountAfterFailure = itemForDispatch.attemptCount + 1;
-    if (isTerminalFailure(sendResult) || attemptCountAfterFailure >= 5) {
-      await repositories.outboxRepository.markDead(itemForDispatch.outboxId, asOfIso, sendResult.errorCode, sendResult.errorMessage);
+    if (sendResult.outcome === 'provider_ambiguous') {
+      await repositories.outboxRepository.markClaimAmbiguous(itemForDispatch, asOfIso, sendResult.errorCode, sendResult.errorMessage);
+      reports.push({ outboxId:itemForDispatch.outboxId,channel:itemForDispatch.channel,status:'ambiguous',attemptCount:attemptCountAfterFailure,errorCode:sendResult.errorCode,errorMessage:sendResult.errorMessage });
+    } else if (isTerminalFailure(sendResult) || attemptCountAfterFailure >= 5) {
+      await repositories.outboxRepository.markClaimDead(itemForDispatch, asOfIso, sendResult.errorCode, sendResult.errorMessage);
       reports.push({ outboxId: itemForDispatch.outboxId, channel: itemForDispatch.channel, status: 'dead', attemptCount: attemptCountAfterFailure, errorCode: sendResult.errorCode, errorMessage: sendResult.errorMessage });
     } else {
-      await repositories.outboxRepository.markFailed(itemForDispatch.outboxId, asOfIso, buildNotificationRetryAvailableAt(asOfIso, attemptCountAfterFailure, sendResult.errorCode), sendResult.errorCode, sendResult.errorMessage);
+      await repositories.outboxRepository.markClaimFailed(itemForDispatch, asOfIso, buildNotificationRetryAvailableAt(asOfIso, attemptCountAfterFailure, sendResult.errorCode), sendResult.errorCode, sendResult.errorMessage);
       reports.push({ outboxId: itemForDispatch.outboxId, channel: itemForDispatch.channel, status: 'failed', attemptCount: attemptCountAfterFailure, errorCode: sendResult.errorCode, errorMessage: sendResult.errorMessage });
     }
   }
 
-  return { asOf: asOfIso, examinedCount: due.length, dispatchedCount: reports.length, deliveredCount: reports.filter((entry) => entry.status === 'delivered').length, failedCount: reports.filter((entry) => entry.status === 'failed').length, deadCount: reports.filter((entry) => entry.status === 'dead').length, reports };
+  return { asOf: asOfIso, examinedCount: due.length, dispatchedCount: reports.length, deliveredCount: reports.filter((entry) => entry.status === 'delivered').length, failedCount: reports.filter((entry) => entry.status === 'failed').length, deadCount: reports.filter((entry) => entry.status === 'dead').length, ambiguousCount: reports.filter((entry) => entry.status === 'ambiguous').length, reports };
 }

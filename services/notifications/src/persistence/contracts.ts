@@ -143,6 +143,7 @@ export type NotificationOutboxRepository = {
   getOutboxByKey(outboxKey: string): Promise<NotificationOutboxRecord | null>;
   listDueOutboxItems(asOfIso: string, limit: number): Promise<NotificationOutboxRecord[]>;
   listRecentOutboxItems(asOfIso: string, lookbackHours: number | null, limit: number): Promise<NotificationOutboxRecord[]>;
+  listRecentOutboxItemsForSubject(subjectKind: NotificationSubjectKind, subjectId: string, asOfIso: string, lookbackHours: number | null, limit: number): Promise<NotificationOutboxRecord[]>;
   markDispatching(outboxId: string, attemptedAt: string): Promise<void>;
   claimDueOutboxItem(outboxId: string, asOfIso: string): Promise<NotificationOutboxRecord | null>;
   markDelivered(outboxId: string, deliveredAt: string): Promise<void>;

@@ -166,6 +166,11 @@ export class MemoryNotificationOutboxRepository implements NotificationOutboxRep
       .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || a.outboxId.localeCompare(b.outboxId))
       .slice(0, limit);
   }
+  async listRecentOutboxItemsForSubject(subjectKind: import('@elceo/types').NotificationSubjectKind, subjectId: string, asOfIso: string, lookbackHours: number | null, limit: number) {
+    return (await this.listRecentOutboxItems(asOfIso, lookbackHours, Number.MAX_SAFE_INTEGER))
+      .filter((row) => row.subjectKind === subjectKind && row.subjectId === subjectId)
+      .slice(0, limit);
+  }
   async markDispatching(outboxId: string, attemptedAt: string): Promise<void> { await this.claimDueOutboxItem(outboxId, attemptedAt); }
   async claimDueOutboxItem(outboxId: string, asOfIso: string): Promise<NotificationOutboxRecord | null> { const c = this.byId.get(outboxId); if (!c || (c.status !== 'staged' && c.status !== 'failed') || Date.parse(c.availableAt) > Date.parse(asOfIso)) return null; const n = { ...c, status: 'dispatching', lastAttemptAt: asOfIso, updatedAt: asOfIso } as NotificationOutboxRecord; this.byId.set(outboxId, n); this.byKey.set(n.outboxKey, n); return n; }
   async markDelivered(outboxId: string, deliveredAt: string): Promise<void> { const c = this.byId.get(outboxId); if (!c) return; const n = { ...c, status: 'delivered', attemptCount: c.attemptCount + 1, deliveredAt, lastAttemptAt: deliveredAt, updatedAt: deliveredAt, lastErrorCode: null, lastErrorMessage: null } as NotificationOutboxRecord; this.byId.set(outboxId, n); this.byKey.set(n.outboxKey, n); }

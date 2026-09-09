@@ -22,7 +22,7 @@ export class NotificationOperationalSummaryService {
     const subscriptions = await this.deps.subscriptionRepository.listSubscriptionsForSubject(subjectKind, subjectId);
 
     const inboxRows = await this.listSubjectInboxAcrossTargets(targets.map((target) => target.targetId));
-    const outboxRows = await this.listSubjectOutboxAcrossTargets(targets.map((target) => target.targetId));
+    const outboxRows = await this.deps.outboxRepository.listRecentOutboxItemsForSubject(subjectKind, subjectId, new Date().toISOString(), null, 1000);
 
     return {
       subjectTargetCount: targets.length,
@@ -59,12 +59,9 @@ export class NotificationOperationalSummaryService {
   }
 
   async listRecentDeliveriesForSubject(subjectKind: NotificationSubjectKind, subjectId: string, limit = 20) {
-    const targets = await this.deps.targetRepository.listTargetsForSubject(subjectKind, subjectId);
     const dedupe = new Map<string, Awaited<ReturnType<NotificationOutboxRepository['listOutboxForDecision']>>[number]>();
-    const recent = await this.deps.outboxRepository.listRecentOutboxItems(new Date().toISOString(), null, 1000);
-    const ids = new Set(targets.map((target) => target.targetId));
+    const recent = await this.deps.outboxRepository.listRecentOutboxItemsForSubject(subjectKind, subjectId, new Date().toISOString(), null, 1000);
     for (const row of recent) {
-      if (!ids.has(row.targetId)) continue;
       if (!dedupe.has(row.outboxId)) dedupe.set(row.outboxId, row);
     }
     return [...dedupe.values()].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || a.outboxId.localeCompare(b.outboxId)).slice(0, limit);
@@ -176,9 +173,4 @@ export class NotificationOperationalSummaryService {
     return [...dedupe.values()];
   }
 
-  private async listSubjectOutboxAcrossTargets(targetIds: string[]) {
-    const rows = await this.deps.outboxRepository.listRecentOutboxItems(new Date().toISOString(), null, 1000);
-    const idSet = new Set(targetIds);
-    return rows.filter((row) => idSet.has(row.targetId));
-  }
 }

@@ -57,7 +57,7 @@
     "verify:deployment-gates": "node scripts/verify-deployment-promotion-gates.mjs",
     "check:ifp": "node scripts/check-intelligence-feature-program.mjs",
     "test:ifp3-postgres": "npm run -w services/reasoning test && node scripts/test-ifp3-postgres.mjs",
-    "test:ifp4-postgres": "npm run -w services/reasoning test && node scripts/test-ifp4-postgres.mjs",
+    "test:ifp4-postgres": "npm run -w @elceo/db-runtime build && npm run -w services/reasoning test && node scripts/test-ifp4-postgres.mjs",
     "test:ifp5-postgres": "npm run -w services/reasoning test && node scripts/test-ifp5-postgres.mjs",
     "test:ifp6-postgres": "npm run -w services/reasoning test && node scripts/test-ifp6-postgres.mjs",
     "test:ifp7-postgres": "npm run -w services/reasoning test && node scripts/test-ifp7-postgres.mjs",
@@ -80,7 +80,8 @@
     "test:sec-f-postgres": "npm run -w services/application-state test && npm run -w services/notifications test && node scripts/test-sec-f-postgres.mjs",
     "test:sec-g": "node scripts/test-sec-g.mjs",
     "test:sec-g-postgres": "node scripts/test-sec-g-postgres.mjs",
-    "test:sec-g-k6": "k6 run --summary-export artifacts/sec-g/k6-summary.json load/sec-g.k6.js"
+    "test:sec-g-k6": "k6 run --summary-export artifacts/sec-g/k6-summary.json load/sec-g.k6.js",
+    "test:sec-g-lifecycle": "npm run -w @elceo/db-runtime build && node scripts/test-sec-g-lifecycle.mjs"
   },
   "engines": {
     "node": "24.x",

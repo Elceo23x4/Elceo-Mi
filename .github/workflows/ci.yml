@@ -313,6 +313,8 @@ jobs:
       - run: npm install --global npm@10.8.2 && npm ci
       - name: SEC-G correctness
         run: npm run test:sec-g
+      - name: SEC-G process lifecycle acceptance
+        run: npm run test:sec-g-lifecycle
       - name: Migrate and capture PostgreSQL plans
         env:
           DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_sec_g

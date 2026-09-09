@@ -1,15 +1,10 @@
 import * as Sentry from '@sentry/nextjs';
 import { applySentryPrivacyPolicy, safeEnvironment } from './lib/sentry-policy';
 import { sentryRelease, serverSentryDsn } from './lib/sentry-dsn.mjs';
-import { closeRuntimePools, installRuntimeSignalHandlers, registerRuntimeDrain } from '@elceo/db-runtime';
-
-let lifecycleInstalled = false;
-
 export async function register() {
-  if (process.env.NEXT_RUNTIME === 'nodejs' && !lifecycleInstalled) {
-    lifecycleInstalled = true;
-    registerRuntimeDrain({ name: 'postgres-runtime', drain: closeRuntimePools });
-    installRuntimeSignalHandlers();
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const { installNodeProcessLifecycle } = await import('./lib/server/process-lifecycle');
+    installNodeProcessLifecycle();
   }
   const sentry = serverSentryDsn(process.env);
   if (!sentry) return;

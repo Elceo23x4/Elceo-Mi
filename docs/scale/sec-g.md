@@ -29,3 +29,11 @@ The k6 file maps ten named scenarios to canonical routes and dispatches by `exec
 ## Still required before SEC-G acceptance
 
 Full end-to-end SQL crash injection beyond the deterministic repository tests, Redis stop/restart and adaptive kill/takeover, process-death backlog tests, authenticated Next runtime startup, actual k6 execution, repeated resource samples, and exact-head green Actions evidence remain acceptance requirements. Until those executable artifacts exist, this PR remains HOLD and no empirical business floor is set.
+
+## Current regression closure evidence
+
+The Next instrumentation regression came from a static `@elceo/db-runtime` import in the universal instrumentation module: Next included Node PostgreSQL/process APIs in the Edge instrumentation graph used with Proxy. The universal hook now performs a runtime-guarded dynamic import of `lib/server/process-lifecycle.ts`; that module is explicitly server-only and is loaded solely for `NEXT_RUNTIME=nodejs`. The unchanged Proxy and Sentry hook now build together.
+
+The IFP-4 failure was `SyntaxError: Unexpected token 'export'` at `packages/db-runtime/src/index.ts:2`: compiled CommonJS reasoning code resolved the workspace package's `main` to raw TypeScript. `@elceo/db-runtime` now publishes `dist/index.js` as its runtime main, and its workspace test builds that artifact before PostgreSQL acceptance stages.
+
+Local PostgreSQL 16 evidence at scale 100 recorded 64 applied migrations; 100 rows in each of ten seeded table families; nine JSON plans; pool peak total 2, waiting 1, bounded checkout timeout, and successful recovery. The SQL notification contention result was 20 claimers, one owner, generation 1→2, zero accepted stale delivered/failed/dead/ambiguous transitions, one ambiguous terminal row, and zero future due rows. These local measurements are correctness evidence, not production capacity.

@@ -168,6 +168,12 @@ jobs:
         run: npm run test:sec-d-postgres
       - name: SEC-E canonical API boundary acceptance
         run: npm run test:sec-e
+      - name: SEC-F residual security acceptance
+        env:
+          DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3
+        run: |
+          npm run test:sec-f
+          npm run test:sec-f-postgres
       - name: Production build
         run: npm run build
       - name: Notification browser bundle secret boundary
@@ -182,7 +188,7 @@ jobs:
           ONESIGNAL_WEBHOOK_CORRELATION_SECRET: rc_i3_client_secret_sentinel_onesignal_webhook_correlation_secret
           DATABASE_URL: postgresql://rc_i3_client_secret_sentinel_database_url@localhost/rc_i3
           AUTH_SECRET: rc_i3_client_secret_sentinel_auth_secret
-        run: npm run -w apps/web build && npm run security:notification-client
+        run: rm -rf apps/web/.next && npm run -w apps/web build && npm run security:notification-client
       - name: RC-I3 notification provider PostgreSQL integration
         env:
           DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_ifp3

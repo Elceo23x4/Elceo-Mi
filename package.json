@@ -75,7 +75,9 @@
     "test:sec-b-auth-postgres": "npm run -w services/application-state test && npm run -w apps/web test && node scripts/test-sec-b-auth-postgres.mjs",
     "test:sec-c-postgres": "node scripts/test-sec-c-postgres.mjs",
     "test:sec-d-postgres": "npm run -w services/reasoning test && node scripts/test-sec-d-provider-postgres.mjs",
-    "test:sec-e": "node scripts/check-sec-e-boundaries.mjs && npm run -w apps/web test"
+    "test:sec-e": "node scripts/check-sec-e-boundaries.mjs && npm run -w apps/web test",
+    "test:sec-f": "npm run -w @elceo/config build && npm run -w @elceo/schemas build && npm run -w apps/web test && node scripts/test-sec-f-runtime.mjs && node scripts/check-sec-f.mjs",
+    "test:sec-f-postgres": "npm run -w services/application-state test && npm run -w services/notifications test && node scripts/test-sec-f-postgres.mjs"
   },
   "engines": {
     "node": "24.x",
@@ -103,8 +105,8 @@
     "next": "16.3.3",
     "pg": "^8.22.0",
     "playwright": "^1.59.1",
-    "sharp": "0.35.3",
-    "svgo": "4.0.2",
+    "sharp": "0.35.4",
+    "svgo": "4.1.0",
     "typescript": "^5.9.3",
     "eslint": "^9.39.4",
     "@types/node": "^20.19.39",
@@ -118,9 +120,9 @@
   "overrides": {
     "postcss": "8.5.25",
     "@babel/core": "7.29.7",
-    "js-yaml": "4.3.1",
+    "js-yaml": "4.3.2",
     "@svgr/plugin-svgo": {
-      "svgo": "3.3.4"
+      "svgo": "3.3.5"
     },
     "next": {
       "postcss": "8.5.25"

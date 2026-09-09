@@ -1,7 +1,7 @@
 import { parseJsonBody, parsePositiveInt, parseSearchParams, unwrapValidation, withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
 import { requireFeatureAccess } from '@/lib/server/access';
 import { guardRouteCommercialEntitlement } from '@/lib/server/access';
-import { getApplicationStateRuntime } from '@/lib/server/composition';
+import { getTenantApplicationStateRuntime } from '@/lib/server/composition';
 import { resolveUserCommercialEntitlementSnapshot } from '@elceo/application-state';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 import { validateWatchlistCreateRequest } from '@elceo/schemas';
@@ -13,7 +13,7 @@ export const GET = withApiErrorBoundary(async (request: Request) => {
   const commercial = guardRouteCommercialEntitlement({ routePath: '/api/portfolio/watchlist', method: 'GET', featureKey: 'premium.full_access', snapshot: await resolveUserCommercialEntitlementSnapshot(subject.userId) });
   if (!commercial.allowed) return commercial.response;
   const params = parseSearchParams(request.url);
-  const entries = await getApplicationStateRuntime().portfolio.listCurrentWatchlist(subject.subjectKind, subject.subjectId, parsePositiveInt(params.get('limit'), 50, 200));
+  const entries = await getTenantApplicationStateRuntime(subject).portfolio.listCurrentWatchlist(subject.subjectKind, subject.subjectId, parsePositiveInt(params.get('limit'), 50, 200));
   return jsonSuccess({ entries });
 });
 
@@ -28,7 +28,7 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   const security = await requireSecurityDecision({ request, routePath: '/api/portfolio/watchlist', method: 'POST', actionKind: 'portfolio_watchlist_write', actor, subjectId: subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;
   try {
-    const entry = await getApplicationStateRuntime().portfolio.createWatchlistEntry({ subjectKind: subject.subjectKind, subjectId: subject.subjectId, asset: body.asset, timeframe: body.timeframe, priority: body.priority, status: body.status ?? 'watching', thesisHealth: body.thesisHealth ?? 'stable', note: body.note ?? null, linkedReasoningRunId: body.linkedReasoningRunId ?? null, linkedSnapshotId: body.linkedSnapshotId ?? null, linkedDriftId: body.linkedDriftId ?? null, linkedJournalCaseId: body.linkedJournalCaseId ?? null }, { actorKind: 'user', actorId: subject.userId });
+    const entry = await getTenantApplicationStateRuntime(subject).portfolio.createWatchlistEntry({ subjectKind: subject.subjectKind, subjectId: subject.subjectId, asset: body.asset, timeframe: body.timeframe, priority: body.priority, status: body.status ?? 'watching', thesisHealth: body.thesisHealth ?? 'stable', note: body.note ?? null, linkedReasoningRunId: body.linkedReasoningRunId ?? null, linkedSnapshotId: body.linkedSnapshotId ?? null, linkedDriftId: body.linkedDriftId ?? null, linkedJournalCaseId: body.linkedJournalCaseId ?? null }, { actorKind: 'user', actorId: subject.userId });
     const envelope = { ok: true as const, data: { entry } };
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { entry }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: subject.subjectId, actionKind: 'portfolio_watchlist_write', routePath: '/api/portfolio/watchlist', method: 'POST', request, idempotencyKey: security.idempotencyKey });

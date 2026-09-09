@@ -26,5 +26,5 @@ assert.equal(versions['@svgr/core'], '8.1.0');
 assert.equal(versions['@svgr/plugin-jsx'], '8.1.0');
 assert.equal(versions['@svgr/plugin-svgo'], '8.1.0');
 assert.equal(versions['@svgr/webpack'], '8.1.0');
-assert.equal(versions.svgo, '4.0.2');
+assert.equal(versions.svgo, '4.1.0');
 console.log(`SVG pipeline passed with ${JSON.stringify(versions)}; generated ${component.length} bytes.`);

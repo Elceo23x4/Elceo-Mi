@@ -4,7 +4,7 @@ import sharp from 'sharp';
 import { generateImageFixtures } from './image-fixtures.mjs';
 
 assert.equal(process.version, 'v24.19.0');
-assert.equal(sharp.versions.sharp, '0.35.3');
+assert.equal(sharp.versions.sharp, '0.35.4');
 const fixtures = await generateImageFixtures();
 for (const format of ['png', 'jpeg', 'webp']) {
   const output = await sharp(fixtures[format], { limitInputPixels: 4096 }).rotate().resize(32, undefined, { fit: 'inside', withoutEnlargement: true }).webp().toBuffer();

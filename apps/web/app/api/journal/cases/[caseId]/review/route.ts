@@ -1,6 +1,6 @@
 import { parseJsonBody, unwrapValidation, withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
 import { requireAuthenticatedSubject } from '@/lib/server/auth';
-import { getApplicationStateRuntime } from '@/lib/server/composition';
+import { getTenantApplicationStateRuntime } from '@/lib/server/composition';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 import { mapJournalReviewRequest } from '@elceo/application-state';
 import { validateJournalReviewRequest } from '@elceo/schemas';
@@ -13,7 +13,7 @@ export const POST = withApiErrorBoundary(async (request: Request, context: { par
   const security = await requireSecurityDecision({ request, routePath: '/api/journal/cases/[caseId]/review', method: 'POST', actionKind: 'journal_case_lifecycle', actor, subjectId: subject.subjectId, requestBody: patch });
   if (!security.ok) return security.response;
   try {
-  const updated = await getApplicationStateRuntime().journal.reviewCase('user', subject.subjectId, caseId, mapJournalReviewRequest(patch), { actorKind: 'user', actorId: subject.userId });
+  const updated = await getTenantApplicationStateRuntime(subject).journal.reviewCase('user', subject.subjectId, caseId, mapJournalReviewRequest(patch), { actorKind: 'user', actorId: subject.userId });
     const envelope = { ok: true as const, data: { case: updated } };
 
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { case: updated }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });

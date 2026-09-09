@@ -3,6 +3,7 @@ export type ProviderEnv = {
   APP_ENV?: 'development' | 'test' | 'staging' | 'production';
   NODE_ENV?: string;
   DATABASE_URL?: string;
+  TENANT_DATABASE_URL?: string;
   REDIS_URL?: string;
   FINNHUB_API_KEY?: string;
   ALPHAVANTAGE_API_KEY?: string;
@@ -41,6 +42,8 @@ export type ProviderEnv = {
   ONESIGNAL_APP_API_KEY?: string;
   ONESIGNAL_WEBHOOK_CORRELATION_SECRET?: string;
   NEXT_PUBLIC_APP_BASE_URL?: string;
+  APP_BASE_URL?: string;
+  INTERNAL_API_BASE_URL?: string;
   BILLING_PROVIDER?: 'mock' | 'stripe';
   BILLING_WEBHOOK_SECRET?: string;
   STRIPE_SECRET_KEY?: string;
@@ -85,6 +88,7 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   if (env.APP_ENV === 'development' || env.APP_ENV === 'test' || env.APP_ENV === 'staging' || env.APP_ENV === 'production') out.APP_ENV = env.APP_ENV;
   if (env.NODE_ENV) out.NODE_ENV=env.NODE_ENV;
   if (env.DATABASE_URL) out.DATABASE_URL=env.DATABASE_URL;
+  if (env.TENANT_DATABASE_URL) out.TENANT_DATABASE_URL=env.TENANT_DATABASE_URL;
   if (env.REDIS_URL) out.REDIS_URL=env.REDIS_URL;
   if (env.FINNHUB_API_KEY) out.FINNHUB_API_KEY = env.FINNHUB_API_KEY;
   if (env.ALPHAVANTAGE_API_KEY) out.ALPHAVANTAGE_API_KEY = env.ALPHAVANTAGE_API_KEY;
@@ -111,6 +115,8 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   for (const key of ['NOTIFICATION_EMAIL_FROM_ADDRESS','NOTIFICATION_EMAIL_FROM_NAME','NOTIFICATION_EMAIL_REPLY_TO','RESEND_API_KEY','RESEND_WEBHOOK_SECRET','POSTMARK_SERVER_TOKEN','POSTMARK_WEBHOOK_USERNAME','POSTMARK_WEBHOOK_PASSWORD','POSTMARK_MESSAGE_STREAM','ONESIGNAL_APP_ID','NEXT_PUBLIC_ONESIGNAL_APP_ID','ONESIGNAL_APP_API_KEY','ONESIGNAL_WEBHOOK_CORRELATION_SECRET'] as const) if (env[key]) out[key]=env[key];
   if (env.NOTIFICATION_PUSH_PROVIDER === 'onesignal_web_push') out.NOTIFICATION_PUSH_PROVIDER=env.NOTIFICATION_PUSH_PROVIDER;
   if (env.NEXT_PUBLIC_APP_BASE_URL) out.NEXT_PUBLIC_APP_BASE_URL = env.NEXT_PUBLIC_APP_BASE_URL;
+  if (env.APP_BASE_URL) out.APP_BASE_URL = env.APP_BASE_URL;
+  if (env.INTERNAL_API_BASE_URL) out.INTERNAL_API_BASE_URL = env.INTERNAL_API_BASE_URL;
   if (env.BILLING_PROVIDER === 'mock' || env.BILLING_PROVIDER === 'stripe') out.BILLING_PROVIDER = env.BILLING_PROVIDER;
   if (env.BILLING_WEBHOOK_SECRET) out.BILLING_WEBHOOK_SECRET = env.BILLING_WEBHOOK_SECRET;
   if (env.STRIPE_SECRET_KEY) out.STRIPE_SECRET_KEY = env.STRIPE_SECRET_KEY;
@@ -141,6 +147,7 @@ export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
   // APP_ENV may be absent during compilation; NODE_ENV alone is not deployed identity.
   if (deployed && env.NODE_ENV !== 'production') errors.push('deployed APP_ENV requires NODE_ENV=production');
   if (deployed && (env.APP_STATE_REPOSITORY !== 'sql' || !env.DATABASE_URL)) errors.push('deployed APP_STATE_REPOSITORY=sql and DATABASE_URL are required');
+  if (deployed && !env.TENANT_DATABASE_URL) errors.push('deployed TENANT_DATABASE_URL restricted runtime principal is required');
   if (deployed && env.NOTIFICATIONS_PERSISTENCE_BACKEND !== 'sql') errors.push('deployed NOTIFICATIONS_PERSISTENCE_BACKEND=sql is required');
   if (deployed && env.ANALYTICS_PERSISTENCE_BACKEND !== 'sql') errors.push('deployed ANALYTICS_PERSISTENCE_BACKEND=sql is required');
   if (deployed && !env.PAYMENT_PROVIDER_MODE) errors.push('deployed PAYMENT_PROVIDER_MODE is required');
@@ -169,7 +176,13 @@ export function validateProviderEnv(env: ProviderEnv): EnvValidationResult {
   } else if (!isValidAbsoluteHttpUrl(env.NEXT_PUBLIC_APP_BASE_URL)) {
     errors.push('NEXT_PUBLIC_APP_BASE_URL must be an absolute http(s) URL');
   }
-
+  if (deployed) {
+    for (const [name, value] of [['NEXT_PUBLIC_APP_BASE_URL', env.NEXT_PUBLIC_APP_BASE_URL], ['APP_BASE_URL', env.APP_BASE_URL], ['INTERNAL_API_BASE_URL', env.INTERNAL_API_BASE_URL]] as const) {
+      if (!value) continue;
+      try { if (new URL(value).protocol !== 'https:') errors.push(`${name} must use HTTPS in deployed environments`); }
+      catch { errors.push(`${name} must be an absolute HTTPS URL in deployed environments`); }
+    }
+  }
   if (appEnv === 'production' && env.AUTH_CREDENTIALS_ENABLED === 'true') {
     let secureBase = false; try { secureBase = new URL(env.NEXT_PUBLIC_APP_BASE_URL ?? '').protocol === 'https:'; } catch { /* Report below. */ }
     if (!secureBase) errors.push('production credentials require an HTTPS NEXT_PUBLIC_APP_BASE_URL');

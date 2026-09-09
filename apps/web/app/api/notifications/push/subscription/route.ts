@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { jsonSuccess, parseJsonBody, withApiErrorBoundary } from '@/lib/server/api';
 import { requireAuthenticatedSubject } from '@/lib/server/auth';
-import { getNotificationRuntimes } from '@/lib/server/composition';
+import { getTenantNotificationRuntimes } from '@/lib/server/composition';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 
 function parseBody(value: unknown): { subscriptionId: string } {
@@ -23,8 +23,8 @@ async function mutate(request: Request, operation: 'bind' | 'unbind'): Promise<R
   if (!security.ok) return security.response;
   try {
     const result = operation === 'bind'
-      ? { target: await getNotificationRuntimes().management.bindPushSubscription(subject.subjectId, body.subscriptionId) }
-      : await getNotificationRuntimes().management.unbindPushSubscription(subject.subjectId, body.subscriptionId);
+      ? { target: await getTenantNotificationRuntimes(subject).management.bindPushSubscription(subject.subjectId, body.subscriptionId) }
+      : await getTenantNotificationRuntimes(subject).management.unbindPushSubscription(subject.subjectId, body.subscriptionId);
     const envelope = { ok: true as const, data: result };
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: result, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });
     await auditInternalMutation({ actor, subjectId: subject.subjectId, actionKind: 'notification_target_write', routePath: '/api/notifications/push/subscription', method: operation === 'bind' ? 'PUT' : 'DELETE', request: securedRequest, idempotencyKey: opaqueKey, metadata: { operation } });

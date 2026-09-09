@@ -166,6 +166,11 @@ export class MemoryNotificationOutboxRepository implements NotificationOutboxRep
       .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || a.outboxId.localeCompare(b.outboxId))
       .slice(0, limit);
   }
+  async listRecentOutboxItemsForSubject(subjectKind: import('@elceo/types').NotificationSubjectKind, subjectId: string, asOfIso: string, lookbackHours: number | null, limit: number) {
+    return (await this.listRecentOutboxItems(asOfIso, lookbackHours, Number.MAX_SAFE_INTEGER))
+      .filter((row) => row.subjectKind === subjectKind && row.subjectId === subjectId)
+      .slice(0, limit);
+  }
   async markDispatching(outboxId: string, attemptedAt: string): Promise<void> { await this.claimDueOutboxItem(outboxId, attemptedAt); }
   async claimDueOutboxItem(outboxId: string, asOfIso: string): Promise<NotificationOutboxRecord | null> { const c = this.byId.get(outboxId); if (!c || (c.status !== 'staged' && c.status !== 'failed') || Date.parse(c.availableAt) > Date.parse(asOfIso)) return null; const n = { ...c, status: 'dispatching', lastAttemptAt: asOfIso, updatedAt: asOfIso } as NotificationOutboxRecord; this.byId.set(outboxId, n); this.byKey.set(n.outboxKey, n); return n; }
   async markDelivered(outboxId: string, deliveredAt: string): Promise<void> { const c = this.byId.get(outboxId); if (!c) return; const n = { ...c, status: 'delivered', attemptCount: c.attemptCount + 1, deliveredAt, lastAttemptAt: deliveredAt, updatedAt: deliveredAt, lastErrorCode: null, lastErrorMessage: null } as NotificationOutboxRecord; this.byId.set(outboxId, n); this.byKey.set(n.outboxKey, n); }
@@ -278,12 +283,16 @@ export class MemoryNotificationDeliveryReceiptRepository implements Notification
   async listReceiptsForDecision(decisionId: string, limit = 100): Promise<PersistedNotificationDeliveryReceiptRecord[]> { return this.filter({ decisionId }, limit); }
   async listReceiptsForOutbox(outboxId: string, limit = 100): Promise<PersistedNotificationDeliveryReceiptRecord[]> { return this.filter({ outboxId }, limit); }
   async listRecentReceipts(eventKind?: import('@elceo/types').NotificationProviderEventKind, limit = 100): Promise<PersistedNotificationDeliveryReceiptRecord[]> { return this.filter(eventKind ? { eventKind } : {}, limit); }
-  private async filter(params: { targetId?: string; decisionId?: string; outboxId?: string; eventKind?: import('@elceo/types').NotificationProviderEventKind }, limit: number): Promise<PersistedNotificationDeliveryReceiptRecord[]> {
+  async listRecentReceiptsForSubject(subjectKind: import('@elceo/types').NotificationSubjectKind, subjectId: string, eventKind?: import('@elceo/types').NotificationProviderEventKind, limit = 100) { return this.filter({ subjectKind, subjectId, ...(eventKind ? { eventKind } : {}) }, limit); }
+  async getReceiptByIdForSubject(subjectKind: import('@elceo/types').NotificationSubjectKind, subjectId: string, receiptId: string) { const row = this.byId.get(receiptId); return row?.subjectKind === subjectKind && row.subjectId === subjectId ? row : null; }
+  async listReceiptsForTargetForSubject(subjectKind: import('@elceo/types').NotificationSubjectKind, subjectId: string, targetId: string, limit = 100) { return this.filter({ subjectKind, subjectId, targetId }, limit); }
+  private async filter(params: { targetId?: string; decisionId?: string; outboxId?: string; eventKind?: import('@elceo/types').NotificationProviderEventKind; subjectKind?: import('@elceo/types').NotificationSubjectKind; subjectId?: string }, limit: number): Promise<PersistedNotificationDeliveryReceiptRecord[]> {
     return [...this.byId.values()]
       .filter((row) => (params.targetId ? row.targetId === params.targetId : true))
       .filter((row) => (params.decisionId ? row.decisionId === params.decisionId : true))
       .filter((row) => (params.outboxId ? row.outboxId === params.outboxId : true))
       .filter((row) => (params.eventKind ? row.eventKind === params.eventKind : true))
+      .filter((row) => (params.subjectKind ? row.subjectKind === params.subjectKind && row.subjectId === params.subjectId : true))
       .sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt) || a.receiptId.localeCompare(b.receiptId))
       .slice(0, limit);
   }

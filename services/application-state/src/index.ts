@@ -63,3 +63,4 @@ export * from './payment-providers/stripe-reconciliation';
 export * from './billing/checkout-resume';
 
 export * from './billing/paid-period';
+export { withTenantDbTransaction } from './db/client';

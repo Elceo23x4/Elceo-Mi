@@ -1,4 +1,5 @@
 import 'server-only';
+import { createHash, timingSafeEqual } from 'node:crypto';
 
 export type AuthenticatedSubject = {
   subjectKind: 'user';
@@ -51,6 +52,10 @@ export async function requireAuthenticatedSubject(): Promise<AuthenticatedSubjec
 export function requireInternalRouteAccess(request: Request): VerifiedInternalPrincipal {
   const token = request.headers.get('x-elceo-internal-token');
   const expected = testInternalToken ?? (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.ELCEO_INTERNAL_API_TOKEN;
-  if (!expected || token !== expected) throw new Error('forbidden');
+  if (!expected || !token) throw new Error('forbidden');
+  // Fixed-length digests avoid both early string equality and timingSafeEqual length exceptions.
+  const suppliedDigest = createHash('sha256').update(token, 'utf8').digest();
+  const expectedDigest = createHash('sha256').update(expected, 'utf8').digest();
+  if (!timingSafeEqual(suppliedDigest, expectedDigest)) throw new Error('forbidden');
   return { kind: 'internal', id: 'internal-api' } as VerifiedInternalPrincipal;
 }

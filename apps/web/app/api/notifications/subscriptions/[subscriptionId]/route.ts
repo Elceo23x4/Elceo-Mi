@@ -1,7 +1,7 @@
 import { parseJsonBody, unwrapValidation, withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
 import { requireAuthenticatedSubject } from '@/lib/server/auth';
 import { assertRouteSubjectOwnership, buildOwnerAccessDeniedResponse } from '@/lib/server/access';
-import { getNotificationRuntimes } from '@/lib/server/composition';
+import { getTenantNotificationRuntimes } from '@/lib/server/composition';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 import { validateSubscriptionUpdateRequest } from '@elceo/schemas';
 
@@ -13,7 +13,7 @@ export const PATCH = withApiErrorBoundary(async (request: Request, context: { pa
   const security = await requireSecurityDecision({ request, routePath: '/api/notifications/subscriptions/[subscriptionId]', method: 'PATCH', actionKind: 'notification_subscription_write', actor, subjectId: subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;
   try {
-    const runtime = getNotificationRuntimes().management;
+    const runtime = getTenantNotificationRuntimes(subject).management;
     const ownedSubscriptions = await runtime.listSubscriptionsForSubjectDetailed(subject.subjectKind, subject.subjectId);
     const ownsSubscription = ownedSubscriptions.some((entry) => assertRouteSubjectOwnership({ authenticatedSubjectId: subject.subjectId, routeSubjectId: entry.subjectId }) && entry.subscriptionId === subscriptionId);
     if (!ownsSubscription) return buildOwnerAccessDeniedResponse();

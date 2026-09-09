@@ -44,8 +44,9 @@ import {
   SQLProviderPlanMappingRepository,
   SQLBillingOrchestrationRunRepository,
   PaymentProviderTranslator,
-  CanonicalSecurityBoundaryService
-  ,ApplicationStateService
+  CanonicalSecurityBoundaryService,
+  ApplicationStateService,
+  withTenantDbTransaction
 } from '@elceo/application-state';
 import { CanonicalAnalyticsBoundaryService, CanonicalCoachingBoundaryService } from '@elceo/analytics';
 import { CanonicalMarketIntelligenceBoundaryService, createReasoningPersistenceRepository, MemoryMarketEvidenceRegistrySnapshotRepository, MemoryNormalizedMarketEvidencePayloadRepository, MemoryProviderSourceRequestRepository, MemoryProviderSourceResponseRepository, MemoryScheduledIngestionRunRepository, MemorySeoContentArchitectureSnapshotRepository, SQLScheduledIngestionRunRepository, SqlMarketEvidenceRegistrySnapshotRepository, SqlNormalizedMarketEvidencePayloadRepository, SqlProviderSourceRequestRepository, SqlProviderSourceResponseRepository, SqlSeoContentArchitectureSnapshotRepository, type ScheduledIngestionExecutionOptions } from '@elceo/reasoning';
@@ -68,7 +69,8 @@ import {
   createNotificationTargetRepository,
   createNotificationVerificationRepository,
   createNotificationDeliveryTransport,
-  type NotificationDeliveryRuntimeRepositories
+  type NotificationDeliveryRuntimeRepositories,
+  withNotificationTenantTransaction
 } from '@elceo/notifications';
 
 const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
@@ -168,6 +170,47 @@ export function getNotificationRuntimes(): NotificationRuntime {
     feedback: new CanonicalNotificationFeedbackBoundaryService(repositories, env)
   };
   return notificationRuntime;
+}
+
+type VerifiedUserSubject = { subjectKind: 'user'; subjectId: string; userId: string };
+type TenantNotificationFeedback = Pick<CanonicalNotificationFeedbackBoundaryService,
+  'getNotificationFeedbackSummaryForSubject' | 'listTargetsWithDegradedHealthForSubject' | 'listRecentCriticalReceiptsForSubject'>;
+type TenantNotificationManagement = Pick<CanonicalNotificationManagementBoundaryService,
+  'registerOrUpdateTarget' | 'disableTargetForSubject' | 'enableTargetForSubject' |
+  'bindPushSubscription' | 'unbindPushSubscription' | 'registerOrUpdateSubscription' |
+  'enableSubscription' | 'disableSubscription' | 'updateSubscriptionThreshold' |
+  'listInbox' | 'getNotificationOperationalSummaryForSubject' |
+  'listTargetsForSubjectDetailed' | 'listSubscriptionsForSubjectDetailed'>;
+function transactionalProxy<T extends object>(target: T, transaction: <R>(operation: () => Promise<R>) => Promise<R>): T {
+  return new Proxy(target, { get(object, property, receiver) { const value = Reflect.get(object, property, receiver); return typeof value === 'function' ? (...args: unknown[]) => transaction(() => Reflect.apply(value, object, args)) : value; } });
+}
+
+/** User-facing notification composition: every repository call runs on the restricted tenant connection. */
+export function getTenantNotificationRuntimes(subject: VerifiedUserSubject): Pick<NotificationRuntime, 'verification'> & { management: TenantNotificationManagement; feedback: TenantNotificationFeedback } {
+  const runtime = getNotificationRuntimes();
+  const management: TenantNotificationManagement = {
+    registerOrUpdateTarget: runtime.management.registerOrUpdateTarget.bind(runtime.management),
+    disableTargetForSubject: runtime.management.disableTargetForSubject.bind(runtime.management),
+    enableTargetForSubject: runtime.management.enableTargetForSubject.bind(runtime.management),
+    bindPushSubscription: runtime.management.bindPushSubscription.bind(runtime.management),
+    unbindPushSubscription: runtime.management.unbindPushSubscription.bind(runtime.management),
+    registerOrUpdateSubscription: runtime.management.registerOrUpdateSubscription.bind(runtime.management),
+    enableSubscription: runtime.management.enableSubscription.bind(runtime.management),
+    disableSubscription: runtime.management.disableSubscription.bind(runtime.management),
+    updateSubscriptionThreshold: runtime.management.updateSubscriptionThreshold.bind(runtime.management),
+    listInbox: runtime.management.listInbox.bind(runtime.management),
+    getNotificationOperationalSummaryForSubject: runtime.management.getNotificationOperationalSummaryForSubject.bind(runtime.management),
+    listTargetsForSubjectDetailed: runtime.management.listTargetsForSubjectDetailed.bind(runtime.management),
+    listSubscriptionsForSubjectDetailed: runtime.management.listSubscriptionsForSubjectDetailed.bind(runtime.management)
+  };
+  const feedback: TenantNotificationFeedback = {
+    getNotificationFeedbackSummaryForSubject: runtime.feedback.getNotificationFeedbackSummaryForSubject.bind(runtime.feedback),
+    listTargetsWithDegradedHealthForSubject: runtime.feedback.listTargetsWithDegradedHealthForSubject.bind(runtime.feedback),
+    listRecentCriticalReceiptsForSubject: runtime.feedback.listRecentCriticalReceiptsForSubject.bind(runtime.feedback)
+  };
+  if (env.NOTIFICATIONS_PERSISTENCE_BACKEND !== 'sql') return { management, verification: runtime.verification, feedback };
+  const run = <T>(operation: () => Promise<T>) => withNotificationTenantTransaction(subject, operation);
+  return { management: transactionalProxy(management, run), verification: transactionalProxy(runtime.verification, run), feedback: transactionalProxy(feedback, run) };
 }
 
 export function getReasoningRuntime(): ReasoningRuntime {
@@ -310,6 +353,14 @@ export function getApplicationStateRuntime(): ApplicationStateRuntime {
     security
   };
   return applicationStateRuntime;
+}
+
+/** User-facing application composition: SEC-A predicates remain, with restricted-role RLS underneath. */
+export function getTenantApplicationStateRuntime(subject: VerifiedUserSubject): Pick<ApplicationStateRuntime, 'journal' | 'journalInfluence' | 'portfolio'> {
+  const runtime = getApplicationStateRuntime();
+  if (env.APP_STATE_REPOSITORY !== 'sql') return { journal: runtime.journal, journalInfluence: runtime.journalInfluence, portfolio: runtime.portfolio };
+  const run = <T>(operation: () => Promise<T>) => withTenantDbTransaction(subject, () => operation());
+  return { journal: transactionalProxy(runtime.journal, run), journalInfluence: transactionalProxy(runtime.journalInfluence, run), portfolio: transactionalProxy(runtime.portfolio, run) };
 }
 
 export function getWorkspaceRuntime() { return getApplicationStateRuntime().workspace; }

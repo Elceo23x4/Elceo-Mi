@@ -6,6 +6,7 @@ import type {
   NotificationProviderEventKind,
   NotificationReceiptSeverity,
   NotificationSubscriptionRecord,
+  NotificationSubjectKind,
   NotificationTargetChannelStatus,
   NotificationTargetHealthRecord,
   NotificationTargetRecord,
@@ -142,6 +143,7 @@ export type NotificationOutboxRepository = {
   getOutboxByKey(outboxKey: string): Promise<NotificationOutboxRecord | null>;
   listDueOutboxItems(asOfIso: string, limit: number): Promise<NotificationOutboxRecord[]>;
   listRecentOutboxItems(asOfIso: string, lookbackHours: number | null, limit: number): Promise<NotificationOutboxRecord[]>;
+  listRecentOutboxItemsForSubject(subjectKind: NotificationSubjectKind, subjectId: string, asOfIso: string, lookbackHours: number | null, limit: number): Promise<NotificationOutboxRecord[]>;
   markDispatching(outboxId: string, attemptedAt: string): Promise<void>;
   claimDueOutboxItem(outboxId: string, asOfIso: string): Promise<NotificationOutboxRecord | null>;
   markDelivered(outboxId: string, deliveredAt: string): Promise<void>;
@@ -216,6 +218,9 @@ export type NotificationDeliveryReceiptRepository = {
   listReceiptsForDecision(decisionId: string, limit?: number): Promise<PersistedNotificationDeliveryReceiptRecord[]>;
   listReceiptsForOutbox(outboxId: string, limit?: number): Promise<PersistedNotificationDeliveryReceiptRecord[]>;
   listRecentReceipts(eventKind?: NotificationProviderEventKind, limit?: number): Promise<PersistedNotificationDeliveryReceiptRecord[]>;
+  listRecentReceiptsForSubject(subjectKind: NotificationSubjectKind, subjectId: string, eventKind?: NotificationProviderEventKind, limit?: number): Promise<PersistedNotificationDeliveryReceiptRecord[]>;
+  getReceiptByIdForSubject(subjectKind: NotificationSubjectKind, subjectId: string, receiptId: string): Promise<PersistedNotificationDeliveryReceiptRecord | null>;
+  listReceiptsForTargetForSubject(subjectKind: NotificationSubjectKind, subjectId: string, targetId: string, limit?: number): Promise<PersistedNotificationDeliveryReceiptRecord[]>;
 };
 
 export type NotificationTargetHealthRepository = {

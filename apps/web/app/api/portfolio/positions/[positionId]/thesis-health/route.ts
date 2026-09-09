@@ -1,6 +1,6 @@
 import { parseJsonBody, unwrapValidation, withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
 import { requireAuthenticatedSubject } from '@/lib/server/auth';
-import { getApplicationStateRuntime } from '@/lib/server/composition';
+import { getTenantApplicationStateRuntime } from '@/lib/server/composition';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 import { validatePositionThesisHealthRequest } from '@elceo/schemas';
 
@@ -12,7 +12,7 @@ export const POST = withApiErrorBoundary(async (request: Request, context: { par
     const security = await requireSecurityDecision({ request, routePath: '/api/portfolio/positions/[positionId]/thesis-health', method: 'POST', actionKind: 'portfolio_position_write', actor, subjectId: subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;
   try {
-const position = await getApplicationStateRuntime().portfolio.changePositionThesisHealth('user', subject.subjectId, positionId, body.thesisHealth, { actorKind: 'user', actorId: subject.userId });
+const position = await getTenantApplicationStateRuntime(subject).portfolio.changePositionThesisHealth('user', subject.subjectId, positionId, body.thesisHealth, { actorKind: 'user', actorId: subject.userId });
     const envelope = { ok: true as const, data: { position } };
 
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { position }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });

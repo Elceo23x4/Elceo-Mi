@@ -81,6 +81,7 @@ export type RouteInventoryRow = DeclaredPolicyExpectation & {
   handlerGuardEvidence: RouteHandlerGuardEvidence;
   runtimeTestEvidence: RouteRuntimeEvidence;
   testCoverageStatus: RuntimeEnforcementExpectation;
+  browserMutationBoundary: 'middleware_guarded' | 'explicit_exception' | 'safe_method_only';
 };
 
 const METHOD_RE = /export\s+(?:async\s+)?function\s+(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\b|export\s+const\s+(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\b|as\s+(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\b|\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s*[,}]/g;
@@ -228,6 +229,9 @@ export function buildRouteInventory(appApiDir = join(process.cwd(), 'app/api')):
     const declaredPolicyExpectation = classifyRoute(routePath, methods);
     const handlerGuardEvidence = evidenceFromSource(source);
     const runtimeTestEvidence = getRuntimeEvidenceForRoute(routePath, declaredPolicyExpectation);
-    return { routeFile, routePath, methods, family: familyOf(routePath), ...declaredPolicyExpectation, declaredPolicyExpectation, handlerGuardEvidence, runtimeTestEvidence, testCoverageStatus: declaredPolicyExpectation.runtimeExpectation };
+    const unsafe = methods.some((method) => ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method));
+    const exempt = routePath.startsWith('/api/auth/') || routePath.startsWith('/api/internal/') || routePath.startsWith('/api/ops/') || routePath.startsWith('/api/admin/') || routePath.startsWith('/api/billing/webhook') || routePath.includes('/providers/') || routePath === '/api/notifications/delivery/dispatch';
+    const browserMutationBoundary: RouteInventoryRow['browserMutationBoundary'] = !unsafe ? 'safe_method_only' : exempt ? 'explicit_exception' : 'middleware_guarded';
+    return { routeFile, routePath, methods, family: familyOf(routePath), ...declaredPolicyExpectation, declaredPolicyExpectation, handlerGuardEvidence, runtimeTestEvidence, testCoverageStatus: declaredPolicyExpectation.runtimeExpectation, browserMutationBoundary };
   }).sort((a, b) => a.routePath.localeCompare(b.routePath));
 }

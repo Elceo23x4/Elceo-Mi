@@ -1,13 +1,13 @@
 import { parseJsonBody, unwrapValidation, withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
 import { requireAuthenticatedSubject } from '@/lib/server/auth';
-import { getNotificationRuntimes } from '@/lib/server/composition';
+import { getTenantNotificationRuntimes } from '@/lib/server/composition';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 import { validateTargetCreateRequest } from '@elceo/schemas';
 import { buildPublicTargetAddress } from '@/lib/server/notifications/target-address';
 
 export const GET = withApiErrorBoundary(async () => {
   const subject = await requireAuthenticatedSubject();
-  const targets = await getNotificationRuntimes().management.listTargetsForSubjectDetailed(subject.subjectKind, subject.subjectId);
+  const targets = await getTenantNotificationRuntimes(subject).management.listTargetsForSubjectDetailed(subject.subjectKind, subject.subjectId);
   return jsonSuccess({ targets });
 });
 
@@ -19,7 +19,7 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   if (!security.ok) return security.response;
   try {
     const address = buildPublicTargetAddress(body, subject.subjectId);
-    const target = await getNotificationRuntimes().management.registerOrUpdateTarget({
+    const target = await getTenantNotificationRuntimes(subject).management.registerOrUpdateTarget({
       subjectKind: subject.subjectKind,
       subjectId: subject.subjectId,
       channel: body.channel,

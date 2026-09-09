@@ -1,6 +1,6 @@
 import { withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
 import { requireAuthenticatedSubject } from '@/lib/server/auth';
-import { getNotificationRuntimes } from '@/lib/server/composition';
+import { getTenantNotificationRuntimes } from '@/lib/server/composition';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 
 export const POST = withApiErrorBoundary(async (request: Request, context: { params: Promise<{ targetId: string }> }) => {
@@ -10,7 +10,7 @@ export const POST = withApiErrorBoundary(async (request: Request, context: { par
   const security = await requireSecurityDecision({ request, routePath: '/api/notifications/targets/[targetId]/disable', method: 'POST', actionKind: 'notification_target_write', actor, subjectId: subject.subjectId, requestBody: { targetId } });
   if (!security.ok) return security.response;
   try {
-    const target = await getNotificationRuntimes().management.disableTargetForSubject('user', subject.subjectId, targetId);
+    const target = await getTenantNotificationRuntimes(subject).management.disableTargetForSubject('user', subject.subjectId, targetId);
     const envelope = { ok: true as const, data: { target } };
 
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { target }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });

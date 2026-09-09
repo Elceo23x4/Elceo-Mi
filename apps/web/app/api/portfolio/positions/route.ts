@@ -1,13 +1,13 @@
 import { parseJsonBody, parsePositiveInt, parseSearchParams, unwrapValidation, withApiErrorBoundary, jsonSuccess } from '@/lib/server/api';
 import { requireAuthenticatedSubject } from '@/lib/server/auth';
-import { getApplicationStateRuntime } from '@/lib/server/composition';
+import { getTenantApplicationStateRuntime } from '@/lib/server/composition';
 import { auditInternalMutation, completeSecurityDecision, failSecurityDecision, requireSecurityDecision } from '@/lib/server/security';
 import { validatePositionCreateRequest } from '@elceo/schemas';
 
 export const GET = withApiErrorBoundary(async (request: Request) => {
   const subject = await requireAuthenticatedSubject();
   const params = parseSearchParams(request.url);
-  const positions = await getApplicationStateRuntime().portfolio.listOpenPositions(subject.subjectKind, subject.subjectId, parsePositiveInt(params.get('limit'), 50, 200));
+  const positions = await getTenantApplicationStateRuntime(subject).portfolio.listOpenPositions(subject.subjectKind, subject.subjectId, parsePositiveInt(params.get('limit'), 50, 200));
   return jsonSuccess({ positions });
 });
 
@@ -18,7 +18,7 @@ export const POST = withApiErrorBoundary(async (request: Request) => {
   const security = await requireSecurityDecision({ request, routePath: '/api/portfolio/positions', method: 'POST', actionKind: 'portfolio_position_write', actor, subjectId: subject.subjectId, requestBody: body });
   if (!security.ok) return security.response;
   try {
-    const position = await getApplicationStateRuntime().portfolio.createProposedPosition({ subjectKind: subject.subjectKind, subjectId: subject.subjectId, asset: body.asset, timeframe: body.timeframe, direction: body.direction, entryPrice: body.entryPrice ?? null, stopLoss: body.stopLoss ?? null, takeProfitLevels: body.takeProfitLevels ?? [], size: body.size ?? null, thesisHealth: body.thesisHealth ?? 'stable', linkedJournalCaseId: body.linkedJournalCaseId ?? null, linkedReasoningRunId: body.linkedReasoningRunId ?? null, linkedSnapshotId: body.linkedSnapshotId ?? null, linkedDriftId: body.linkedDriftId ?? null, note: body.note ?? null }, { actorKind: 'user', actorId: subject.userId });
+    const position = await getTenantApplicationStateRuntime(subject).portfolio.createProposedPosition({ subjectKind: subject.subjectKind, subjectId: subject.subjectId, asset: body.asset, timeframe: body.timeframe, direction: body.direction, entryPrice: body.entryPrice ?? null, stopLoss: body.stopLoss ?? null, takeProfitLevels: body.takeProfitLevels ?? [], size: body.size ?? null, thesisHealth: body.thesisHealth ?? 'stable', linkedJournalCaseId: body.linkedJournalCaseId ?? null, linkedReasoningRunId: body.linkedReasoningRunId ?? null, linkedSnapshotId: body.linkedSnapshotId ?? null, linkedDriftId: body.linkedDriftId ?? null, note: body.note ?? null }, { actorKind: 'user', actorId: subject.userId });
     const envelope = { ok: true as const, data: { position } };
 
     await completeSecurityDecision({ decision: security.decision, idempotencyKey: security.idempotencyKey, responseBody: { position }, responseEnvelope: envelope, httpStatus: 200, requestHash: security.requestHash });

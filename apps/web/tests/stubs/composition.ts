@@ -29,6 +29,9 @@ export function getNotificationRuntimes() {
   return overrides.notificationRuntime;
 }
 
+export function getTenantNotificationRuntimes(_subject: unknown) { return getNotificationRuntimes(); }
+export function getTenantApplicationStateRuntime(_subject: unknown) { return getApplicationStateRuntime(); }
+
 export function getReasoningRuntime() {
   if (!overrides?.reasoningRuntime) throw new Error('missing_reasoning_runtime_override');
   return overrides.reasoningRuntime;

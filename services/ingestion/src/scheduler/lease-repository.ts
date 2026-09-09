@@ -2,6 +2,7 @@ import type { CanonicalAssetSymbol, Timeframe } from '@elceo/types';
 import type { IngestionExecutionMode } from '../runtime/execution-mode';
 import type { IngestionScheduleFrequency } from './frequency';
 import type { IngestionTriggerKind } from './trigger-context';
+import { randomUUID } from 'node:crypto';
 
 export type IngestionRuntimeLeaseStatus = 'acquired' | 'released' | 'expired';
 
@@ -19,6 +20,8 @@ export type IngestionRuntimeLeaseRecord = {
   status: IngestionRuntimeLeaseStatus;
   createdAt: string;
   updatedAt: string;
+  ownerToken: string;
+  generation: number;
 };
 
 export type AcquireLeaseInput = {
@@ -36,7 +39,9 @@ export type AcquireLeaseInput = {
 
 export type IngestionRuntimeLeaseRepository = {
   acquireLease(input: AcquireLeaseInput): Promise<{ acquired: boolean; lease: IngestionRuntimeLeaseRecord | null }>;
-  releaseLease(requestKey: string, releasedAt: string): Promise<void>;
+  releaseLease(lease: IngestionRuntimeLeaseRecord, releasedAt: string): Promise<boolean>;
+  renewLease(lease: IngestionRuntimeLeaseRecord, expiresAt: string, renewedAt: string): Promise<boolean>;
+  isCurrentOwner(lease: IngestionRuntimeLeaseRecord, asOfIso: string): Promise<boolean>;
   getLeaseByRequestKey(requestKey: string): Promise<IngestionRuntimeLeaseRecord | null>;
   cleanupExpiredLeases(nowIso: string): Promise<number>;
 };
@@ -82,17 +87,20 @@ export class MemoryIngestionRuntimeLeaseRepository implements IngestionRuntimeLe
       status: 'acquired',
       createdAt: existing?.createdAt ?? now,
       updatedAt: now
+      ,ownerToken: randomUUID(), generation: (existing?.generation ?? 0) + 1
     };
 
     this.leases.set(input.requestKey, lease);
     return { acquired: true, lease };
   }
 
-  async releaseLease(requestKey: string, releasedAt: string): Promise<void> {
-    const existing = this.leases.get(requestKey);
-    if (!existing) return;
-    this.leases.set(requestKey, { ...existing, status: 'released', updatedAt: releasedAt });
+  async releaseLease(lease: IngestionRuntimeLeaseRecord, releasedAt: string): Promise<boolean> {
+    const existing = this.leases.get(lease.requestKey);
+    if (!existing || existing.ownerToken!==lease.ownerToken || existing.generation!==lease.generation) return false;
+    this.leases.set(lease.requestKey, { ...existing, status: 'released', updatedAt: releasedAt }); return true;
   }
+  async renewLease(lease:IngestionRuntimeLeaseRecord,expiresAt:string,renewedAt:string):Promise<boolean>{const current=this.leases.get(lease.requestKey);if(!current||current.ownerToken!==lease.ownerToken||current.generation!==lease.generation||current.status!=='acquired')return false;this.leases.set(lease.requestKey,{...current,expiresAt,updatedAt:renewedAt});return true;}
+  async isCurrentOwner(lease:IngestionRuntimeLeaseRecord,asOfIso:string):Promise<boolean>{const current=this.leases.get(lease.requestKey);return !!current&&current.status==='acquired'&&current.ownerToken===lease.ownerToken&&current.generation===lease.generation&&Date.parse(current.expiresAt)>Date.parse(asOfIso);}
 
   async getLeaseByRequestKey(requestKey: string): Promise<IngestionRuntimeLeaseRecord | null> {
     return this.leases.get(requestKey) ?? null;
@@ -152,6 +160,8 @@ type LeaseRow = {
   status: string;
   created_at: string;
   updated_at: string;
+  owner_token: string;
+  generation: string | number;
 };
 
 function mapLeaseRow(row: LeaseRow): IngestionRuntimeLeaseRecord {
@@ -169,6 +179,7 @@ function mapLeaseRow(row: LeaseRow): IngestionRuntimeLeaseRecord {
     status: row.status as IngestionRuntimeLeaseStatus,
     createdAt: row.created_at,
     updatedAt: row.updated_at
+    ,ownerToken: row.owner_token, generation: Number(row.generation)
   };
 }
 
@@ -178,11 +189,11 @@ export class SqlIngestionRuntimeLeaseRepository implements IngestionRuntimeLease
       `INSERT INTO app_ingestion_runtime_leases (
          request_key, asset, timeframe, mode, trigger_kind,
          slot_start_at, slot_end_at, lease_holder, acquired_at,
-         expires_at, status, created_at, updated_at
+         expires_at, status, created_at, updated_at, owner_token, generation
        ) VALUES (
          $1, $2, $3, $4, $5,
          $6, $7, $8, $9,
-         $10, 'acquired', $11, $12
+         $10, 'acquired', $11, $12, $13, 1
        )
        ON CONFLICT (request_key) DO UPDATE SET
          asset = EXCLUDED.asset,
@@ -194,6 +205,8 @@ export class SqlIngestionRuntimeLeaseRepository implements IngestionRuntimeLease
          lease_holder = EXCLUDED.lease_holder,
          acquired_at = EXCLUDED.acquired_at,
          expires_at = EXCLUDED.expires_at,
+         owner_token = EXCLUDED.owner_token,
+         generation = app_ingestion_runtime_leases.generation + 1,
          status = CASE
            WHEN app_ingestion_runtime_leases.status = 'acquired' AND app_ingestion_runtime_leases.expires_at > EXCLUDED.acquired_at
              THEN app_ingestion_runtime_leases.status
@@ -204,7 +217,7 @@ export class SqlIngestionRuntimeLeaseRepository implements IngestionRuntimeLease
        RETURNING
          request_key, asset, timeframe, mode, trigger_kind,
          slot_start_at, slot_end_at, lease_holder, acquired_at,
-         expires_at, status, created_at, updated_at`,
+         expires_at, status, created_at, updated_at, owner_token, generation`,
       [
         input.requestKey,
         input.asset,
@@ -217,7 +230,8 @@ export class SqlIngestionRuntimeLeaseRepository implements IngestionRuntimeLease
         input.acquiredAt,
         input.expiresAt,
         input.acquiredAt,
-        input.acquiredAt
+        input.acquiredAt,
+        randomUUID()
       ]
     );
 
@@ -229,21 +243,23 @@ export class SqlIngestionRuntimeLeaseRepository implements IngestionRuntimeLease
     return { acquired: false, lease: existing };
   }
 
-  async releaseLease(requestKey: string, releasedAt: string): Promise<void> {
-    await queryDb(
+  async releaseLease(lease: IngestionRuntimeLeaseRecord, releasedAt: string): Promise<boolean> {
+    const rows=await queryDb(
       `UPDATE app_ingestion_runtime_leases
        SET status = 'released', updated_at = $2
-       WHERE request_key = $1`,
-      [requestKey, releasedAt]
-    );
+       WHERE request_key = $1 AND owner_token=$3 AND generation=$4 RETURNING request_key`,
+      [lease.requestKey, releasedAt, lease.ownerToken, lease.generation]
+    ); return rows.length===1;
   }
+  async renewLease(lease:IngestionRuntimeLeaseRecord,expiresAt:string,renewedAt:string):Promise<boolean>{const rows=await queryDb(`UPDATE app_ingestion_runtime_leases SET expires_at=$4,updated_at=$5 WHERE request_key=$1 AND owner_token=$2 AND generation=$3 AND status='acquired' RETURNING request_key`,[lease.requestKey,lease.ownerToken,lease.generation,expiresAt,renewedAt]);return rows.length===1;}
+  async isCurrentOwner(lease:IngestionRuntimeLeaseRecord,asOfIso:string):Promise<boolean>{const rows=await queryDb(`SELECT request_key FROM app_ingestion_runtime_leases WHERE request_key=$1 AND owner_token=$2 AND generation=$3 AND status='acquired' AND expires_at>$4`,[lease.requestKey,lease.ownerToken,lease.generation,asOfIso]);return rows.length===1;}
 
   async getLeaseByRequestKey(requestKey: string): Promise<IngestionRuntimeLeaseRecord | null> {
     const rows = await queryDb<LeaseRow>(
       `SELECT
         request_key, asset, timeframe, mode, trigger_kind,
         slot_start_at, slot_end_at, lease_holder, acquired_at,
-        expires_at, status, created_at, updated_at
+        expires_at, status, created_at, updated_at, owner_token, generation
        FROM app_ingestion_runtime_leases
        WHERE request_key = $1`,
       [requestKey]

@@ -130,6 +130,7 @@ export type NotificationInboxRepository = {
   getInboxById(inboxId: string): Promise<NotificationInboxRecord | null>;
   listInboxForTarget(targetId: string, limit?: number): Promise<NotificationInboxRecord[]>;
   listInbox(query: InboxListQuery): Promise<NotificationInboxRecord[]>;
+  listInboxForSubject?(query: Required<Pick<InboxListQuery, 'subjectKind' | 'subjectId'>> & InboxListQuery): Promise<NotificationInboxRecord[]>;
   markRead(inboxId: string, readAt: string): Promise<void>;
   markUnread(inboxId: string): Promise<void>;
   markArchived(inboxId: string, archivedAt: string): Promise<void>;

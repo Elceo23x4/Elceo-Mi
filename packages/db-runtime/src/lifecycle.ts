@@ -22,5 +22,5 @@ export async function drainRuntime(graceMs = Number(process.env.ELCEO_SHUTDOWN_G
 export function installRuntimeSignalHandlers(): void {
   if (installed) return;
   installed = true;
-  for (const signal of ['SIGTERM', 'SIGINT'] as const) process.once(signal, () => { void drainRuntime().finally(() => { process.exitCode = 0; }); });
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) process.once(signal, () => { void drainRuntime().catch(() => { process.exitCode = 1; }); });
 }

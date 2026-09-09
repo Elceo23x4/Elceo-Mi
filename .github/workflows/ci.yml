@@ -174,6 +174,8 @@ jobs:
         run: |
           npm run test:sec-f
           npm run test:sec-f-postgres
+      - name: SEC-G bounded structural correctness
+        run: npm run test:sec-g
       - name: Production build
         run: npm run build
       - name: Notification browser bundle secret boundary
@@ -318,8 +320,33 @@ jobs:
         run: npm run check:migrations && npm run test:sec-g-postgres
       - uses: grafana/setup-k6-action@v1
         with: { k6-version: '2.2.0' }
-      - name: Validate pinned k6 harness
-        run: k6 inspect load/sec-g.k6.js > artifacts/sec-g/k6-inspect.json
+      - name: Build and start local SEC-G runtime
+        env:
+          APP_ENV: test
+          AUTH_SECRET: sec-g-ci-only-auth-secret-at-least-32-bytes
+          NEXT_PUBLIC_APP_BASE_URL: http://127.0.0.1:3000
+          DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_sec_g
+          REDIS_URL: redis://127.0.0.1:6379
+          ELCEO_DB_SSL_POLICY: local-plaintext
+        run: |
+          npm run -w apps/web build
+          npm run -w apps/web start > artifacts/sec-g/web-runtime.log 2>&1 &
+          echo $! > artifacts/sec-g/web-runtime.pid
+          for attempt in $(seq 1 60); do curl --fail --silent http://127.0.0.1:3000/api/auth/session >/dev/null && break; sleep 1; done
+          curl --fail --silent http://127.0.0.1:3000/api/auth/session >/dev/null
+      - name: Execute pinned local k6 workload
+        env:
+          SEC_G_PROFILE: ci
+          SEC_G_BASE_URL: http://127.0.0.1:3000
+        run: |
+          k6 inspect load/sec-g.k6.js > artifacts/sec-g/k6-inspect.json
+          k6 run --summary-export artifacts/sec-g/k6-summary.json --out json=artifacts/sec-g/k6-samples.json load/sec-g.k6.js
+      - name: Stop local runtime
+        if: always()
+        run: test ! -f artifacts/sec-g/web-runtime.pid || kill -TERM $(cat artifacts/sec-g/web-runtime.pid) || true
       - uses: actions/upload-artifact@v4
         if: always()
-        with: { name: sec-g-empirical-${{ github.sha }}, path: artifacts/sec-g, if-no-files-found: error }
+        with:
+          name: sec-g-empirical-${{ github.sha }}
+          path: artifacts/sec-g
+          if-no-files-found: error

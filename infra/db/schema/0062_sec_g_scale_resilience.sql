@@ -11,6 +11,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_ingestion_runtime_lease_request ON app_ing
 
 ALTER TABLE app_ops_job_leases ADD COLUMN IF NOT EXISTS owner_token TEXT;
 ALTER TABLE app_ops_job_leases ADD COLUMN IF NOT EXISTS generation BIGINT NOT NULL DEFAULT 0;
+WITH ranked AS (SELECT lease_id,row_number() OVER (PARTITION BY job_kind,scope_kind,scope_key ORDER BY acquired_at DESC,lease_id DESC) AS position FROM app_ops_job_leases WHERE lease_state='acquired') UPDATE app_ops_job_leases l SET lease_state='expired' FROM ranked r WHERE l.lease_id=r.lease_id AND r.position>1;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_ops_active_scope ON app_ops_job_leases(job_kind, scope_kind, scope_key) WHERE lease_state='acquired';
 
 ALTER TABLE app_notification_outbox ADD COLUMN IF NOT EXISTS claim_token TEXT;

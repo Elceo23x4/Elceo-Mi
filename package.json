@@ -71,7 +71,7 @@
     "test:kick-off-migration-postgres": "node scripts/test-kick-off-migration-postgres.mjs",
     "test:kick-off-acceptance": "npm run -w services/reasoning test && npm run -w apps/web test && npm run test:kick-off-migration-postgres && npm run test:kick-off-production-integration",
     "test:kick-off-production-integration": "KICK_OFF_PRODUCTION_INTEGRATION=1 npm run -w services/reasoning test",
-    "test:sec-a1-postgres": "npm run -w services/application-state test && npm run -w services/notifications test && node scripts/test-sec-a1-postgres.mjs",
+    "test:sec-a1-postgres": "npm run -w services/application-state test && npm run -w services/notifications test && ELCEO_DB_RUNTIME_TEST_OWNER=1 node scripts/test-sec-a1-postgres.mjs",
     "test:sec-b-auth-postgres": "npm run -w services/application-state test && npm run -w apps/web test && node scripts/test-sec-b-auth-postgres.mjs",
     "test:sec-c-postgres": "node scripts/test-sec-c-postgres.mjs",
     "test:sec-d-postgres": "npm run -w services/reasoning test && node scripts/test-sec-d-provider-postgres.mjs",
@@ -79,7 +79,7 @@
     "test:sec-f": "npm run -w @elceo/config build && npm run -w @elceo/schemas build && npm run -w apps/web test && node scripts/test-sec-f-runtime.mjs && node scripts/check-sec-f.mjs",
     "test:sec-f-postgres": "npm run -w services/application-state test && npm run -w services/notifications test && node scripts/test-sec-f-postgres.mjs",
     "test:sec-g": "node scripts/test-sec-g.mjs",
-    "test:sec-g-postgres": "node scripts/test-sec-g-postgres.mjs && node scripts/test-sec-g-recovery.mjs && npm run -w @elceo/db-runtime build && npm run test:canonical-dashboard-12-asset-acceptance && node scripts/seed-sec-g-dashboard-runtime.mjs",
+    "test:sec-g-postgres": "node scripts/test-sec-g-postgres.mjs && node scripts/test-sec-g-recovery.mjs && npm run -w @elceo/db-runtime build && REDIS_URL=${REDIS_URL:-redis://127.0.0.1:6379} npm run test:canonical-dashboard-12-asset-acceptance && REDIS_URL=${REDIS_URL:-redis://127.0.0.1:6379} node scripts/seed-sec-g-dashboard-runtime.mjs",
     "test:sec-g-k6": "k6 run --summary-export artifacts/sec-g/k6-summary.json load/sec-g.k6.js",
     "test:sec-g-lifecycle": "npm run -w @elceo/db-runtime build && node scripts/test-sec-g-lifecycle.mjs"
   },

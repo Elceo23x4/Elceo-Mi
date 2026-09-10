@@ -26,6 +26,36 @@ const artifactSqlPool = {
 };
 
 try {
+  // The credential users must exercise the requested canonical load asset. Without
+  // an application watchlist the dashboard route correctly falls back to XAU/USD,
+  // which makes the workload dependent on an unrelated fixture's freshness.
+  const loadWatchlistAssets = ['BTC/USD', 'XAU/USD', 'EUR/USD'];
+  await sql.query(`
+    INSERT INTO app_watchlists(user_id, assets)
+    SELECT id, $1::jsonb
+    FROM app_user_profiles
+    WHERE email IN (
+      SELECT 'sec-g-' || g || '@example.test'
+      FROM generate_series(1, 5) g
+    )
+    ON CONFLICT (user_id)
+    DO UPDATE SET assets = EXCLUDED.assets, updated_at = now()
+  `, [JSON.stringify(loadWatchlistAssets)]);
+  const watchlistVerification = await sql.query(`
+    SELECT count(*)::int AS count
+    FROM app_watchlists w
+    JOIN app_user_profiles u ON u.id = w.user_id
+    WHERE u.email IN (
+      SELECT 'sec-g-' || g || '@example.test'
+      FROM generate_series(1, 5) g
+    )
+      AND w.assets @> '["BTC/USD"]'::jsonb
+  `);
+  const credentialUserWatchlists = Number(watchlistVerification.rows[0]?.count ?? 0);
+  if (credentialUserWatchlists !== 5) {
+    throw new Error(`sec_g_credential_watchlist_count:${credentialUserWatchlists}`);
+  }
+
   // The preceding 12-asset acceptance deliberately persists adversarial dashboard
   // artifacts as negative-test evidence. Do not assume the newest row per asset is
   // canonical; let the production reader validate candidates before selecting one
@@ -107,11 +137,19 @@ try {
 
   await import('node:fs/promises').then(({ mkdir, writeFile }) =>
     mkdir('artifacts/sec-g', { recursive: true }).then(() =>
-      writeFile('artifacts/sec-g/dashboard-runtime-seed.json', JSON.stringify({ count: published.length, published }, null, 2))
+      writeFile('artifacts/sec-g/dashboard-runtime-seed.json', JSON.stringify({
+        testedHeadSha: process.env.SEC_G_HEAD_SHA ?? null,
+        credentialUserWatchlists,
+        loadWatchlistAssets,
+        count: published.length,
+        published
+      }, null, 2))
     )
   );
   console.log(JSON.stringify({
     secGDashboardRuntime: 'ready',
+    credentialUserWatchlists,
+    loadWatchlistAssets,
     count: published.length,
     assets: published.map((item) => item.asset),
     readerMetrics: reader.metrics

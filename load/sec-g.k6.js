@@ -45,7 +45,7 @@ export function setup(){if(!Array.isArray(runtimeCredentials.users)||runtimeCred
 
 function requestBody(name){
  if(name==='portfolio_mutation')return JSON.stringify({asset:'BTC/USD',timeframe:'H1',direction:'long',entryPrice:50000,size:1,thesisHealth:'stable',note:`SEC-G empirical ${__VU}-${__ITER}`});
- if(name==='journal_mutation')return JSON.stringify({asset:'BTC/USD',timeframe:'H1',title:`SEC-G empirical ${__VU}-${__ITER}`,direction:'long',setupType:'breakout',conviction:'medium',thesis:'SEC-G authenticated empirical workload'});
+ if(name==='journal_mutation')return JSON.stringify({asset:'BTC/USD',timeframe:'H1',title:`SEC-G empirical ${__VU}-${__ITER}`,direction:'long',setupType:'breakout',conviction:'standard',thesis:'SEC-G authenticated empirical workload'});
  return null;
 }
 export function workload(data){

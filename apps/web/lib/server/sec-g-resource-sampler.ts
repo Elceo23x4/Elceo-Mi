@@ -23,11 +23,13 @@ type ResourceSample = {
 };
 
 type SamplerArtifact = {
-  testedHeadSha: string | null;
+  exactGitSha: string | null;
+  scenario: 'web-runtime-repeated-resource-pressure-sampling';
+  environment: 'github-actions-test' | 'local-test';
   pid: number;
   intervalMs: number;
   startedAt: string;
-  completedAt: string | null;
+  endedAt: string | null;
   samples: ResourceSample[];
   peak: {
     cpuPercent: number;
@@ -98,13 +100,15 @@ export function startSecGResourceSampler(): { stop: () => void; drain: () => Pro
     notificationBacklog: 0
   };
 
-  const persist = (completedAt: string | null = null) => {
+  const persist = (endedAt: string | null = null) => {
     const artifact: SamplerArtifact = {
-      testedHeadSha: process.env.SEC_G_HEAD_SHA ?? null,
+      exactGitSha: process.env.SEC_G_HEAD_SHA ?? null,
+      scenario: 'web-runtime-repeated-resource-pressure-sampling',
+      environment: process.env.GITHUB_ACTIONS === 'true' ? 'github-actions-test' : 'local-test',
       pid: process.pid,
       intervalMs,
       startedAt,
-      completedAt,
+      endedAt,
       samples,
       peak
     };

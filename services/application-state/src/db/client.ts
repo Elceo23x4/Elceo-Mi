@@ -55,6 +55,13 @@ export async function closeDbPool(): Promise<void> {
     if (typeof pool.end === 'function') await pool.end();
   }
   tenantPoolPromise = null;
+
+  // Shared runtime pools are process-owned. Only an explicit acceptance-harness
+  // owner may drain them; package callers merely forget their cached facade.
+  if (!testPoolFactory && runtimeEnv().ELCEO_DB_RUNTIME_TEST_OWNER === '1') {
+    const { closeRuntimePools } = await import('@elceo/db-runtime');
+    await closeRuntimePools();
+  }
 }
 
 export async function queryDb<T extends QueryResultRow = QueryResultRow>(sql: string, params: unknown[] = []): Promise<T[]> {

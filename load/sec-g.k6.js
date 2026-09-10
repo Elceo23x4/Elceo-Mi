@@ -3,7 +3,8 @@ import { check, fail } from 'k6';
 import exec from 'k6/execution';
 import { Counter, Rate, Trend } from 'k6/metrics';
 
-const base=__ENV.SEC_G_BASE_URL||'http://127.0.0.1:3000',profile=__ENV.SEC_G_PROFILE||'smoke';
+const base=(__ENV.SEC_G_BASE_URL||'http://127.0.0.1:3000').replace(/\/$/,'');
+const profile=__ENV.SEC_G_PROFILE||'smoke';
 const runtimeCredentials=JSON.parse(open('../.sec-g-runtime-credentials.json'));
 const unexpected=new Rate('unexpected_response'),statuses=new Counter('status_distribution'),latency=new Trend('scenario_latency',true),authFailures=new Rate('auth_failure');
 const routes={
@@ -18,8 +19,16 @@ const routes={
  analytics_read:['GET','/api/analytics/latest'],
  watchlist_read:['GET','/api/portfolio/watchlist']
 };
+const mutationScenarios=new Set(['portfolio_mutation','journal_mutation']);
 const duration=profile==='smoke'?'10s':'30s',vus=profile==='smoke'?1:5;
-const scenario=(name)=>profile==='capacity-discovery'?{executor:'ramping-vus',exec:'workload',stages:[{duration:'30s',target:5},{duration:'30s',target:20},{duration:'30s',target:40},{duration:'15s',target:0}],tags:{scenario_name:name}}:{executor:'constant-vus',exec:'workload',vus,duration,tags:{scenario_name:name}};
+function scenario(name){
+ if(mutationScenarios.has(name)){
+  const rate=profile==='smoke'?1:2;
+  return {executor:'constant-arrival-rate',exec:'workload',rate,timeUnit:'1s',duration,preAllocatedVUs:2,maxVUs:5,tags:{scenario_name:name}};
+ }
+ if(profile==='capacity-discovery')return {executor:'ramping-vus',exec:'workload',stages:[{duration:'30s',target:5},{duration:'30s',target:20},{duration:'30s',target:40},{duration:'15s',target:0}],tags:{scenario_name:name}};
+ return {executor:'constant-vus',exec:'workload',vus,duration,tags:{scenario_name:name}};
+}
 export const options={scenarios:Object.fromEntries(Object.keys(routes).map((name)=>[name,scenario(name)])),thresholds:{checks:['rate==1'],unexpected_response:['rate==0'],auth_failure:['rate==0'],'scenario_latency{scenario_name:account_read}':['p(95)<1500','p(99)<3000'],'scenario_latency{scenario_name:dashboard_read}':['p(95)<2500','p(99)<5000'],'scenario_latency{scenario_name:portfolio_read}':['p(95)<1500','p(99)<3000'],'scenario_latency{scenario_name:journal_read}':['p(95)<1500','p(99)<3000']}};
 
 function formEncode(values){return Object.entries(values).map(([key,value])=>`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`).join('&');}
@@ -41,6 +50,8 @@ function requestBody(name){
 }
 export function workload(data){
  const name=exec.scenario.name,[method,path]=routes[name],session=data.sessions[(__VU-1)%data.sessions.length],body=requestBody(name);
- const response=http.request(method,`${base}${path}`,body,{headers:{cookie:session.cookie,'content-type':'application/json','idempotency-key':`sec-g-${name}-${__VU}-${__ITER}`},tags:{scenario_name:name}});
+ const headers={cookie:session.cookie,'content-type':'application/json','idempotency-key':`sec-g-${name}-${__VU}-${__ITER}`};
+ if(mutationScenarios.has(name)){headers.origin=base;headers['sec-fetch-site']='same-origin';}
+ const response=http.request(method,`${base}${path}`,body,{headers,tags:{scenario_name:name}});
  const failed=response.status<200||response.status>=300;unexpected.add(failed,{scenario_name:name});statuses.add(1,{scenario_name:name,status:String(response.status)});latency.add(response.timings.duration,{scenario_name:name});check(response,{'authenticated canonical response is successful':(r)=>r.status>=200&&r.status<300});
 }

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { createClient } from 'redis';
 
 if(!process.env.REDIS_URL)throw new Error('REDIS_URL_required');
 const dir='artifacts/sec-g';await mkdir(dir,{recursive:true});
@@ -18,7 +19,18 @@ function worker(namespace,index,counterPath,{barrier,region}={}){
  return{child,ready,result};
 }
 const countLines=async path=>{try{return (await readFile(path,'utf8')).split(/\r?\n/).filter(Boolean).length;}catch{return 0;}};
-async function successfulWave(namespace,counterPath,region){await rm(counterPath,{force:true});const workers=Array.from({length:8},(_,i)=>worker(namespace,i,counterPath,{region}));await Promise.all(workers.map(item=>item.ready));const results=await Promise.all(workers.map(item=>item.result));await Promise.all(workers.map(item=>new Promise(resolve=>item.child.once('exit',resolve))));const errors=results.filter(item=>item.event==='error'),owners=results.filter(item=>item.role==='owner'),live=results.filter(item=>item.providerCallMode==='live_staging_call'),followers=results.filter(item=>item.providerCallMode==='cache_response'),upstreamExecutions=await countLines(counterPath);assert.equal(errors.length,0);assert.equal(owners.length,1);assert.equal(live.length,1);assert.equal(followers.length,7);assert.equal(upstreamExecutions,1);const snapshot=owners[0].providerControlSnapshot;assert(snapshot);assert.equal(snapshot.quota?.used,1);assert.equal(snapshot.cost?.committed,1);return{processes:8,contenders:8,owners:owners.length,followers:followers.length,actualUpstreamFixtureExecutions:upstreamExecutions,quotaDebits:snapshot.quota.used,costDebits:snapshot.cost.committed,settlementState:owners[0].settlementState,ownerControlSnapshot:snapshot,retryFailureClassifications:results.map(item=>item.decisionReason),invariants:{oneGovernedUpstreamExecution:true,oneQuotaDebit:snapshot.quota.used===1,oneCostDebit:snapshot.cost.committed===1,allFollowersSharedResult:followers.length===7}};}
+async function controlLedger(namespace){
+ const client=createClient({url:process.env.REDIS_URL,socket:{connectTimeout:1000,reconnectStrategy:false}});client.on('error',()=>undefined);await client.connect();
+ const root=`${namespace}:control:{tiingo_market_data|market_price_history|primary}:policy:sec-g-multiprocess`;
+ const [quotaUsed,reserved,committed]=await Promise.all([client.hGet(`${root}:quota`,'used'),client.hGet(`${root}:cost`,'reserved'),client.hGet(`${root}:cost`,'committed')]);await client.quit();
+ return{quotaUsed:Number(quotaUsed??0),costReserved:Number(reserved??0),costCommitted:Number(committed??0)};
+}
+async function successfulWave(namespace,counterPath,region){
+ await rm(counterPath,{force:true});const workers=Array.from({length:8},(_,i)=>worker(namespace,i,counterPath,{region}));await Promise.all(workers.map(item=>item.ready));const results=await Promise.all(workers.map(item=>item.result));await Promise.all(workers.map(item=>new Promise(resolve=>item.child.once('exit',resolve))));
+ const errors=results.filter(item=>item.event==='error'),owners=results.filter(item=>item.role==='owner'),live=results.filter(item=>item.providerCallMode==='live_staging_call'),followers=results.filter(item=>item.providerCallMode==='cache_response'),upstreamExecutions=await countLines(counterPath);assert.equal(errors.length,0);assert.equal(owners.length,1);assert.equal(live.length,1);assert.equal(followers.length,7);assert.equal(upstreamExecutions,1);
+ const ledger=await controlLedger(namespace);assert.equal(ledger.quotaUsed,1);assert.equal(ledger.costReserved,0);assert.equal(ledger.costCommitted,1);
+ return{processes:8,contenders:8,owners:owners.length,followers:followers.length,actualUpstreamFixtureExecutions:upstreamExecutions,quotaDebits:ledger.quotaUsed,costDebits:ledger.costCommitted,costReservedAfterSettlement:ledger.costReserved,settlementState:owners[0].settlementState,ownerAdmissionSnapshot:owners[0].providerControlSnapshot??null,retryFailureClassifications:results.map(item=>item.decisionReason),invariants:{oneGovernedUpstreamExecution:true,oneQuotaDebit:ledger.quotaUsed===1,oneCostDebit:ledger.costCommitted===1,noResidualCostReservation:ledger.costReserved===0,allFollowersSharedResult:followers.length===7}};
+}
 
 const startedAt=new Date().toISOString();
 const successNamespace=`elceo:sec-g:provider:success:${randomUUID()}`,successCounter=`${dir}/.provider-success-count`;

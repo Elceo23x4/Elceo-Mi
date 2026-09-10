@@ -29,7 +29,14 @@ function scenario(name){
  if(profile==='capacity-discovery')return {executor:'ramping-vus',exec:'workload',stages:[{duration:'30s',target:5},{duration:'30s',target:20},{duration:'30s',target:40},{duration:'15s',target:0}],tags:{scenario_name:name}};
  return {executor:'constant-vus',exec:'workload',vus,duration,tags:{scenario_name:name}};
 }
-export const options={scenarios:Object.fromEntries(Object.keys(routes).map((name)=>[name,scenario(name)])),thresholds:{checks:['rate==1'],unexpected_response:['rate==0'],auth_failure:['rate==0'],'scenario_latency{scenario_name:account_read}':['p(95)<1500','p(99)<3000'],'scenario_latency{scenario_name:dashboard_read}':['p(95)<2500','p(99)<5000'],'scenario_latency{scenario_name:portfolio_read}':['p(95)<1500','p(99)<3000'],'scenario_latency{scenario_name:journal_read}':['p(95)<1500','p(99)<3000']}};
+const correctnessThresholds={checks:['rate==1'],unexpected_response:['rate==0'],auth_failure:['rate==0']};
+const ciLatencyThresholds={
+ 'scenario_latency{scenario_name:account_read}':['p(95)<1500','p(99)<3000'],
+ 'scenario_latency{scenario_name:dashboard_read}':['p(95)<2500','p(99)<5000'],
+ 'scenario_latency{scenario_name:portfolio_read}':['p(95)<1500','p(99)<3000'],
+ 'scenario_latency{scenario_name:journal_read}':['p(95)<1500','p(99)<3000']
+};
+export const options={scenarios:Object.fromEntries(Object.keys(routes).map((name)=>[name,scenario(name)])),thresholds:profile==='capacity-discovery'?correctnessThresholds:{...correctnessThresholds,...ciLatencyThresholds}};
 
 function formEncode(values){return Object.entries(values).map(([key,value])=>`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`).join('&');}
 function cookieHeader(jar){const cookies=jar.cookiesForURL(base);return Object.entries(cookies).flatMap(([name,values])=>values.map(value=>`${name}=${value}`)).join('; ');}

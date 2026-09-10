@@ -1,6 +1,6 @@
 import type { NotificationChannel } from '@elceo/types';
 import type { NotificationOutboxAttemptRepository, NotificationOutboxRepository, NotificationSubscriptionRepository, NotificationTargetRepository } from '../persistence/contracts';
-import type { NotificationOutboxAttemptRecord } from './outbox-contracts';
+import type { NotificationOutboxAttemptRecord, NotificationOutboxRecord } from './outbox-contracts';
 import type { NotificationDeliveryTransport, NotificationTransportResult } from './transport';
 import { deserializeTargetAwareNotificationPayload } from './replay-delivery';
 import { safeNotificationChecksum } from '../management/redaction';
@@ -16,6 +16,13 @@ export const buildNotificationRetryAvailableAt = (attemptedAt: string, attemptCo
 
 const isTerminalFailure = (result: NotificationTransportResult): boolean => result.outcome === 'permanent_failure' || result.outcome === 'invalid_target' || result.outcome === 'unsubscribed_or_disabled' || result.retryable === false;
 const normalizedReceiptStatus = (result: NotificationTransportResult): string => result.outcome ?? (result.success ? 'accepted' : 'temporary_failure');
+const claimLost = (item: NotificationOutboxRecord): Error => new Error(`notification_outbox_claim_lost:${item.outboxId}:${item.claimGeneration ?? 0}`);
+const latestAttempt = (attempts: NotificationOutboxAttemptRecord[]): NotificationOutboxAttemptRecord | null => attempts[0] ?? null;
+const isAmbiguousAttempt = (attempt: NotificationOutboxAttemptRecord): boolean => attempt.receiptStatus === 'provider_ambiguous' || attempt.errorCode === 'provider_ambiguous';
+
+async function assertClaimTransition(item: NotificationOutboxRecord, transition: Promise<boolean>): Promise<void> {
+  if (!await transition) throw claimLost(item);
+}
 
 export async function dispatchDueNotificationOutbox(asOfIso: string, limit: number, repositories: { outboxRepository: NotificationOutboxRepository; outboxAttemptRepository: NotificationOutboxAttemptRepository; targetRepository: NotificationTargetRepository; subscriptionRepository?: NotificationSubscriptionRepository }, transport: NotificationDeliveryTransport): Promise<NotificationOutboxDispatchReport> {
   const due = await repositories.outboxRepository.claimDueOutboxItems(asOfIso, new Date(Date.parse(asOfIso)+30_000).toISOString(), limit, randomUUID());
@@ -23,6 +30,22 @@ export async function dispatchDueNotificationOutbox(asOfIso: string, limit: numb
 
   for (const item of due) {
     const itemForDispatch = item;
+
+    // A provider call can complete after this worker loses its database claim. The attempt
+    // ledger is durable and written before the fenced outbox transition, so a successor
+    // must reconcile a prior terminal provider outcome before it considers another send.
+    const priorAttempt = latestAttempt(await repositories.outboxAttemptRepository.listAttemptsForOutbox(itemForDispatch.outboxId));
+    if (priorAttempt?.status === 'success') {
+      await assertClaimTransition(itemForDispatch, repositories.outboxRepository.markClaimDelivered(itemForDispatch, asOfIso));
+      reports.push({ outboxId: itemForDispatch.outboxId, channel: itemForDispatch.channel, status: 'delivered', attemptCount: itemForDispatch.attemptCount + 1, errorCode: null, errorMessage: null });
+      continue;
+    }
+    if (priorAttempt && isAmbiguousAttempt(priorAttempt)) {
+      await assertClaimTransition(itemForDispatch, repositories.outboxRepository.markClaimAmbiguous(itemForDispatch, asOfIso, priorAttempt.errorCode ?? 'provider_ambiguous', priorAttempt.errorMessage));
+      reports.push({ outboxId: itemForDispatch.outboxId, channel: itemForDispatch.channel, status: 'ambiguous', attemptCount: itemForDispatch.attemptCount + 1, errorCode: priorAttempt.errorCode ?? 'provider_ambiguous', errorMessage: priorAttempt.errorMessage });
+      continue;
+    }
+
     let sendResult: NotificationTransportResult;
     try {
       const envelope = deserializeTargetAwareNotificationPayload(itemForDispatch.payloadJson);
@@ -63,19 +86,19 @@ export async function dispatchDueNotificationOutbox(asOfIso: string, limit: numb
     await repositories.outboxAttemptRepository.saveAttempt(attemptRecord);
 
     if (sendResult.success) {
-      await repositories.outboxRepository.markClaimDelivered(itemForDispatch, asOfIso);
+      await assertClaimTransition(itemForDispatch, repositories.outboxRepository.markClaimDelivered(itemForDispatch, asOfIso));
       reports.push({ outboxId: itemForDispatch.outboxId, channel: itemForDispatch.channel, status: 'delivered', attemptCount: itemForDispatch.attemptCount + 1, errorCode: null, errorMessage: null });
       continue;
     }
     const attemptCountAfterFailure = itemForDispatch.attemptCount + 1;
     if (sendResult.outcome === 'provider_ambiguous') {
-      await repositories.outboxRepository.markClaimAmbiguous(itemForDispatch, asOfIso, sendResult.errorCode, sendResult.errorMessage);
+      await assertClaimTransition(itemForDispatch, repositories.outboxRepository.markClaimAmbiguous(itemForDispatch, asOfIso, sendResult.errorCode, sendResult.errorMessage));
       reports.push({ outboxId:itemForDispatch.outboxId,channel:itemForDispatch.channel,status:'ambiguous',attemptCount:attemptCountAfterFailure,errorCode:sendResult.errorCode,errorMessage:sendResult.errorMessage });
     } else if (isTerminalFailure(sendResult) || attemptCountAfterFailure >= 5) {
-      await repositories.outboxRepository.markClaimDead(itemForDispatch, asOfIso, sendResult.errorCode, sendResult.errorMessage);
+      await assertClaimTransition(itemForDispatch, repositories.outboxRepository.markClaimDead(itemForDispatch, asOfIso, sendResult.errorCode, sendResult.errorMessage));
       reports.push({ outboxId: itemForDispatch.outboxId, channel: itemForDispatch.channel, status: 'dead', attemptCount: attemptCountAfterFailure, errorCode: sendResult.errorCode, errorMessage: sendResult.errorMessage });
     } else {
-      await repositories.outboxRepository.markClaimFailed(itemForDispatch, asOfIso, buildNotificationRetryAvailableAt(asOfIso, attemptCountAfterFailure, sendResult.errorCode), sendResult.errorCode, sendResult.errorMessage);
+      await assertClaimTransition(itemForDispatch, repositories.outboxRepository.markClaimFailed(itemForDispatch, asOfIso, buildNotificationRetryAvailableAt(asOfIso, attemptCountAfterFailure, sendResult.errorCode), sendResult.errorCode, sendResult.errorMessage));
       reports.push({ outboxId: itemForDispatch.outboxId, channel: itemForDispatch.channel, status: 'failed', attemptCount: attemptCountAfterFailure, errorCode: sendResult.errorCode, errorMessage: sendResult.errorMessage });
     }
   }

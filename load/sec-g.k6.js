@@ -6,7 +6,7 @@ import { Counter, Rate, Trend } from 'k6/metrics';
 const base=(__ENV.SEC_G_BASE_URL||'http://127.0.0.1:3000').replace(/\/$/,'');
 const profile=__ENV.SEC_G_PROFILE||'smoke';
 const runtimeCredentials=JSON.parse(open('../.sec-g-runtime-credentials.json'));
-const unexpected=new Rate('unexpected_response'),statuses=new Counter('status_distribution'),latency=new Trend('scenario_latency',true),authFailures=new Rate('auth_failure');
+const unexpected=new Rate('unexpected_response'),statuses=new Counter('status_distribution'),latency=new Trend('scenario_latency',true),authFailures=new Rate('auth_failure'),boundedBackpressure=new Counter('bounded_backpressure');
 const routes={
  account_read:['GET','/api/account/state'],
  dashboard_read:['GET','/api/dashboard/BTC%2FUSD'],
@@ -48,10 +48,12 @@ function requestBody(name){
  if(name==='journal_mutation')return JSON.stringify({asset:'BTC/USD',timeframe:'H1',title:`SEC-G empirical ${__VU}-${__ITER}`,direction:'long',setupType:'breakout',conviction:'standard',thesis:'SEC-G authenticated empirical workload'});
  return null;
 }
+function isBoundedCapacityBackpressure(status){return profile==='capacity-discovery'&&(status===429||status===503);}
 export function workload(data){
  const name=exec.scenario.name,[method,path]=routes[name],session=data.sessions[(__VU-1)%data.sessions.length],body=requestBody(name);
  const headers={cookie:session.cookie,'content-type':'application/json','idempotency-key':`sec-g-${name}-${__VU}-${__ITER}`};
  if(mutationScenarios.has(name)){headers.origin=base;headers['sec-fetch-site']='same-origin';}
  const response=http.request(method,`${base}${path}`,body,{headers,tags:{scenario_name:name}});
- const failed=response.status<200||response.status>=300;unexpected.add(failed,{scenario_name:name});statuses.add(1,{scenario_name:name,status:String(response.status)});latency.add(response.timings.duration,{scenario_name:name});check(response,{'authenticated canonical response is successful':(r)=>r.status>=200&&r.status<300});
+ const businessSuccess=response.status>=200&&response.status<300,bounded=isBoundedCapacityBackpressure(response.status),accepted=businessSuccess||bounded;
+ unexpected.add(!accepted,{scenario_name:name});if(bounded)boundedBackpressure.add(1,{scenario_name:name,status:String(response.status)});statuses.add(1,{scenario_name:name,status:String(response.status)});latency.add(response.timings.duration,{scenario_name:name});check(response,{'authenticated canonical response or bounded capacity backpressure':()=>accepted});
 }

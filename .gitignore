@@ -14,3 +14,6 @@ dist-operator-cjs
 
 # SEC-G locally generated empirical evidence
 artifacts/sec-g/
+
+# SEC-G ephemeral credential handoff for local/CI load testing
+.sec-g-runtime-credentials.json

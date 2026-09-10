@@ -51,10 +51,12 @@ async function expectClaimLoss(operation: () => Promise<unknown>, message: strin
 }
 
 export async function runSecGNotificationRecoveryTests(){
+ const startedAt=new Date().toISOString();
  const repo=new MemoryNotificationOutboxRepository(),base:NotificationOutboxRecord={outboxId:'sec-g-outbox',outboxKey:'sec-g-key',decisionId:'d',decisionKey:'dk',asset:'BTC/USD',timeframe:'H1',ruleKey:'r',channel:'email',targetId:'t',subjectKind:'user',subjectId:'u',targetKey:'tk',deliveryAddressJson:'{}',status:'staged',availableAt:'2026-01-01T00:00:00.000Z',lastAttemptAt:null,deliveredAt:null,deadAt:null,attemptCount:0,lastErrorCode:null,lastErrorMessage:null,payloadJson:'{}',createdAt:'2026-01-01T00:00:00.000Z',updatedAt:'2026-01-01T00:00:00.000Z'};
  await repo.stageOutbox(base);const races=await Promise.all(Array.from({length:20},(_,i)=>repo.claimDueOutboxItems('2026-01-01T00:00:00.000Z','2026-01-01T00:00:01.000Z',1,`worker-${i}`)));assert(races.flat().length===1,'twenty claimers must yield one owner');const first=races.flat()[0]!;
  const successor=(await repo.claimDueOutboxItems('2026-01-01T00:00:02.000Z','2026-01-01T00:00:03.000Z',1,'successor'))[0]!;assert(successor.claimGeneration===2,'takeover generation advances');assert(!await repo.markClaimDelivered(first,'2026-01-01T00:00:02.000Z'),'stale delivered rejected');assert(!await repo.markClaimDead(first,'2026-01-01T00:00:02.000Z','x','x'),'stale dead rejected');assert(await repo.markClaimAmbiguous(successor,'2026-01-01T00:00:02.000Z','provider_ambiguous','manual_reconciliation'),'current owner records ambiguity');assert((await repo.listDueOutboxItems('2027-01-01T00:00:00.000Z',10)).length===0,'ambiguous Postmark work is never blindly resent');
- assert(resendIdempotencyKey(first.outboxId)===resendIdempotencyKey(successor.outboxId),'Resend identity survives reclaim');assert(oneSignalIdempotencyKey(first.outboxId)===oneSignalIdempotencyKey(successor.outboxId),'OneSignal identity survives reclaim');
+ const resendIdentityStable=resendIdempotencyKey(first.outboxId)===resendIdempotencyKey(successor.outboxId);assert(resendIdentityStable,'Resend identity survives reclaim');
+ const oneSignalIdentityStable=oneSignalIdempotencyKey(first.outboxId)===oneSignalIdempotencyKey(successor.outboxId);assert(oneSignalIdentityStable,'OneSignal identity survives reclaim');
 
  const successCase=await stageEmail('stale-success');
  let firstSuccessSends=0;
@@ -80,4 +82,29 @@ export async function runSecGNotificationRecoveryTests(){
  assert(reconciledAmbiguous.ambiguousCount===1&&replayAmbiguousSends===0,'successor must reconcile durable ambiguity without another send');
  assert((await ambiguousCase.repos.outboxRepository.getOutboxById(ambiguousCase.outbox.outboxId))?.status==='ambiguous','reconciled ambiguity is terminal for automatic dispatch');
  assert((await ambiguousCase.repos.outboxAttemptRepository.listAttemptsForOutbox(ambiguousCase.outbox.outboxId)).length===1,'ambiguity reconciliation must not invent a second provider attempt');
+
+ if(process.env.SEC_G_ARTIFACTS==='1'){
+  const {mkdir,readFile,writeFile}=await import('node:fs/promises');
+  const path='artifacts/sec-g/notification-recovery.json';
+  let postgresContention:unknown=null;
+  try{postgresContention=JSON.parse(await readFile(path,'utf8'));}catch{}
+  const evidence={
+   exactGitSha:process.env.SEC_G_HEAD_SHA??process.env.GITHUB_SHA??null,
+   scenario:'notification-postgres-contention-plus-provider-recovery-semantics',
+   environment:process.env.GITHUB_ACTIONS==='true'?'github-actions-test':'local-test',
+   startedAt,
+   endedAt:new Date().toISOString(),
+   postgresContention,
+   providerSpecific:{
+    resend:{deterministicIdentityAcrossReclaim:resendIdentityStable},
+    oneSignal:{deterministicIdentityAcrossReclaim:oneSignalIdentityStable},
+    postmark:{ambiguousAttemptProviderCalls:firstAmbiguousSends,replayProviderCalls:replayAmbiguousSends,blindResendPrevented:replayAmbiguousSends===0,terminalAmbiguous:reconciledAmbiguous.ambiguousCount===1},
+    durableSuccessReconciliation:{initialProviderCalls:firstSuccessSends,replayProviderCalls:replaySuccessSends,reconciledDelivered:reconciledSuccess.deliveredCount===1}
+   },
+   invariants:{singleInitialOwner:races.flat().length===1,successorGenerationAdvanced:successor.claimGeneration===2,staleOwnerFenced:true,resendIdentityStable,oneSignalIdentityStable,postmarkAmbiguityNeverBlindlyResent:replayAmbiguousSends===0,durableSuccessNeverDoubleSent:replaySuccessSends===0}
+  };
+  assert(Object.values(evidence.invariants).every(Boolean),'SEC-G notification recovery evidence invariant failed');
+  await mkdir('artifacts/sec-g',{recursive:true});
+  await writeFile(path,JSON.stringify(evidence,null,2));
+ }
 }

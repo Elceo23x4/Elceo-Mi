@@ -1,15 +1,46 @@
 import http from 'k6/http';
-import { check } from 'k6';
+import { check, fail } from 'k6';
 import exec from 'k6/execution';
 import { Counter, Rate, Trend } from 'k6/metrics';
 
-const base=__ENV.SEC_G_BASE_URL||'http://127.0.0.1:3000',profile=__ENV.SEC_G_PROFILE||'smoke',cookie=__ENV.SEC_G_SESSION_COOKIE||'';
-const unexpected=new Rate('unexpected_server_error'),statuses=new Counter('status_distribution'),latency=new Trend('scenario_latency',true);
+const base=__ENV.SEC_G_BASE_URL||'http://127.0.0.1:3000',profile=__ENV.SEC_G_PROFILE||'smoke';
+const runtimeCredentials=JSON.parse(open('../.sec-g-runtime-credentials.json'));
+const unexpected=new Rate('unexpected_response'),statuses=new Counter('status_distribution'),latency=new Trend('scenario_latency',true),authFailures=new Rate('auth_failure');
 const routes={
- account_read:['GET','/api/account/state'],dashboard_read:['GET','/api/dashboard/BTC%2FUSD'],portfolio_read:['GET','/api/portfolio/positions'],portfolio_mutation:['POST','/api/portfolio/positions'],journal_read:['GET','/api/journal/cases'],journal_mutation:['POST','/api/journal/cases'],notification_inbox:['GET','/api/notifications/inbox'],ops_read:['GET','/api/admin/ops'],provider_ingestion:['POST','/api/internal/market-evidence/tiingo/fixture-ingest'],mixed_user:['GET','/api/workspace/current']
+ account_read:['GET','/api/account/state'],
+ dashboard_read:['GET','/api/dashboard/BTC%2FUSD'],
+ portfolio_read:['GET','/api/portfolio/positions'],
+ portfolio_mutation:['POST','/api/portfolio/positions'],
+ journal_read:['GET','/api/journal/cases'],
+ journal_mutation:['POST','/api/journal/cases'],
+ notification_inbox:['GET','/api/notifications/inbox'],
+ notification_summary:['GET','/api/notifications/summary'],
+ analytics_read:['GET','/api/analytics/latest'],
+ watchlist_read:['GET','/api/portfolio/watchlist']
 };
 const duration=profile==='smoke'?'10s':'30s',vus=profile==='smoke'?1:5;
 const scenario=(name)=>profile==='capacity-discovery'?{executor:'ramping-vus',exec:'workload',stages:[{duration:'30s',target:5},{duration:'30s',target:20},{duration:'30s',target:40},{duration:'15s',target:0}],tags:{scenario_name:name}}:{executor:'constant-vus',exec:'workload',vus,duration,tags:{scenario_name:name}};
-export const options={scenarios:Object.fromEntries(Object.keys(routes).map((name)=>[name,scenario(name)])),thresholds:{checks:['rate==1'],unexpected_server_error:['rate==0']}};
-const bodies={portfolio_mutation:JSON.stringify({positionId:`sec-g-${__VU}-${__ITER}`,asset:'BTC/USD',side:'long',quantity:1,averageEntryPrice:50000,openedAt:'2026-01-01T00:00:00.000Z'}),journal_mutation:JSON.stringify({caseId:`sec-g-${__VU}-${__ITER}`,asset:'BTC/USD',timeframe:'H1',direction:'long',status:'planned'}),provider_ingestion:JSON.stringify({asset:'BTC/USD',timeframe:'H1',from:'2026-01-01T00:00:00.000Z',to:'2026-01-01T01:00:00.000Z'})};
-export function workload(){const name=exec.scenario.name,[method,path]=routes[name],response=http.request(method,`${base}${path}`,bodies[name]||null,{headers:{cookie,'content-type':'application/json','idempotency-key':`sec-g-${name}-${__VU}-${__ITER}`},tags:{scenario_name:name}});const failed=response.status>=500;unexpected.add(failed);statuses.add(1,{scenario_name:name,status:String(response.status)});latency.add(response.timings.duration,{scenario_name:name});check(response,{'authenticated canonical response':(r)=>r.status>=200&&r.status<500});}
+export const options={scenarios:Object.fromEntries(Object.keys(routes).map((name)=>[name,scenario(name)])),thresholds:{checks:['rate==1'],unexpected_response:['rate==0'],auth_failure:['rate==0'],'scenario_latency{scenario_name:account_read}':['p(95)<1500','p(99)<3000'],'scenario_latency{scenario_name:dashboard_read}':['p(95)<2500','p(99)<5000'],'scenario_latency{scenario_name:portfolio_read}':['p(95)<1500','p(99)<3000'],'scenario_latency{scenario_name:journal_read}':['p(95)<1500','p(99)<3000']}};
+
+function formEncode(values){return Object.entries(values).map(([key,value])=>`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`).join('&');}
+function cookieHeader(jar){const cookies=jar.cookiesForURL(base);return Object.entries(cookies).flatMap(([name,values])=>values.map(value=>`${name}=${value}`)).join('; ');}
+function authenticate(user){
+ const jar=http.cookieJar();jar.clear(base);
+ const csrf=http.get(`${base}/api/auth/csrf`,{tags:{scenario_name:'auth_setup'}});const csrfBody=csrf.json();
+ if(csrf.status!==200||!csrfBody||!csrfBody.csrfToken)fail(`sec_g_csrf_failed:${csrf.status}`);
+ const login=http.post(`${base}/api/auth/callback/credentials`,formEncode({csrfToken:csrfBody.csrfToken,email:user.email,password:user.passphrase,callbackUrl:`${base}/api/auth/session`,redirect:'false'}),{headers:{'content-type':'application/x-www-form-urlencoded'},redirects:0,tags:{scenario_name:'auth_setup'}});
+ const cookie=cookieHeader(jar);const session=http.get(`${base}/api/auth/session`,{headers:{cookie},tags:{scenario_name:'auth_setup'}});let sessionBody=null;try{sessionBody=session.json();}catch{}
+ const authenticated=(login.status===200||login.status===302)&&session.status===200&&Boolean(sessionBody?.user?.id)&&Boolean(cookie);authFailures.add(!authenticated,{scenario_name:'auth_setup'});check(session,{'real NextAuth credential session established':()=>authenticated});if(!authenticated)fail(`sec_g_authentication_failed:login=${login.status}:session=${session.status}`);jar.clear(base);return {email:user.email,cookie,userId:sessionBody.user.id};
+}
+export function setup(){if(!Array.isArray(runtimeCredentials.users)||runtimeCredentials.users.length===0)fail('sec_g_runtime_credentials_missing');return {sessions:runtimeCredentials.users.map(authenticate)};}
+
+function requestBody(name){
+ if(name==='portfolio_mutation')return JSON.stringify({asset:'BTC/USD',timeframe:'H1',direction:'long',entryPrice:50000,size:1,thesisHealth:'stable',note:`SEC-G empirical ${__VU}-${__ITER}`});
+ if(name==='journal_mutation')return JSON.stringify({asset:'BTC/USD',timeframe:'H1',title:`SEC-G empirical ${__VU}-${__ITER}`,direction:'long',setupType:'breakout',conviction:'medium',thesis:'SEC-G authenticated empirical workload'});
+ return null;
+}
+export function workload(data){
+ const name=exec.scenario.name,[method,path]=routes[name],session=data.sessions[(__VU-1)%data.sessions.length],body=requestBody(name);
+ const response=http.request(method,`${base}${path}`,body,{headers:{cookie:session.cookie,'content-type':'application/json','idempotency-key':`sec-g-${name}-${__VU}-${__ITER}`},tags:{scenario_name:name}});
+ const failed=response.status<200||response.status>=300;unexpected.add(failed,{scenario_name:name});statuses.add(1,{scenario_name:name,status:String(response.status)});latency.add(response.timings.duration,{scenario_name:name});check(response,{'authenticated canonical response is successful':(r)=>r.status>=200&&r.status<300});
+}

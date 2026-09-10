@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { mkdir, writeFile } from 'node:fs/promises';
+import { access, mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { createConnection } from 'node:net';
 import { monitorEventLoopDelay } from 'node:perf_hooks';
@@ -50,16 +50,16 @@ async function pingRedis(urlText: string | undefined): Promise<boolean> {
   if (!urlText) return false;
   let url: URL;
   try { url = new URL(urlText); } catch { return false; }
-  if (!['redis:', 'rediss:'].includes(url.protocol) || url.protocol === 'rediss:') return false;
+  if (url.protocol !== 'redis:') return false;
   return await new Promise<boolean>((resolve) => {
     let settled = false;
+    const socket = createConnection({ host: url.hostname, port: Number(url.port || 6379) });
     const finish = (value: boolean) => {
       if (settled) return;
       settled = true;
       socket.destroy();
       resolve(value);
     };
-    const socket = createConnection({ host: url.hostname, port: Number(url.port || 6379) });
     socket.setTimeout(500);
     socket.once('connect', () => socket.write('*1\r\n$4\r\nPING\r\n'));
     socket.once('data', (chunk) => finish(chunk.toString('utf8').startsWith('+PONG')));
@@ -72,6 +72,7 @@ export function startSecGResourceSampler(): { stop: () => void; drain: () => Pro
   const outputPath = process.env.SEC_G_RESOURCE_SAMPLE_PATH;
   if (process.env.APP_ENV !== 'test' || !outputPath) return null;
 
+  const recoveryMarker = process.env.SEC_G_RESOURCE_RECOVERY_MARKER;
   const intervalMs = Math.max(250, Number(process.env.SEC_G_RESOURCE_SAMPLE_INTERVAL_MS ?? 1000));
   const histogram = monitorEventLoopDelay({ resolution: 20 });
   histogram.enable();
@@ -81,6 +82,7 @@ export function startSecGResourceSampler(): { stop: () => void; drain: () => Pro
   let lastClock = process.hrtime.bigint();
   let stopped = false;
   let writing = Promise.resolve();
+  let sampling = Promise.resolve();
 
   const peak = {
     cpuPercent: 0,
@@ -111,6 +113,16 @@ export function startSecGResourceSampler(): { stop: () => void; drain: () => Pro
       await writeFile(outputPath, JSON.stringify(artifact, null, 2));
     }).catch(() => undefined);
     return writing;
+  };
+
+  const phaseForPeriodicSample = async (): Promise<ResourceSample['phase']> => {
+    if (!recoveryMarker) return samples.length === 0 ? 'baseline' : 'load';
+    try {
+      await access(recoveryMarker);
+      return 'recovery';
+    } catch {
+      return samples.length === 0 ? 'baseline' : 'load';
+    }
   };
 
   const takeSample = async (phase: ResourceSample['phase']) => {
@@ -172,8 +184,13 @@ export function startSecGResourceSampler(): { stop: () => void; drain: () => Pro
     await persist();
   };
 
-  void takeSample('baseline');
-  const timer = setInterval(() => { void takeSample('load'); }, intervalMs);
+  const queueSample = (phase?: ResourceSample['phase']) => {
+    sampling = sampling.then(async () => takeSample(phase ?? await phaseForPeriodicSample())).catch(() => undefined);
+    return sampling;
+  };
+
+  void queueSample('baseline');
+  const timer = setInterval(() => { void queueSample(); }, intervalMs);
   timer.unref();
 
   return {
@@ -187,7 +204,8 @@ export function startSecGResourceSampler(): { stop: () => void; drain: () => Pro
         stopped = true;
         clearInterval(timer);
       }
-      await takeSample('drain');
+      await sampling;
+      await queueSample('drain');
       histogram.disable();
       await persist(new Date().toISOString());
     }

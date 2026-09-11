@@ -296,6 +296,9 @@ jobs:
   sec-g-empirical-scale:
     name: SEC-G empirical scale acceptance
     runs-on: ubuntu-latest
+    env:
+      SEC_G_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      ELCEO_INBOUND_READ_POLICY_JSON: '{"policyId":"sec-g-empirical-dashboard-read","policyVersion":"1","status":"approved","provenance":"SEC-G empirical CI runtime policy","effectiveFrom":"2020-01-01T00:00:00.000Z","effectiveTo":null,"routeFamily":"dashboard-read","windowMs":1000,"requestAllowance":200,"concurrentAllowance":64,"leaseMs":5000,"stateTtlMs":10000,"canonicalPolicyHash":"sha256:69c3b9b8f062b991d0a7648cb0202cc5558f7de234de790d1661ffc5655c223c"}'
     services:
       postgres:
         image: postgres:16-alpine
@@ -308,6 +311,11 @@ jobs:
         options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Prove exact empirical checkout
+        run: test "$(git rev-parse HEAD)" = "$SEC_G_HEAD_SHA"
       - uses: actions/setup-node@v4
         with: { node-version: '24.19.0', cache: npm }
       - run: npm install --global npm@10.8.2 && npm ci
@@ -349,6 +357,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: sec-g-empirical-${{ github.sha }}
+          name: sec-g-empirical-${{ env.SEC_G_HEAD_SHA }}
           path: artifacts/sec-g
           if-no-files-found: error

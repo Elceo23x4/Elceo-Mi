@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { Pool } from 'pg';
+import { getRuntimePool } from '@elceo/db-runtime';
 import {
   createAdaptiveMaterializationRedisClient,
   createProductionCanonicalDashboardProjectionReader,
@@ -20,7 +20,7 @@ export function getCanonicalDashboardProjectionReader(): CanonicalDashboardProje
   if (reader) return reader;
   if (!process.env.DATABASE_URL) throw new Error('dashboard_projection_unavailable');
   const redisClient = createAdaptiveMaterializationRedisClient();
-  const sqlPool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const sqlPool = { query: async (sql: string, params?: unknown[]) => { const result=await (await getRuntimePool('system')).query(sql, params); return { rows: result.rows.map((row) => ({ artifact_json: String(row.artifact_json) })) }; } };
   reader = createProductionCanonicalDashboardProjectionReader({
     redisClient,
     sqlPool,
@@ -29,7 +29,7 @@ export function getCanonicalDashboardProjectionReader(): CanonicalDashboardProje
   return reader;
 }
 
-function getKickOffReader(){if(kickOffReader)return kickOffReader;if(!process.env.DATABASE_URL)throw new Error('kick_off_context_unavailable');const redisClient=createAdaptiveMaterializationRedisClient(),sqlPool=new Pool({connectionString:process.env.DATABASE_URL});return kickOffReader=createProductionCanonicalKickOffContextReader({redisClient,sqlPool,cacheLimits:{maxEntries:24,maxSerializedBytes:4*1024*1024}})}
+function getKickOffReader(){if(kickOffReader)return kickOffReader;if(!process.env.DATABASE_URL)throw new Error('kick_off_context_unavailable');const redisClient=createAdaptiveMaterializationRedisClient(),sqlPool={query:async(sql:string,params?:unknown[])=>{const result=await (await getRuntimePool('system')).query(sql,params);return{rows:result.rows.map((row)=>({artifact_json:String(row.artifact_json)}))}}};return kickOffReader=createProductionCanonicalKickOffContextReader({redisClient,sqlPool,cacheLimits:{maxEntries:24,maxSerializedBytes:4*1024*1024}})}
 
 /** Passive, same-epoch projection; context failure never suppresses validated D1 chart truth. */
 export async function readKickOffDashboard(asset:string,_signal:AbortSignal,features:{evidenceScore:boolean;macroHeadlines:boolean}):Promise<KickOffDashboardViewModelV1|null>{

@@ -13,6 +13,7 @@
     "test": "tsc -p tsconfig.test.json && node ../../scripts/run-cjs-tests.mjs dist-test dist-test/services/analytics/src/tests/run-tests.js"
   },
   "dependencies": {
-    "@elceo/types": "0.1.0"
+    "@elceo/types": "0.1.0",
+    "@elceo/db-runtime": "0.1.0"
   }
 }

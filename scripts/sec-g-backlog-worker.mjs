@@ -7,11 +7,13 @@ const token=process.env.SEC_G_BACKLOG_TOKEN??`${domain}-${process.pid}`;
 const mode=process.env.SEC_G_BACKLOG_MODE??'drain';
 const holdMs=Number(process.env.SEC_G_HOLD_MS??'10000');
 const limit=Number(process.env.SEC_G_BACKLOG_LIMIT??'10');
+const claimTtlMs=Number(process.env.SEC_G_BACKLOG_CLAIM_TTL_MS??'1000');
+if(!Number.isInteger(claimTtlMs)||claimTtlMs<250)throw new Error('SEC_G_BACKLOG_CLAIM_TTL_MS_invalid');
 const db=new pg.Client({connectionString:process.env.DATABASE_URL});await db.connect();
 
 async function claim(){
- if(domain==='notification')return (await db.query(`WITH candidates AS (SELECT outbox_id FROM app_notification_outbox WHERE outbox_id LIKE $1 AND ((status IN ('staged','failed') AND available_at<=now()) OR (status='dispatching' AND claim_expires_at<=now())) ORDER BY outbox_id FOR UPDATE SKIP LOCKED LIMIT $2) UPDATE app_notification_outbox o SET status='dispatching',claim_token=$3,claim_generation=claim_generation+1,claimed_at=now(),claim_expires_at=now()+interval '250 milliseconds',last_attempt_at=now(),updated_at=now() FROM candidates c WHERE o.outbox_id=c.outbox_id RETURNING o.outbox_id,o.claim_token,o.claim_generation`,[`${prefix}%`,limit,token])).rows;
- return (await db.query(`WITH candidates AS (SELECT outbox_id FROM app_ingestion_outbox WHERE outbox_id LIKE $1 AND ((status IN ('pending','failed') AND available_at<=now()) OR (status='publishing' AND claim_expires_at<=now())) ORDER BY outbox_id FOR UPDATE SKIP LOCKED LIMIT $2) UPDATE app_ingestion_outbox o SET status='publishing',claim_token=$3,claim_generation=claim_generation+1,claimed_at=now(),claim_expires_at=now()+interval '250 milliseconds',last_attempt_at=now(),updated_at=now() FROM candidates c WHERE o.outbox_id=c.outbox_id RETURNING o.outbox_id,o.claim_token,o.claim_generation`,[`${prefix}%`,limit,token])).rows;
+ if(domain==='notification')return (await db.query(`WITH candidates AS (SELECT outbox_id FROM app_notification_outbox WHERE outbox_id LIKE $1 AND ((status IN ('staged','failed') AND available_at<=now()) OR (status='dispatching' AND claim_expires_at<=now())) ORDER BY outbox_id FOR UPDATE SKIP LOCKED LIMIT $2) UPDATE app_notification_outbox o SET status='dispatching',claim_token=$3,claim_generation=claim_generation+1,claimed_at=now(),claim_expires_at=now()+($4::int * interval '1 millisecond'),last_attempt_at=now(),updated_at=now() FROM candidates c WHERE o.outbox_id=c.outbox_id RETURNING o.outbox_id,o.claim_token,o.claim_generation,o.claim_expires_at`,[`${prefix}%`,limit,token,claimTtlMs])).rows;
+ return (await db.query(`WITH candidates AS (SELECT outbox_id FROM app_ingestion_outbox WHERE outbox_id LIKE $1 AND ((status IN ('pending','failed') AND available_at<=now()) OR (status='publishing' AND claim_expires_at<=now())) ORDER BY outbox_id FOR UPDATE SKIP LOCKED LIMIT $2) UPDATE app_ingestion_outbox o SET status='publishing',claim_token=$3,claim_generation=claim_generation+1,claimed_at=now(),claim_expires_at=now()+($4::int * interval '1 millisecond'),last_attempt_at=now(),updated_at=now() FROM candidates c WHERE o.outbox_id=c.outbox_id RETURNING o.outbox_id,o.claim_token,o.claim_generation,o.claim_expires_at`,[`${prefix}%`,limit,token,claimTtlMs])).rows;
 }
 async function complete(row){
  if(domain==='notification'){
@@ -23,7 +25,7 @@ async function complete(row){
 }
 
 if(mode==='hold'){
- const rows=await claim();if(rows.length===0)throw new Error('sec_g_backlog_holder_claim_empty');process.stdout.write(`${JSON.stringify({event:'claimed',domain,pid:process.pid,rows:rows.map(row=>({outboxId:row.outbox_id,token:row.claim_token,generation:Number(row.claim_generation)}))})}\n`);
+ const rows=await claim();if(rows.length===0)throw new Error('sec_g_backlog_holder_claim_empty');process.stdout.write(`${JSON.stringify({event:'claimed',domain,pid:process.pid,rows:rows.map(row=>({outboxId:row.outbox_id,token:row.claim_token,generation:Number(row.claim_generation),expiresAt:new Date(row.claim_expires_at).toISOString()}))})}\n`);
  const timer=setTimeout(async()=>{await db.end();process.exit(0);},holdMs);timer.unref();process.on('SIGTERM',async()=>{clearTimeout(timer);await db.end().catch(()=>{});process.exit(0);});await new Promise(()=>{});
 }else{
  let claimed=0,completed=0,batches=0;const generations=[];for(;;){const rows=await claim();if(rows.length===0)break;batches++;claimed+=rows.length;for(const row of rows){generations.push(Number(row.claim_generation));completed+=await complete(row);}}

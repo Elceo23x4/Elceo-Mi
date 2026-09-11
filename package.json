@@ -77,7 +77,7 @@
     "test:sec-d-postgres": "npm run -w services/reasoning test && node scripts/test-sec-d-provider-postgres.mjs",
     "test:sec-e": "node scripts/check-sec-e-boundaries.mjs && npm run -w apps/web test",
     "test:sec-f": "npm run -w @elceo/config build && npm run -w @elceo/schemas build && npm run -w apps/web test && node scripts/test-sec-f-runtime.mjs && node scripts/check-sec-f.mjs",
-    "test:sec-f-postgres": "npm run -w services/application-state test && npm run -w services/notifications test && node scripts/test-sec-f-postgres.mjs",
+    "test:sec-f-postgres": "npm run -w services/application-state test && npm run -w services/notifications test && ELCEO_DB_RUNTIME_TEST_OWNER=1 node scripts/test-sec-f-postgres.mjs",
     "test:sec-g": "node scripts/test-sec-g.mjs",
     "test:sec-g-postgres": "node scripts/test-sec-g-postgres.mjs && node scripts/test-sec-g-recovery.mjs && npm run -w @elceo/db-runtime build && REDIS_URL=${REDIS_URL:-redis://127.0.0.1:6379} npm run test:canonical-dashboard-12-asset-acceptance && REDIS_URL=${REDIS_URL:-redis://127.0.0.1:6379} node scripts/seed-sec-g-dashboard-runtime.mjs",
     "test:sec-g-k6": "k6 run --summary-export artifacts/sec-g/k6-summary.json load/sec-g.k6.js",

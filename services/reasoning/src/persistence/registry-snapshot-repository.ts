@@ -39,10 +39,6 @@ type QueryRow = Record<string, unknown>;
 type PoolLike = { query: (sql: string, params?: unknown[]) => Promise<{ rows: QueryRow[] }> };
 let poolPromise: Promise<PoolLike> | null = null;
 
-function runtimeEnv(): Record<string, string | undefined> {
-  return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
-}
-
 async function getPool(): Promise<PoolLike> {
   if (!poolPromise) {
     poolPromise = (async () => {

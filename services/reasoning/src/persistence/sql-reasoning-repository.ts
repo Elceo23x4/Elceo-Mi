@@ -31,10 +31,6 @@ import type {
   ReasoningRunRepository
 } from './contracts';
 
-function runtimeEnv(): Record<string, string | undefined> {
-  return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
-}
-
 type QueryRow = Record<string, unknown>;
 type SqlClientLike = { query: (sql: string, params?: unknown[]) => Promise<{ rows: QueryRow[] }>; release: () => void };
 type PoolLike = { query: (sql: string, params?: unknown[]) => Promise<{ rows: QueryRow[] }>; connect?: () => Promise<SqlClientLike> };

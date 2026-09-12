@@ -87,7 +87,7 @@ export async function runSecGNotificationRecoveryTests(){
   const {mkdir,readFile,writeFile}=await import('node:fs/promises');
   const path='artifacts/sec-g/notification-recovery.json';
   let postgresContention:unknown=null;
-  try{postgresContention=JSON.parse(await readFile(path,'utf8'));}catch{}
+  try{postgresContention=JSON.parse(await readFile(path,'utf8'));}catch{/* PostgreSQL contention evidence is additive when this test runs in the empirical workflow. */}
   const evidence={
    exactGitSha:process.env.SEC_G_HEAD_SHA??process.env.GITHUB_SHA??null,
    scenario:'notification-postgres-contention-plus-provider-recovery-semantics',

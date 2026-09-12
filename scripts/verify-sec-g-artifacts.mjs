@@ -16,6 +16,9 @@ const required=[
  'notification-recovery.json',
  'notification-inbox-query-count.json',
  'provider-single-flight.json',
+ 'provider-ingestion-workload.json',
+ 'admin-workload.json',
+ 'pagination-data-growth.json',
  'redis-recovery.json',
  'adaptive-takeover.json',
  'ingestion-backlog-recovery.json',
@@ -54,6 +57,9 @@ const dataset=files['dataset-manifest.json'].json;
 assert(Number(dataset.scale)>=5000,`sec_g_dataset_not_high_cardinality:${dataset.scale}`);
 const datasetCounts=Object.values(dataset.counts??{}).map(Number);
 assert(datasetCounts.length>=8&&datasetCounts.every(value=>value>=1000),'sec_g_dataset_counts_incomplete');
+assert(Number(dataset.qualification?.minimumRowsPerSeededDomain)>=5000,'sec_g_dataset_domain_qualification_too_small');
+assert(Number(dataset.qualification?.totalQualifiedRows)>=Number(dataset.qualification?.minimumTotalQualifiedRows),'sec_g_dataset_total_below_qualification');
+for(const name of ['provider-ingestion-workload.json','admin-workload.json','pagination-data-growth.json'])assert(Object.values(files[name].json.invariants??{}).every(Boolean),`sec_g_workload_invariant_failed:${name}`);
 
 for(const name of ['ingestion-fencing.json','scheduler-fencing.json','ops-fencing.json','provider-single-flight.json','adaptive-takeover.json','ingestion-backlog-recovery.json','notification-backlog-recovery.json']){
  const evidence=files[name].json;
@@ -85,6 +91,9 @@ const phases=new Set((resources.samples??[]).map(sample=>sample.phase));
 for(const phase of ['baseline','load','recovery','drain'])assert(phases.has(phase),`sec_g_resource_phase_missing:${phase}`);
 assert((resources.samples??[]).length>=5,'sec_g_resource_sampling_not_repeated');
 assert(resources.peak&&Number.isFinite(Number(resources.peak.rssBytes)),'sec_g_resource_peak_missing');
+assert(resources.samples.every(sample=>Number.isFinite(Number(sample.cpuPercent))&&Number(sample.rssBytes)>0&&Number(sample.heapUsedBytes)>0&&Number.isFinite(Number(sample.eventLoopDelayP95Ms))&&Array.isArray(sample.pools)),'sec_g_resource_sample_metrics_incomplete');
+assert(resources.samples.some(sample=>sample.phase==='load')&&resources.samples.some(sample=>sample.phase==='recovery'),'sec_g_resource_marker_phases_not_observed');
+assert(Number.isFinite(Number(resources.peak.systemPoolTotal))&&Number.isFinite(Number(resources.peak.tenantPoolTotal)),'sec_g_resource_pool_peaks_missing');
 
 const verification={
  exactGitSha:head,

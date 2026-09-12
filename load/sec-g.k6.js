@@ -17,9 +17,11 @@ const routes={
  notification_inbox:['GET','/api/notifications/inbox'],
  notification_summary:['GET','/api/notifications/summary'],
  analytics_read:['GET','/api/analytics/latest'],
- watchlist_read:['GET','/api/portfolio/watchlist']
+ watchlist_read:['GET','/api/portfolio/watchlist'],
+ admin_read:['GET','/api/admin/ops'],
+ provider_ingestion:['POST','/api/internal/market-evidence/tiingo/fixture-ingest']
 };
-const mutationScenarios=new Set(['portfolio_mutation','journal_mutation']);
+const mutationScenarios=new Set(['portfolio_mutation','journal_mutation','provider_ingestion']);
 const duration=profile==='smoke'?'10s':'30s',vus=profile==='smoke'?1:5;
 function scenario(name){
  if(mutationScenarios.has(name)){
@@ -48,17 +50,19 @@ function authenticate(user){
  const cookie=cookieHeader(jar);const session=http.get(`${base}/api/auth/session`,{headers:{cookie},tags:{scenario_name:'auth_setup'}});let sessionBody=null;try{sessionBody=session.json();}catch{}
  const authenticated=(login.status===200||login.status===302)&&session.status===200&&Boolean(sessionBody?.user?.id)&&Boolean(cookie);authFailures.add(!authenticated,{scenario_name:'auth_setup'});check(session,{'real NextAuth credential session established':()=>authenticated});if(!authenticated)fail(`sec_g_authentication_failed:login=${login.status}:session=${session.status}`);jar.clear(base);return {email:user.email,cookie,userId:sessionBody.user.id};
 }
-export function setup(){if(!Array.isArray(runtimeCredentials.users)||runtimeCredentials.users.length===0)fail('sec_g_runtime_credentials_missing');return {sessions:runtimeCredentials.users.map(authenticate)};}
+export function setup(){if(!Array.isArray(runtimeCredentials.users)||runtimeCredentials.users.length===0)fail('sec_g_runtime_credentials_missing');const sessions=runtimeCredentials.users.map(authenticate),adminSession=sessions.find(value=>value.email===runtimeCredentials.adminEmail);if(!adminSession)fail('sec_g_admin_session_missing');return {sessions,adminSession};}
 
 function requestBody(name){
  if(name==='portfolio_mutation')return JSON.stringify({asset:'BTC/USD',timeframe:'H1',direction:'long',entryPrice:50000,size:1,thesisHealth:'stable',note:`SEC-G empirical ${__VU}-${__ITER}`});
  if(name==='journal_mutation')return JSON.stringify({asset:'BTC/USD',timeframe:'H1',title:`SEC-G empirical ${__VU}-${__ITER}`,direction:'long',setupType:'breakout',conviction:'standard',thesis:'SEC-G authenticated empirical workload'});
+ if(name==='provider_ingestion')return JSON.stringify({asset:'xau_usd',frequency:'daily',requestedAt:new Date().toISOString()});
  return null;
 }
 function isBoundedCapacityBackpressure(status){return profile==='capacity-discovery'&&(status===429||status===503);}
 export function workload(data){
- const name=exec.scenario.name,[method,path]=routes[name],session=data.sessions[(__VU-1)%data.sessions.length],body=requestBody(name);
- const headers={cookie:session.cookie,'content-type':'application/json','idempotency-key':`sec-g-${name}-${__VU}-${__ITER}`};
+ const name=exec.scenario.name,[method,path]=routes[name],session=name==='admin_read'||name==='provider_ingestion'?data.adminSession:data.sessions[(__VU-1)%data.sessions.length],body=requestBody(name);
+ const headers={cookie:session.cookie,'content-type':'application/json','idempotency-key':`sec-g-${profile}-${name}-${__VU}-${__ITER}`};
+ if(name==='admin_read'||name==='provider_ingestion')headers['x-elceo-internal-token']=__ENV.ELCEO_INTERNAL_API_TOKEN;
  if(mutationScenarios.has(name)){headers.origin=base;headers['sec-fetch-site']='same-origin';}
  const response=http.request(method,`${base}${path}`,body,{headers,tags:{scenario_name:name}});
  const businessSuccess=response.status>=200&&response.status<300,bounded=isBoundedCapacityBackpressure(response.status),accepted=businessSuccess||bounded;

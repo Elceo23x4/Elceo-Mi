@@ -14,6 +14,7 @@ jobs:
       SEC_G_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_sec_g
       REDIS_URL: redis://127.0.0.1:6379
+      ELCEO_INTERNAL_API_TOKEN: sec-g-ci-only-internal-token
       ELCEO_INBOUND_READ_POLICY_JSON: '{"policyId":"sec-g-empirical-dashboard-read","policyVersion":"1","status":"approved","provenance":"SEC-G empirical CI runtime policy","effectiveFrom":"2020-01-01T00:00:00.000Z","effectiveTo":null,"routeFamily":"dashboard-read","windowMs":1000,"requestAllowance":200,"concurrentAllowance":64,"leaseMs":5000,"stateTtlMs":10000,"canonicalPolicyHash":"sha256:69c3b9b8f062b991d0a7648cb0202cc5558f7de234de790d1661ffc5655c223c"}'
     services:
       postgres:
@@ -94,7 +95,9 @@ jobs:
 
       - name: PostgreSQL ingestion, scheduler, ops fencing and notification inbox query-count evidence
         if: ${{ always() }}
-        run: node scripts/test-sec-g-distributed-postgres.mjs
+        run: |
+          node scripts/test-sec-g-distributed-postgres.mjs
+          node scripts/test-sec-g-pagination-postgres.mjs
 
       - name: Provider-specific notification reclaim and ambiguity evidence
         if: ${{ always() }}
@@ -131,9 +134,9 @@ jobs:
           AUTH_SECRET: sec-g-ci-only-auth-secret-at-least-32-bytes
           NEXT_PUBLIC_APP_BASE_URL: http://127.0.0.1:3000
           ELCEO_DB_SSL_POLICY: local-plaintext
-          SEC_G_RESOURCE_SAMPLE_PATH: artifacts/sec-g/resource-samples.json
+          SEC_G_RESOURCE_SAMPLE_PATH: ${{ github.workspace }}/artifacts/sec-g/resource-samples.json
           SEC_G_RESOURCE_SAMPLE_INTERVAL_MS: '1000'
-          SEC_G_RESOURCE_RECOVERY_MARKER: artifacts/sec-g/resource-recovery.marker
+          SEC_G_RESOURCE_RECOVERY_MARKER: ${{ github.workspace }}/artifacts/sec-g/resource-recovery.marker
         run: |
           npm run -w apps/web build
           printf '{"exactGitSha":"%s","scenario":"authenticated-nextjs-web-runtime","environment":"github-actions-test","startedAt":"%s"}\n' "$SEC_G_HEAD_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > artifacts/sec-g/web-runtime.log

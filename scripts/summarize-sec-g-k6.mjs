@@ -5,7 +5,7 @@ const head=process.env.SEC_G_HEAD_SHA??process.env.GITHUB_SHA??null;
 if(!head)throw new Error('SEC_G_HEAD_SHA_required');
 const environment=process.env.GITHUB_ACTIONS==='true'?'github-actions-test':'local-test';
 const profiles=['smoke','ci','capacity-discovery'];
-const scenarioNames=['account_read','dashboard_read','portfolio_read','portfolio_mutation','journal_read','journal_mutation','notification_inbox','notification_summary','analytics_read','watchlist_read'];
+const scenarioNames=['account_read','dashboard_read','portfolio_read','portfolio_mutation','journal_read','journal_mutation','notification_inbox','notification_summary','analytics_read','watchlist_read','admin_read','provider_ingestion'];
 const configured={
  smoke:{durationSeconds:10,reads:{executor:'constant-vus',vus:1},mutations:{executor:'constant-arrival-rate',ratePerSecond:1,preAllocatedVUs:2,maxVUs:5}},
  ci:{durationSeconds:30,reads:{executor:'constant-vus',vus:5},mutations:{executor:'constant-arrival-rate',ratePerSecond:2,preAllocatedVUs:2,maxVUs:5}},
@@ -102,4 +102,5 @@ if(!acceptance.accepted)throw new Error(`sec_g_k6_acceptance_failed:${JSON.strin
 await mkdir(dir,{recursive:true});
 await writeFile(`${dir}/k6-summary.json`,JSON.stringify({acceptance,profiles:profileEvidence},null,2));
 await writeFile(`${dir}/k6-samples.json`,JSON.stringify({exactGitSha:head,scenario:'k6-derived-per-scenario-measurements',environment,startedAt:acceptance.startedAt,endedAt:acceptance.endedAt,profiles:Object.fromEntries(profiles.map(profile=>[profile,{source:`k6-${profile}-samples.json`,scenarios:profileEvidence[profile].scenarios}]))},null,2));
+for(const [filename,name] of [['admin-workload.json','admin_read'],['provider-ingestion-workload.json','provider_ingestion']])await writeFile(`${dir}/${filename}`,JSON.stringify({exactGitSha:head,scenario:`authenticated-${name.replaceAll('_','-')}-empirical-workload`,environment,profiles:Object.fromEntries(profiles.map(profile=>[profile,profileEvidence[profile].scenarios[name]])),invariants:{executedAllProfiles:profiles.every(profile=>profileEvidence[profile].scenarios[name].requests>0),successfulBusinessResponses:profiles.every(profile=>profileEvidence[profile].scenarios[name].successfulBusinessOps>0),zeroAuthorizationFailures:profiles.every(profile=>profileEvidence[profile].scenarios[name].unexpected4xx===0),zeroUnexpectedServerErrors:profiles.every(profile=>profileEvidence[profile].scenarios[name].unexpected5xx===0),zeroTransportFailures:profiles.every(profile=>profileEvidence[profile].scenarios[name].transportFailures===0)}},null,2));
 console.log(JSON.stringify(acceptance));

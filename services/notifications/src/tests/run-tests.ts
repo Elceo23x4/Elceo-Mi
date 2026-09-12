@@ -1,3 +1,4 @@
+import { runSecGNotificationRecoveryTests } from './sec-g-notification-recovery.test.js';
 import { runMaterialChangeTests } from './material-change.test.js';
 import { runCooldownTests } from './cooldown.test.js';
 import { runMessageBuilderTests } from './message-builder.test.js';
@@ -50,6 +51,7 @@ async function run(): Promise<void> {
   runUserNotificationPreferencesFoundationTests();
   await runNotificationReliabilityLayerTests();
   await runNotificationReliabilitySurgicalTests();
+  await runSecGNotificationRecoveryTests();
   console.log('notifications runtime contract tests passed');
 }
 

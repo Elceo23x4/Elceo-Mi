@@ -4,9 +4,9 @@ type QueryRow = Record<string, unknown>;
 type PoolLike = { query: (sql: string, params?: unknown[]) => Promise<{ rows: QueryRow[] }>; end?:()=>Promise<void> };
 let poolPromise: Promise<PoolLike> | null = null;
 const env = (): Record<string, string | undefined> => (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
-const getPool = async (): Promise<PoolLike> => { if (!poolPromise) { poolPromise = import('pg').then((m) => new m.Pool({ connectionString: env().DATABASE_URL }) as unknown as PoolLike); } return poolPromise; };
+const getPool = async (): Promise<PoolLike> => { if (!poolPromise) { poolPromise = import('@elceo/db-runtime').then((m) => m.getRuntimePool('system') as Promise<unknown> as Promise<PoolLike>); } return poolPromise; };
 const queryDb = async <T extends QueryRow>(sql: string, params: unknown[] = []): Promise<T[]> => ((await getPool()).query(sql, params)).then((r) => r.rows as T[]);
-export async function closeMarketEvidenceIngestionSqlPoolForTests(){const pool=await poolPromise;poolPromise=null;await pool?.end?.();}
+export async function closeMarketEvidenceIngestionSqlPoolForTests(){poolPromise=null;}
 
 export type PersistedProviderSourceRequestRecord = ProviderSourceRequest & { createdAt: string };
 export type PersistedProviderSourceResponseRecord = ProviderSourceResponse & { createdAt: string };

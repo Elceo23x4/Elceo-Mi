@@ -31,9 +31,8 @@ export function __setDbPoolFactoryForTests(factory: (() => Promise<PoolLike> | P
 
 async function initializePool(): Promise<PoolLike> {
   if (testPoolFactory) return testPoolFactory();
-  const module = await import('pg');
-  const PoolCtor = module.Pool;
-  return new PoolCtor({ connectionString: runtimeEnv().DATABASE_URL }) as unknown as PoolLike;
+  const { getRuntimePool } = await import('@elceo/db-runtime');
+  return await getRuntimePool('system') as unknown as PoolLike;
 }
 
 export async function getDbPoolForTests(): Promise<PoolLike> { return getPool(); }
@@ -51,13 +50,18 @@ async function getPool(): Promise<PoolLike> {
 export async function closeDbPool(): Promise<void> {
   const current = poolPromise;
   poolPromise = null;
-  if (current) {
+  if (current && testPoolFactory) {
     const pool = await current;
     if (typeof pool.end === 'function') await pool.end();
   }
-  const tenant = tenantPoolPromise;
   tenantPoolPromise = null;
-  if (tenant) await (await tenant).end?.();
+
+  // Shared runtime pools are process-owned. Only an explicit acceptance-harness
+  // owner may drain them; package callers merely forget their cached facade.
+  if (!testPoolFactory && runtimeEnv().ELCEO_DB_RUNTIME_TEST_OWNER === '1') {
+    const { closeRuntimePools } = await import('@elceo/db-runtime');
+    await closeRuntimePools();
+  }
 }
 
 export async function queryDb<T extends QueryResultRow = QueryResultRow>(sql: string, params: unknown[] = []): Promise<T[]> {
@@ -104,7 +108,7 @@ export function withTenantDbTransaction<T>(subject: { readonly subjectKind: 'use
     const configured = runtimeEnv().TENANT_DATABASE_URL;
     if (!configured) throw new Error('tenant_database_url_required');
     if (!tenantPoolPromise) {
-      tenantPoolPromise = import('pg').then(({ Pool }) => new Pool({ connectionString: configured }) as unknown as PoolLike);
+      tenantPoolPromise = import('@elceo/db-runtime').then((module) => module.getRuntimePool('tenant') as Promise<unknown> as Promise<PoolLike>);
     }
     const client = await (await tenantPoolPromise).connect();
     try {

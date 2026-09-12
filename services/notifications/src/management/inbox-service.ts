@@ -10,6 +10,9 @@ export class NotificationInboxManagementService {
     const includeArchived = query.includeArchived ?? false;
 
     if (query.subjectKind && query.subjectId) {
+      if (this.inboxRepository.listInboxForSubject) {
+        return this.inboxRepository.listInboxForSubject({ ...query, subjectKind: query.subjectKind, subjectId: query.subjectId, includeArchived, limit: normalizedLimit });
+      }
       const targets = await this.targetRepository.listTargetsForSubject(query.subjectKind, query.subjectId);
       const targetIds = query.targetId ? targets.filter((target) => target.targetId === query.targetId).map((target) => target.targetId) : targets.map((target) => target.targetId);
       if (targetIds.length === 0) return [];

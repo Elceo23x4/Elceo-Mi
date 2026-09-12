@@ -11,6 +11,10 @@ const identity=process.env.SEC_G_ADAPTIVE_IDENTITY??`artifact-${token}`;
 const leaseMs=Number(process.env.SEC_G_ADAPTIVE_LEASE_MS??'300');
 const holdMs=Number(process.env.SEC_G_ADAPTIVE_HOLD_MS??'10000');
 const namespace=process.env.SEC_G_ADAPTIVE_NAMESPACE??'elceo:sec-g:adaptive:v1';
+if(process.env.SEC_G_ADAPTIVE_WAIT_FOR_RELEASE==='1'){
+ process.send?.({event:'ready',pid:process.pid,observedAt:Date.now()});
+ await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('adaptive_worker_release_timeout')),15000);process.once('message',message=>{if(message!=='acquire')return reject(new Error('adaptive_worker_invalid_release'));clearTimeout(timer);resolve();});});
+}
 const client=adaptive.createAdaptiveMaterializationRedisClient(redisUrl);
 const store=new adaptive.RedisAdaptiveOwnershipStore(client,namespace);
 const result=await store.acquireMaterialization(jobHash,scope,token,leaseMs);

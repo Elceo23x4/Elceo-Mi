@@ -97,6 +97,16 @@ assert(resources.samples.every(sample=>Number.isFinite(Number(sample.cpuPercent)
 assert(resources.samples.some(sample=>sample.phase==='load')&&resources.samples.some(sample=>sample.phase==='recovery'),'sec_g_resource_marker_phases_not_observed');
 assert(Number.isFinite(Number(resources.peak.systemPoolTotal))&&Number.isFinite(Number(resources.peak.tenantPoolTotal)),'sec_g_resource_pool_peaks_missing');
 
+const integrity=files['source-integrity.json'].json;
+assert.equal(integrity.exactGitSha,head,'sec_g_source_integrity_head_mismatch');
+const integrityPhases=new Map((integrity.phases??[]).map(phase=>[phase.phase,phase]));
+for(const phaseName of ['after-checkout','before-adaptive','before-verification']){
+ const phase=integrityPhases.get(phaseName);assert(phase,`sec_g_source_integrity_phase_missing:${phaseName}`);
+ assert.equal(phase.head,head,`sec_g_source_integrity_phase_head_mismatch:${phaseName}`);assert.equal(phase.expectedHead,head,`sec_g_source_integrity_phase_expected_head_mismatch:${phaseName}`);assert.equal(phase.status,'',`sec_g_source_integrity_phase_dirty:${phaseName}`);
+ assert.equal(phase.observations?.length,2,`sec_g_source_integrity_observations_missing:${phaseName}`);
+ for(const observation of phase.observations)assert.equal(observation.committedBlob,observation.executableBlob,`sec_g_source_integrity_blob_mismatch:${phaseName}:${observation.path}`);
+}
+
 const verification={
  exactGitSha:head,
  scenario:'sec-g-final-artifact-integrity',

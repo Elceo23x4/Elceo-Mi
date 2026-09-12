@@ -18,7 +18,7 @@ export function verifyAdaptiveTakeover(evidence, exactHead) {
   assert.equal(evidence?.observed?.ownerDeathObserved, true, invalid('owner-death-not-observed'));
   assert.equal(owner.killedSignal, 'SIGKILL', invalid('owner-kill-signal-not-captured'));
   assert(Number.isFinite(owner.acquiredAt) && Number.isFinite(owner.expiresAt) && owner.acquiredAt < owner.expiresAt, invalid('invalid-owner-lease-boundary'));
-  assert(Number.isFinite(early.observedAt) && early.observedAt < owner.expiresAt, invalid('early-contender-not-before-expiry'));
+  assert(Number.isFinite(early.releasedAt) && early.releasedAt < owner.expiresAt, invalid('early-contender-not-before-expiry'));
   assert.equal(early.acquired, false, invalid('early-contender-acquired'));
   assert.equal(early.reason, 'adaptive_scheduler_follower', invalid('early-contender-did-not-observe-owner'));
   assert.equal(early.exit?.code, 2, invalid('early-contender-exit-not-captured'));

@@ -52,6 +52,9 @@ jobs:
           mkdir -p artifacts/sec-g
           printf '{"exactGitSha":"%s","scenario":"exact-head-checkout","environment":"github-actions-test","checkedAt":"%s"}\n' "$SEC_G_HEAD_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > artifacts/sec-g/exact-head.json
 
+      - name: Record checked-out SEC-G executable provenance
+        run: node scripts/assert-sec-g-source-integrity.mjs after-checkout
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -101,7 +104,9 @@ jobs:
 
       - name: Adaptive independent-process kill and takeover
         if: ${{ always() }}
-        run: node scripts/test-sec-g-adaptive-takeover.mjs
+        run: |
+          node scripts/assert-sec-g-source-integrity.mjs before-adaptive-takeover
+          node scripts/test-sec-g-adaptive-takeover.mjs
 
       - name: Ingestion and notification meaningful-backlog process-death recovery
         if: ${{ always() }}
@@ -189,7 +194,9 @@ jobs:
 
       - name: Verify complete exact-head empirical artifact contract
         if: ${{ always() }}
-        run: node scripts/verify-sec-g-artifacts.mjs
+        run: |
+          node scripts/assert-sec-g-source-integrity.mjs before-artifact-verification
+          node scripts/verify-sec-g-artifacts.mjs
 
       - name: Upload complete SEC-G exact-head evidence
         if: ${{ always() }}

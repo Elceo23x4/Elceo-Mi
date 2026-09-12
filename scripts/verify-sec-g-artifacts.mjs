@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile, stat, writeFile } from 'node:fs/promises';
+import { verifyAdaptiveTakeover } from './lib/sec-g-adaptive-evidence.mjs';
 
 const dir='artifacts/sec-g';
 const head=process.env.SEC_G_HEAD_SHA??process.env.GITHUB_SHA??null;
@@ -24,6 +25,7 @@ const required=[
  'k6-summary.json',
  'k6-samples.json',
  'resource-samples.json',
+ 'source-integrity.json',
  'web-runtime.log'
 ];
 
@@ -42,6 +44,7 @@ for(const name of required){
   files[name].json=parsed;
  }
 }
+verifyAdaptiveTakeover(files['adaptive-takeover.json'].json,head);
 
 const correctness=files['correctness-summary.json'].json;
 assert.equal(correctness.accepted,true,'sec_g_correctness_not_accepted');

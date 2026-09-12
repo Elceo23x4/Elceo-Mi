@@ -1,0 +1,210 @@
+name: SEC-G Exact-Head Empirical
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  sec-g-exact-head-empirical:
+    name: SEC-G exact-head empirical acceptance
+    runs-on: ubuntu-latest
+    env:
+      SEC_G_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_sec_g
+      REDIS_URL: redis://127.0.0.1:6379
+      ELCEO_INTERNAL_API_TOKEN: sec-g-ci-only-internal-token
+      ELCEO_INBOUND_READ_POLICY_JSON: '{"policyId":"sec-g-empirical-dashboard-read","policyVersion":"1","status":"approved","provenance":"SEC-G empirical CI runtime policy","effectiveFrom":"2020-01-01T00:00:00.000Z","effectiveTo":null,"routeFamily":"dashboard-read","windowMs":1000,"requestAllowance":200,"concurrentAllowance":64,"leaseMs":5000,"stateTtlMs":10000,"canonicalPolicyHash":"sha256:69c3b9b8f062b991d0a7648cb0202cc5558f7de234de790d1661ffc5655c223c"}'
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: elceo
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: elceo_sec_g
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U elceo -d elceo_sec_g"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout exact published PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Prove exact-head checkout
+        run: |
+          test "$(git rev-parse HEAD)" = "$SEC_G_HEAD_SHA"
+          mkdir -p artifacts/sec-g
+          printf '{"exactGitSha":"%s","scenario":"exact-head-checkout","environment":"github-actions-test","checkedAt":"%s"}\n' "$SEC_G_HEAD_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > artifacts/sec-g/exact-head.json
+
+      - name: Record checked-out SEC-G executable provenance
+        run: node scripts/assert-sec-g-source-integrity.mjs after-checkout
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+          cache: npm
+
+      - name: Install deterministic dependencies
+        run: |
+          npm install --global npm@10.8.2
+          npm ci
+          node --version
+          npm --version
+          npm run check:runtime
+
+      - name: Install pinned k6
+        uses: grafana/setup-k6-action@v1
+        with:
+          k6-version: '2.2.0'
+
+      - name: SEC-G bounded correctness
+        if: ${{ always() }}
+        run: npm run test:sec-g
+
+      - name: SEC-G SIGTERM and hard-kill lifecycle
+        if: ${{ always() }}
+        run: npm run test:sec-g-lifecycle
+
+      - name: High-cardinality PostgreSQL seed, EXPLAIN, pool saturation, notification contention, and dashboard runtime preparation
+        if: ${{ always() }}
+        env:
+          SEC_G_DATASET_SCALE: '5000'
+          APP_ENV: test
+          ELCEO_DB_SSL_POLICY: local-plaintext
+        run: |
+          npm run check:migrations
+          npm run test:sec-g-postgres
+
+      - name: PostgreSQL ingestion, scheduler, ops fencing and notification inbox query-count evidence
+        if: ${{ always() }}
+        run: |
+          node scripts/test-sec-g-distributed-postgres.mjs
+          node scripts/test-sec-g-pagination-postgres.mjs
+
+      - name: Provider-specific notification reclaim and ambiguity evidence
+        if: ${{ always() }}
+        env:
+          SEC_G_ARTIFACTS: '1'
+        run: npm run -w services/notifications test
+
+      - name: Adaptive independent-process kill and takeover
+        if: ${{ always() }}
+        run: |
+          node scripts/assert-sec-g-source-integrity.mjs before-adaptive-takeover
+          node scripts/test-sec-g-adaptive-takeover.mjs
+
+      - name: Ingestion and notification meaningful-backlog process-death recovery
+        if: ${{ always() }}
+        run: node scripts/test-sec-g-backlog-recovery.mjs
+
+      - name: Provider independent-process single-flight with Redis stop and restart
+        if: ${{ always() }}
+        run: node scripts/test-sec-g-provider-multiprocess.mjs
+
+      - name: Re-establish validated canonical dashboard pointers after Redis recovery
+        if: ${{ always() }}
+        run: node scripts/seed-sec-g-dashboard-runtime.mjs
+
+      - name: Stamp point-in-time PostgreSQL artifacts with published head identity
+        if: ${{ always() }}
+        run: node scripts/stamp-sec-g-artifacts.mjs
+
+      - name: Build and start authenticated SEC-G runtime with repeated resource sampling
+        if: ${{ always() }}
+        env:
+          APP_ENV: test
+          AUTH_SECRET: sec-g-ci-only-auth-secret-at-least-32-bytes
+          NEXT_PUBLIC_APP_BASE_URL: http://127.0.0.1:3000
+          ELCEO_DB_SSL_POLICY: local-plaintext
+          SEC_G_RESOURCE_SAMPLE_PATH: ${{ github.workspace }}/artifacts/sec-g/resource-samples.json
+          SEC_G_RESOURCE_SAMPLE_INTERVAL_MS: '1000'
+          SEC_G_RESOURCE_RECOVERY_MARKER: ${{ github.workspace }}/artifacts/sec-g/resource-recovery.marker
+        run: |
+          npm run -w apps/web build
+          printf '{"exactGitSha":"%s","scenario":"authenticated-nextjs-web-runtime","environment":"github-actions-test","startedAt":"%s"}\n' "$SEC_G_HEAD_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > artifacts/sec-g/web-runtime.log
+          npm run -w apps/web start >> artifacts/sec-g/web-runtime.log 2>&1 &
+          echo $! > artifacts/sec-g/web-runtime.pid
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent http://127.0.0.1:3000/api/auth/session >/dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:3000/api/auth/session >/dev/null
+
+      - name: k6 authenticated smoke profile
+        if: ${{ always() }}
+        env:
+          SEC_G_PROFILE: smoke
+          SEC_G_BASE_URL: http://127.0.0.1:3000
+        run: |
+          k6 inspect load/sec-g.k6.js > artifacts/sec-g/k6-smoke-inspect.json
+          k6 run --summary-export artifacts/sec-g/k6-smoke-summary.json --out json=artifacts/sec-g/k6-smoke-samples.json load/sec-g.k6.js
+
+      - name: k6 authenticated CI profile
+        if: ${{ always() }}
+        env:
+          SEC_G_PROFILE: ci
+          SEC_G_BASE_URL: http://127.0.0.1:3000
+        run: |
+          k6 inspect load/sec-g.k6.js > artifacts/sec-g/k6-ci-inspect.json
+          k6 run --summary-export artifacts/sec-g/k6-ci-summary.json --out json=artifacts/sec-g/k6-ci-samples.json load/sec-g.k6.js
+
+      - name: k6 authenticated capacity-discovery ramp
+        if: ${{ always() }}
+        env:
+          SEC_G_PROFILE: capacity-discovery
+          SEC_G_BASE_URL: http://127.0.0.1:3000
+        run: |
+          k6 inspect load/sec-g.k6.js > artifacts/sec-g/k6-capacity-discovery-inspect.json
+          k6 run --summary-export artifacts/sec-g/k6-capacity-discovery-summary.json --out json=artifacts/sec-g/k6-capacity-discovery-samples.json load/sec-g.k6.js
+
+      - name: Summarize all k6 profiles
+        if: ${{ always() }}
+        run: node scripts/summarize-sec-g-k6.mjs
+
+      - name: Capture post-load recovery and gracefully stop runtime
+        if: ${{ always() }}
+        run: |
+          touch artifacts/sec-g/resource-recovery.marker
+          sleep 3
+          if test -f artifacts/sec-g/web-runtime.pid; then
+            pid="$(cat artifacts/sec-g/web-runtime.pid)"
+            kill -TERM "$pid" || true
+            for attempt in $(seq 1 30); do
+              if ! kill -0 "$pid" 2>/dev/null; then break; fi
+              sleep 1
+            done
+            ! kill -0 "$pid" 2>/dev/null
+          fi
+          sleep 1
+
+      - name: Verify complete exact-head empirical artifact contract
+        if: ${{ always() }}
+        run: |
+          node scripts/assert-sec-g-source-integrity.mjs before-artifact-verification
+          node scripts/verify-sec-g-artifacts.mjs
+
+      - name: Upload complete SEC-G exact-head evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sec-g-exact-head-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/sec-g
+          if-no-files-found: error

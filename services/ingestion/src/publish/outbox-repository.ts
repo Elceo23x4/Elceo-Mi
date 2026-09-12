@@ -48,6 +48,13 @@ export class MemoryOutboxRepository implements OutboxRepository {
     return due.slice(0, limit).map(cloneItem);
   }
 
+  async claimDueOutboxItems(limit: number, nowIso: string, claimExpiresAt: string, claimToken: string): Promise<PersistedOutboxItem[]> {
+    const due = (await this.listDueOutboxItems(limit, nowIso)).concat(
+      [...this.outboxById.values()].filter((item) => item.status === 'publishing' && !!item.claimExpiresAt && Date.parse(item.claimExpiresAt) <= Date.parse(nowIso))
+    ).sort((a,b) => Date.parse(a.createdAt)-Date.parse(b.createdAt) || a.outboxId.localeCompare(b.outboxId)).slice(0,limit);
+    return due.map((item) => { const claimed={...item,status:'publishing' as const,claimToken,claimGeneration:(item.claimGeneration ?? 0)+1,claimedAt:nowIso,claimExpiresAt,lastAttemptAt:nowIso,updatedAt:nowIso};this.outboxById.set(item.outboxId,claimed);return cloneItem(claimed); });
+  }
+
   async markOutboxPublishing(outboxId: string, attemptedAt: string): Promise<void> {
     const existing = this.outboxById.get(outboxId);
     if (!existing) return;
@@ -97,6 +104,11 @@ export class MemoryOutboxRepository implements OutboxRepository {
     });
   }
 
+  private current(item: PersistedOutboxItem): PersistedOutboxItem | null { const row=this.outboxById.get(item.outboxId);return row && row.claimToken===item.claimToken&&row.claimGeneration===item.claimGeneration?row:null; }
+  async markClaimPublished(item: PersistedOutboxItem, at: string): Promise<boolean> { if(!this.current(item))return false;await this.markOutboxPublished(item.outboxId,at);return true; }
+  async markClaimFailed(item: PersistedOutboxItem, at:string, code:string,message:string,next:string):Promise<boolean>{if(!this.current(item))return false;await this.markOutboxFailed(item.outboxId,at,code,message,next);return true;}
+  async markClaimDead(item: PersistedOutboxItem, at:string, code:string,message:string):Promise<boolean>{if(!this.current(item))return false;await this.markOutboxDead(item.outboxId,at,code,message);return true;}
+
   async saveAttempt(attempt: PersistedOutboxAttempt): Promise<void> {
     const rows = this.attemptsByOutbox.get(attempt.outboxId) ?? [];
     rows.push(cloneAttempt(attempt));
@@ -124,9 +136,8 @@ let poolPromise: Promise<PoolLike> | null = null;
 async function getPool(): Promise<PoolLike> {
   if (!poolPromise) {
     poolPromise = (async () => {
-      const pgModule = await import('pg');
-      const PoolCtor = pgModule.Pool;
-      return new PoolCtor({ connectionString: runtimeEnv().DATABASE_URL }) as unknown as PoolLike;
+      const { getRuntimePool } = await import('@elceo/db-runtime');
+      return await getRuntimePool('system') as unknown as PoolLike;
     })();
   }
   return poolPromise;
@@ -161,6 +172,10 @@ type OutboxRow = {
   available_at: string;
   created_at: string;
   updated_at: string;
+  claim_token: string | null;
+  claim_generation: string | number;
+  claimed_at: string | null;
+  claim_expires_at: string | null;
 };
 
 type OutboxAttemptRow = {
@@ -197,6 +212,7 @@ function mapOutboxRow(row: OutboxRow): PersistedOutboxItem {
     availableAt: row.available_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at
+    ,claimToken: row.claim_token, claimGeneration: Number(row.claim_generation ?? 0), claimedAt: row.claimed_at, claimExpiresAt: row.claim_expires_at
   };
 }
 
@@ -307,6 +323,16 @@ export class SqlOutboxRepository implements OutboxRepository {
     return rows.map(mapOutboxRow);
   }
 
+  async claimDueOutboxItems(limit: number, nowIso: string, claimExpiresAt: string, claimToken: string): Promise<PersistedOutboxItem[]> {
+    const rows=await queryDb<OutboxRow>(`WITH candidates AS (
+      SELECT outbox_id FROM app_ingestion_outbox
+      WHERE ((status IN ('pending','failed') AND available_at <= $1) OR (status='publishing' AND claim_expires_at <= $1))
+      ORDER BY available_at ASC, created_at ASC, outbox_id ASC FOR UPDATE SKIP LOCKED LIMIT $2
+    ) UPDATE app_ingestion_outbox o SET status='publishing',claim_token=$3,claim_generation=o.claim_generation+1,claimed_at=$1,claim_expires_at=$4,last_attempt_at=$1,updated_at=$1
+      FROM candidates c WHERE o.outbox_id=c.outbox_id RETURNING o.*,o.payload_json::text AS payload_json`,[nowIso,Math.max(1,Math.min(500,limit)),claimToken,claimExpiresAt]);
+    return rows.map(mapOutboxRow);
+  }
+
   async markOutboxPublishing(outboxId: string, attemptedAt: string): Promise<void> {
     await queryDb(
       `UPDATE app_ingestion_outbox
@@ -354,6 +380,11 @@ export class SqlOutboxRepository implements OutboxRepository {
       [outboxId, attemptedAt, errorCode, errorMessage]
     );
   }
+
+  private async fenced(item:PersistedOutboxItem,setSql:string,params:unknown[]):Promise<boolean>{const rows=await queryDb(`UPDATE app_ingestion_outbox SET ${setSql},claim_token=NULL,claimed_at=NULL,claim_expires_at=NULL WHERE outbox_id=$1 AND claim_token=$2 AND claim_generation=$3 RETURNING outbox_id`,[item.outboxId,item.claimToken,item.claimGeneration,...params]);return rows.length===1;}
+  markClaimPublished(item:PersistedOutboxItem,at:string){return this.fenced(item,`status='published',published_at=$4,updated_at=$4,last_error_code=NULL,last_error_message=NULL`,[at]);}
+  markClaimFailed(item:PersistedOutboxItem,at:string,code:string,message:string,next:string){return this.fenced(item,`status='failed',attempt_count=attempt_count+1,last_attempt_at=$4,last_error_code=$5,last_error_message=$6,available_at=$7,updated_at=$4`,[at,code,message,next]);}
+  markClaimDead(item:PersistedOutboxItem,at:string,code:string,message:string){return this.fenced(item,`status='dead',attempt_count=attempt_count+1,last_attempt_at=$4,last_error_code=$5,last_error_message=$6,updated_at=$4`,[at,code,message]);}
 
   async saveAttempt(attempt: PersistedOutboxAttempt): Promise<void> {
     await queryDb(

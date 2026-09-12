@@ -351,7 +351,7 @@ export type SnapshotFreshnessRepository = {
 
 
 export type PersistedOpsJobLeaseRecord = {
-  leaseId: string; jobKind: OpsJobKind; scopeKind: OpsJobScope; scopeKey: string; leaseState: OpsLeaseState; acquiredAt: string; expiresAt: string; releasedAt: string | null; holderId: string; createdAt: string;
+  leaseId: string; jobKind: OpsJobKind; scopeKind: OpsJobScope; scopeKey: string; leaseState: OpsLeaseState; acquiredAt: string; expiresAt: string; releasedAt: string | null; holderId: string; createdAt: string; ownerToken?: string | undefined; generation?: number | undefined;
 };
 export type PersistedOpsJobRunRecord = {
   runId: string; jobKind: OpsJobKind; triggerKind: OpsJobTriggerKind; scopeKind: OpsJobScope; scopeKey: string; startedAt: string; endedAt: string; durationMs: number; status: OpsJobRunStatus; warningsJson: string; failureReason: string | null; childReportIdsJson: string; metricsJson: string; reportJson: string; createdAt: string;
@@ -359,7 +359,9 @@ export type PersistedOpsJobRunRecord = {
 export type OpsJobRunListQuery = { jobKind?: OpsJobKind; scopeKind?: OpsJobScope; scopeKey?: string; status?: OpsJobRunStatus; limit?: number; };
 export type OpsJobLeaseRepository = {
   acquireLease(params: PersistedOpsJobLeaseRecord): Promise<{ acquired: true; lease: PersistedOpsJobLeaseRecord } | { acquired: false; existingLease: PersistedOpsJobLeaseRecord }>;
-  releaseLease(leaseId: string, releasedAt: string): Promise<void>;
+  releaseLease(lease: PersistedOpsJobLeaseRecord, releasedAt: string): Promise<boolean>;
+  renewLease(lease: PersistedOpsJobLeaseRecord, expiresAt: string): Promise<boolean>;
+  isCurrentOwner(lease: PersistedOpsJobLeaseRecord, asOfIso: string): Promise<boolean>;
   getLeaseByJobScope(jobKind: OpsJobKind, scopeKind: OpsJobScope, scopeKey: string): Promise<PersistedOpsJobLeaseRecord | null>;
   cleanupExpiredLeases(asOfIso: string): Promise<number>;
   listStaleLeases(asOfIso: string): Promise<PersistedOpsJobLeaseRecord[]>;

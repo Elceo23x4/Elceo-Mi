@@ -59,7 +59,7 @@ export async function runSchedulerLeaseRepositoryTests(): Promise<void> {
   assert(reacquired.acquired, 're-acquisition should succeed after lease expiry');
   assert(reacquired.lease?.leaseHolder === 'tick-c', 'stale claim recovery should install the restarting worker holder');
 
-  await repo.releaseLease('scheduled|XAU/USD|H1|hourly|2026-04-22T10:00:00.000Z|canonical', '2026-04-22T10:50:00.000Z');
+  await repo.releaseLease(reacquired.lease!, '2026-04-22T10:50:00.000Z');
   const released = await repo.getLeaseByRequestKey('scheduled|XAU/USD|H1|hourly|2026-04-22T10:00:00.000Z|canonical');
   assert(released?.status === 'released', 'release should update lease status to released');
 }

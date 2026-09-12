@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import { verifyAdaptiveTakeover } from './lib/sec-g-adaptive-evidence.mjs';
+import { assertSafe } from './sanitize-sec-g-k6-artifacts.mjs';
 
 const dir='artifacts/sec-g';
 const head=process.env.SEC_G_HEAD_SHA??process.env.GITHUB_SHA??null;
@@ -38,6 +39,7 @@ for(const name of required){
  const info=await stat(path);
  assert(info.isFile()&&info.size>0,`sec_g_required_artifact_empty:${name}`);
  const text=await readFile(path,'utf8');
+ assertSafe(text,name);
  assert(text.includes(head),`sec_g_artifact_missing_exact_head:${name}`);
  files[name]={bytes:info.size};
  if(name.endsWith('.json')){

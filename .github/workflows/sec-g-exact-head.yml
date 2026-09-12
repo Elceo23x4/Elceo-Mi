@@ -156,6 +156,7 @@ jobs:
         run: |
           k6 inspect load/sec-g.k6.js > artifacts/sec-g/k6-smoke-inspect.json
           k6 run --summary-export artifacts/sec-g/k6-smoke-summary.json --out json=artifacts/sec-g/k6-smoke-samples.json load/sec-g.k6.js
+          node scripts/sanitize-sec-g-k6-artifacts.mjs artifacts/sec-g/k6-smoke-summary.json
 
       - name: k6 authenticated CI profile
         if: ${{ always() }}
@@ -165,6 +166,7 @@ jobs:
         run: |
           k6 inspect load/sec-g.k6.js > artifacts/sec-g/k6-ci-inspect.json
           k6 run --summary-export artifacts/sec-g/k6-ci-summary.json --out json=artifacts/sec-g/k6-ci-samples.json load/sec-g.k6.js
+          node scripts/sanitize-sec-g-k6-artifacts.mjs artifacts/sec-g/k6-ci-summary.json
 
       - name: k6 authenticated capacity-discovery ramp
         if: ${{ always() }}
@@ -174,6 +176,7 @@ jobs:
         run: |
           k6 inspect load/sec-g.k6.js > artifacts/sec-g/k6-capacity-discovery-inspect.json
           k6 run --summary-export artifacts/sec-g/k6-capacity-discovery-summary.json --out json=artifacts/sec-g/k6-capacity-discovery-samples.json load/sec-g.k6.js
+          node scripts/sanitize-sec-g-k6-artifacts.mjs artifacts/sec-g/k6-capacity-discovery-summary.json
 
       - name: Summarize all k6 profiles
         if: ${{ always() }}

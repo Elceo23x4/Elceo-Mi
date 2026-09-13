@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "repository": "Elceo23x4/Elceo-Mi",
+  "targetBranch": "main",
+  "rulesetName": "ELCEO main release protection",
+  "ruleset": {
+    "enforcement": "active",
+    "target": "branch",
+    "includeRefs": ["~DEFAULT_BRANCH"],
+    "requireDeletionProtection": true,
+    "requireNonFastForwardProtection": true,
+    "allowedMergeMethods": ["merge"],
+    "requiredApprovingReviewCount": 0,
+    "requireReviewThreadResolution": true,
+    "strictRequiredStatusChecks": true,
+    "requiredStatusChecks": [
+      "validate",
+      "PostgreSQL R2 backup image",
+      "PostgreSQL R2 restore rehearsal image"
+    ],
+    "allowBypassActors": false
+  },
+  "runtime": {
+    "node": "24.x",
+    "npm": "10.8.2",
+    "packageManager": "npm@10.8.2"
+  },
+  "workflow": {
+    "requiredPermissions": {
+      "contents": "read"
+    },
+    "requiredValidationCommands": [
+      "npm run check:migrations",
+      "npm run security:gate",
+      "npm run release:gate"
+    ]
+  },
+  "criticalFiles": [
+    ".github/sec-h-release-governance.json",
+    ".github/workflows/ci.yml",
+    ".github/workflows/sec-g-exact-head.yml",
+    ".github/workflows/sec-h-exact-head.yml",
+    "package.json",
+    "package-lock.json",
+    "scripts/release-gate.mjs",
+    "scripts/run-sec-h.mjs",
+    "scripts/sec-h-release-governance.mjs",
+    "scripts/verify-sec-h-release-manifest.mjs",
+    "scripts/lib/sec-h-release-governance.mjs",
+    "scripts/migration-utils.mjs",
+    "test/sec-h-release-governance.test.mjs",
+    "docs/deployment-runbook.md",
+    "docs/release/sec-h-repository-release-governance.md"
+  ],
+  "migrationPolicy": {
+    "directory": "infra/db/schema",
+    "ordering": "full-filename-lexicographic",
+    "decisionDirectory": "docs/release/migration-risk-decisions",
+    "decisionRequiredForClassifications": ["destructive", "unknown"]
+  },
+  "deploymentStatusPolicy": {
+    "repositoryRequiredChecksAreAuthoritativeForMerge": true,
+    "externalDeploymentStatusesAreSeparateFromBackendMergeGate": true
+  }
+}

@@ -1,0 +1,60 @@
+name: SEC-H Exact-Head Release Governance
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  sec-h-exact-head:
+    name: SEC-H exact-head release governance
+    runs-on: ubuntu-latest
+    env:
+      SEC_H_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      SEC_H_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      SEC_H_REQUIRE_LIVE_GOVERNANCE: '1'
+      SEC_H_GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout exact published PR head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Prove exact-head checkout
+        run: test "$(git rev-parse HEAD)" = "$SEC_H_HEAD_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.19.0'
+          cache: npm
+
+      - name: Activate npm 10.8.2 and install deterministic dependencies
+        run: |
+          npm install --global npm@10.8.2
+          npm ci
+          node --version
+          npm --version
+
+      - name: Execute SEC-H governance and exact-head manifest verification
+        env:
+          SEC_H_ARTIFACT_DIR: ${{ runner.temp }}/sec-h
+        run: node scripts/run-sec-h.mjs
+
+      - name: Verify source tree remained clean
+        if: ${{ always() }}
+        run: |
+          git diff --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+
+      - name: Upload exact-head SEC-H evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: sec-h-exact-head-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/sec-h
+          if-no-files-found: error

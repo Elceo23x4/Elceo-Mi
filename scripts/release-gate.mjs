@@ -15,6 +15,7 @@ const steps = [
   { label: 'npm run check:dependency-compatibility', command: 'npm', args: ['run', 'check:dependency-compatibility'] },
   { label: 'npm run check:sharp-exception-upstream', command: 'npm', args: ['run', 'check:sharp-exception-upstream'] },
   { label: 'npm run audit:image-ingress', command: 'npm', args: ['run', 'audit:image-ingress'] },
+  { label: 'SEC-H repository/release governance', command: 'node', args: ['scripts/run-sec-h.mjs'] },
   { label: 'npm run typecheck', command: 'npm', args: ['run', 'typecheck'] },
   { label: 'npm run test', command: 'npm', args: ['run', 'test'] },
   { label: 'npm run build', command: 'npm', args: ['run', 'build'] },

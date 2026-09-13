@@ -15,7 +15,7 @@ export class FredOfficialAdapter implements MarketEvidenceProviderAdapter{
  fetchManaged(request:ProviderSourceRequest,execution:ProviderManagedExecution){return this.fetchInternal(request,execution);}
  private async fetchInternal(request:ProviderSourceRequest,execution?:ProviderManagedExecution):Promise<ProviderSourceResponse>{
   if(!ALLOWED_CAPABILITIES.has(request.capability))return fail(request,'unsupported_capability');
-  const params=parseParams(request.paramsJson);if(!params.ok)return fail(request,params.code);
+  const params=parseParams(request.paramsJson);if('code' in params)return fail(request,params.code);
   const mode=this.config.mode??'live_disabled';
   if(mode==='fixture')return success(request,JSON.stringify(FRED_FIXTURE),`${ORIGIN}/fred/series/observations`);
   if(mode!=='live_enabled')return fail(request,'fred_live_disabled');

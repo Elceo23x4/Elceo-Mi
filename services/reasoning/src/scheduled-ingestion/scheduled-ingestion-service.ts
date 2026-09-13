@@ -1,6 +1,9 @@
 import type { ProviderSourceRequest, ScheduledIngestionJobPolicy, ScheduledIngestionRunMode, ScheduledIngestionRunRecord, ScheduledIngestionRunReport, ScheduledIngestionStalenessReport } from '@elceo/types';
 import { CftcCotAdapter } from '../provider-sources/cot/cot-adapter';
 import { TiingoMarketDataAdapter } from '../provider-sources/tiingo/tiingo-adapter';
+import { FredOfficialAdapter } from '../provider-sources/official/fred-adapter';
+import { EcbOfficialAdapter } from '../provider-sources/official/ecb-adapter';
+import { UsTreasuryOfficialAdapter } from '../provider-sources/official/us-treasury-adapter';
 import { IngestionPersistenceService, type IngestionPersistenceReport } from '../provider-sources/ingestion-persistence-service';
 import type { ScheduledIngestionRunRepository } from '../persistence/scheduled-ingestion-repository';
 import { computeBoundedProviderRetryAt, deriveRetryStatus, isRetryableProviderFailure } from './retry-policy';
@@ -11,6 +14,15 @@ import type { TrustedProviderExecutionResolver } from '../provider-sources/provi
 
 export type ScheduledIngestionGatePolicyResolver = (policy: ScheduledIngestionJobPolicy, runMode: ScheduledIngestionRunMode, requestedAt: string) => ProviderApiGatePolicy | undefined;
 export type ScheduledIngestionExecutionOptions={gatePolicyResolver?:ScheduledIngestionGatePolicyResolver;liveExecutionResolver?:TrustedProviderExecutionResolver;retryJitter?:()=>number;now?:()=>string;gateExecutor?:typeof executeProviderApiGateRequest};
+
+function trustedScheduledProviderParams(policy:ScheduledIngestionJobPolicy):Record<string,unknown>{
+ if(policy.providerId==='fred'&&policy.capability==='real_yield_series')return{seriesId:'DFII10'};
+ if(policy.providerId==='fred'&&policy.capability==='financial_conditions_index')return{seriesId:'NFCI'};
+ if(policy.providerId==='ecb_public'&&policy.capability==='policy_rate_series')return{series:'deposit_facility'};
+ if(policy.providerId==='us_treasury'&&policy.capability==='nominal_yield_series')return{dataset:'daily_treasury_yield_curve'};
+ if(policy.providerId==='us_treasury'&&policy.capability==='real_yield_series')return{dataset:'daily_treasury_real_yield_curve'};
+ return{mode:'fixture',scheduled:true};
+}
 
 export class ScheduledIngestionService {
   private readonly gatePolicyResolver:ScheduledIngestionGatePolicyResolver|undefined;private readonly liveExecutionResolver:TrustedProviderExecutionResolver|undefined;private readonly retryJitter:()=>number;private readonly now:()=>string;private readonly gateExecutor:typeof executeProviderApiGateRequest;
@@ -107,6 +119,12 @@ export class ScheduledIngestionService {
       report = await this.ingestion.persistAdapterFetchAndNormalize(new TiingoMarketDataAdapter({ mode: 'fixture' }), request);
     } else if (policy.providerId === 'cftc_cot') {
       report = await this.ingestion.persistAdapterFetchAndNormalize(new CftcCotAdapter(), request);
+    } else if (policy.providerId === 'fred' && (policy.capability === 'real_yield_series' || policy.capability === 'financial_conditions_index')) {
+      report = await this.ingestion.persistAdapterFetchAndNormalize(new FredOfficialAdapter({ mode: 'fixture' }), request);
+    } else if (policy.providerId === 'ecb_public' && policy.capability === 'policy_rate_series') {
+      report = await this.ingestion.persistAdapterFetchAndNormalize(new EcbOfficialAdapter({ mode: 'fixture' }), request);
+    } else if (policy.providerId === 'us_treasury' && (policy.capability === 'nominal_yield_series' || policy.capability === 'real_yield_series')) {
+      report = await this.ingestion.persistAdapterFetchAndNormalize(new UsTreasuryOfficialAdapter({ mode: 'fixture' }), request);
     }
 
     if (!report) {
@@ -141,7 +159,7 @@ export class ScheduledIngestionService {
   }
 
   private buildRequest(policy: ScheduledIngestionJobPolicy, requestedAt: string, evidenceTypeId: string): ProviderSourceRequest {
-    return { requestId: `${policy.jobId}-${requestedAt}`, providerId: policy.providerId, capability: policy.capability, asset: policy.asset, region: policy.region, evidenceTypeId, requestedAt, paramsJson: JSON.stringify({ mode: 'fixture', scheduled: true }) };
+    return { requestId: `${policy.jobId}-${requestedAt}`, providerId: policy.providerId, capability: policy.capability, asset: policy.asset, region: policy.region, evidenceTypeId, requestedAt, paramsJson: JSON.stringify(trustedScheduledProviderParams(policy)) };
   }
 
   private buildSimpleRun(runId: string, jobId: string, runMode: ScheduledIngestionRunMode, startedAt: string, status: ScheduledIngestionRunRecord['status'], reason: string, policy?: ScheduledIngestionJobPolicy, gate?: ProviderRuntimeResolverDecision): ScheduledIngestionRunRecord {
@@ -180,7 +198,7 @@ export class ScheduledIngestionService {
     const effectiveRunMode:ScheduledIngestionRunMode=activationMode==='staging_live_allowed'?'staging_live':activationMode==='production_live_allowed'?'production_live':'dry_run_fixture';
     const gatePolicy = this.gatePolicyResolver?.(policy, effectiveRunMode, requestedAt);
     const replayPayload: ProviderRuntimeResponse | undefined = original ? { requestId: runId ?? `${policy.jobId}-${requestedAt}`, responseId: original.originalSourceRef ?? original.requestId ?? original.runId, sourceId: original.providerId, capabilityId: original.capability, adapterId: `${original.providerId}_${original.capability}_adapter`, receivedAt: original.completedAt ?? requestedAt, payload: { replayOfRunId: original.runId, persistedPayloadIds: original.persistedPayloadIds }, payloadSchemaStatus: 'valid', payloadSizeBytes: JSON.stringify(original.persistedPayloadIds).length, recordCount: original.payloadCount, provenance: { requestId: original.requestId ?? original.runId, sourceId: original.providerId }, error: null, rateLimit: null } : undefined;
-    const request: ProviderRuntimeRequest = { requestId: runId ?? `${policy.jobId}-${requestedAt}`, sourceId: policy.providerId, capabilityId: gatePolicy?.requestCapabilityOverride ?? policy.capability, asset: policy.asset, region: policy.region, activationMode, provenance: { actor: 'scheduled_ingestion_service', purpose: 'scheduled_provider_orchestration' } };
+    const request: ProviderRuntimeRequest = { requestId: runId ?? `${policy.jobId}-${requestedAt}`, sourceId: policy.providerId, capabilityId: gatePolicy?.requestCapabilityOverride ?? policy.capability, asset: policy.asset, region: policy.region, activationMode, providerRequestParams:trustedScheduledProviderParams(policy), provenance: { actor: 'scheduled_ingestion_service', purpose: 'scheduled_provider_orchestration' } };
     if (activationMode === 'replay') request.idempotencyKey = `replay:${original?.runId ?? runId}`;
     if (gatePolicy) request.policy = gatePolicy;
     if (gatePolicy?.requestMetadata) request.metadata = gatePolicy.requestMetadata;

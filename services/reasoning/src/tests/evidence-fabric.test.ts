@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { MARKET_REASONING_DIAGNOSTIC_ASSETS, TRADING_ASSET_COVERAGE, type AssetEvidenceBlueprint } from '@elceo/types';
-import { ASSET_EVIDENCE_BLUEPRINTS, EVIDENCE_EXECUTION_REGISTRATIONS, EvidenceSufficiencyEvaluator, PostgresMacroVintageRepository, PROVIDER_IDENTITY_ALIASES, assertEvidenceFabric, canonicalSourceId, evidenceImplementationState } from '../evidence-fabric/index';
+import { ASSET_EVIDENCE_BLUEPRINTS, EVIDENCE_EXECUTION_REGISTRATIONS, EvidenceSufficiencyEvaluator, PostgresMacroVintageRepository, PROVIDER_IDENTITY_ALIASES, assertEvidenceFabric, canonicalSourceId, evidenceImplementationState, resolveEvidenceGateExecution } from '../evidence-fabric/index';
+import { ECB_CSV_FIXTURE, parseEcbCsv } from '../provider-sources/official/ecb-adapter';
+import { TREASURY_XML_FIXTURE, parseTreasuryXml } from '../provider-sources/official/us-treasury-adapter';
 
 const FX_TWO_LEG_CONTRACT = [
  { asset:'eur_usd', base:['ecb_policy','euro_german_macro'], quote:['fed_policy','us_macro'] },
@@ -32,7 +34,13 @@ export async function runEvidenceFabricTests():Promise<void> {
  const evaluator=new EvidenceSufficiencyEvaluator(); const eur=structuredClone(ASSET_EVIDENCE_BLUEPRINTS.find(x=>x.asset==='eur_usd')) as AssetEvidenceBlueprint; eur.requirements.find(x=>x.capabilityId==='ecb_policy')!.routes=[]; assert.equal(evaluator.evaluate(eur).state,'degraded');
  const priceOnly={asset:'eur_usd',requirements:[structuredClone(ASSET_EVIDENCE_BLUEPRINTS[1]!.requirements[0]!)]} as AssetEvidenceBlueprint; assert.match(evaluator.evaluate(priceOnly).reasons.join(','),/price_only/);
  for(const id of ['imf_official','world_bank_official','oecd_official'] as const)assert.equal(evidenceImplementationState(id),'source_contract_ready','legacy zero adapters cannot confer executable state');
- assert.deepEqual(EVIDENCE_EXECUTION_REGISTRATIONS.map(x=>x.sourceId),['tiingo_market_data']);
+ assert.deepEqual(EVIDENCE_EXECUTION_REGISTRATIONS.map(x=>`${x.sourceId}:${x.capabilityId}`),['tiingo_market_data:direct_price','fred_macro:real_yields','fred_macro:financial_conditions','ecb_official:ecb_policy']);
+ assert.equal(evidenceImplementationState('fred_macro','real_yields'),'executable_adapter');assert.equal(evidenceImplementationState('ecb_official','ecb_policy'),'executable_adapter');assert.equal(evidenceImplementationState('us_treasury_official'),'source_contract_ready','Treasury parser exists but must not become executable before a semantically correct gate capability is registered');
+ const fredPlan=resolveEvidenceGateExecution('fred_macro','real_yields');assert.equal(fredPlan?.gateSourceId,'fred');assert.equal(fredPlan?.providerCapabilityId,'real_yield_series');assert.deepEqual(fredPlan?.requestParams,{seriesId:'DFII10'});
+ const ecbPlan=resolveEvidenceGateExecution('ecb_official','ecb_policy');assert.equal(ecbPlan?.gateSourceId,'ecb_public');assert.equal(ecbPlan?.providerCapabilityId,'policy_rate_series');assert.deepEqual(ecbPlan?.requestParams,{series:'deposit_facility'});
+ assert.equal(resolveEvidenceGateExecution('us_treasury_official','treasury_yields'),null,'unregistered Treasury route must fail closed');
+ assert.equal(parseEcbCsv(ECB_CSV_FIXTURE)[0]?.OBS_VALUE,'2.25');assert.equal(parseTreasuryXml(TREASURY_XML_FIXTURE)[0]?.BC_10YEAR,'4.21');
+ const eurReadiness=evaluator.evaluate(ASSET_EVIDENCE_BLUEPRINTS.find(x=>x.asset==='eur_usd')!);assert.equal(eurReadiness.empiricalReady,false);assert.ok(eurReadiness.empiricalReasons.some(x=>x.includes('not_staging_verified')));
  const dxy=ASSET_EVIDENCE_BLUEPRINTS.find(x=>x.asset==='dxy')!;const vix=ASSET_EVIDENCE_BLUEPRINTS.find(x=>x.asset==='vix')!;assert.equal(dxy.requirements.find(x=>x.directPriceRequired)?.routes[0]?.sourceId,'ice_data_indices');assert.equal(vix.requirements.find(x=>x.directPriceRequired)?.routes[0]?.sourceId,'cboe_official');assert.equal(evaluator.evaluate(dxy).state,'degraded');assert.equal(evaluator.evaluate(vix).state,'degraded');
  const calls:{sql:string;params?:unknown[]}[]=[];const repo=new PostgresMacroVintageRepository({query:async(sql,params)=>{calls.push(params===undefined?{sql}:{sql,params});return{rows:sql.startsWith('INSERT')?[{observation_identity:'cpi'}]:[]};}});const inserted=await repo.append({observationIdentity:'cpi',correlationKey:'US:CPI:2026-01',countryOrArea:'US',indicatorId:'CPI',referencePeriod:'2026-01',scheduledReleaseAt:null,sourceReleaseAt:null,firstSeenAt:'2026-02-01T00:00:00Z',retrievedAt:'2026-02-01T00:00:01Z',effectiveAt:'2026-02-01T00:00:00Z',vintageId:'initial',previousPublishedValue:null,value:100,revisionState:'preliminary',sourceUrl:'https://api.bls.gov',sourceId:'bls_official',retrievalRequestId:'request-1'});assert.equal(inserted,'inserted');assert.match(calls[0]?.sql??'',/ON CONFLICT DO NOTHING/);
 }

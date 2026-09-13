@@ -9,7 +9,7 @@ import { computeBoundedProviderRetryAt, computeNextRetryAt, deserializeScheduled
 
 export async function runScheduledIngestionTests(){
   const policies=getDefaultScheduledIngestionPolicies();
-  assert.ok(policies.length>=16);
+  assert.ok(policies.length>=20);
   const coverage=getScheduledLaunchAssetCoverage();assert.equal(Object.keys(coverage).length,14);assert.ok(Object.values(coverage).every(jobIds=>jobIds.length>0));
   assert.ok(policies.every((x)=>x.rationale.trim().length>0));
   assert.ok(policies.every((x)=>x.enabled===true && x.runMode==='dry_run_fixture'));
@@ -30,6 +30,19 @@ export async function runScheduledIngestionTests(){
   const tiJob='sched-tiingo_market_data-market_price_history-eur_usd'; const cotJob='sched-cftc_cot-cot_report-eur_usd';
   const ti=await svc.runScheduledIngestionDryRun(tiJob,'2026-01-01T00:00:00.000Z'); assert.ok(ti.run.payloadCount>0); assert.ok(ti.run.requestId);
   const cot=await svc.runScheduledIngestionDryRun(cotJob,'2026-01-02T00:00:00.000Z'); assert.ok(cot.run.payloadCount>0);
+  const officialJobs=[
+    ['sched-us_treasury-nominal_yield_series','interest_rates'],
+    ['sched-us_treasury-real_yield_series','real_yields'],
+    ['sched-fred-real_yield_series','real_yields'],
+    ['sched-fred-financial_conditions_index','financial_conditions'],
+    ['sched-ecb_public-policy_rate_series','central_bank_policy']
+  ] as const;
+  for(const [jobId,evidenceClass] of officialJobs){
+    const result=await svc.runScheduledIngestionDryRun(jobId,'2026-01-02T12:00:00.000Z');
+    assert.equal(result.run.status,'succeeded',`${jobId}:fixture_schedule_must_execute`);assert.ok(result.run.payloadCount>0,`${jobId}:fixture_payload_missing`);
+    const payloads=await payRepo.listPayloadsByEvidenceClass(evidenceClass);assert.ok(payloads.some(payload=>payload.providerId===result.run.providerId),`${jobId}:normalized_persistence_missing`);
+  }
+  const nominalRequest=await reqRepo.listRequestsByProvider('us_treasury');assert.ok(nominalRequest.some(request=>request.capability==='nominal_yield_series'&&request.paramsJson.includes('daily_treasury_yield_curve')));assert.ok(nominalRequest.some(request=>request.capability==='real_yield_series'&&request.paramsJson.includes('daily_treasury_real_yield_curve')));
   const blocked=await svc.runScheduledIngestionJob(tiJob,'production_live','2026-01-03T00:00:00.000Z'); assert.equal(blocked.run.status,'blocked');
   const unknown=await svc.runScheduledIngestionDryRun('missing','2026-01-04T00:00:00.000Z'); assert.equal(unknown.run.status,'skipped');
   assert.ok(validateScheduledIngestionRunRecord(ti.run).ok); assert.equal(validateScheduledIngestionRunRecord({runId:'x'}).ok,false);
@@ -54,7 +67,6 @@ export async function runScheduledIngestionTests(){
   assert.equal(replayLiveModeBlocked.run.operatorNote,'replay_blocked:unsupported_replay_mode');
   const replayAgain=await svc.replayScheduledIngestionRun(ti.run.runId,'dry_run_fixture','2026-01-06T00:00:00.000Z');
   assert.equal(replayAgain.run.runId,replayExec.run.runId);
-
 
   let blockedCalls=0;
   const blockingIngestion = { persistAdapterFetchAndNormalize: async () => { blockedCalls += 1; throw new Error('adapter_should_not_execute_without_gate'); } } as unknown as IngestionPersistenceService;
@@ -83,7 +95,6 @@ export async function runScheduledIngestionTests(){
   assert.equal((await liveBlockedSvc.runScheduledIngestionJob(tiJob,'production_live','2026-02-02T00:00:00.000Z')).run.errorCode,'production_live_not_approved');
   assert.equal((await liveBlockedSvc.runScheduledIngestionJob(tiJob,'staging_live','2026-02-03T00:00:00.000Z')).run.errorCode,'staging_live_requires_explicit_allow');
   assert.equal(blockedCalls, 0);
-
 
   const boundary = new CanonicalMarketIntelligenceBoundaryService({} as never, {} as never, reqRepo, resRepo, payRepo, runRepo);
   const bRun=await boundary.runScheduledIngestionDryRun(tiJob,'2026-01-05T00:00:00.000Z'); assert.equal(bRun.run.providerId,'tiingo_market_data');

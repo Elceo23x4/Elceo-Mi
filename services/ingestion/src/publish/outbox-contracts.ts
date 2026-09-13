@@ -29,6 +29,10 @@ export type PersistedOutboxItem = {
   availableAt: string;
   createdAt: string;
   updatedAt: string;
+  claimToken?: string | null;
+  claimGeneration?: number;
+  claimedAt?: string | null;
+  claimExpiresAt?: string | null;
 };
 
 export type PersistedOutboxAttempt = {
@@ -46,10 +50,14 @@ export type OutboxRepository = {
   getOutboxById(outboxId: string): Promise<PersistedOutboxItem | null>;
   getOutboxByDedupeKey(dedupeKey: string): Promise<PersistedOutboxItem | null>;
   listDueOutboxItems(limit: number, nowIso: string): Promise<PersistedOutboxItem[]>;
+  claimDueOutboxItems(limit: number, nowIso: string, claimExpiresAt: string, claimToken: string): Promise<PersistedOutboxItem[]>;
   markOutboxPublishing(outboxId: string, attemptedAt: string): Promise<void>;
   markOutboxPublished(outboxId: string, publishedAt: string): Promise<void>;
   markOutboxFailed(outboxId: string, attemptedAt: string, errorCode: string, errorMessage: string, nextAvailableAt: string): Promise<void>;
   markOutboxDead(outboxId: string, attemptedAt: string, errorCode: string, errorMessage: string): Promise<void>;
+  markClaimPublished(item: PersistedOutboxItem, publishedAt: string): Promise<boolean>;
+  markClaimFailed(item: PersistedOutboxItem, attemptedAt: string, errorCode: string, errorMessage: string, nextAvailableAt: string): Promise<boolean>;
+  markClaimDead(item: PersistedOutboxItem, attemptedAt: string, errorCode: string, errorMessage: string): Promise<boolean>;
   saveAttempt(attempt: PersistedOutboxAttempt): Promise<void>;
   listAttemptsForOutbox(outboxId: string): Promise<PersistedOutboxAttempt[]>;
 };

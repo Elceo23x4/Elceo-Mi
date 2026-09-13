@@ -32,7 +32,9 @@ export async function runAdminControlPlaneTests(): Promise<void> {
   };
   const leaseRepo: OpsJobLeaseRepository = {
     acquireLease: async () => ({ acquired: true, lease: { leaseId: 'l', jobKind: 'snapshot_refresh', scopeKind: 'global', scopeKey: 'global', leaseState: 'acquired', acquiredAt: '', expiresAt: '', releasedAt: null, holderId: 'h', createdAt: '' } }),
-    releaseLease: async () => {}, getLeaseByJobScope: async () => null, cleanupExpiredLeases: async () => 0,
+    releaseLease: async () => true,
+    renewLease: async () => true,
+    isCurrentOwner: async () => true, getLeaseByJobScope: async () => null, cleanupExpiredLeases: async () => 0,
     listStaleLeases: async () => [{ leaseId: 'l', jobKind: 'snapshot_refresh', scopeKind: 'global', scopeKey: 'global', leaseState: 'acquired', acquiredAt: '', expiresAt: '', releasedAt: null, holderId: 'h', createdAt: '' }]
   };
 

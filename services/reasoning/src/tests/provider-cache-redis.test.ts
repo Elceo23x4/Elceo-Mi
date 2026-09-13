@@ -50,6 +50,19 @@ function carriedResponse(requestId: string): ProviderRuntimeResponse {
   };
 }
 
+async function waitForRedisFlightExpiry(client: ReturnType<typeof createProviderCacheRedisClient>, key: string, expectedLeaseMs: number) {
+  const observations: Array<{ redisTime: number; pttl: number }> = [];
+  const deadline = Date.now() + expectedLeaseMs + 2_000;
+  while (Date.now() < deadline) {
+    const [time, pttl] = await Promise.all([client.sendCommand(['TIME']) as Promise<string[]>, client.pTTL(key)]);
+    const redisTime = Number(time[0]) * 1_000 + Math.floor(Number(time[1]) / 1_000);
+    observations.push({ redisTime, pttl });
+    if (pttl <= 0) return observations;
+    await new Promise(resolve => setTimeout(resolve, Math.min(25, Math.max(2, pttl))));
+  }
+  throw new Error(`provider_cache_flight_expiry_timeout:${JSON.stringify(observations.slice(-8))}`);
+}
+
 export async function runProviderCacheRedisIntegrationTests(): Promise<void> {
   if (process.env.PROVIDER_CACHE_REDIS_INTEGRATION !== '1') return;
   const namespace = `elceo:provider-cache:test:${process.pid}:${Date.now()}`;
@@ -173,9 +186,11 @@ export async function runProviderCacheRedisIntegrationTests(): Promise<void> {
     const staleExecution = executeProviderApiGateRequest(staleRequest, { ...adapter, fetchManaged: async (value: never) => { staleAdapterCalls += 1; return fixture.fetch(value); } }, expiryContext(new ProviderCacheCoordinator(staleOwnerStore), expiryControl(controlStores[0]!, true), 0));
     await staleAcquired;
     const expiryIdentity = buildProviderCacheIdentity(staleRequest, expiryCachePolicy, 'primary', buildProviderRequestFingerprint(staleRequest));
-    const authoritativeRemaining = await cacheClients[0]!.pTTL(`${namespace}:{${expiryIdentity.hash}}:flight`);
+    const expiryFlightKey = `${namespace}:{${expiryIdentity.hash}}:flight`;
+    const authoritativeRemaining = await cacheClients[0]!.pTTL(expiryFlightKey);
     assert.ok(authoritativeRemaining > 0);
-    await new Promise(resolve => setTimeout(resolve, authoritativeRemaining + 1));
+    const expiryObservations = await waitForRedisFlightExpiry(cacheClients[0]!, expiryFlightKey, expiryCachePolicy.flightLeaseMs);
+    assert.ok(expiryObservations.at(-1)!.pttl <= 0, `flight remained active: ${JSON.stringify(expiryObservations.slice(-8))}`);
     const validExecution = executeProviderApiGateRequest(validRequest, { ...adapter, fetchManaged: async (value: never) => { validAdapterCalls += 1; validProviderResolve(); await releaseValidProvider; return fixture.fetch(value); } }, expiryContext(new ProviderCacheCoordinator(cacheStores[1]!), expiryControl(controlStores[1]!, false), 1));
     await validProvider;
     releaseValidationResolve();
@@ -516,18 +531,36 @@ export async function runProviderCacheRedisIntegrationTests(): Promise<void> {
     const evaluationResilienceStores = [new RedisProviderResilienceStore(resilienceClients[0]!, `${evaluationNamespace}:resilience`), new RedisProviderResilienceStore(resilienceClients[1]!, `${evaluationNamespace}:resilience`)];
     const evaluationL1 = [new ProviderL1Cache(), new ProviderL1Cache()];
     let evaluationAdapterCalls = 0;
+    let evaluationOwnerStartedResolve!: () => void;
+    const evaluationOwnerStarted = new Promise<void>(resolve => { evaluationOwnerStartedResolve = resolve; });
+    let evaluationFollowerBlockedResolve!: () => void;
+    const evaluationFollowerBlocked = new Promise<void>(resolve => { evaluationFollowerBlockedResolve = resolve; });
+    const evaluationFollowerStore: ProviderCacheStore = {
+      kind:'redis',
+      read:(identity,policy)=>evaluationCacheStores[1]!.read(identity,policy),
+      tryAcquireFlight:async(identity,token,leaseMs)=>{const acquired=await evaluationCacheStores[1]!.tryAcquireFlight(identity,token,leaseMs);if(!acquired)evaluationFollowerBlockedResolve();return acquired;},
+      renewFlight:(identity,token,leaseMs)=>evaluationCacheStores[1]!.renewFlight(identity,token,leaseMs),
+      readFlightState:identity=>evaluationCacheStores[1]!.readFlightState(identity),
+      publishSuccessAndComplete:(identity,token,material,policy)=>evaluationCacheStores[1]!.publishSuccessAndComplete(identity,token,material,policy),
+      publishFailureAndComplete:(identity,token,reason,ttlMs)=>evaluationCacheStores[1]!.publishFailureAndComplete(identity,token,reason,ttlMs),
+      releaseOwnerSafely:(identity,token)=>evaluationCacheStores[1]!.releaseOwnerSafely(identity,token)
+    };
     const payloadSentinel = 'P1B_RAW_PROVIDER_SENTINEL_7f31';
     const apiKeySentinel = 'P1B_API_KEY_SENTINEL_NEVER_PERSIST';
     const ohlcSentinel = 918273.645;
     const evaluationAdapter = { ...adapter, fetchManaged: async (request: never) => {
       evaluationAdapterCalls += 1;
-      await new Promise(resolve => setTimeout(resolve, 75));
+      evaluationOwnerStartedResolve();
+      await evaluationFollowerBlocked;
       const response=await fixture.fetch(request);
       return {...response,status:'success' as const,rawPayloadJson:JSON.stringify({sentinel:payloadSentinel,apiKeyLeak:apiKeySentinel,bars:[{open:ohlcSentinel,high:ohlcSentinel+1,low:ohlcSentinel-1,close:ohlcSentinel}]})};
     } };
-    const evaluationContexts = [0,1].map(index=>({cacheCoordinator:new ProviderCacheCoordinator(evaluationCacheStores[index]!,evaluationL1[index]!),cachePolicyResolver:evaluationCachePolicyResolver,providerControlStore:evaluationControlStores[index]!,policyResolver:evaluationProviderControlPolicyResolver,resilienceStore:evaluationResilienceStores[index]!,resiliencePolicyResolver:evaluationResiliencePolicyResolver,credentialPoolId:'evaluation_free'}));
+    const evaluationContexts = [evaluationCacheStores[0]!,evaluationFollowerStore].map((store,index)=>({cacheCoordinator:new ProviderCacheCoordinator(store,evaluationL1[index]!),cachePolicyResolver:evaluationCachePolicyResolver,providerControlStore:evaluationControlStores[index]!,policyResolver:evaluationProviderControlPolicyResolver,resilienceStore:evaluationResilienceStores[index]!,resiliencePolicyResolver:evaluationResiliencePolicyResolver,credentialPoolId:'evaluation_free'}));
     const evaluationRequest = (requestId:string):ProviderRuntimeRequest=>({...liveRequest(requestId),region:'p1b-evaluation-isolated'});
-    const evaluationResults = await Promise.all([executeProviderApiGateRequest(evaluationRequest('redis-evaluation-a'),evaluationAdapter,evaluationContexts[0]!),executeProviderApiGateRequest(evaluationRequest('redis-evaluation-b'),evaluationAdapter,evaluationContexts[1]!)]);
+    const evaluationOwnerExecution=executeProviderApiGateRequest(evaluationRequest('redis-evaluation-a'),evaluationAdapter,evaluationContexts[0]!);
+    await evaluationOwnerStarted;
+    const evaluationFollowerExecution=executeProviderApiGateRequest(evaluationRequest('redis-evaluation-b'),evaluationAdapter,evaluationContexts[1]!);
+    const evaluationResults = await Promise.all([evaluationOwnerExecution,evaluationFollowerExecution]);
     assert.equal(evaluationAdapterCalls,1);
     const evaluationOwner=evaluationResults.find(result=>result.cacheSnapshot?.singleFlightRole==='owner')!;
     const evaluationFollower=evaluationResults.find(result=>result.cacheSnapshot?.singleFlightRole==='follower')!;

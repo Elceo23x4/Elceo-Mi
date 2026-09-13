@@ -5,7 +5,8 @@ import { dirname, join, relative } from 'node:path';
 type InventoryClass = 'through_provider_api_gate'|'adapter_factory_no_execution'|'fixture_only_behind_gate'|'dry_run_only_behind_gate'|'replay_only_behind_gate'|'operator_inspection_only'|'adapter_implementation'|'legacy_construction_fail_closed'|'test_only'|'remaining_unmanaged_call';
 const roots = ['services/reasoning','services/ingestion','services/application-state','apps/web/app/api','packages/providers'];
 const legacyAdapterNames = ['FinnhubMarketDataAdapter','FinnhubMacroCalendarAdapter','AlphaVantageMarketDataAdapter','FmpMarketDataAdapter','FmpMacroCalendarAdapter','MarketauxNewsAdapter','NewsApiNewsAdapter','GdeltEventAdapter','FirecrawlExtractionAdapter','InvestingCalendarScrapeAdapter','ImfMacroContextAdapter','WorldBankMacroContextAdapter','OecdMacroContextAdapter'];
-const runtimeProviderCallPattern = new RegExp(`(new\\s+(TiingoMarketDataAdapter|CftcCotAdapter|${legacyAdapterNames.join('|')})\\b|persistAdapterFetchAndNormalize\\s*\\(|\\.fetch(?:Managed)?\\s*\\(|fetchLiveTiingoBars\\s*\\()`);
+const dfcOfficialAdapterNames=['FredOfficialAdapter','EcbOfficialAdapter','UsTreasuryOfficialAdapter'];
+const runtimeProviderCallPattern = new RegExp(`(new\\s+(TiingoMarketDataAdapter|CftcCotAdapter|${dfcOfficialAdapterNames.join('|')}|${legacyAdapterNames.join('|')})\\b|persistAdapterFetchAndNormalize\\s*\\(|\\.fetch(?:Managed)?\\s*\\(|fetchLiveTiingoBars\\s*\\()`);
 
 export function runProviderUnmanagedCallInventoryTests(){
   const repoRoot = findRepoRoot(process.cwd());
@@ -25,6 +26,8 @@ export function runProviderUnmanagedCallInventoryTests(){
   assert.ok(legacyConfig.includes("APP_ENV === 'staging'") && legacyConfig.includes("APP_ENV === 'production'") && legacyConfig.includes("NODE_ENV === 'production'"));
   const negative = classify(join(repoRoot,'services/application-state/src/runtime/direct-provider.ts'), "const provider = new FinnhubMarketDataAdapter(process.env.FINNHUB_API_KEY ?? '');");
   assert.equal(negative.classification, 'remaining_unmanaged_call');
+  const officialNegative=classify(join(repoRoot,'services/application-state/src/runtime/direct-official-provider.ts'),"const provider = new FredOfficialAdapter({mode:'live_enabled',apiKey:process.env.FRED_API_KEY});");
+  assert.equal(officialNegative.classification,'remaining_unmanaged_call');
   const nestedNegative=classify(join(repoRoot,'services/reasoning/src/provider-sources/unmanaged.ts'),"export async function bypass(adapter:any,request:any){return adapter.fetchManaged(request,{signal:new AbortController().signal,timeoutMs:1});}");
   assert.equal(nestedNegative.classification,'remaining_unmanaged_call');
 }
@@ -45,6 +48,7 @@ function classify(absFile:string, source:string): { file:string; classification:
     return { file, classification:failClosed ? 'legacy_construction_fail_closed' : 'remaining_unmanaged_call' };
   }
   if(file.endsWith('/tiingo/tiingo-adapter.ts'))return{file,classification:'adapter_implementation'};
+  if(file.includes('/provider-sources/official/')&&dfcOfficialAdapterNames.some(name=>source.includes(`class ${name}`)))return{file,classification:'adapter_implementation'};
   if(file.endsWith('/provider-adapter-resolver.ts')&&source.includes('new TiingoMarketDataAdapter')&&!source.includes('.fetch(')&&!source.includes('.fetchManaged('))return{file,classification:'adapter_factory_no_execution'};
   if(file.endsWith('/ingestion-persistence-service.ts')&&source.includes('persistProviderApiGateResult')&&source.includes('persistAdapterFetchAndNormalize'))return{file,classification:'fixture_only_behind_gate'};
   if(file.includes('/provider-sources/')&&source.includes("mode: 'fixture'")&&!source.includes('live_enabled'))return{file,classification:'fixture_only_behind_gate'};

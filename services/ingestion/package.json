@@ -18,6 +18,7 @@
     "@elceo/providers": "0.1.0",
     "@elceo/schemas": "0.1.0",
     "@elceo/types": "0.1.0",
-    "kafkajs": "^2.2.4"
+    "kafkajs": "^2.2.4",
+    "@elceo/db-runtime": "0.1.0"
   }
 }

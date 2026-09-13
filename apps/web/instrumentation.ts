@@ -1,8 +1,11 @@
 import * as Sentry from '@sentry/nextjs';
 import { applySentryPrivacyPolicy, safeEnvironment } from './lib/sentry-policy';
 import { sentryRelease, serverSentryDsn } from './lib/sentry-dsn.mjs';
-
 export async function register() {
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const { installNodeProcessLifecycle } = await import('./lib/server/process-lifecycle');
+    installNodeProcessLifecycle();
+  }
   const sentry = serverSentryDsn(process.env);
   if (!sentry) return;
 

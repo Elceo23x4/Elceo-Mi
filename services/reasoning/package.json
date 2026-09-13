@@ -18,6 +18,7 @@
     "@elceo/domain": "0.1.0",
     "@elceo/schemas": "0.1.0",
     "@elceo/types": "0.1.0",
-    "redis": "6.2.1"
+    "redis": "6.2.1",
+    "@elceo/db-runtime": "0.1.0"
   }
 }

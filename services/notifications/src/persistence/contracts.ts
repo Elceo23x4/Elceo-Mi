@@ -130,6 +130,7 @@ export type NotificationInboxRepository = {
   getInboxById(inboxId: string): Promise<NotificationInboxRecord | null>;
   listInboxForTarget(targetId: string, limit?: number): Promise<NotificationInboxRecord[]>;
   listInbox(query: InboxListQuery): Promise<NotificationInboxRecord[]>;
+  listInboxForSubject?(query: Required<Pick<InboxListQuery, 'subjectKind' | 'subjectId'>> & InboxListQuery): Promise<NotificationInboxRecord[]>;
   markRead(inboxId: string, readAt: string): Promise<void>;
   markUnread(inboxId: string): Promise<void>;
   markArchived(inboxId: string, archivedAt: string): Promise<void>;
@@ -146,9 +147,14 @@ export type NotificationOutboxRepository = {
   listRecentOutboxItemsForSubject(subjectKind: NotificationSubjectKind, subjectId: string, asOfIso: string, lookbackHours: number | null, limit: number): Promise<NotificationOutboxRecord[]>;
   markDispatching(outboxId: string, attemptedAt: string): Promise<void>;
   claimDueOutboxItem(outboxId: string, asOfIso: string): Promise<NotificationOutboxRecord | null>;
+  claimDueOutboxItems(asOfIso: string, claimExpiresAt: string, limit: number, claimToken: string): Promise<NotificationOutboxRecord[]>;
   markDelivered(outboxId: string, deliveredAt: string): Promise<void>;
   markFailed(outboxId: string, failedAt: string, nextAvailableAt: string, errorCode: string | null, errorMessage: string | null): Promise<void>;
   markDead(outboxId: string, deadAt: string, errorCode: string | null, errorMessage: string | null): Promise<void>;
+  markClaimDelivered(item: NotificationOutboxRecord, deliveredAt: string): Promise<boolean>;
+  markClaimFailed(item: NotificationOutboxRecord, failedAt: string, nextAvailableAt: string, errorCode: string | null, errorMessage: string | null): Promise<boolean>;
+  markClaimDead(item: NotificationOutboxRecord, deadAt: string, errorCode: string | null, errorMessage: string | null): Promise<boolean>;
+  markClaimAmbiguous(item: NotificationOutboxRecord, ambiguousAt: string, errorCode: string | null, errorMessage: string | null): Promise<boolean>;
   listOutboxForDecision(decisionId: string): Promise<NotificationOutboxRecord[]>;
 };
 

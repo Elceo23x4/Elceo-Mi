@@ -65,3 +65,4 @@ export * from './intelligence-acceptance/index';
 export * from './adaptive-materialization/index';
 
 export * from './inbound-read/index';
+export * from './evidence-fabric/index';

@@ -1,0 +1,939 @@
+[
+  {
+    "asset": "xau_usd",
+    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "gaps": [
+      "empirical staging validation",
+      "raw redistribution legal review"
+    ],
+    "requirements": [
+      {
+        "capabilityId": "direct_price",
+        "criticality": "critical",
+        "primary": "tiingo_market_data",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "tiingo_market_data",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "fed_policy",
+        "criticality": "critical",
+        "primary": "federal_reserve_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "federal_reserve_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "treasury_nominal_real_yields",
+        "criticality": "critical",
+        "primary": "us_treasury_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "us_treasury_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "asset": "eur_usd",
+    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "gaps": [
+      "empirical staging validation",
+      "raw redistribution legal review"
+    ],
+    "requirements": [
+      {
+        "capabilityId": "direct_price",
+        "criticality": "critical",
+        "primary": "tiingo_market_data",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "tiingo_market_data",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "fed_policy",
+        "criticality": "critical",
+        "primary": "federal_reserve_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "federal_reserve_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "ecb_policy",
+        "criticality": "critical",
+        "primary": "ecb_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "ecb_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "euro_german_macro",
+        "criticality": "critical",
+        "primary": "eurostat_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "eurostat_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "asset": "gbp_usd",
+    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "gaps": [
+      "empirical staging validation",
+      "raw redistribution legal review"
+    ],
+    "requirements": [
+      {
+        "capabilityId": "direct_price",
+        "criticality": "critical",
+        "primary": "tiingo_market_data",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "tiingo_market_data",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "fed_policy",
+        "criticality": "critical",
+        "primary": "federal_reserve_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "federal_reserve_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "boe_policy",
+        "criticality": "critical",
+        "primary": "boe_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "boe_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "uk_macro",
+        "criticality": "critical",
+        "primary": "ons_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "ons_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "asset": "usd_jpy",
+    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "gaps": [
+      "empirical staging validation",
+      "raw redistribution legal review"
+    ],
+    "requirements": [
+      {
+        "capabilityId": "direct_price",
+        "criticality": "critical",
+        "primary": "tiingo_market_data",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "tiingo_market_data",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "fed_policy",
+        "criticality": "critical",
+        "primary": "federal_reserve_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "federal_reserve_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "boj_policy",
+        "criticality": "critical",
+        "primary": "boj_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "boj_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "japan_macro_intervention",
+        "criticality": "critical",
+        "primary": "japan_mof_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "japan_mof_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "asset": "usd_chf",
+    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "gaps": [
+      "empirical staging validation",
+      "raw redistribution legal review"
+    ],
+    "requirements": [
+      {
+        "capabilityId": "direct_price",
+        "criticality": "critical",
+        "primary": "tiingo_market_data",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "tiingo_market_data",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "fed_policy",
+        "criticality": "critical",
+        "primary": "federal_reserve_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "federal_reserve_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "snb_policy",
+        "criticality": "critical",
+        "primary": "snb_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "snb_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "swiss_macro",
+        "criticality": "critical",
+        "primary": "swiss_fso_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "swiss_fso_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "asset": "aud_usd",
+    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "gaps": [
+      "empirical staging validation",
+      "raw redistribution legal review"
+    ],
+    "requirements": [
+      {
+        "capabilityId": "direct_price",
+        "criticality": "critical",
+        "primary": "tiingo_market_data",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "tiingo_market_data",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "fed_policy",
+        "criticality": "critical",
+        "primary": "federal_reserve_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "federal_reserve_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "rba_policy",
+        "criticality": "critical",
+        "primary": "rba_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "rba_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "australia_macro",
+        "criticality": "critical",
+        "primary": "abs_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "abs_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "asset": "nzd_usd",
+    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "gaps": [
+      "empirical staging validation",
+      "raw redistribution legal review"
+    ],
+    "requirements": [
+      {
+        "capabilityId": "direct_price",
+        "criticality": "critical",
+        "primary": "tiingo_market_data",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "tiingo_market_data",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "fed_policy",
+        "criticality": "critical",
+        "primary": "federal_reserve_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "federal_reserve_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "rbnz_policy",
+        "criticality": "critical",
+        "primary": "rbnz_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "rbnz_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "new_zealand_macro",
+        "criticality": "critical",
+        "primary": "stats_nz_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "stats_nz_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "asset": "usd_cad",
+    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "gaps": [
+      "empirical staging validation",
+      "raw redistribution legal review"
+    ],
+    "requirements": [
+      {
+        "capabilityId": "direct_price",
+        "criticality": "critical",
+        "primary": "tiingo_market_data",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "tiingo_market_data",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "fed_policy",
+        "criticality": "critical",
+        "primary": "federal_reserve_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "federal_reserve_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "boc_policy",
+        "criticality": "critical",
+        "primary": "bank_of_canada_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "bank_of_canada_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "canada_macro",
+        "criticality": "critical",
+        "primary": "statistics_canada_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "statistics_canada_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "asset": "btc_usd",
+    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "gaps": [
+      "empirical staging validation",
+      "raw redistribution legal review"
+    ],
+    "requirements": [
+      {
+        "capabilityId": "direct_price",
+        "criticality": "critical",
+        "primary": "tiingo_market_data",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "tiingo_market_data",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "independent_price_confirmation",
+        "criticality": "critical",
+        "primary": "coinbase_public",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "coinbase_public",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "fed_policy",
+        "criticality": "critical",
+        "primary": "federal_reserve_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "federal_reserve_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "asset": "nasdaq_100",
+    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "gaps": [
+      "empirical staging validation",
+      "raw redistribution legal review"
+    ],
+    "requirements": [
+      {
+        "capabilityId": "direct_price",
+        "criticality": "critical",
+        "primary": "tiingo_market_data",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "tiingo_market_data",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "fed_policy",
+        "criticality": "critical",
+        "primary": "federal_reserve_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "federal_reserve_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "yields_real_yields",
+        "criticality": "critical",
+        "primary": "us_treasury_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "us_treasury_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "asset": "sp500",
+    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "gaps": [
+      "empirical staging validation",
+      "raw redistribution legal review"
+    ],
+    "requirements": [
+      {
+        "capabilityId": "direct_price",
+        "criticality": "critical",
+        "primary": "tiingo_market_data",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "tiingo_market_data",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "fed_policy",
+        "criticality": "critical",
+        "primary": "federal_reserve_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "federal_reserve_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "yields_real_yields",
+        "criticality": "critical",
+        "primary": "us_treasury_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "us_treasury_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "asset": "de30",
+    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "gaps": [
+      "empirical staging validation",
+      "raw redistribution legal review"
+    ],
+    "requirements": [
+      {
+        "capabilityId": "direct_price",
+        "criticality": "critical",
+        "primary": "tiingo_market_data",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "tiingo_market_data",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "ecb_policy",
+        "criticality": "critical",
+        "primary": "ecb_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "ecb_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      },
+      {
+        "capabilityId": "euro_german_macro",
+        "criticality": "critical",
+        "primary": "eurostat_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "eurostat_official",
+            "role": "primary",
+            "executable": true,
+            "placeholder": false,
+            "normalization": true,
+            "persistence": true,
+            "freshness": true,
+            "providerApiGate": true
+          }
+        ]
+      }
+    ]
+  }
+]

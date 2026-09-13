@@ -119,3 +119,4 @@ export * from './market-economic-context';
 
 export * from './canonical-dashboard-assets';
 export * from './kick-off-dashboard';
+export * from './evidence-fabric';

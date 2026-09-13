@@ -87,8 +87,10 @@ import { runAdaptiveMaterializationTests } from './adaptive-materialization.test
 import { runAdaptiveMaterializationRedisIntegrationTests } from './adaptive-materialization-redis.test.js';
 import { runAdaptiveMaterializationIntegrationTests } from './adaptive-materialization-integration.test.js';
 import { runProviderScaleAcceptanceTests } from './provider-scale-acceptance.test.js';
+import { runEvidenceFabricTests } from './evidence-fabric.test.js';
 
 async function run(): Promise<void> {
+  runEvidenceFabricTests();
   await runProviderScaleAcceptanceTests();
   await runAdaptiveMaterializationTests();
   await runAdaptiveMaterializationRedisIntegrationTests();

@@ -89,6 +89,12 @@ jobs:
         if: ${{ always() }}
         run: npm run test:sec-g-lifecycle
 
+      - name: Adaptive independent-process kill and takeover
+        if: ${{ always() }}
+        run: |
+          node scripts/assert-sec-g-source-integrity.mjs before-adaptive
+          node scripts/test-sec-g-adaptive-takeover.mjs
+
       - name: High-cardinality PostgreSQL seed, EXPLAIN, pool saturation, notification contention, and dashboard runtime preparation
         if: ${{ always() }}
         env:
@@ -110,12 +116,6 @@ jobs:
         env:
           SEC_G_ARTIFACTS: '1'
         run: npm run -w services/notifications test
-
-      - name: Adaptive independent-process kill and takeover
-        if: ${{ always() }}
-        run: |
-          node scripts/assert-sec-g-source-integrity.mjs before-adaptive
-          node scripts/test-sec-g-adaptive-takeover.mjs
 
       - name: Ingestion and notification meaningful-backlog process-death recovery
         if: ${{ always() }}
@@ -203,6 +203,13 @@ jobs:
             ! kill -0 "$pid" 2>/dev/null
           fi
           sleep 1
+
+      - name: Remove transient authenticated-runtime inputs before final provenance
+        if: ${{ always() }}
+        run: |
+          rm -f .sec-g-runtime-credentials.json apps/web/.env.local
+          test ! -e .sec-g-runtime-credentials.json
+          test ! -e apps/web/.env.local
 
       - name: Verify complete exact-head empirical artifact contract
         if: ${{ always() }}

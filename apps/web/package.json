@@ -9,7 +9,7 @@
     "lint": "eslint app components lib middleware.ts --ext .ts,.tsx",
     "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier --check .",
-    "test": "tsc -p tsconfig.test.json && node scripts/run-web-cjs-tests.mjs dist-test dist-test/tests/run-tests.js"
+    "test": "npm run -w @elceo/db-runtime build && tsc -p tsconfig.test.json && node scripts/run-web-cjs-tests.mjs dist-test dist-test/tests/run-tests.js"
   },
   "dependencies": {
     "@elceo/admin-jobs": "0.1.0",

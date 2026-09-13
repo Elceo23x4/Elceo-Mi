@@ -191,13 +191,13 @@ export function startSecGResourceSampler(): { stop: () => void; drain: () => Pro
     await persist();
   };
 
-  const queueSample = (phase?: ResourceSample['phase']) => {
+  const queuePeriodicSample = (phase?: ResourceSample['phase']) => {
     sampling = sampling.then(async () => takeSample(phase ?? await phaseForPeriodicSample())).catch(() => undefined);
     return sampling;
   };
 
-  void queueSample('baseline');
-  const timer = setInterval(() => { void queueSample(); }, intervalMs);
+  void queuePeriodicSample('baseline');
+  const timer = setInterval(() => { void queuePeriodicSample(); }, intervalMs);
   timer.unref();
 
   return {
@@ -212,7 +212,7 @@ export function startSecGResourceSampler(): { stop: () => void; drain: () => Pro
         clearInterval(timer);
       }
       await sampling;
-      await queueSample('drain');
+      await takeSample('drain');
       histogram.disable();
       await persist(new Date().toISOString());
       if (persistenceError) throw persistenceError;

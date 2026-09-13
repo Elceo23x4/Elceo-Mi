@@ -208,6 +208,7 @@ jobs:
             ! kill -0 "$pid" 2>/dev/null
           fi
           sleep 1
+          node scripts/verify-sec-g-resource-drain.mjs
 
       - name: Remove transient authenticated-runtime inputs before final provenance
         if: ${{ always() }}

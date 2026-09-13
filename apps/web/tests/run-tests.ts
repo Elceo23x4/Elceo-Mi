@@ -27,6 +27,8 @@ import('./route-runtime.test.js').then(({ runRouteRuntimeTests }) => runRouteRun
   .then(({ runSecEBoundaryTests }) => runSecEBoundaryTests())
   .then(() => import('./sec-f-security.test.js'))
   .then(({ runSecFSecurityTests }) => runSecFSecurityTests())
+  .then(() => import('./sec-g-resource-sampler.test.js'))
+  .then(({ runSecGResourceSamplerTests }) => runSecGResourceSamplerTests())
   .then(() => {
     console.log('web route runtime tests passed');
   })

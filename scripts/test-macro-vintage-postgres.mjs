@@ -13,6 +13,7 @@ const migration = await readFile(new URL('../infra/db/schema/0063_evidence_macro
 
 const connect = () => new pg.Pool({ connectionString: url, max: 1 });
 let pool = connect();
+let poolIsOpen = true;
 
 const insertVintage = async ({ knownAt, value, vintageId, revisionState, previousPublishedValue }) => pool.query(
   `INSERT INTO app_macro_evidence_vintages(
@@ -60,7 +61,9 @@ try {
   assert.equal(countAfterDuplicate.rows[0]?.count, 2, 'idempotent re-ingestion must not create a duplicate vintage');
 
   await pool.end();
+  poolIsOpen = false;
   pool = connect();
+  poolIsOpen = true;
 
   const afterProcessReload = await asKnownAt('2026-03-15T00:00:00Z');
   assert.equal(Number(afterProcessReload?.published_value), 101, 'durable as-of semantics must survive repository/process reload');
@@ -87,7 +90,10 @@ try {
 
   console.log('macro vintage PostgreSQL acceptance passed: append-only history, idempotency, process reload, revision isolation, and as-known-at semantics');
 } finally {
-  if (pool.ended) pool = connect();
+  if (!poolIsOpen) {
+    pool = connect();
+    poolIsOpen = true;
+  }
   await pool.query('DELETE FROM app_macro_evidence_vintages WHERE correlation_key=$1', [correlationKey]).catch(() => {});
   await pool.query('DELETE FROM app_provider_source_requests WHERE request_id=$1', [requestId]).catch(() => {});
   await pool.end().catch(() => {});

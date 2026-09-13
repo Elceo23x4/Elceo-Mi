@@ -15,7 +15,6 @@ jobs:
       DATABASE_URL: postgresql://elceo@127.0.0.1:5432/elceo_sec_g
       REDIS_URL: redis://127.0.0.1:6379
       ELCEO_INTERNAL_API_TOKEN: sec-g-ci-only-internal-token
-      SEC_G_SOURCE_INTEGRITY_PHASE_DIR: ${{ runner.temp }}/sec-g-source-integrity-phases
       ELCEO_INBOUND_READ_POLICY_JSON: '{"policyId":"sec-g-empirical-dashboard-read","policyVersion":"1","status":"approved","provenance":"SEC-G empirical CI runtime policy","effectiveFrom":"2020-01-01T00:00:00.000Z","effectiveTo":null,"routeFamily":"dashboard-read","windowMs":1000,"requestAllowance":200,"concurrentAllowance":64,"leaseMs":5000,"stateTtlMs":10000,"canonicalPolicyHash":"sha256:69c3b9b8f062b991d0a7648cb0202cc5558f7de234de790d1661ffc5655c223c"}'
     services:
       postgres:
@@ -47,6 +46,12 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
+
+      - name: Initialize runner-owned source-integrity journal
+        run: |
+          SEC_G_PHASE_DIR="$RUNNER_TEMP/sec-g-source-integrity-phases"
+          mkdir -p "$SEC_G_PHASE_DIR"
+          printf 'SEC_G_SOURCE_INTEGRITY_PHASE_DIR=%s\n' "$SEC_G_PHASE_DIR" >> "$GITHUB_ENV"
 
       - name: Prove exact-head checkout
         run: |

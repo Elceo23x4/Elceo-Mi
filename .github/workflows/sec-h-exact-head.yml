@@ -2,6 +2,8 @@ name: SEC-H Exact-Head Release Governance
 
 on:
   pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -15,7 +17,6 @@ jobs:
       SEC_H_BASE_SHA: ${{ github.event.pull_request.base.sha }}
       SEC_H_REQUIRE_LIVE_GOVERNANCE: '1'
       SEC_H_GITHUB_TOKEN: ${{ github.token }}
-      SEC_H_ARTIFACT_DIR: ${{ runner.temp }}/sec-h
     steps:
       - name: Checkout exact published PR head
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -40,6 +41,8 @@ jobs:
           npm --version
 
       - name: Execute SEC-H governance and exact-head manifest verification
+        env:
+          SEC_H_ARTIFACT_DIR: ${{ runner.temp }}/sec-h
         run: node scripts/run-sec-h.mjs
 
       - name: Verify source tree remained clean

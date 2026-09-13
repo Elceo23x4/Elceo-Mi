@@ -1,4 +1,4 @@
-import type { ProviderCapabilityKind, ScheduledIngestionJobPolicy, ScheduledIngestionPolicySnapshot } from '@elceo/types';
+import { TRADING_ASSET_COVERAGE, type ProviderCapabilityKind, type ScheduledIngestionJobPolicy, type ScheduledIngestionPolicySnapshot, type TradingAssetCoverage } from '@elceo/types';
 
 type Seed = Omit<ScheduledIngestionJobPolicy, 'jobId'> & { jobKey: string };
 const buildJobId = (providerId: string, capability: ProviderCapabilityKind, asset: string | null): string => `sched-${providerId}-${capability}${asset ? `-${asset}` : ''}`;
@@ -27,3 +27,5 @@ export const getDefaultScheduledIngestionPolicies = (): ScheduledIngestionJobPol
 export const listScheduledIngestionPolicies = (providerId?: string): ScheduledIngestionJobPolicy[] => providerId ? DEFAULT_POLICIES.filter((x) => x.providerId === providerId) : DEFAULT_POLICIES;
 export const getScheduledIngestionPolicy = (jobId: string): ScheduledIngestionJobPolicy | null => DEFAULT_POLICIES.find((x) => x.jobId === jobId) ?? null;
 export const getScheduledIngestionPolicySnapshot = (asOfIso?: string): ScheduledIngestionPolicySnapshot => ({ generatedAt: asOfIso ?? new Date().toISOString(), policies: DEFAULT_POLICIES });
+/** Source/capability jobs are fetched once and then fanned out; null-asset jobs intentionally cover all launch assets. */
+export const getScheduledLaunchAssetCoverage=():Readonly<Record<TradingAssetCoverage,string[]>>=>Object.fromEntries(TRADING_ASSET_COVERAGE.map(asset=>[asset,DEFAULT_POLICIES.filter(policy=>policy.asset===null||policy.asset===asset).map(policy=>policy.jobId)])) as Record<TradingAssetCoverage,string[]>;

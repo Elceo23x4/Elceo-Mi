@@ -1,8 +1,9 @@
 [
   {
     "asset": "xau_usd",
-    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "currentReadiness": "degraded",
     "gaps": [
+      "one or more critical official routes lack executable registration",
       "empirical staging validation",
       "raw redistribution legal review"
     ],
@@ -36,12 +37,12 @@
           {
             "sourceId": "federal_reserve_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -55,21 +56,24 @@
           {
             "sourceId": "us_treasury_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       }
-    ]
+    ],
+    "structuralReady": false,
+    "empiricallyReady": false
   },
   {
     "asset": "eur_usd",
-    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "currentReadiness": "degraded",
     "gaps": [
+      "one or more critical official routes lack executable registration",
       "empirical staging validation",
       "raw redistribution legal review"
     ],
@@ -103,12 +107,12 @@
           {
             "sourceId": "federal_reserve_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -122,12 +126,12 @@
           {
             "sourceId": "ecb_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -141,21 +145,24 @@
           {
             "sourceId": "eurostat_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       }
-    ]
+    ],
+    "structuralReady": false,
+    "empiricallyReady": false
   },
   {
     "asset": "gbp_usd",
-    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "currentReadiness": "degraded",
     "gaps": [
+      "one or more critical official routes lack executable registration",
       "empirical staging validation",
       "raw redistribution legal review"
     ],
@@ -189,12 +196,12 @@
           {
             "sourceId": "federal_reserve_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -208,12 +215,12 @@
           {
             "sourceId": "boe_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -227,21 +234,24 @@
           {
             "sourceId": "ons_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       }
-    ]
+    ],
+    "structuralReady": false,
+    "empiricallyReady": false
   },
   {
     "asset": "usd_jpy",
-    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "currentReadiness": "degraded",
     "gaps": [
+      "one or more critical official routes lack executable registration",
       "empirical staging validation",
       "raw redistribution legal review"
     ],
@@ -275,12 +285,12 @@
           {
             "sourceId": "federal_reserve_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -294,12 +304,12 @@
           {
             "sourceId": "boj_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -313,21 +323,24 @@
           {
             "sourceId": "japan_mof_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       }
-    ]
+    ],
+    "structuralReady": false,
+    "empiricallyReady": false
   },
   {
     "asset": "usd_chf",
-    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "currentReadiness": "degraded",
     "gaps": [
+      "one or more critical official routes lack executable registration",
       "empirical staging validation",
       "raw redistribution legal review"
     ],
@@ -361,12 +374,12 @@
           {
             "sourceId": "federal_reserve_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -380,12 +393,12 @@
           {
             "sourceId": "snb_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -399,21 +412,24 @@
           {
             "sourceId": "swiss_fso_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       }
-    ]
+    ],
+    "structuralReady": false,
+    "empiricallyReady": false
   },
   {
     "asset": "aud_usd",
-    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "currentReadiness": "degraded",
     "gaps": [
+      "one or more critical official routes lack executable registration",
       "empirical staging validation",
       "raw redistribution legal review"
     ],
@@ -447,12 +463,12 @@
           {
             "sourceId": "federal_reserve_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -466,12 +482,12 @@
           {
             "sourceId": "rba_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -485,21 +501,24 @@
           {
             "sourceId": "abs_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       }
-    ]
+    ],
+    "structuralReady": false,
+    "empiricallyReady": false
   },
   {
     "asset": "nzd_usd",
-    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "currentReadiness": "degraded",
     "gaps": [
+      "one or more critical official routes lack executable registration",
       "empirical staging validation",
       "raw redistribution legal review"
     ],
@@ -533,12 +552,12 @@
           {
             "sourceId": "federal_reserve_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -552,12 +571,12 @@
           {
             "sourceId": "rbnz_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -571,21 +590,24 @@
           {
             "sourceId": "stats_nz_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       }
-    ]
+    ],
+    "structuralReady": false,
+    "empiricallyReady": false
   },
   {
     "asset": "usd_cad",
-    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "currentReadiness": "degraded",
     "gaps": [
+      "one or more critical official routes lack executable registration",
       "empirical staging validation",
       "raw redistribution legal review"
     ],
@@ -619,12 +641,12 @@
           {
             "sourceId": "federal_reserve_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -638,12 +660,12 @@
           {
             "sourceId": "bank_of_canada_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -657,21 +679,24 @@
           {
             "sourceId": "statistics_canada_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       }
-    ]
+    ],
+    "structuralReady": false,
+    "empiricallyReady": false
   },
   {
     "asset": "btc_usd",
-    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "currentReadiness": "degraded",
     "gaps": [
+      "one or more critical official routes lack executable registration",
       "empirical staging validation",
       "raw redistribution legal review"
     ],
@@ -705,12 +730,12 @@
           {
             "sourceId": "coinbase_public",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -724,21 +749,24 @@
           {
             "sourceId": "federal_reserve_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       }
-    ]
+    ],
+    "structuralReady": false,
+    "empiricallyReady": false
   },
   {
     "asset": "nasdaq_100",
-    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "currentReadiness": "degraded",
     "gaps": [
+      "one or more critical official routes lack executable registration",
       "empirical staging validation",
       "raw redistribution legal review"
     ],
@@ -772,12 +800,12 @@
           {
             "sourceId": "federal_reserve_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -791,21 +819,24 @@
           {
             "sourceId": "us_treasury_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       }
-    ]
+    ],
+    "structuralReady": false,
+    "empiricallyReady": false
   },
   {
     "asset": "sp500",
-    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "currentReadiness": "degraded",
     "gaps": [
+      "one or more critical official routes lack executable registration",
       "empirical staging validation",
       "raw redistribution legal review"
     ],
@@ -839,12 +870,12 @@
           {
             "sourceId": "federal_reserve_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -858,21 +889,24 @@
           {
             "sourceId": "us_treasury_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       }
-    ]
+    ],
+    "structuralReady": false,
+    "empiricallyReady": false
   },
   {
     "asset": "de30",
-    "currentReadiness": "contract_ready_empirical_staging_blocked",
+    "currentReadiness": "degraded",
     "gaps": [
+      "one or more critical official routes lack executable registration",
       "empirical staging validation",
       "raw redistribution legal review"
     ],
@@ -906,12 +940,12 @@
           {
             "sourceId": "ecb_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       },
@@ -925,12 +959,135 @@
           {
             "sourceId": "eurostat_official",
             "role": "primary",
-            "executable": true,
+            "executable": false,
             "placeholder": false,
-            "normalization": true,
-            "persistence": true,
-            "freshness": true,
-            "providerApiGate": true
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
+          }
+        ]
+      }
+    ],
+    "structuralReady": false,
+    "empiricallyReady": false
+  },
+  {
+    "asset": "dxy",
+    "currentReadiness": "degraded",
+    "structuralReady": false,
+    "empiricallyReady": false,
+    "gaps": [
+      "direct index entitlement and executable registration required",
+      "empirical staging validation",
+      "raw redistribution legal review"
+    ],
+    "requirements": [
+      {
+        "capabilityId": "dxy_direct_index",
+        "criticality": "critical",
+        "primary": "ice_data_indices",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "ice_data_indices",
+            "role": "primary",
+            "executable": false,
+            "placeholder": false,
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
+          }
+        ]
+      },
+      {
+        "capabilityId": "fed_policy",
+        "criticality": "critical",
+        "primary": "federal_reserve_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "federal_reserve_official",
+            "role": "primary",
+            "executable": false,
+            "placeholder": false,
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
+          }
+        ]
+      },
+      {
+        "capabilityId": "treasury_nominal_real_yields",
+        "criticality": "critical",
+        "primary": "us_treasury_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "us_treasury_official",
+            "role": "primary",
+            "executable": false,
+            "placeholder": false,
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "asset": "vix",
+    "currentReadiness": "degraded",
+    "structuralReady": false,
+    "empiricallyReady": false,
+    "gaps": [
+      "direct index entitlement and executable registration required",
+      "empirical staging validation",
+      "raw redistribution legal review"
+    ],
+    "requirements": [
+      {
+        "capabilityId": "vix_direct_index_delayed",
+        "criticality": "critical",
+        "primary": "cboe_official",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "cboe_official",
+            "role": "primary",
+            "executable": false,
+            "placeholder": false,
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
+          }
+        ]
+      },
+      {
+        "capabilityId": "spx_context",
+        "criticality": "critical",
+        "primary": "tiingo_market_data",
+        "confirmation": null,
+        "fallback": null,
+        "routes": [
+          {
+            "sourceId": "tiingo_market_data",
+            "role": "primary",
+            "executable": false,
+            "placeholder": false,
+            "normalization": false,
+            "persistence": false,
+            "freshness": false,
+            "providerApiGate": false
           }
         ]
       }

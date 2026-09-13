@@ -1,4 +1,4 @@
-import type { MarketEvidenceRegistrySnapshot, MarketEvidenceSource, MarketEvidenceTypeDefinition } from '@elceo/types';
+import { TRADING_ASSET_COVERAGE, type MarketEvidenceRegistrySnapshot, type MarketEvidenceSource, type MarketEvidenceTypeDefinition } from '@elceo/types';
 
 export const EVIDENCE_SOURCES: MarketEvidenceSource[] = [{sourceId:'fred',sourceName:'FRED',sourceKind:'economic_database',institutionName:'Federal Reserve Bank of St. Louis',region:'united_states',countryOrBloc:'United States',accessLevel:'public',homepageUrl:'https://fred.stlouisfed.org',notes:'Public macro time-series'}];
 
@@ -15,9 +15,6 @@ export const EVIDENCE_TYPES: MarketEvidenceTypeDefinition[] = [
 {evidenceTypeId:'interbank_orderflow',evidenceClass:'institutional_liquidity',displayName:'Interbank Orderflow',description:'Licensed bank orderflow',frequency:'intraday',primarySources:['fred'],regions:['global'],accessLevel:'licensed',isLaunchScope:false,isPublicAccessible:false,excludedReason:'Excluded from launch due to interbank licensing complexity.'}
 ];
 
-const LAUNCH_ASSETS = [
-  'xau_usd','eur_usd','gbp_usd','usd_jpy','usd_chf','aud_usd','nzd_usd','usd_cad','btc_usd','nasdaq_100','sp500','de30'
-] as const;
-const LAUNCH_ASSET_INFLUENCES: MarketEvidenceRegistrySnapshot['assetInfluences'] = LAUNCH_ASSETS.map((asset)=>({ asset, evidenceTypeId:'macro_calendar', influenceDirection:'contextual', influenceStrength:'medium', influenceHorizon:'swing', rationale:'Launch macro-calendar catalyst path for all launch assets.', primaryCountries:['United States'], primaryInstitutions:['Federal Reserve'] }));
+const LAUNCH_ASSET_INFLUENCES: MarketEvidenceRegistrySnapshot['assetInfluences'] = TRADING_ASSET_COVERAGE.map((asset)=>({ asset, evidenceTypeId:'macro_calendar', influenceDirection:'contextual', influenceStrength:'medium', influenceHorizon:'swing', rationale:'Launch macro-calendar catalyst path for all launch assets.', primaryCountries:['United States'], primaryInstitutions:['Federal Reserve'] }));
 
 export function getMarketEvidenceRegistrySnapshot(asOfIso: string): MarketEvidenceRegistrySnapshot { return { generatedAt: asOfIso, evidenceTypes: EVIDENCE_TYPES, sources: EVIDENCE_SOURCES, assetInfluences: LAUNCH_ASSET_INFLUENCES }; }

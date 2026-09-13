@@ -1,5 +1,5 @@
 export const PROVIDER_SOURCE_IDS = [
-  'tiingo_market_data','public_market_price_exchange','index_futures_shell','fred_macro','us_treasury_official','federal_reserve_official','ecb_official','boe_official','boj_official','eurostat_official','bls_official','bea_official','census_official','ons_official','destatis_official','ifo_shell','zew_shell','ism_shell','cftc_cot','marketaux_news','newsapi_news','gdelt_news','finnhub_news','firecrawl_extraction','sec_edgar','etf_flows_shell','earnings_filings_shell','crypto_exchange_public','crypto_onchain_public','crypto_derivatives_shell','volatility_metric_source','credit_stress_source','liquidity_condition_source','financial_conditions_source','public_equity_breadth_sources','calculated_internal_conditions','equity_index_breadth_indicator','imf_official','world_bank_official','oecd_official','bis_official','uk_dmo_official','japan_mof_official','snb_official','swiss_fso_official','rba_official','abs_official','rbnz_official','stats_nz_official','bank_of_canada_official','statistics_canada_official','eia_official','cboe_official','coinbase_public'
+  'tiingo_market_data','public_market_price_exchange','index_futures_shell','fred_macro','us_treasury_official','federal_reserve_official','ecb_official','boe_official','boj_official','eurostat_official','bls_official','bea_official','census_official','ons_official','destatis_official','ifo_shell','zew_shell','ism_shell','cftc_cot','marketaux_news','newsapi_news','gdelt_news','finnhub_news','firecrawl_extraction','sec_edgar','etf_flows_shell','earnings_filings_shell','crypto_exchange_public','crypto_onchain_public','crypto_derivatives_shell','volatility_metric_source','credit_stress_source','liquidity_condition_source','financial_conditions_source','public_equity_breadth_sources','calculated_internal_conditions','equity_index_breadth_indicator','imf_official','world_bank_official','oecd_official','bis_official','uk_dmo_official','japan_mof_official','snb_official','swiss_fso_official','rba_official','abs_official','rbnz_official','stats_nz_official','bank_of_canada_official','statistics_canada_official','eia_official','cboe_official','ice_data_indices','coinbase_public'
 ] as const;
 export type ProviderSourceId = typeof PROVIDER_SOURCE_IDS[number];
 
@@ -21,6 +21,7 @@ export const PROVIDER_SOURCE_STATUSES = ['fixture_ready','dry_run_ready','live_b
 export type ProviderSourceStatus = typeof PROVIDER_SOURCE_STATUSES[number];
 
 import type { TradingAssetCoverage } from './market-evidence';
+/** DXY and VIX retain their cross-asset diagnostic role in addition to launch-asset status. */
 export const MARKET_REASONING_DIAGNOSTIC_ASSETS = ['dxy','vix'] as const;
 export type TradableLaunchAsset = TradingAssetCoverage;
 export type MarketReasoningDiagnosticAsset = typeof MARKET_REASONING_DIAGNOSTIC_ASSETS[number];

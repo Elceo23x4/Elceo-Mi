@@ -9,6 +9,7 @@ export type EvidenceRouteFreshnessPolicy={policyId:string;maxAgeMs:number;cadenc
 export type EvidenceRevisionPolicy={mode:'append_vintage'|'immutable'|'replace_with_audit';supportsAsOf:boolean};
 export type SourceUsagePolicy={internalAnalytics:'allowed'|'unknown';rawDisplay:'permitted'|'restricted'|'unknown';attributionRequired:boolean|'unknown';redistribution:'permitted'|'restricted'|'legal_review_required'};
 export type ProviderIdentityAlias={alias:string;canonicalSourceId:ProviderSourceId};
+export type EvidenceImplementationState='descriptor_only'|'source_contract_ready'|'fixture_parser_ready'|'executable_adapter'|'staging_eligible'|'staging_verified'|'production_eligible'|'production_active'|'blocked';
 export type ProxySemantics={proxy:true;underlyingTarget:string;proxyInstrument:string;basisRisk:'low'|'medium'|'high'|'unknown';rationale:string;mayLabelAsDirectPrice:false};
 export type EvidenceRoute={role:EvidenceRouteRole;sourceId:ProviderSourceId;availability:EvidenceAvailabilityState;normalizerId:string|null;persistencePath:string|null;freshnessPolicy:EvidenceRouteFreshnessPolicy|null;trustedGateExecution:boolean;placeholder:boolean;proxy?:ProxySemantics};
 export type AssetEvidenceRequirement={capabilityId:string;criticality:EvidenceCriticality;directPriceRequired?:boolean;proxyPermitted?:boolean;routes:EvidenceRoute[]};

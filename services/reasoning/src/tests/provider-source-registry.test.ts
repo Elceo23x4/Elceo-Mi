@@ -14,7 +14,7 @@ export async function runProviderSourceRegistryTests(){
   assert.equal(snap.reasoningAssetCoverage.every((x)=>x.sourceIds.length>0),true);
 
   assert.equal(snap.reasoningAssetCoverage.length,14);
-  assert.equal(snap.launchTradableAssetCoverage.length,12);
+  assert.equal(snap.launchTradableAssetCoverage.length,14);
   assert.equal(snap.reasoningDiagnosticAssetCoverage.length,2);
   assert.deepEqual(new Set(snap.launchTradableAssetCoverage.map((x)=>x.asset)), new Set(TRADING_ASSET_COVERAGE));
   assert.deepEqual(new Set(snap.reasoningDiagnosticAssetCoverage.map((x)=>x.asset)), new Set(MARKET_REASONING_DIAGNOSTIC_ASSETS));

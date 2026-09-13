@@ -10,6 +10,9 @@ src({sourceId:'index_futures_shell',family:'market_data',displayName:'Index/futu
 ];
 const add=(id:ProviderSourceId,family:ProviderSourceFamily,name:string,assets:MarketReasoningAsset[])=>providerSources.push(src({sourceId:id,family,displayName:name,status:'not_started',activationStage:'not_started',fixtureReadiness:'none',liveActivationMode:'blocked_by_default',credentialRequirement:'unknown',capabilities:[{capabilityKind:'macro_timeseries',evidenceTypeId:id,activationStage:'not_started',fixtureReadiness:'none',dryRunSupported:false,liveActivationMode:'blocked_by_default'}],assets:[...assets].sort(),notes:'Registry-only placeholder.'}));
 ['fred_macro','us_treasury_official','federal_reserve_official','ecb_official','boe_official','boj_official','eurostat_official','bls_official','bea_official','census_official','ons_official','destatis_official','ifo_shell','zew_shell','ism_shell','imf_official','world_bank_official','oecd_official','bis_official','uk_dmo_official','japan_mof_official'].forEach((id)=>add(id as ProviderSourceId,'macro_official',id,['aud_usd','de30','dxy','eur_usd','gbp_usd','nasdaq_100','nzd_usd','sp500','usd_cad','usd_chf','usd_jpy','xau_usd']));
+['snb_official','swiss_fso_official','rba_official','abs_official','rbnz_official','stats_nz_official','bank_of_canada_official','statistics_canada_official','eia_official'].forEach((id)=>add(id as ProviderSourceId,'macro_official',id,reasoningAssets));
+['cboe_official','ice_data_indices'].forEach((id)=>add(id as ProviderSourceId,'market_data',id,id==='cboe_official'?['vix']:['dxy']));
+add('coinbase_public','crypto','Coinbase public market data',['btc_usd']);
 add('cftc_cot','positioning','CFTC COT',['aud_usd','btc_usd','eur_usd','gbp_usd','nzd_usd','usd_cad','usd_chf','usd_jpy','xau_usd']);
 ['marketaux_news','newsapi_news','gdelt_news','finnhub_news','firecrawl_extraction'].forEach((id)=>add(id as ProviderSourceId,'news_extraction',id,reasoningAssets));
 ['sec_edgar','etf_flows_shell','earnings_filings_shell'].forEach((id)=>add(id as ProviderSourceId,'filings_company_etf',id,['btc_usd','nasdaq_100','sp500','xau_usd']));
@@ -18,7 +21,7 @@ add('cftc_cot','positioning','CFTC COT',['aud_usd','btc_usd','eur_usd','gbp_usd'
 
 providerSources.sort((a,b)=>a.sourceId.localeCompare(b.sourceId));
 
-const supportRole=(asset:MarketReasoningAsset)=>asset==='dxy'||asset==='vix'?'reasoning_diagnostic':'launch_tradable';
+const supportRole=(_asset:MarketReasoningAsset)=>'launch_tradable' as const;
 const coverage = (asset:MarketReasoningAsset,sourceIds:ProviderSourceId[],themes:string[]): ProviderAssetCoverageDescriptor => ({asset,supportRole:supportRole(asset),sourceIds:[...sourceIds].sort(),themes:[...themes]});
 const reasoningAssetCoverage: ProviderAssetCoverageDescriptor[] = [
 coverage('xau_usd',['tiingo_market_data','us_treasury_official','federal_reserve_official','cftc_cot','etf_flows_shell','marketaux_news'],['market_price','real_yields','fed_policy','usd_context','cot_gold','etf_holdings','safe_haven_news']),
@@ -48,7 +51,7 @@ export const getDefaultProviderSourceRegistry=():ProviderSourceDescriptor[]=>pro
 export const getProviderSourceRegistrySnapshot=(asOfIso?:string):ProviderSourceRegistrySnapshot=>{
 const gaps:ProviderSourceGap[]=providerSources.filter((x)=>x.status!=='fixture_ready').map((x)=>({gapId:`gap:${x.sourceId}`,sourceId:x.sourceId,asset:'all',severity:x.status==='not_started'?'high':'medium',reason:x.status==='not_started'?'Implementation not started':'Fixture/dry-run incomplete',blockedBy:x.status==='not_started'?'integration_not_started':'fixture_missing'}));
 const activationChecklistBySource = Object.fromEntries(PROVIDER_SOURCE_IDS.map((id)=>[id,baseChecklist(id)])) as ProviderSourceRegistrySnapshot['activationChecklistBySource'];
-const launchTradableAssetCoverage=reasoningAssetCoverage.filter((x)=>x.supportRole==='launch_tradable'); const reasoningDiagnosticAssetCoverage=reasoningAssetCoverage.filter((x)=>x.supportRole==='reasoning_diagnostic'); return {generatedAt:asOfIso ?? new Date().toISOString(),sources:getDefaultProviderSourceRegistry(),reasoningAssetCoverage:[...reasoningAssetCoverage],launchTradableAssetCoverage,reasoningDiagnosticAssetCoverage,launchTradableAssetCount:launchTradableAssetCoverage.length,reasoningDiagnosticAssetCount:reasoningDiagnosticAssetCoverage.length,representedReasoningAssetCount:reasoningAssetCoverage.length,gaps,activationChecklistBySource};
+const launchTradableAssetCoverage=[...reasoningAssetCoverage]; const reasoningDiagnosticAssetCoverage=reasoningAssetCoverage.filter((x)=>x.asset==='dxy'||x.asset==='vix').map(x=>({...x,supportRole:'reasoning_diagnostic' as const})); return {generatedAt:asOfIso ?? new Date().toISOString(),sources:getDefaultProviderSourceRegistry(),reasoningAssetCoverage:[...reasoningAssetCoverage],launchTradableAssetCoverage,reasoningDiagnosticAssetCoverage,launchTradableAssetCount:launchTradableAssetCoverage.length,reasoningDiagnosticAssetCount:reasoningDiagnosticAssetCoverage.length,representedReasoningAssetCount:reasoningAssetCoverage.length,gaps,activationChecklistBySource};
 };
 export const listProviderSourcesByFamily=(family:ProviderSourceFamily)=>getDefaultProviderSourceRegistry().filter((x)=>x.family===family);
 export const getProviderSourceDescriptor=(sourceId:ProviderSourceId)=>getDefaultProviderSourceRegistry().find((x)=>x.sourceId===sourceId)??null;

@@ -5,11 +5,12 @@ import { MemoryScheduledIngestionRunRepository } from '../persistence/scheduled-
 import { IngestionPersistenceService } from '../provider-sources/ingestion-persistence-service.js';
 import type { ScheduledIngestionJobPolicy } from '@elceo/types';
 import { CanonicalMarketIntelligenceBoundaryService } from '../runtime/canonical-market-intelligence-boundary.js';
-import { computeBoundedProviderRetryAt, computeNextRetryAt, deserializeScheduledIngestionRunRecord, deriveRetryStatus, deriveStalenessStatus, getDefaultScheduledIngestionPolicies, isRetryableProviderFailure, ScheduledIngestionService, serializeScheduledIngestionRunRecord } from '../scheduled-ingestion/index.js';
+import { computeBoundedProviderRetryAt, computeNextRetryAt, deserializeScheduledIngestionRunRecord, deriveRetryStatus, deriveStalenessStatus, getDefaultScheduledIngestionPolicies, getScheduledLaunchAssetCoverage, isRetryableProviderFailure, ScheduledIngestionService, serializeScheduledIngestionRunRecord } from '../scheduled-ingestion/index.js';
 
 export async function runScheduledIngestionTests(){
   const policies=getDefaultScheduledIngestionPolicies();
   assert.ok(policies.length>=16);
+  const coverage=getScheduledLaunchAssetCoverage();assert.equal(Object.keys(coverage).length,14);assert.ok(Object.values(coverage).every(jobIds=>jobIds.length>0));
   assert.ok(policies.every((x)=>x.rationale.trim().length>0));
   assert.ok(policies.every((x)=>x.enabled===true && x.runMode==='dry_run_fixture'));
   assert.equal(new Set(policies.map((x)=>x.jobId)).size,policies.length);

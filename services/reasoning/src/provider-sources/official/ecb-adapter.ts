@@ -14,7 +14,7 @@ export class EcbOfficialAdapter implements MarketEvidenceProviderAdapter{
  fetchManaged(request:ProviderSourceRequest,execution:ProviderManagedExecution){return this.fetchInternal(request,execution);}
  private async fetchInternal(request:ProviderSourceRequest,execution?:ProviderManagedExecution):Promise<ProviderSourceResponse>{
   if(request.capability!=='policy_rate_series')return fail(request,'unsupported_capability');
-  const params=parseParams(request.paramsJson);if(!params.ok)return fail(request,params.code);
+  const params=parseParams(request.paramsJson);if('code' in params)return fail(request,params.code);
   const mode=this.config.mode??'live_disabled';
   if(mode==='fixture')return success(request,JSON.stringify(parseEcbCsv(ECB_CSV_FIXTURE)),`${ORIGIN}/service/data/FM/${SERIES[params.series]!.slice(3)}?format=csvdata`);
   if(mode!=='live_enabled')return fail(request,'ecb_live_disabled');

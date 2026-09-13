@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
+
+const files=['scripts/test-sec-g-adaptive-takeover.mjs','scripts/sec-g-adaptive-worker.mjs','scripts/assert-sec-g-source-integrity.mjs','scripts/verify-sec-g-artifacts.mjs','.github/workflows/sec-g-exact-head.yml'];
+const git=(...args)=>execFileSync('git',args,{encoding:'utf8'}).trim();
+const head=git('rev-parse','HEAD');
+const expectedHead=process.env.SEC_G_HEAD_SHA??head;
+const status=git('status','--porcelain=v1','--untracked-files=all');
+const observations=files.map(path=>({path,committedBlob:git('rev-parse',`HEAD:${path}`),executableBlob:git('hash-object',path)}));
+console.error(JSON.stringify({check:'sec-g-source-integrity',head,expectedHead,statusPaths:status?status.split('\n'):[],observations}));
+assert.equal(head,expectedHead,'sec_g_source_integrity_head_mismatch');
+git('diff','--exit-code','--',...files);
+assert.equal(status,'','sec_g_source_integrity_worktree_not_clean');
+for(const observation of observations)assert.equal(observation.executableBlob,observation.committedBlob,`sec_g_source_integrity_blob_mismatch:${observation.path}`);
+const phase=process.argv[2]??'unspecified',path='artifacts/sec-g/source-integrity.json',phaseDir=process.env.SEC_G_SOURCE_INTEGRITY_PHASE_DIR??'artifacts/sec-g/source-integrity-phases';
+assert(/^[a-z-]+$/.test(phase),'sec_g_source_integrity_invalid_phase');
+await mkdir(phaseDir,{recursive:true});
+const observation={phase,observedAt:new Date().toISOString(),head,expectedHead,status,statusPaths:status?status.split('\n'):[],tree:git('ls-tree','HEAD','--',...files),observations};
+const phasePath=`${phaseDir}/${phase}.json`,phaseTemp=`${phasePath}.${process.pid}.tmp`;
+await writeFile(phaseTemp,JSON.stringify(observation,null,2));await rename(phaseTemp,phasePath);
+const phases=[];for(const name of (await readdir(phaseDir)).filter(name=>name.endsWith('.json')).sort())phases.push(JSON.parse(await readFile(`${phaseDir}/${name}`,'utf8')));
+const evidence={exactGitSha:head,scenario:'sec-g-executable-source-integrity',environment:process.env.GITHUB_ACTIONS==='true'?'github-actions-test':'local-test',head,status,tree:observation.tree,phases};
+const temp=`${path}.${process.pid}.tmp`;await writeFile(temp,JSON.stringify(evidence,null,2));await rename(temp,path);
+console.log(JSON.stringify(evidence.phases.at(-1)));

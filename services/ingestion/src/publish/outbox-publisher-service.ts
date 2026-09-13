@@ -1,6 +1,7 @@
 import type { OutboxRepository } from './outbox-contracts';
 import type { IngestionPublishTopic } from './topic-contracts';
 import type { IngestionPublishTransport } from './transport';
+import { randomUUID } from 'node:crypto';
 
 export type OutboxPublishReportItem = {
   outboxId: string;
@@ -39,7 +40,8 @@ export class OutboxPublisherService {
     const limit = params.limit ?? 100;
     const maxAttemptsBeforeDead = params.maxAttemptsBeforeDead ?? 5;
 
-    const dueItems = await this.outboxRepository.listDueOutboxItems(limit, startedAt);
+    const claimExpiresAt = new Date(Date.parse(startedAt) + 30_000).toISOString();
+    const dueItems = await this.outboxRepository.claimDueOutboxItems(limit, startedAt, claimExpiresAt, randomUUID());
     const reportItems: OutboxPublishReportItem[] = [];
     let publishedCount = 0;
     let failedCount = 0;
@@ -47,8 +49,6 @@ export class OutboxPublisherService {
 
     for (const outbox of dueItems) {
       const attemptedAt = params.nowIso;
-      await this.outboxRepository.markOutboxPublishing(outbox.outboxId, attemptedAt);
-
       try {
         await this.transport.publish(outbox.topic, outbox.payloadJson);
 
@@ -62,7 +62,7 @@ export class OutboxPublisherService {
           errorMessage: null
         });
 
-        await this.outboxRepository.markOutboxPublished(outbox.outboxId, attemptedAt);
+        if (!await this.outboxRepository.markClaimPublished(outbox, attemptedAt)) throw new Error('outbox_claim_lost');
 
         publishedCount += 1;
         reportItems.push({
@@ -87,7 +87,7 @@ export class OutboxPublisherService {
         });
 
         if (nextAttemptCount >= maxAttemptsBeforeDead) {
-          await this.outboxRepository.markOutboxDead(outbox.outboxId, attemptedAt, 'dead_threshold_reached', errorMessage);
+          await this.outboxRepository.markClaimDead(outbox, attemptedAt, 'dead_threshold_reached', errorMessage);
           deadCount += 1;
           reportItems.push({
             outboxId: outbox.outboxId,
@@ -98,7 +98,7 @@ export class OutboxPublisherService {
           });
         } else {
           const nextAvailableAt = computeNextAvailableAt(attemptedAt, nextAttemptCount);
-          await this.outboxRepository.markOutboxFailed(outbox.outboxId, attemptedAt, 'transport_error', errorMessage, nextAvailableAt);
+          await this.outboxRepository.markClaimFailed(outbox, attemptedAt, 'transport_error', errorMessage, nextAvailableAt);
           failedCount += 1;
           reportItems.push({
             outboxId: outbox.outboxId,

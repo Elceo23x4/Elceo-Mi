@@ -1,7 +1,7 @@
 import type { CanonicalAssetSymbol, NotificationChannel, Timeframe } from '@elceo/types';
 import type { NotificationDeliveryEnvelope } from './channel-contracts';
 
-export type NotificationOutboxStatus = 'staged' | 'dispatching' | 'delivered' | 'failed' | 'dead';
+export type NotificationOutboxStatus = 'staged' | 'dispatching' | 'delivered' | 'failed' | 'dead' | 'ambiguous';
 
 export type NotificationOutboxAttemptStatus = 'success' | 'failure';
 
@@ -30,6 +30,11 @@ export type NotificationOutboxRecord = {
   payloadJson: string;
   createdAt: string;
   updatedAt: string;
+  claimToken?: string | null | undefined;
+  claimGeneration?: number | undefined;
+  claimedAt?: string | null | undefined;
+  claimExpiresAt?: string | null | undefined;
+  ambiguousAt?: string | null | undefined;
 };
 
 export type NotificationOutboxAttemptRecord = {

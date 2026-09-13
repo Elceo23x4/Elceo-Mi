@@ -113,6 +113,7 @@ export class IngestionSchedulerTickService {
       let skippedReason: string | null = null;
 
       try {
+        if (!leaseAttempt.lease || !await this.leaseRepository.isCurrentOwner(leaseAttempt.lease, acquiredAt)) throw new Error('scheduler_lease_lost');
         const triggerContext = createScheduledIngestionRequest({
           asset: duePlan.asset,
           timeframe: duePlan.timeframe,
@@ -137,6 +138,7 @@ export class IngestionSchedulerTickService {
           config: runtimeConfig,
           triggerContext
         });
+        if (!await this.leaseRepository.isCurrentOwner(leaseAttempt.lease, acquiredAt)) throw new Error('scheduler_lease_lost_after_execution');
 
         dispatchedCount += 1;
         runStatus = result.report.status;
@@ -151,7 +153,7 @@ export class IngestionSchedulerTickService {
         runStatus = 'failed';
         skippedReason = `dispatch_failure:${error instanceof Error ? error.message : 'unknown'}`;
       } finally {
-        await this.leaseRepository.releaseLease(duePlan.requestKey, acquiredAt);
+        if (leaseAttempt.lease) await this.leaseRepository.releaseLease(leaseAttempt.lease, new Date().toISOString());
       }
 
       dispatches.push({

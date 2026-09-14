@@ -9,32 +9,38 @@ const SUPPORTED = new Set(['cot_report']);
 const CFTC_ORIGIN='https://publicreporting.cftc.gov';
 const CFTC_DATASET='6dca-aqww';
 const CFTC_PATH=`/api/v3/views/${CFTC_DATASET}/query.json`;
+export const CFTC_PUBLIC_REPORTING_GATE_ID='cftc_public_reporting';
 const CFTC_CODES:Readonly<Record<string,string>>={
  xau_usd:'088691',eur_usd:'099741',gbp_usd:'096742',usd_jpy:'097741',usd_chf:'092741',aud_usd:'232741',nzd_usd:'112741',usd_cad:'090741',btc_usd:'133741',nasdaq_100:'209742',sp500:'13874+',dxy:'098662'
 };
 const SELECT_FIELDS=['market_and_exchange_names','report_date_as_yyyy_mm_dd','cftc_contract_market_code','open_interest_all','noncomm_positions_long_all','noncomm_positions_short_all','noncomm_postions_spread_all','comm_positions_long_all','comm_positions_short_all','nonrept_positions_long_all','nonrept_positions_short_all'] as const;
 
 export type CftcCotAdapterMode='fixture'|'live_disabled'|'live_enabled';
-export type CftcCotRuntimeConfig={mode?:CftcCotAdapterMode;liveEnabled?:boolean;appToken?:string|null;timeoutMs?:number|null;fetchImpl?:typeof fetch};
-type ResolvedConfig={mode:CftcCotAdapterMode;liveEnabled:boolean;appToken:string|null;timeoutMs:number;fetchImpl:typeof fetch};
+export type CftcCotRuntimeConfig={mode?:CftcCotAdapterMode;liveEnabled?:boolean;appToken?:string|null;timeoutMs?:number|null;fetchImpl?:typeof fetch;gateProviderId?:string};
+type ResolvedConfig={mode:CftcCotAdapterMode;liveEnabled:boolean;appToken:string|null;timeoutMs:number;fetchImpl:typeof fetch;gateProviderId:string};
 type RecordValue=Record<string,unknown>;
-function resolveConfig(config:CftcCotRuntimeConfig):ResolvedConfig{const mode=config.mode??((config.liveEnabled??false)?'live_enabled':'live_disabled'),liveEnabled=config.liveEnabled??mode==='live_enabled';return{mode,liveEnabled,appToken:config.appToken?.trim()||null,timeoutMs:config.timeoutMs&&Number.isFinite(config.timeoutMs)&&config.timeoutMs>0?config.timeoutMs:10000,fetchImpl:config.fetchImpl??fetch};}
+function resolveConfig(config:CftcCotRuntimeConfig):ResolvedConfig{const mode=config.mode??((config.liveEnabled??false)?'live_enabled':'live_disabled'),liveEnabled=config.liveEnabled??mode==='live_enabled';return{mode,liveEnabled,appToken:config.appToken?.trim()||null,timeoutMs:config.timeoutMs&&Number.isFinite(config.timeoutMs)&&config.timeoutMs>0?config.timeoutMs:10000,fetchImpl:config.fetchImpl??fetch,gateProviderId:config.gateProviderId?.trim()||COT_PROVIDER_ID};}
 
 export class CftcCotAdapter implements MarketEvidenceProviderAdapter {
- descriptor = getProviderDescriptor(COT_PROVIDER_ID) ?? (()=>{throw new Error('missing_cot_descriptor')})();
- constructor(private readonly config:CftcCotRuntimeConfig={mode:'fixture'}){}
+ readonly descriptor;
+ private readonly resolved:ResolvedConfig;
+ constructor(private readonly config:CftcCotRuntimeConfig={mode:'fixture'}){
+  this.resolved=resolveConfig(config);
+  this.descriptor=getProviderDescriptor(this.resolved.gateProviderId)??(()=>{throw new Error(`missing_cot_descriptor:${this.resolved.gateProviderId}`)})();
+ }
  async fetch(request:ProviderSourceRequest):Promise<ProviderSourceResponse>{return this.fetchInternal(request);}
  async fetchManaged(request:ProviderSourceRequest,execution:ProviderManagedExecution):Promise<ProviderSourceResponse>{return this.fetchInternal(request,execution);}
  private async fetchInternal(request:ProviderSourceRequest,execution?:ProviderManagedExecution):Promise<ProviderSourceResponse>{
+  if(request.providerId!==this.resolved.gateProviderId)return fail(request,'cftc_gate_identity_mismatch',`Expected CFTC gate identity ${this.resolved.gateProviderId}`,'unsupported');
   if(!SUPPORTED.has(request.capability))return fail(request,'unsupported_capability',`Unsupported capability: ${request.capability}`,'unsupported');
   if(!request.asset)return fail(request,'missing_asset','Asset is required for CFTC COT fetch');
-  const cfg=resolveConfig(this.config);
+  const cfg=this.resolved;
   if(cfg.mode==='fixture'){const fixture=COT_FIXTURES[request.asset];const payload=fixture??{request:{asset:request.asset,reportKind:'legacy_futures_only',requestedAt:request.requestedAt,region:request.region},rows:[]};return{...base(request),status:'success',rawPayloadJson:JSON.stringify(payload),sourceUrl:`fixture://cftc/${mapAssetToCotMarket(request.asset)}`};}
   if(cfg.mode==='live_disabled'||!cfg.liveEnabled)return fail(request,'cftc_live_disabled','Live CFTC COT fetch is disabled');
   const code=CFTC_CODES[request.asset];if(!code)return fail(request,'cftc_unsupported_asset',`No canonical CFTC contract mapping for ${request.asset}`,'unsupported');
   return fetchLive(request,code,cfg,execution);
  }
- async normalize(response:ProviderSourceResponse){if(!response.rawPayloadJson||response.rawPayloadJson.trim()==='')return[];const parsed=JSON.parse(response.rawPayloadJson) as CotFixtureResponse;if(!parsed||!parsed.request||!Array.isArray(parsed.rows))throw new Error('cot_malformed_payload');return normalizeCotRows(parsed.request,parsed.rows,response.providerId);}
+ async normalize(response:ProviderSourceResponse){if(!response.rawPayloadJson||response.rawPayloadJson.trim()==='')return[];const parsed=JSON.parse(response.rawPayloadJson) as CotFixtureResponse;if(!parsed||!parsed.request||!Array.isArray(parsed.rows))throw new Error('cot_malformed_payload');return normalizeCotRows(parsed.request,parsed.rows,COT_PROVIDER_ID);}
 }
 
 async function fetchLive(request:ProviderSourceRequest,code:string,cfg:ResolvedConfig,managed?:ProviderManagedExecution):Promise<ProviderSourceResponse>{

@@ -1,6 +1,8 @@
 import type { ProviderSourceRequest, ScheduledIngestionJobPolicy, ScheduledIngestionRunMode, ScheduledIngestionRunRecord, ScheduledIngestionRunReport, ScheduledIngestionStalenessReport } from '@elceo/types';
 import { CftcCotAdapter } from '../provider-sources/cot/cot-adapter';
 import { TiingoMarketDataAdapter } from '../provider-sources/tiingo/tiingo-adapter';
+import { FinnhubMacroCalendarEvidenceAdapter, FinnhubMarketDataFallbackAdapter } from '../provider-sources/finnhub/finnhub-adapter';
+import { GdeltNewsAdapter, MarketauxMarketNewsAdapter } from '../provider-sources/news/news-adapters';
 import { createOfficialAdapter } from '../provider-sources/official/official-adapter-catalog';
 import { IngestionPersistenceService, type IngestionPersistenceReport } from '../provider-sources/ingestion-persistence-service';
 import type { ScheduledIngestionRunRepository } from '../persistence/scheduled-ingestion-repository';
@@ -14,6 +16,12 @@ export type ScheduledIngestionGatePolicyResolver = (policy: ScheduledIngestionJo
 export type ScheduledIngestionExecutionOptions={gatePolicyResolver?:ScheduledIngestionGatePolicyResolver;liveExecutionResolver?:TrustedProviderExecutionResolver;retryJitter?:()=>number;now?:()=>string;gateExecutor?:typeof executeProviderApiGateRequest};
 
 function trustedScheduledProviderParams(policy:ScheduledIngestionJobPolicy):Record<string,unknown>{
+ if(policy.providerId==='tiingo_market_data')return{frequency:'daily'};
+ if(policy.providerId==='finnhub_market_data')return{frequency:'daily',fallbackFor:'tiingo_market_data'};
+ if(policy.providerId==='finnhub_macro')return{profile:'economic_calendar',authority:'secondary'};
+ if(policy.providerId==='marketaux_news')return{profile:'launch_financial_news',lookbackHours:3};
+ if(policy.providerId==='gdelt_news')return{profile:policy.capability==='geopolitical_risk_event'?'geopolitical_risk':'market_news_fallback',lookbackHours:3};
+ if(policy.providerId==='cftc_cot')return{profile:'6dca-aqww:legacy_futures_only'};
  if(policy.providerId==='fred'&&policy.capability==='real_yield_series')return{seriesId:'DFII10'};
  if(policy.providerId==='fred'&&policy.capability==='financial_conditions_index')return{seriesId:'NFCI'};
  if(policy.providerId==='ecb_public'&&policy.capability==='policy_rate_series')return{series:'deposit_facility'};
@@ -22,14 +30,22 @@ function trustedScheduledProviderParams(policy:ScheduledIngestionJobPolicy):Reco
  if(policy.providerId==='bls_official'&&policy.capability==='inflation_indicator')return{profile:'CUSR0000SA0'};
  if(policy.providerId==='bls_official'&&policy.capability==='labor_market_indicator')return{profile:'LNS14000000'};
  if(policy.providerId==='bea_official')return{profile:'NIPA:T10101:Q'};
- if(policy.providerId==='census_official')return{profile:'mrts_retail_sales'};
+ if(policy.providerId==='census_official')return{profile:'EITS:MRTS'};
  if(policy.providerId==='boe_official')return{profile:'IUDBEDR'};
  if(policy.providerId==='rba_official')return{profile:'cash_rate_target'};
- if(policy.providerId==='rbnz_official')return{profile:'ocr_decision_history'};
+ if(policy.providerId==='rbnz_official')return{profile:'OCR_DECISION_HISTORY'};
  if(policy.providerId==='bank_of_canada_official')return{profile:'V39079'};
  if(policy.providerId==='statistics_canada_official')return{profile:'vector:41690973'};
  if(policy.providerId==='eia_official')return{profile:'RWTC'};
  if(policy.providerId==='world_bank_official')return{profile:'NY.GDP.MKTP.KD.ZG'};
+ if(policy.providerId==='federal_reserve')return{profile:'H41:H41/RESPPA_N.WW'};
+ if(policy.providerId==='eurostat_official')return{profile:'prc_hicp_minr:M:RCH_A:TOTAL:EA21'};
+ if(policy.providerId==='ons_official')return{profile:'L55O:CPIH_ALL_ITEMS_ANNUAL_RATE'};
+ if(policy.providerId==='boj_public')return{profile:'FM01:STRDCLUCON'};
+ if(policy.providerId==='snb_official')return{profile:'snboffzisa:D0(LZ)'};
+ if(policy.providerId==='abs_official')return{profile:'ABS,CPI,2.0.0/1.10001.10.50.M'};
+ if(policy.providerId==='oecd_official')return{profile:'OECD.SDD.STES,DSD_STES@DF_CLI,4.1:G20.M.LI...AA...H'};
+ if(policy.providerId==='cboe_official')return{profile:'VIX:EOD_DIRECT_INDEX'};
  return{profile:'server_owned_fixture',scheduled:true};
 }
 
@@ -42,6 +58,7 @@ export class ScheduledIngestionService {
     const runMode = modeOverride ?? policy?.runMode ?? 'dry_run_fixture';
     const at = startedAt ?? this.now();
     if (!policy) return this.persistSimple(jobId, runMode, at, 'skipped', 'unsupported_job_id');
+    if (!policy.enabled) return this.persistSimple(jobId,runMode,at,'skipped','scheduled_policy_disabled',policy);
     if (runMode === 'production_live') {
       const gate = this.resolveGate(policy, runMode, at);
       return this.persistSimple(jobId, runMode, at, 'blocked', gate.reason, policy, gate);
@@ -71,6 +88,7 @@ export class ScheduledIngestionService {
     const policy = getScheduledIngestionPolicy(jobId);
     const at = startedAt ?? new Date().toISOString();
     if (!policy) return this.persistSimple(jobId, 'dry_run_fixture', at, 'skipped', 'unsupported_job_id');
+    if(!policy.enabled)return this.persistSimple(jobId,'dry_run_fixture',at,'skipped','scheduled_policy_disabled',policy);
     const run = await this.executeFixtureDryRun(policy, at, `run-${jobId}-${at}`);
     await this.runs.saveRun(run);
     return this.buildScheduledIngestionRunReport(run);
@@ -120,7 +138,11 @@ export class ScheduledIngestionService {
     let report: IngestionPersistenceReport | null = null;
     const request = this.buildRequest(policy, requestedAt, policy.capability);
     if (policy.providerId === 'tiingo_market_data') report = await this.ingestion.persistAdapterFetchAndNormalize(new TiingoMarketDataAdapter({ mode: 'fixture' }), request);
-    else if (policy.providerId === 'cftc_cot') report = await this.ingestion.persistAdapterFetchAndNormalize(new CftcCotAdapter(), request);
+    else if (policy.providerId === 'cftc_cot') report = await this.ingestion.persistAdapterFetchAndNormalize(new CftcCotAdapter({mode:'fixture'}), request);
+    else if(policy.providerId==='finnhub_market_data')report=await this.ingestion.persistAdapterFetchAndNormalize(new FinnhubMarketDataFallbackAdapter({mode:'fixture'}),request);
+    else if(policy.providerId==='finnhub_macro')report=await this.ingestion.persistAdapterFetchAndNormalize(new FinnhubMacroCalendarEvidenceAdapter({mode:'fixture'}),request);
+    else if(policy.providerId==='marketaux_news')report=await this.ingestion.persistAdapterFetchAndNormalize(new MarketauxMarketNewsAdapter({mode:'fixture'}),request);
+    else if(policy.providerId==='gdelt_news')report=await this.ingestion.persistAdapterFetchAndNormalize(new GdeltNewsAdapter({mode:'fixture'}),request);
     else {
       const officialAdapter=createOfficialAdapter(policy.providerId,policy.capability,{mode:'fixture'});
       if(officialAdapter)report=await this.ingestion.persistAdapterFetchAndNormalize(officialAdapter,request);

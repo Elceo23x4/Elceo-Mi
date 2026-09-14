@@ -1,10 +1,11 @@
 import { TRADING_ASSET_COVERAGE, type ProviderCapabilityKind, type ScheduledIngestionJobPolicy, type ScheduledIngestionPolicySnapshot, type TradingAssetCoverage } from '@elceo/types';
+import { CANONICAL_OFFICIAL_SCHEDULE_POLICIES } from './official-schedule-policies';
 
 type Seed = Omit<ScheduledIngestionJobPolicy, 'jobId'> & { jobKey: string };
 const buildJobId = (providerId: string, capability: ProviderCapabilityKind, asset: string | null): string => `sched-${providerId}-${capability}${asset ? `-${asset}` : ''}`;
 const seed = (s: Seed): ScheduledIngestionJobPolicy => ({ ...s, jobId: buildJobId(s.providerId, s.capability, s.asset) });
 
-const DEFAULT_POLICIES: ScheduledIngestionJobPolicy[] = [
+const LEGACY_AND_EXISTING_POLICIES: ScheduledIngestionJobPolicy[] = [
   seed({ jobKey: '1', providerId: 'tiingo_market_data', capability: 'market_price_history', asset: 'xau_usd', region: 'global', cadence: 'hourly', runMode: 'dry_run_fixture', enabled: true, maxRetries: 2, retryBackoffSeconds: 30, staleAfterMinutes: 90, expiresAfterMinutes: 360, rationale: 'Fixture-safe Tiingo XAU dry-run ingestion.' }),
   seed({ jobKey: '2', providerId: 'tiingo_market_data', capability: 'market_price_history', asset: 'eur_usd', region: 'global', cadence: 'hourly', runMode: 'dry_run_fixture', enabled: true, maxRetries: 2, retryBackoffSeconds: 30, staleAfterMinutes: 90, expiresAfterMinutes: 360, rationale: 'Fixture-safe Tiingo EUR dry-run ingestion.' }),
   seed({ jobKey: '3', providerId: 'tiingo_market_data', capability: 'market_price_history', asset: 'btc_usd', region: 'global', cadence: 'hourly', runMode: 'dry_run_fixture', enabled: true, maxRetries: 2, retryBackoffSeconds: 30, staleAfterMinutes: 90, expiresAfterMinutes: 360, rationale: 'Fixture-safe Tiingo BTC dry-run ingestion.' }),
@@ -27,9 +28,13 @@ const DEFAULT_POLICIES: ScheduledIngestionJobPolicy[] = [
   seed({ jobKey: '20', providerId: 'ecb_public', capability: 'policy_rate_series', asset: null, region: 'euro_area', cadence: 'daily', runMode: 'dry_run_fixture', enabled: true, maxRetries: 1, retryBackoffSeconds: 60, staleAfterMinutes: 1440, expiresAfterMinutes: 10080, rationale: 'Source-level ECB policy-rate observation with fan-out to EUR and relative-FX cognition consumers.' })
 ];
 
-export const getDefaultScheduledIngestionPolicies = (): ScheduledIngestionJobPolicy[] => DEFAULT_POLICIES;
-export const listScheduledIngestionPolicies = (providerId?: string): ScheduledIngestionJobPolicy[] => providerId ? DEFAULT_POLICIES.filter((x) => x.providerId === providerId) : DEFAULT_POLICIES;
-export const getScheduledIngestionPolicy = (jobId: string): ScheduledIngestionJobPolicy | null => DEFAULT_POLICIES.find((x) => x.jobId === jobId) ?? null;
-export const getScheduledIngestionPolicySnapshot = (asOfIso?: string): ScheduledIngestionPolicySnapshot => ({ generatedAt: asOfIso ?? new Date().toISOString(), policies: DEFAULT_POLICIES });
+const byJobId=new Map<string,ScheduledIngestionJobPolicy>();
+for(const policy of [...LEGACY_AND_EXISTING_POLICIES,...CANONICAL_OFFICIAL_SCHEDULE_POLICIES])byJobId.set(policy.jobId,policy);
+const DEFAULT_POLICIES:ScheduledIngestionJobPolicy[]=[...byJobId.values()];
+
+export const getDefaultScheduledIngestionPolicies = (): ScheduledIngestionJobPolicy[] => [...DEFAULT_POLICIES];
+export const listScheduledIngestionPolicies = (providerId?: string): ScheduledIngestionJobPolicy[] => providerId ? DEFAULT_POLICIES.filter((x) => x.providerId === providerId) : [...DEFAULT_POLICIES];
+export const getScheduledIngestionPolicy = (jobId: string): ScheduledIngestionJobPolicy | null => byJobId.get(jobId) ?? null;
+export const getScheduledIngestionPolicySnapshot = (asOfIso?: string): ScheduledIngestionPolicySnapshot => ({ generatedAt: asOfIso ?? new Date().toISOString(), policies: [...DEFAULT_POLICIES] });
 /** Source/capability jobs are fetched once and then fanned out; null-asset jobs intentionally cover all launch assets. */
 export const getScheduledLaunchAssetCoverage=():Readonly<Record<TradingAssetCoverage,string[]>>=>Object.fromEntries(TRADING_ASSET_COVERAGE.map(asset=>[asset,DEFAULT_POLICIES.filter(policy=>policy.asset===null||policy.asset===asset).map(policy=>policy.jobId)])) as Record<TradingAssetCoverage,string[]>;

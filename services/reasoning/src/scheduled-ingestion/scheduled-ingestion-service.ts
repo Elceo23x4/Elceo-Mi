@@ -1,5 +1,5 @@
 import type { ProviderSourceRequest, ScheduledIngestionJobPolicy, ScheduledIngestionRunMode, ScheduledIngestionRunRecord, ScheduledIngestionRunReport, ScheduledIngestionStalenessReport } from '@elceo/types';
-import { CftcCotAdapter } from '../provider-sources/cot/cot-adapter';
+import { CFTC_PUBLIC_REPORTING_GATE_ID, CftcCotAdapter } from '../provider-sources/cot/cot-adapter';
 import { TiingoMarketDataAdapter } from '../provider-sources/tiingo/tiingo-adapter';
 import { FinnhubMacroCalendarEvidenceAdapter, FinnhubMarketDataFallbackAdapter } from '../provider-sources/finnhub/finnhub-adapter';
 import { GdeltNewsAdapter, MarketauxMarketNewsAdapter } from '../provider-sources/news/news-adapters';
@@ -21,7 +21,7 @@ function trustedScheduledProviderParams(policy:ScheduledIngestionJobPolicy):Reco
  if(policy.providerId==='finnhub_macro')return{profile:'economic_calendar',authority:'secondary'};
  if(policy.providerId==='marketaux_news')return{profile:'launch_financial_news',lookbackHours:3};
  if(policy.providerId==='gdelt_news')return{profile:policy.capability==='geopolitical_risk_event'?'geopolitical_risk':'market_news_fallback',lookbackHours:3};
- if(policy.providerId==='cftc_cot')return{profile:'6dca-aqww:legacy_futures_only'};
+ if(policy.providerId==='cftc_cot'||policy.providerId===CFTC_PUBLIC_REPORTING_GATE_ID)return{profile:'6dca-aqww:legacy_futures_only',canonicalSourceId:'cftc_cot'};
  if(policy.providerId==='fred'&&policy.capability==='real_yield_series')return{seriesId:'DFII10'};
  if(policy.providerId==='fred'&&policy.capability==='financial_conditions_index')return{seriesId:'NFCI'};
  if(policy.providerId==='ecb_public'&&policy.capability==='policy_rate_series')return{series:'deposit_facility'};
@@ -138,7 +138,8 @@ export class ScheduledIngestionService {
     let report: IngestionPersistenceReport | null = null;
     const request = this.buildRequest(policy, requestedAt, policy.capability);
     if (policy.providerId === 'tiingo_market_data') report = await this.ingestion.persistAdapterFetchAndNormalize(new TiingoMarketDataAdapter({ mode: 'fixture' }), request);
-    else if (policy.providerId === 'cftc_cot') report = await this.ingestion.persistAdapterFetchAndNormalize(new CftcCotAdapter({mode:'fixture'}), request);
+    else if (policy.providerId === 'cftc_cot') report = await this.ingestion.persistAdapterFetchAndNormalize(new CftcCotAdapter({mode:'fixture',gateProviderId:'cftc_cot'}), request);
+    else if (policy.providerId === CFTC_PUBLIC_REPORTING_GATE_ID) report = await this.ingestion.persistAdapterFetchAndNormalize(new CftcCotAdapter({mode:'fixture',gateProviderId:CFTC_PUBLIC_REPORTING_GATE_ID}), request);
     else if(policy.providerId==='finnhub_market_data')report=await this.ingestion.persistAdapterFetchAndNormalize(new FinnhubMarketDataFallbackAdapter({mode:'fixture'}),request);
     else if(policy.providerId==='finnhub_macro')report=await this.ingestion.persistAdapterFetchAndNormalize(new FinnhubMacroCalendarEvidenceAdapter({mode:'fixture'}),request);
     else if(policy.providerId==='marketaux_news')report=await this.ingestion.persistAdapterFetchAndNormalize(new MarketauxMarketNewsAdapter({mode:'fixture'}),request);

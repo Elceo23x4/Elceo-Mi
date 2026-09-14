@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS app_macro_evidence_vintages (
   vintage_id text,
   previous_published_value double precision,
   published_value double precision NOT NULL,
-  revision_state text NOT NULL CHECK (revision_state IN ('preliminary','final','revised')),
+  revision_state text NOT NULL CHECK (revision_state IN ('observed','preliminary','final','revised')),
   canonical_source_id text NOT NULL,
   source_reference text NOT NULL,
   provider_request_id text NOT NULL REFERENCES app_provider_source_requests(request_id),

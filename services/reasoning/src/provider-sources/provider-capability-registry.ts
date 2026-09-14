@@ -1,9 +1,9 @@
 import type { MarketDataProviderDescriptor, MarketEvidenceClass, ProviderCapabilityKind, ProviderCapabilityRegistrySnapshot } from '@elceo/types';
+import { OFFICIAL_PROVIDER_DESCRIPTORS } from './official/official-provider-descriptors';
 
 export type EvidenceClassCoverage = { evidenceClass: MarketEvidenceClass; providerCapabilities: ProviderCapabilityKind[]; normalizedPayloadKinds: string[]; calculatedInternal: boolean; placeholderOnly: boolean; explicitlyExcluded: boolean; notes: string; };
 
 const PROVIDERS: MarketDataProviderDescriptor[] = [
-
 {providerId:'calculated_internal_macro_calendar',providerFamily:'calculated_internal',displayName:'Calculated Internal Macro Calendar',homepageUrl:'https://elceo.internal',accessRequirement:'derived_internal',supportedCapabilities:['economic_calendar'],supportedRegions:['global'],supportedAssets:['macro_calendar'],launchEnabled:false,notes:'Fixture-only macro calendar foundation.'},
 {providerId:'public_statistics_agencies',providerFamily:'statistics_agency',displayName:'Public Statistics Agencies',homepageUrl:'https://www.bls.gov',accessRequirement:'official_public_download',supportedCapabilities:['macro_indicator_series','inflation_indicator','labor_market_indicator','growth_activity_indicator','economic_calendar'],supportedRegions:['united_states','euro_area','united_kingdom','japan'],supportedAssets:['macro_series'],launchEnabled:false,notes:'Fixture-only macro indicator foundation.'},
 {providerId:'macro_surprise_calculated_internal',providerFamily:'calculated_internal',displayName:'Macro Surprise Calculated Internal',homepageUrl:'https://elceo.internal',accessRequirement:'derived_internal',supportedCapabilities:['macro_surprise_series'],supportedRegions:['global'],supportedAssets:['macro_surprises'],launchEnabled:false,notes:'Fixture-only macro surprise history foundation.'},
@@ -26,6 +26,8 @@ const PROVIDERS: MarketDataProviderDescriptor[] = [
 {providerId:'bank_public_reports',providerFamily:'bank_reports',displayName:'Bank Public Reports',homepageUrl:'https://www.ffiec.gov',accessRequirement:'manual_download',supportedCapabilities:['bank_earnings_report','bank_health_metric','stress_test_result'],supportedRegions:['united_states','euro_area','united_kingdom','japan'],supportedAssets:['banking_sector'],launchEnabled:false,notes:'Public disclosures foundation.'},
 {providerId:'public_regulatory_filings',providerFamily:'public_regulatory_filings',displayName:'Public Regulatory Filings',homepageUrl:'https://www.sec.gov',accessRequirement:'official_public_download',supportedCapabilities:['stress_test_result','institutional_liquidity_report','bank_health_metric','regulatory_filing_reference'],supportedRegions:['united_states','global'],supportedAssets:['banking_sector','institutional_liquidity'],launchEnabled:false,notes:'Public filings only.'}
 ];
+const ALL_PROVIDERS:readonly MarketDataProviderDescriptor[]=[...PROVIDERS,...OFFICIAL_PROVIDER_DESCRIPTORS];
+
 export const EVIDENCE_CLASS_COVERAGE: EvidenceClassCoverage[] = [
 {evidenceClass:'macro_calendar',providerCapabilities:['economic_calendar'],normalizedPayloadKinds:['NormalizedMacroCalendarEvent','NormalizedMarketEvidencePayload'],calculatedInternal:false,placeholderOnly:false,explicitlyExcluded:false,notes:'Calendar events via public schedules.'},
 {evidenceClass:'economic_indicator',providerCapabilities:['economic_calendar'],normalizedPayloadKinds:['NormalizedMarketEvidencePayload'],calculatedInternal:false,placeholderOnly:false,explicitlyExcluded:false,notes:'Economic release streams.'},
@@ -62,10 +64,10 @@ export const EVIDENCE_CLASS_COVERAGE: EvidenceClassCoverage[] = [
 {evidenceClass:'financial_conditions',providerCapabilities:['financial_conditions_index'],normalizedPayloadKinds:['NormalizedFinancialConditionsPoint'],calculatedInternal:true,placeholderOnly:false,explicitlyExcluded:false,notes:'Financial conditions index.'},
 {evidenceClass:'positioning_sentiment',providerCapabilities:['positioning_sentiment_indicator'],normalizedPayloadKinds:['NormalizedPositioningSentimentPoint'],calculatedInternal:true,placeholderOnly:false,explicitlyExcluded:false,notes:'Derived positioning sentiment.'}
 ];
-export const getProviderCapabilityRegistrySnapshot=(asOfIso:string):ProviderCapabilityRegistrySnapshot=>({generatedAt:asOfIso,providers:[...PROVIDERS]});
-export const listProvidersByCapability=(capability:ProviderCapabilityKind)=>PROVIDERS.filter((x)=>x.supportedCapabilities.includes(capability));
-export const listLaunchEnabledProviders=()=>PROVIDERS.filter((x)=>x.launchEnabled);
-export const listProvidersForAsset=(asset:string)=>PROVIDERS.filter((x)=>x.supportedAssets.includes('*')||x.supportedAssets.includes(asset));
-export const listProvidersForRegion=(region:string)=>PROVIDERS.filter((x)=>x.supportedRegions.includes(region)||x.supportedRegions.includes('global'));
-export const getProviderDescriptor=(providerId:string)=>PROVIDERS.find((x)=>x.providerId===providerId)??null;
+export const getProviderCapabilityRegistrySnapshot=(asOfIso:string):ProviderCapabilityRegistrySnapshot=>({generatedAt:asOfIso,providers:[...ALL_PROVIDERS]});
+export const listProvidersByCapability=(capability:ProviderCapabilityKind)=>ALL_PROVIDERS.filter((x)=>x.supportedCapabilities.includes(capability));
+export const listLaunchEnabledProviders=()=>ALL_PROVIDERS.filter((x)=>x.launchEnabled);
+export const listProvidersForAsset=(asset:string)=>ALL_PROVIDERS.filter((x)=>x.supportedAssets.includes('*')||x.supportedAssets.includes(asset));
+export const listProvidersForRegion=(region:string)=>ALL_PROVIDERS.filter((x)=>x.supportedRegions.includes(region)||x.supportedRegions.includes('global'));
+export const getProviderDescriptor=(providerId:string)=>ALL_PROVIDERS.find((x)=>x.providerId===providerId)??null;
 export const getEvidenceClassCoverage=()=>[...EVIDENCE_CLASS_COVERAGE];

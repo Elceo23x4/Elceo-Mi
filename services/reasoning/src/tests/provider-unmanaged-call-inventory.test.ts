@@ -4,9 +4,11 @@ import { dirname, join, relative } from 'node:path';
 
 type InventoryClass = 'through_provider_api_gate'|'adapter_factory_no_execution'|'fixture_only_behind_gate'|'dry_run_only_behind_gate'|'replay_only_behind_gate'|'operator_inspection_only'|'adapter_implementation'|'legacy_construction_fail_closed'|'test_only'|'remaining_unmanaged_call';
 const roots = ['services/reasoning','services/ingestion','services/application-state','apps/web/app/api','packages/providers'];
-const legacyAdapterNames = ['FinnhubMarketDataAdapter','FinnhubMacroCalendarAdapter','AlphaVantageMarketDataAdapter','FmpMarketDataAdapter','FmpMacroCalendarAdapter','MarketauxNewsAdapter','NewsApiNewsAdapter','GdeltEventAdapter','FirecrawlExtractionAdapter','InvestingCalendarScrapeAdapter','ImfMacroContextAdapter','WorldBankMacroContextAdapter','OecdMacroContextAdapter'];
+const legacyAdapterNames = ['FinnhubMarketDataAdapter','FinnhubMacroCalendarAdapter','FmpMarketDataAdapter','FmpMacroCalendarAdapter','MarketauxNewsAdapter','GdeltEventAdapter','FirecrawlExtractionAdapter','ImfMacroContextAdapter','WorldBankMacroContextAdapter','OecdMacroContextAdapter'];
+const canonicalSecondaryAdapterNames=['FinnhubMarketDataFallbackAdapter','FinnhubMacroCalendarEvidenceAdapter','MarketauxMarketNewsAdapter','GdeltNewsAdapter'];
 const dfcOfficialAdapterNames=['FredOfficialAdapter','EcbOfficialAdapter','UsTreasuryOfficialAdapter'];
-const runtimeProviderCallPattern = new RegExp(`(new\\s+(TiingoMarketDataAdapter|CftcCotAdapter|${dfcOfficialAdapterNames.join('|')}|${legacyAdapterNames.join('|')})\\b|persistAdapterFetchAndNormalize\\s*\\(|\\.fetch(?:Managed)?\\s*\\(|fetchLiveTiingoBars\\s*\\()`);
+const adapterNames=['TiingoMarketDataAdapter','CftcCotAdapter',...dfcOfficialAdapterNames,...canonicalSecondaryAdapterNames,...legacyAdapterNames];
+const runtimeProviderCallPattern = new RegExp(`(new\\s+(${adapterNames.join('|')})\\b|persistAdapterFetchAndNormalize\\s*\\(|\\.fetch(?:Managed)?\\s*\\(|fetchLiveTiingoBars\\s*\\()`);
 
 export function runProviderUnmanagedCallInventoryTests(){
   const repoRoot = findRepoRoot(process.cwd());
@@ -24,7 +26,7 @@ export function runProviderUnmanagedCallInventoryTests(){
   }
   const legacyConfig = readFileSync(join(repoRoot,'services/ingestion/src/facade/provider-config.ts'),'utf8');
   assert.ok(legacyConfig.includes("APP_ENV === 'staging'") && legacyConfig.includes("APP_ENV === 'production'") && legacyConfig.includes("NODE_ENV === 'production'"));
-  const negative = classify(join(repoRoot,'services/application-state/src/runtime/direct-provider.ts'), "const provider = new FinnhubMarketDataAdapter(process.env.FINNHUB_API_KEY ?? '');");
+  const negative = classify(join(repoRoot,'services/application-state/src/runtime/direct-provider.ts'), "const provider = new FinnhubMarketDataFallbackAdapter({mode:'live_enabled',apiKey:process.env.FINNHUB_API_KEY});");
   assert.equal(negative.classification, 'remaining_unmanaged_call');
   const officialNegative=classify(join(repoRoot,'services/application-state/src/runtime/direct-official-provider.ts'),"const provider = new FredOfficialAdapter({mode:'live_enabled',apiKey:process.env.FRED_API_KEY});");
   assert.equal(officialNegative.classification,'remaining_unmanaged_call');
@@ -47,9 +49,9 @@ function classify(absFile:string, source:string): { file:string; classification:
       : source.includes("APP_ENV === 'staging'") && source.includes("APP_ENV === 'production'") && source.includes("NODE_ENV === 'production'");
     return { file, classification:failClosed ? 'legacy_construction_fail_closed' : 'remaining_unmanaged_call' };
   }
-  if(file.endsWith('/tiingo/tiingo-adapter.ts'))return{file,classification:'adapter_implementation'};
+  if(file.endsWith('/tiingo/tiingo-adapter.ts')||file.endsWith('/cot/cot-adapter.ts')||file.endsWith('/finnhub/finnhub-adapter.ts')||file.endsWith('/news/news-adapters.ts'))return{file,classification:'adapter_implementation'};
   if(file.includes('/provider-sources/official/')&&dfcOfficialAdapterNames.some(name=>source.includes(`class ${name}`)))return{file,classification:'adapter_implementation'};
-  if(file.endsWith('/provider-adapter-resolver.ts')&&source.includes('new TiingoMarketDataAdapter')&&!source.includes('.fetch(')&&!source.includes('.fetchManaged('))return{file,classification:'adapter_factory_no_execution'};
+  if(file.endsWith('/provider-adapter-resolver.ts')&&adapterNames.some(name=>source.includes(`new ${name}`))&&!source.includes('.fetch(')&&!source.includes('.fetchManaged('))return{file,classification:'adapter_factory_no_execution'};
   if(file.endsWith('/ingestion-persistence-service.ts')&&source.includes('persistProviderApiGateResult')&&source.includes('persistAdapterFetchAndNormalize'))return{file,classification:'fixture_only_behind_gate'};
   if(file.includes('/provider-sources/')&&source.includes("mode: 'fixture'")&&!source.includes('live_enabled'))return{file,classification:'fixture_only_behind_gate'};
   if(file === 'services/reasoning/src/runtime/canonical-market-intelligence-boundary.ts' && source.includes('runTiingoFixtureIngestion') && source.includes("mode: 'fixture'")) return { file, classification:'fixture_only_behind_gate' };

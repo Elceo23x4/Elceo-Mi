@@ -1,9 +1,7 @@
 import type { ProviderSourceRequest, ScheduledIngestionJobPolicy, ScheduledIngestionRunMode, ScheduledIngestionRunRecord, ScheduledIngestionRunReport, ScheduledIngestionStalenessReport } from '@elceo/types';
 import { CftcCotAdapter } from '../provider-sources/cot/cot-adapter';
 import { TiingoMarketDataAdapter } from '../provider-sources/tiingo/tiingo-adapter';
-import { FredOfficialAdapter } from '../provider-sources/official/fred-adapter';
-import { EcbOfficialAdapter } from '../provider-sources/official/ecb-adapter';
-import { UsTreasuryOfficialAdapter } from '../provider-sources/official/us-treasury-adapter';
+import { createOfficialAdapter } from '../provider-sources/official/official-adapter-catalog';
 import { IngestionPersistenceService, type IngestionPersistenceReport } from '../provider-sources/ingestion-persistence-service';
 import type { ScheduledIngestionRunRepository } from '../persistence/scheduled-ingestion-repository';
 import { computeBoundedProviderRetryAt, deriveRetryStatus, isRetryableProviderFailure } from './retry-policy';
@@ -21,7 +19,18 @@ function trustedScheduledProviderParams(policy:ScheduledIngestionJobPolicy):Reco
  if(policy.providerId==='ecb_public'&&policy.capability==='policy_rate_series')return{series:'deposit_facility'};
  if(policy.providerId==='us_treasury'&&policy.capability==='nominal_yield_series')return{dataset:'daily_treasury_yield_curve'};
  if(policy.providerId==='us_treasury'&&policy.capability==='real_yield_series')return{dataset:'daily_treasury_real_yield_curve'};
- return{mode:'fixture',scheduled:true};
+ if(policy.providerId==='bls_official'&&policy.capability==='inflation_indicator')return{profile:'CUSR0000SA0'};
+ if(policy.providerId==='bls_official'&&policy.capability==='labor_market_indicator')return{profile:'LNS14000000'};
+ if(policy.providerId==='bea_official')return{profile:'NIPA:T10101:Q'};
+ if(policy.providerId==='census_official')return{profile:'mrts_retail_sales'};
+ if(policy.providerId==='boe_official')return{profile:'IUDBEDR'};
+ if(policy.providerId==='rba_official')return{profile:'cash_rate_target'};
+ if(policy.providerId==='rbnz_official')return{profile:'ocr_decision_history'};
+ if(policy.providerId==='bank_of_canada_official')return{profile:'V39079'};
+ if(policy.providerId==='statistics_canada_official')return{profile:'vector:41690973'};
+ if(policy.providerId==='eia_official')return{profile:'RWTC'};
+ if(policy.providerId==='world_bank_official')return{profile:'NY.GDP.MKTP.KD.ZG'};
+ return{profile:'server_owned_fixture',scheduled:true};
 }
 
 export class ScheduledIngestionService {
@@ -62,7 +71,6 @@ export class ScheduledIngestionService {
     const policy = getScheduledIngestionPolicy(jobId);
     const at = startedAt ?? new Date().toISOString();
     if (!policy) return this.persistSimple(jobId, 'dry_run_fixture', at, 'skipped', 'unsupported_job_id');
-
     const run = await this.executeFixtureDryRun(policy, at, `run-${jobId}-${at}`);
     await this.runs.saveRun(run);
     return this.buildScheduledIngestionRunReport(run);
@@ -84,14 +92,11 @@ export class ScheduledIngestionService {
     if (original.runMode !== 'dry_run_fixture') return this.persistReplayBlocked('original_run_not_replayable', runId, replayMode, at, original);
     if (original.status === 'blocked' && original.errorCode === 'production_live_blocked') return this.persistReplayBlocked('original_run_live_blocked', runId, replayMode, at, original);
     if (!original.jobId || !original.providerId || !original.capability) return this.persistReplayBlocked('original_run_metadata_missing', runId, replayMode, at, original);
-
     const policy = getScheduledIngestionPolicy(original.jobId);
     if (!policy) return this.persistReplayBlocked('original_job_descriptor_missing', runId, replayMode, at, original);
-
     const replayRunId = `run-${original.jobId}-${at}-replay-${original.runId}`;
     const duplicate = await this.runs.getRunById(replayRunId);
     if (duplicate) return this.buildScheduledIngestionRunReport(duplicate);
-
     const gate = this.resolveGate(policy, replayMode, at, 'replay', original, replayRunId);
     if (!gate.allowed || gate.providerCallMode !== 'replay_captured_payload') return this.persistReplayBlocked(gate.reason, runId, replayMode, at, original);
     const replayRun = this.buildReplayRunFromOriginal(original, policy, at, replayRunId, gate);
@@ -112,87 +117,26 @@ export class ScheduledIngestionService {
   private async executeFixtureDryRun(policy: ScheduledIngestionJobPolicy, requestedAt: string, runId: string): Promise<ScheduledIngestionRunRecord> {
     const gate = this.resolveGate(policy, 'dry_run_fixture', requestedAt, 'fixture_only');
     if (!gate.allowed || gate.providerCallMode !== 'fixture_response') return this.buildSimpleRun(runId, policy.jobId, 'dry_run_fixture', requestedAt, 'blocked', gate.reason, policy, gate);
-
     let report: IngestionPersistenceReport | null = null;
     const request = this.buildRequest(policy, requestedAt, policy.capability);
-    if (policy.providerId === 'tiingo_market_data') {
-      report = await this.ingestion.persistAdapterFetchAndNormalize(new TiingoMarketDataAdapter({ mode: 'fixture' }), request);
-    } else if (policy.providerId === 'cftc_cot') {
-      report = await this.ingestion.persistAdapterFetchAndNormalize(new CftcCotAdapter(), request);
-    } else if (policy.providerId === 'fred' && (policy.capability === 'real_yield_series' || policy.capability === 'financial_conditions_index')) {
-      report = await this.ingestion.persistAdapterFetchAndNormalize(new FredOfficialAdapter({ mode: 'fixture' }), request);
-    } else if (policy.providerId === 'ecb_public' && policy.capability === 'policy_rate_series') {
-      report = await this.ingestion.persistAdapterFetchAndNormalize(new EcbOfficialAdapter({ mode: 'fixture' }), request);
-    } else if (policy.providerId === 'us_treasury' && (policy.capability === 'nominal_yield_series' || policy.capability === 'real_yield_series')) {
-      report = await this.ingestion.persistAdapterFetchAndNormalize(new UsTreasuryOfficialAdapter({ mode: 'fixture' }), request);
+    if (policy.providerId === 'tiingo_market_data') report = await this.ingestion.persistAdapterFetchAndNormalize(new TiingoMarketDataAdapter({ mode: 'fixture' }), request);
+    else if (policy.providerId === 'cftc_cot') report = await this.ingestion.persistAdapterFetchAndNormalize(new CftcCotAdapter(), request);
+    else {
+      const officialAdapter=createOfficialAdapter(policy.providerId,policy.capability,{mode:'fixture'});
+      if(officialAdapter)report=await this.ingestion.persistAdapterFetchAndNormalize(officialAdapter,request);
     }
-
-    if (!report) {
-      return this.buildSimpleRun(runId, policy.jobId, 'dry_run_fixture', requestedAt, 'skipped', 'fixture_adapter_not_wired', policy, gate);
-    }
-
+    if (!report) return this.buildSimpleRun(runId, policy.jobId, 'dry_run_fixture', requestedAt, 'skipped', 'fixture_adapter_not_wired', policy, gate);
     const status: ScheduledIngestionRunRecord['status'] = report.errors.length > 0 ? 'failed' : 'succeeded';
-    return {
-      runId,
-      jobId: policy.jobId,
-      providerId: policy.providerId,
-      capability: policy.capability,
-      asset: policy.asset,
-      region: policy.region,
-      runMode: 'dry_run_fixture',
-      status,
-      startedAt: requestedAt,
-      completedAt: new Date().toISOString(),
-      requestId: report.requestId,
-      responseStatus: report.responseStatus,
-      payloadCount: report.payloadCount,
-      persistedPayloadIds: report.persistedPayloadIds,
-      errorCode: report.errors.length > 0 ? 'ingestion_error' : null,
-      errorMessage: report.errors[0] ?? null,
-      retryStatus: deriveRetryStatus(status, 0, policy.maxRetries),
-      retryCount: 0,
-      nextRetryAt: null,
-      stalenessStatus: deriveStalenessStatus(requestedAt, requestedAt, policy.staleAfterMinutes, policy.expiresAfterMinutes),
-      warnings: [...report.errors, `provider_api_gate:${gate.providerCallMode}`],
-      originalSourceRef: report.requestId
-    };
+    return {runId,jobId:policy.jobId,providerId:policy.providerId,capability:policy.capability,asset:policy.asset,region:policy.region,runMode:'dry_run_fixture',status,startedAt:requestedAt,completedAt:new Date().toISOString(),requestId:report.requestId,responseStatus:report.responseStatus,payloadCount:report.payloadCount,persistedPayloadIds:report.persistedPayloadIds,errorCode:report.errors.length>0?'ingestion_error':null,errorMessage:report.errors[0]??null,retryStatus:deriveRetryStatus(status,0,policy.maxRetries),retryCount:0,nextRetryAt:null,stalenessStatus:deriveStalenessStatus(requestedAt,requestedAt,policy.staleAfterMinutes,policy.expiresAfterMinutes),warnings:[...report.errors,`provider_api_gate:${gate.providerCallMode}`],originalSourceRef:report.requestId};
   }
 
-  private buildRequest(policy: ScheduledIngestionJobPolicy, requestedAt: string, evidenceTypeId: string): ProviderSourceRequest {
-    return { requestId: `${policy.jobId}-${requestedAt}`, providerId: policy.providerId, capability: policy.capability, asset: policy.asset, region: policy.region, evidenceTypeId, requestedAt, paramsJson: JSON.stringify(trustedScheduledProviderParams(policy)) };
-  }
+  private buildRequest(policy: ScheduledIngestionJobPolicy, requestedAt: string, evidenceTypeId: string): ProviderSourceRequest {return { requestId: `${policy.jobId}-${requestedAt}`, providerId: policy.providerId, capability: policy.capability, asset: policy.asset, region: policy.region, evidenceTypeId, requestedAt, paramsJson: JSON.stringify(trustedScheduledProviderParams(policy)) };}
 
   private buildSimpleRun(runId: string, jobId: string, runMode: ScheduledIngestionRunMode, startedAt: string, status: ScheduledIngestionRunRecord['status'], reason: string, policy?: ScheduledIngestionJobPolicy, gate?: ProviderRuntimeResolverDecision): ScheduledIngestionRunRecord {
-    return {
-      runId,
-      jobId,
-      providerId: policy?.providerId ?? 'unknown_provider',
-      capability: policy?.capability ?? 'market_price_history',
-      asset: policy?.asset ?? null,
-      region: policy?.region ?? null,
-      runMode,
-      status,
-      startedAt,
-      completedAt: startedAt,
-      requestId: null,
-      responseStatus: null,
-      payloadCount: 0,
-      persistedPayloadIds: [],
-      errorCode: reason,
-      errorMessage: reason,
-      retryStatus: 'not_needed',
-      retryCount: 0,
-      nextRetryAt: null,
-      stalenessStatus: 'unknown',
-      warnings: gate ? [reason, `provider_api_gate:${gate.providerCallMode}`, `provider_api_gate_reason:${gate.reason}`] : [reason]
-    };
+    return {runId,jobId,providerId:policy?.providerId??'unknown_provider',capability:policy?.capability??'market_price_history',asset:policy?.asset??null,region:policy?.region??null,runMode,status,startedAt,completedAt:startedAt,requestId:null,responseStatus:null,payloadCount:0,persistedPayloadIds:[],errorCode:reason,errorMessage:reason,retryStatus:'not_needed',retryCount:0,nextRetryAt:null,stalenessStatus:'unknown',warnings:gate?[reason,`provider_api_gate:${gate.providerCallMode}`,`provider_api_gate_reason:${gate.reason}`]:[reason]};
   }
 
-  private async persistSimple(jobId: string, runMode: ScheduledIngestionRunMode, startedAt: string, status: ScheduledIngestionRunRecord['status'], reason: string, policy?: ScheduledIngestionJobPolicy, gate?: ProviderRuntimeResolverDecision): Promise<ScheduledIngestionRunReport> {
-    const run = this.buildSimpleRun(`run-${jobId}-${startedAt}`, jobId, runMode, startedAt, status, reason, policy, gate);
-    await this.runs.saveRun(run);
-    return this.buildScheduledIngestionRunReport(run);
-  }
+  private async persistSimple(jobId: string, runMode: ScheduledIngestionRunMode, startedAt: string, status: ScheduledIngestionRunRecord['status'], reason: string, policy?: ScheduledIngestionJobPolicy, gate?: ProviderRuntimeResolverDecision): Promise<ScheduledIngestionRunReport> {const run=this.buildSimpleRun(`run-${jobId}-${startedAt}`,jobId,runMode,startedAt,status,reason,policy,gate);await this.runs.saveRun(run);return this.buildScheduledIngestionRunReport(run);}
 
   private buildGateRequest(policy: ScheduledIngestionJobPolicy, requestedAt: string, activationMode: ProviderActivationMode, runId?: string, original?: ScheduledIngestionRunRecord): ProviderRuntimeRequest {
     const effectiveRunMode:ScheduledIngestionRunMode=activationMode==='staging_live_allowed'?'staging_live':activationMode==='production_live_allowed'?'production_live':'dry_run_fixture';
@@ -206,27 +150,14 @@ export class ScheduledIngestionService {
     return request;
   }
 
-  private resolveGate(policy: ScheduledIngestionJobPolicy, runMode: ScheduledIngestionRunMode, requestedAt: string, activationOverride?: ProviderActivationMode, original?: ScheduledIngestionRunRecord, runId?: string): ProviderRuntimeResolverDecision {
-    const activationMode: ProviderActivationMode = activationOverride ?? (runMode === 'production_live' ? 'production_live_allowed' : runMode === 'staging_live' ? 'staging_live_allowed' : 'fixture_only');
-    return resolveProviderRuntimeRequest(this.buildGateRequest(policy, requestedAt, activationMode, runId, original));
-  }
+  private resolveGate(policy: ScheduledIngestionJobPolicy, runMode: ScheduledIngestionRunMode, requestedAt: string, activationOverride?: ProviderActivationMode, original?: ScheduledIngestionRunRecord, runId?: string): ProviderRuntimeResolverDecision {const activationMode:ProviderActivationMode=activationOverride??(runMode==='production_live'?'production_live_allowed':runMode==='staging_live'?'staging_live_allowed':'fixture_only');return resolveProviderRuntimeRequest(this.buildGateRequest(policy,requestedAt,activationMode,runId,original));}
 
-  private buildReplayRunFromOriginal(original: ScheduledIngestionRunRecord, policy: ScheduledIngestionJobPolicy, startedAt: string, runId: string, gate: ProviderRuntimeResolverDecision): ScheduledIngestionRunRecord {
-    return { ...original, runId, jobId: policy.jobId, runMode: 'dry_run_fixture', status: 'succeeded', startedAt, completedAt: startedAt, retryStatus: 'not_needed', retryCount: 0, nextRetryAt: null, warnings: [...original.warnings, 'replay_duplicate_decision:created', `provider_api_gate:${gate.providerCallMode}`], replayOfRunId: original.runId, originalJobId: original.jobId, originalExecutionMode: original.runMode, replayMode: 'dry_run_fixture', replayedAt: startedAt, duplicateDecision: 'created', originalSourceRef: original.originalSourceRef ?? original.requestId ?? null, operatorNote: `replay_of:${original.runId}` };
-  }
+  private buildReplayRunFromOriginal(original: ScheduledIngestionRunRecord, policy: ScheduledIngestionJobPolicy, startedAt: string, runId: string, gate: ProviderRuntimeResolverDecision): ScheduledIngestionRunRecord {return { ...original, runId, jobId: policy.jobId, runMode: 'dry_run_fixture', status: 'succeeded', startedAt, completedAt: startedAt, retryStatus: 'not_needed', retryCount: 0, nextRetryAt: null, warnings: [...original.warnings, 'replay_duplicate_decision:created', `provider_api_gate:${gate.providerCallMode}`], replayOfRunId: original.runId, originalJobId: original.jobId, originalExecutionMode: original.runMode, replayMode: 'dry_run_fixture', replayedAt: startedAt, duplicateDecision: 'created', originalSourceRef: original.originalSourceRef ?? original.requestId ?? null, operatorNote: `replay_of:${original.runId}` };}
 
   private async persistReplayBlocked(reason: string, replayOfRunId: string, replayMode: ScheduledIngestionRunMode, startedAt: string, original?: ScheduledIngestionRunRecord): Promise<ScheduledIngestionRunReport> {
-    const jobId = original?.jobId ?? 'unknown_job';
-    const runId = `run-${jobId}-${startedAt}-replay-${replayOfRunId}`;
-    const run = this.buildSimpleRun(runId, jobId, 'dry_run_fixture', startedAt, 'blocked', reason, getScheduledIngestionPolicy(jobId) ?? undefined);
-    run.replayOfRunId = replayOfRunId;
-    run.originalJobId = original?.jobId ?? null;
-    run.originalExecutionMode = original?.runMode ?? null;
-    run.replayMode = replayMode;
-    run.replayedAt = startedAt;
-    run.duplicateDecision = 'blocked';
-    run.operatorNote = `replay_blocked:${reason}`;
-    await this.runs.saveRun(run);
-    return this.buildScheduledIngestionRunReport(run);
+    const jobId=original?.jobId??'unknown_job',runId=`run-${jobId}-${startedAt}-replay-${replayOfRunId}`;
+    const run=this.buildSimpleRun(runId,jobId,'dry_run_fixture',startedAt,'blocked',reason,getScheduledIngestionPolicy(jobId)??undefined);
+    run.replayOfRunId=replayOfRunId;run.originalJobId=original?.jobId??null;run.originalExecutionMode=original?.runMode??null;run.replayMode=replayMode;run.replayedAt=startedAt;run.duplicateDecision='blocked';run.operatorNote=`replay_blocked:${reason}`;
+    await this.runs.saveRun(run);return this.buildScheduledIngestionRunReport(run);
   }
 }

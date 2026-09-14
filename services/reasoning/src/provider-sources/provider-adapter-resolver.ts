@@ -2,7 +2,7 @@ import type { ScheduledIngestionJobPolicy } from '@elceo/types';
 import type { MarketEvidenceProviderAdapter } from './normalization-contracts';
 import { translateProviderCapability, type ProviderActivationMode, type ProviderApiGateExecutionContext } from './provider-api-gate';
 import { TiingoMarketDataAdapter, type TiingoRuntimeConfig } from './tiingo/tiingo-adapter';
-import { CftcCotAdapter, type CftcCotRuntimeConfig } from './cot/cot-adapter';
+import { CFTC_PUBLIC_REPORTING_GATE_ID, CftcCotAdapter, type CftcCotRuntimeConfig } from './cot/cot-adapter';
 import { FinnhubMacroCalendarEvidenceAdapter, FinnhubMarketDataFallbackAdapter, type FinnhubRuntimeConfig } from './finnhub/finnhub-adapter';
 import { GdeltNewsAdapter, MarketauxMarketNewsAdapter, type GdeltRuntimeConfig, type MarketauxRuntimeConfig } from './news/news-adapters';
 import { createOfficialAdapter, getOfficialAdapterCatalogEntry, type OfficialAdapterFactoryConfig } from './official/official-adapter-catalog';
@@ -15,9 +15,9 @@ export function createTiingoStagingExecutionResolver(config:TiingoRuntimeConfig,
  return async policy=>{if(policy.providerId!=='tiingo_market_data'||policy.capability!=='market_price_history')return null;translateProviderCapability(policy.providerId,policy.capability);return{sourceId:policy.providerId,capabilityId:policy.capability,activationMode:'staging_live_allowed',adapter:new TiingoMarketDataAdapter({...config,mode:'live_enabled',liveEnabled:true}),context};};
 }
 
-/** CFTC is a public first-party positioning authority; live eligibility is still controlled by Provider API Gate. */
+/** CFTC live execution has a gate-only identity; normalized evidence remains canonical cftc_cot. */
 export function createCftcStagingExecutionResolver(config:CftcCotRuntimeConfig,context:ProviderApiGateExecutionContext):TrustedProviderExecutionResolver{
- return async policy=>{if(policy.providerId!=='cftc_cot'||policy.capability!=='cot_report')return null;translateProviderCapability(policy.providerId,policy.capability);return{sourceId:policy.providerId,capabilityId:policy.capability,activationMode:'staging_live_allowed',adapter:new CftcCotAdapter({...config,mode:'live_enabled',liveEnabled:true}),context};};
+ return async policy=>{if(policy.providerId!==CFTC_PUBLIC_REPORTING_GATE_ID||policy.capability!=='cot_report')return null;translateProviderCapability(policy.providerId,policy.capability);return{sourceId:policy.providerId,capabilityId:policy.capability,activationMode:'staging_live_allowed',adapter:new CftcCotAdapter({...config,mode:'live_enabled',liveEnabled:true,gateProviderId:CFTC_PUBLIC_REPORTING_GATE_ID}),context};};
 }
 
 export type SecondaryEvidenceStagingConfig={

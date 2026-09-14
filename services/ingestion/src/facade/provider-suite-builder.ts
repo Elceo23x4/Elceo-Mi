@@ -26,7 +26,10 @@ export type CanonicalProviderSuiteBuildResult = {
   bridgeDiagnosticsSources: BridgeDiagnosticsSource[];
 };
 
-export type CanonicalSuiteBuilderDependencies = Record<string, never>;
+/** @deprecated Test seam retained temporarily so existing deployed-runtime denial tests can prove the retired scraper is never constructed. */
+export type CanonicalSuiteBuilderDependencies = {
+  createFirecrawlExtractionAdapter?: (apiKey:string|undefined)=>unknown;
+};
 
 function markConstructionFailure(capabilities: ProviderCapabilityDiagnostic[], providerName: string): void {
   const item = capabilities.find((entry) => entry.providerName === providerName);
@@ -93,10 +96,7 @@ export function buildCanonicalProviderSuite(
 
     if (Object.keys(contextProviders).length > 0) {
       const compositeContext = new MacroContextCompositeAdapter(contextProviders);
-      const macroContextProvider = {
-        providerId: 'macro-context-composite',
-        getContext: async (countryCode: string) => compositeContext.getContext(countryCode)
-      };
+      const macroContextProvider = {providerId:'macro-context-composite',getContext:async(countryCode:string)=>compositeContext.getContext(countryCode)};
       const bridge = new LegacyMacroContextBridge(macroContextProvider);
       suite.macroContext = bridge;
       bridgeDiagnosticsSources.push(bridge);
@@ -138,12 +138,5 @@ export function buildCanonicalProviderSuite(
 
   const activeProvidersByCategory = buildActiveProvidersByCategory(capabilities);
   const activeProviderCount = Object.values(activeProvidersByCategory).reduce((sum, values) => sum + values.length, 0);
-
-  return {
-    suite,
-    providerCapabilities: capabilities,
-    activeProvidersByCategory,
-    activeProviderCount,
-    bridgeDiagnosticsSources
-  };
+  return {suite,providerCapabilities:capabilities,activeProvidersByCategory,activeProviderCount,bridgeDiagnosticsSources};
 }

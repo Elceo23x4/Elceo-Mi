@@ -14,7 +14,21 @@ const TRUSTED_PROJECTIONS = new Set([
   'ecb_public:policy_rate_series:ecb_official',
   'us_treasury:nominal_yield_series:us_treasury_official',
   'us_treasury:real_yield_series:us_treasury_official',
+  'bls_payrolls:labor_market_indicator:bls_official',
+  'census_housing:macro_indicator_series:census_official',
+  'ism_manufacturing_pmi:macro_indicator_series:ism_official',
+  'ism_services_pmi:macro_indicator_series:ism_official',
+  'oecd_consumer_confidence:macro_indicator_series:oecd_official',
+  'oecd_business_confidence:macro_indicator_series:oecd_official',
+  'oecd_monetary:macro_indicator_series:oecd_official',
+  'oecd_bop:macro_indicator_series:oecd_official',
+  'oecd_ppp:macro_indicator_series:oecd_official',
+  'bis_credit:macro_indicator_series:bis_official',
+  'bis_housing:macro_indicator_series:bis_official',
+  'bis_reer:macro_indicator_series:bis_official',
 ]);
+
+const STRUCTURAL_SOURCES = new Set(['bls_official','census_official','ism_official','oecd_official','bis_official']);
 
 type ProjectionInput = {
   request: ProviderSourceRequest;
@@ -50,7 +64,7 @@ export function projectOfficialMacroVintage(input: ProjectionInput): MacroVintag
 
   const knownAt = requireIso(response.fetchedAt, 'macro_vintage_fetched_at_invalid');
   const effectiveAt = requireIso(payload.observedAt, 'macro_vintage_observed_at_invalid');
-  const projection = projectionIdentity(request, payload, values);
+  const projection = projectionIdentity(request, payload, values, metadata);
   const correlationKey = `${payload.sourceId}:${projection.indicatorId}:${projection.referencePeriod}`;
 
   const vintage: NormalizedMacroVintage = {
@@ -64,7 +78,7 @@ export function projectOfficialMacroVintage(input: ProjectionInput): MacroVintag
     retrievedAt: knownAt,
     effectiveAt,
     vintageId: projection.vintageId,
-    previousPublishedValue: null,
+    previousPublishedValue: projection.previousPublishedValue,
     value: projection.value,
     revisionState: 'observed',
     sourceUrl: response.sourceUrl,
@@ -79,13 +93,14 @@ function projectionIdentity(
   request: ProviderSourceRequest,
   payload: NormalizedMarketEvidencePayload,
   values: Record<string, unknown>,
-): { indicatorId: string; referencePeriod: string; value: number; vintageId: string | null } {
+  metadata: Record<string, unknown>,
+): { indicatorId: string; referencePeriod: string; value: number; vintageId: string | null; previousPublishedValue:number|null } {
   if (payload.sourceId === 'fred_macro') {
     const params = parseRecord(request.paramsJson, 'macro_vintage_request_params_invalid');
     const seriesId = requireString(params.seriesId, 'macro_vintage_fred_series_missing');
     const referencePeriod = requireDate(values.date, 'macro_vintage_fred_date_missing');
     const vintageId = typeof values.realtimeStart === 'string' && values.realtimeStart.length > 0 ? values.realtimeStart : null;
-    return { indicatorId: seriesId, referencePeriod, value: requireNumber(values.value), vintageId };
+    return { indicatorId: seriesId, referencePeriod, value: requireNumber(values.value), vintageId, previousPublishedValue:null };
   }
 
   if (payload.sourceId === 'ecb_official') {
@@ -94,6 +109,7 @@ function projectionIdentity(
       referencePeriod: requirePeriod(values.timePeriod, 'macro_vintage_ecb_period_missing'),
       value: requireNumber(values.value),
       vintageId: null,
+      previousPublishedValue:null,
     };
   }
 
@@ -105,6 +121,25 @@ function projectionIdentity(
       referencePeriod: requireDate(values.date, 'macro_vintage_treasury_date_missing'),
       value: requireNumber(values.value),
       vintageId: null,
+      previousPublishedValue:null,
+    };
+  }
+
+  if (STRUCTURAL_SOURCES.has(String(payload.sourceId))) {
+    const family=requireString(metadata.indicatorFamily,'macro_vintage_structural_family_missing');
+    const detail=[metadata.measure,metadata.accountingEntry,metadata.flowOrStock,metadata.type,metadata.basket,values.indicator]
+      .filter((value):value is string=>typeof value==='string'&&value.trim().length>0)
+      .map(value=>value.trim())
+      .filter((value,index,array)=>array.indexOf(value)===index)
+      .join(':');
+    const period=requirePeriod(values.date,'macro_vintage_structural_period_missing');
+    const previous=values.previous===null||values.previous===undefined?null:requireNumber(values.previous);
+    return{
+      indicatorId:detail?`${family}:${detail}`:family,
+      referencePeriod:period,
+      value:requireNumber(values.value),
+      vintageId:null,
+      previousPublishedValue:previous,
     };
   }
 
@@ -141,7 +176,7 @@ function requireDate(value: unknown, errorCode: string): string {
 
 function requirePeriod(value: unknown, errorCode: string): string {
   const text = requireString(value, errorCode);
-  if (!/^\d{4}(?:-\d{2}(?:-\d{2})?)?$/.test(text)) throw new Error(errorCode);
+  if (!/^\d{4}(?:-Q[1-4]|-\d{2}(?:-\d{2})?)?$/.test(text)) throw new Error(errorCode);
   return text;
 }
 

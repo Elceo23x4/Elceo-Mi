@@ -22,7 +22,8 @@ export function createOfficialEvidenceStagingExecutionResolver(config:OfficialEv
  return async policy=>{
   const catalog=getOfficialAdapterCatalogEntry(policy.providerId,policy.capability);if(!catalog||catalog.readiness!=='live_capable')return null;
   translateProviderCapability(policy.providerId,policy.capability);
-  const adapter=createOfficialAdapter(policy.providerId,policy.capability,{...config,mode:'live_enabled',fetchImpl:config.fetchImpl});if(!adapter)return null;
+  const adapterConfig:OfficialAdapterFactoryConfig={...config,mode:'live_enabled',...(config.fetchImpl?{fetchImpl:config.fetchImpl}:{})};
+  const adapter=createOfficialAdapter(policy.providerId,policy.capability,adapterConfig);if(!adapter)return null;
   return{sourceId:policy.providerId,capabilityId:policy.capability,activationMode:'staging_live_allowed',adapter,context};
  };
 }

@@ -1,5 +1,4 @@
 import {
-  AlphaVantageMarketDataAdapter,
   FinnhubMacroCalendarAdapter,
   FinnhubMarketDataAdapter,
   FmpMacroCalendarAdapter,
@@ -8,10 +7,7 @@ import {
   MacroContextCompositeAdapter,
   MarketDataCompositeAdapter,
   MarketauxNewsAdapter,
-  NewsApiNewsAdapter,
   NewsCompositeAdapter,
-  InvestingCalendarScrapeAdapter,
-  FirecrawlExtractionAdapter,
   GdeltEventAdapter,
   ImfMacroContextAdapter,
   OecdMacroContextAdapter,
@@ -30,9 +26,7 @@ export type CanonicalProviderSuiteBuildResult = {
   bridgeDiagnosticsSources: BridgeDiagnosticsSource[];
 };
 
-export type CanonicalSuiteBuilderDependencies = {
-  createFirecrawlExtractionAdapter?: (apiKey: string | undefined) => FirecrawlExtractionAdapter;
-};
+export type CanonicalSuiteBuilderDependencies = Record<string, never>;
 
 function markConstructionFailure(capabilities: ProviderCapabilityDiagnostic[], providerName: string): void {
   const item = capabilities.find((entry) => entry.providerName === providerName);
@@ -48,19 +42,18 @@ function isEnabled(config: IngestionProviderConfigSet, providerName: string): bo
 
 export function buildCanonicalProviderSuite(
   rawEnv: Record<string, string | undefined>,
-  dependencies: CanonicalSuiteBuilderDependencies = {}
+  _dependencies: CanonicalSuiteBuilderDependencies = {}
 ): CanonicalProviderSuiteBuildResult {
   const config = getIngestionProviderConfig(rawEnv);
   const capabilities = toProviderCapabilityDiagnostics(config);
   const suite: Partial<CanonicalProviderAdapterSuite> = {};
   const bridgeDiagnosticsSources: BridgeDiagnosticsSource[] = [];
-  const createFirecrawl = dependencies.createFirecrawlExtractionAdapter ?? ((apiKey) => new FirecrawlExtractionAdapter(apiKey));
 
-  // 1) marketData
+  // Legacy/development compatibility only. Deployed runtimes are rejected in provider-config.
+  // Market continuity is Finnhub -> FMP here; canonical deployed DFC uses Tiingo primary -> Finnhub fallback.
   try {
-    const marketProviders: Record<string, FinnhubMarketDataAdapter | AlphaVantageMarketDataAdapter | FmpMarketDataAdapter> = {};
+    const marketProviders: Record<string, FinnhubMarketDataAdapter | FmpMarketDataAdapter> = {};
     if (isEnabled(config, 'finnhub')) marketProviders.finnhub = new FinnhubMarketDataAdapter(config.env.FINNHUB_API_KEY ?? '');
-    if (isEnabled(config, 'alphavantage')) marketProviders.alphavantage = new AlphaVantageMarketDataAdapter(config.env.ALPHAVANTAGE_API_KEY ?? '');
     if (isEnabled(config, 'fmp')) marketProviders.fmp = new FmpMarketDataAdapter(config.env.FMP_API_KEY ?? '');
 
     if (Object.keys(marketProviders).length > 0) {
@@ -72,18 +65,13 @@ export function buildCanonicalProviderSuite(
     }
   } catch {
     markConstructionFailure(capabilities, 'finnhub');
-    markConstructionFailure(capabilities, 'alphavantage');
     markConstructionFailure(capabilities, 'fmp');
   }
 
-  // 2) macroCalendar
   try {
-    const macroProviders: Record<string, FinnhubMacroCalendarAdapter | FmpMacroCalendarAdapter | InvestingCalendarScrapeAdapter> = {};
+    const macroProviders: Record<string, FinnhubMacroCalendarAdapter | FmpMacroCalendarAdapter> = {};
     if (isEnabled(config, 'finnhub-calendar')) macroProviders.finnhub = new FinnhubMacroCalendarAdapter(config.env.FINNHUB_API_KEY ?? '');
     if (isEnabled(config, 'fmp-calendar')) macroProviders.fmp = new FmpMacroCalendarAdapter(config.env.FMP_API_KEY ?? '');
-    if (isEnabled(config, 'investing-calendar-scrape')) {
-      macroProviders['investing-firecrawl'] = new InvestingCalendarScrapeAdapter(createFirecrawl(config.env.FIRECRAWL_API_KEY));
-    }
 
     if (Object.keys(macroProviders).length > 0) {
       const bridge = new LegacyCalendarBridge(new MacroCalendarCompositeAdapter(macroProviders));
@@ -95,10 +83,8 @@ export function buildCanonicalProviderSuite(
   } catch {
     markConstructionFailure(capabilities, 'finnhub-calendar');
     markConstructionFailure(capabilities, 'fmp-calendar');
-    markConstructionFailure(capabilities, 'investing-calendar-scrape');
   }
 
-  // 3) macroContext
   try {
     const contextProviders: Record<string, ImfMacroContextAdapter | WorldBankMacroContextAdapter | OecdMacroContextAdapter> = {};
     if (isEnabled(config, 'imf')) contextProviders.imf = new ImfMacroContextAdapter();
@@ -123,11 +109,9 @@ export function buildCanonicalProviderSuite(
     markConstructionFailure(capabilities, 'oecd');
   }
 
-  // 4) news
   try {
-    const newsProviders: Record<string, MarketauxNewsAdapter | NewsApiNewsAdapter> = {};
+    const newsProviders: Record<string, MarketauxNewsAdapter> = {};
     if (isEnabled(config, 'marketaux')) newsProviders.marketaux = new MarketauxNewsAdapter(config.env.MARKETAUX_API_KEY ?? '');
-    if (isEnabled(config, 'newsapi')) newsProviders.newsapi = new NewsApiNewsAdapter(config.env.NEWSAPI_API_KEY ?? '');
 
     if (Object.keys(newsProviders).length > 0) {
       const bridge = new LegacyNewsBridge(new NewsCompositeAdapter(newsProviders));
@@ -138,10 +122,8 @@ export function buildCanonicalProviderSuite(
     }
   } catch {
     markConstructionFailure(capabilities, 'marketaux');
-    markConstructionFailure(capabilities, 'newsapi');
   }
 
-  // 5) geopolitics
   try {
     if (isEnabled(config, 'gdelt')) {
       const bridge = new LegacyGeopoliticsBridge(new GdeltEventAdapter());

@@ -1,6 +1,25 @@
-import type { NormalizedMarketEvidencePayload } from '@elceo/types';import { buildMetadataJson,buildNormalizedPayloadId,buildValuesJson,clampConfidenceScore } from '../normalization-helpers';import type { CotFixtureRequest,CotReportKind,CotReportRow } from './cot-contracts';
+import type { NormalizedMarketEvidencePayload } from '@elceo/types';
+import { buildMetadataJson,buildNormalizedPayloadId,buildValuesJson,clampConfidenceScore } from '../normalization-helpers';
+import type { CotFixtureRequest,CotReportKind,CotReportRow } from './cot-contracts';
+
 export const COT_PROVIDER_ID='cftc_cot';
-export function mapAssetToCotMarket(asset:string|null):string{const m:Record<string,string>={xau_usd:'Gold',eur_usd:'Euro FX',gbp_usd:'British Pound',usd_jpy:'Japanese Yen',btc_usd:'Bitcoin',nasdaq_100:'Nasdaq 100'};return asset?(m[asset]??asset):'Unknown';}
+
+const ASSET_TO_COT_MARKET:Readonly<Record<string,string>>={
+ xau_usd:'Gold',
+ eur_usd:'Euro FX',
+ gbp_usd:'British Pound',
+ usd_jpy:'Japanese Yen',
+ usd_chf:'Swiss Franc',
+ aud_usd:'Australian Dollar',
+ nzd_usd:'New Zealand Dollar',
+ usd_cad:'Canadian Dollar',
+ btc_usd:'Bitcoin',
+ nasdaq_100:'Nasdaq-100',
+ sp500:'S&P 500 Consolidated',
+ dxy:'U.S. Dollar Index'
+};
+
+export function mapAssetToCotMarket(asset:string|null):string{return asset?(ASSET_TO_COT_MARKET[asset]??asset):'Unknown';}
 export function deriveNetNonCommercial(row:CotReportRow):number|null{return row.nonCommercialLong!==null&&row.nonCommercialShort!==null?row.nonCommercialLong-row.nonCommercialShort:null;}
 const direction=(long:number|null|undefined,short:number|null|undefined):'bullish'|'bearish'|'neutral'|'mixed'=>long==null||short==null?'mixed':long>short?'bullish':long<short?'bearish':'neutral';
 export function derivePositioningSentiment(row:CotReportRow,kind?:CotReportKind):'bullish'|'bearish'|'neutral'|'mixed'{const resolved=kind??(row.nonCommercialLong!==null||row.nonCommercialShort!==null?'legacy_futures_only':row.managedMoneyLong!=null||row.managedMoneyShort!=null?'disaggregated':'traders_in_financial_futures');if(resolved==='legacy_futures_only')return direction(row.nonCommercialLong,row.nonCommercialShort);if(resolved==='disaggregated')return direction(row.managedMoneyLong,row.managedMoneyShort);return direction(row.leveragedFundsLong,row.leveragedFundsShort);}

@@ -15,6 +15,12 @@ export type EvidenceRoute={role:EvidenceRouteRole;sourceId:ProviderSourceId;avai
 export type AssetEvidenceRequirement={capabilityId:string;criticality:EvidenceCriticality;directPriceRequired?:boolean;proxyPermitted?:boolean;routes:EvidenceRoute[]};
 export type AssetEvidenceBlueprint={asset:TradingAssetCoverage;requirements:AssetEvidenceRequirement[]};
 
-export type MacroRevisionState='preliminary'|'final'|'revised';
+/**
+ * `observed` is intentionally distinct from release-revision states. It is used
+ * for official rate/index observations whose source does not expose a
+ * preliminary/final/revised lifecycle. This prevents ingestion from inventing a
+ * revision status merely to satisfy storage.
+ */
+export type MacroRevisionState='observed'|'preliminary'|'final'|'revised';
 export type NormalizedMacroVintage={correlationKey:string;countryOrArea:string;indicatorId:string;referencePeriod:string;scheduledReleaseAt:string|null;sourceReleaseAt:string|null;firstSeenAt:string;retrievedAt:string;effectiveAt:string;vintageId:string|null;previousPublishedValue:number|null;value:number;revisionState:MacroRevisionState;sourceUrl:string;sourceId:ProviderSourceId;retrievalRequestId:string};
 export type CalendarOfficialReleaseLink={correlationKey:string;countryOrArea:string;indicatorId:string;referencePeriod:string;scheduledReleaseAt:string;sourceAuthority:ProviderSourceId;expectation:number|null;previous:number|null;preliminaryActual:number|null;authoritativeActual:number|null;revisedActual:number|null};

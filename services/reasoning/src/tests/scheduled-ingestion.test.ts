@@ -31,16 +31,17 @@ export async function runScheduledIngestionTests(){
   const ti=await svc.runScheduledIngestionDryRun(tiJob,'2026-01-01T00:00:00.000Z'); assert.ok(ti.run.payloadCount>0); assert.ok(ti.run.requestId);
   const cot=await svc.runScheduledIngestionDryRun(cotJob,'2026-01-02T00:00:00.000Z'); assert.ok(cot.run.payloadCount>0); assert.equal(cot.run.providerId,'cftc_public_reporting');
   const officialJobs=[
-    ['sched-us_treasury-nominal_yield_series','interest_rates'],
-    ['sched-us_treasury-real_yield_series','real_yields'],
-    ['sched-fred-real_yield_series','real_yields'],
-    ['sched-fred-financial_conditions_index','financial_conditions'],
-    ['sched-ecb_public-policy_rate_series','central_bank_policy']
+    ['sched-us_treasury-nominal_yield_series','interest_rates','us_treasury_official'],
+    ['sched-us_treasury-real_yield_series','real_yields','us_treasury_official'],
+    ['sched-fred-real_yield_series','real_yields','fred_macro'],
+    ['sched-fred-financial_conditions_index','financial_conditions','fred_macro'],
+    ['sched-ecb_public-policy_rate_series','central_bank_policy','ecb_official']
   ] as const;
-  for(const [jobId,evidenceClass] of officialJobs){
+  for(const [jobId,evidenceClass,canonicalSourceId] of officialJobs){
     const result=await svc.runScheduledIngestionDryRun(jobId,'2026-01-02T12:00:00.000Z');
     assert.equal(result.run.status,'succeeded',`${jobId}:fixture_schedule_must_execute`);assert.ok(result.run.payloadCount>0,`${jobId}:fixture_payload_missing`);
-    const payloads=await payRepo.listPayloadsByEvidenceClass(evidenceClass);assert.ok(payloads.some(payload=>payload.providerId===result.run.providerId),`${jobId}:normalized_persistence_missing`);
+    const payloads=await payRepo.listPayloadsByEvidenceClass(evidenceClass);const persisted=payloads.find(payload=>payload.providerId===canonicalSourceId);assert.ok(persisted,`${jobId}:canonical_normalized_persistence_missing`);
+    const provenance=JSON.parse(persisted.metadataJson) as {canonicalSourceId?:string;gateSourceId?:string};assert.equal(provenance.canonicalSourceId,canonicalSourceId,`${jobId}:canonical_source_provenance_mismatch`);assert.equal(provenance.gateSourceId,result.run.providerId,`${jobId}:gate_source_provenance_mismatch`);
   }
   const nominalRequest=await reqRepo.listRequestsByProvider('us_treasury');assert.ok(nominalRequest.some(request=>request.capability==='nominal_yield_series'&&request.paramsJson.includes('daily_treasury_yield_curve')));assert.ok(nominalRequest.some(request=>request.capability==='real_yield_series'&&request.paramsJson.includes('daily_treasury_real_yield_curve')));
   const blocked=await svc.runScheduledIngestionJob(tiJob,'production_live','2026-01-03T00:00:00.000Z'); assert.equal(blocked.run.status,'blocked');

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { MARKET_REASONING_DIAGNOSTIC_ASSETS, TRADING_ASSET_COVERAGE } from '@elceo/types';
+import { MARKET_REASONING_DIAGNOSTIC_ASSETS, PROVIDER_SOURCE_FAMILIES, PROVIDER_SOURCE_IDS, TRADING_ASSET_COVERAGE } from '@elceo/types';
 import { validateProviderSourceRegistrySnapshot } from '@elceo/schemas';
 import { buildProviderActivationChecklist, getProviderSourceDescriptor, getProviderSourceRegistrySnapshot, listProviderSourceGaps, listProviderSourcesByFamily, listProviderSourcesForAsset } from '../provider-source-registry/index.js';
 import { CanonicalMarketIntelligenceBoundaryService } from '../runtime/canonical-market-intelligence-boundary.js';
@@ -7,10 +7,12 @@ import { MemoryMarketEvidenceRegistrySnapshotRepository, MemorySeoContentArchite
 
 export async function runProviderSourceRegistryTests(){
   const snap = getProviderSourceRegistrySnapshot('2026-01-01T00:00:00.000Z');
-  assert.equal(validateProviderSourceRegistrySnapshot(snap).ok, true);
+  const validation=validateProviderSourceRegistrySnapshot(snap);assert.equal(validation.ok, true, validation.ok?'':validation.errors.join('|'));
   assert.deepEqual(snap.sources.map((x)=>x.sourceId), [...snap.sources.map((x)=>x.sourceId)].sort());
-  assert.equal(new Set(snap.sources.map((x)=>x.family)).size,7);
-  ['tiingo_market_data','fred_macro','cftc_cot','marketaux_news','sec_edgar','crypto_onchain_public','credit_stress_source'].forEach((id)=>assert.equal(snap.sources.some((x)=>x.sourceId===id),true));
+  assert.deepEqual(new Set(snap.sources.map((x)=>x.sourceId)),new Set(PROVIDER_SOURCE_IDS));
+  assert.equal(snap.sources.length,PROVIDER_SOURCE_IDS.length);
+  assert.deepEqual(new Set(snap.sources.map((x)=>x.family)),new Set(PROVIDER_SOURCE_FAMILIES));
+  ['tiingo_market_data','fred_macro','cftc_cot','marketaux_news','sec_edgar','crypto_onchain_public','credit_stress_source','ism_official','spglobal_pmi','spglobal_ratings','ice_credit_data'].forEach((id)=>assert.equal(snap.sources.some((x)=>x.sourceId===id),true,`${id}:registry_missing`));
   assert.equal(snap.reasoningAssetCoverage.every((x)=>x.sourceIds.length>0),true);
 
   assert.equal(snap.reasoningAssetCoverage.length,14);
@@ -33,7 +35,12 @@ export async function runProviderSourceRegistryTests(){
   assert.deepEqual(listProviderSourceGaps(),listProviderSourceGaps());
   assert.deepEqual(buildProviderActivationChecklist('tiingo_market_data'),buildProviderActivationChecklist('tiingo_market_data'));
   assert.equal(listProviderSourcesByFamily('macro_official').length>0,true);
+  assert.equal(listProviderSourcesByFamily('macro_secondary').some((x)=>x.sourceId==='finnhub_macro'),true);
   assert.equal(getProviderSourceDescriptor('tiingo_market_data')?.sourceId,'tiingo_market_data');
+  assert.equal(getProviderSourceDescriptor('ism_official')?.status,'dry_run_ready');
+  assert.equal(getProviderSourceDescriptor('spglobal_pmi')?.liveActivationMode,'not_allowed');
+  assert.equal(getProviderSourceDescriptor('spglobal_ratings')?.liveActivationMode,'not_allowed');
+  assert.equal(getProviderSourceDescriptor('ice_credit_data')?.liveActivationMode,'not_allowed');
   assert.equal(listProviderSourcesForAsset('xau_usd').length>0,true);
   ['aud_usd','usd_chf','nzd_usd','usd_cad'].forEach((asset)=>assert.equal(listProviderSourcesForAsset(asset as any).length>0,true));
   const boundary = new CanonicalMarketIntelligenceBoundaryService(new MemoryMarketEvidenceRegistrySnapshotRepository(),new MemorySeoContentArchitectureSnapshotRepository());

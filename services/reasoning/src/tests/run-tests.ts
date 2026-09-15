@@ -48,6 +48,7 @@ import { runMarketCognitionTests } from './market-cognition.test.js';
 import { runSeoContentFeedTests } from './seo-content-feed.test.js';
 import { runProviderLiveReadinessTests } from './provider-live-readiness.test.js';
 import { runScheduledIngestionTests } from './scheduled-ingestion.test.js';
+import { runNewsCadenceTests } from './news-cadence.test.js';
 import { runProviderSourceRegistryTests } from './provider-source-registry.test.js';
 import { runNewsExtractionFilingsTests } from './news-extraction-filings.test.js';
 import { runCryptoRiskLiquidityTests } from './crypto-risk-liquidity.test.js';
@@ -146,6 +147,7 @@ async function run(): Promise<void> {
   runSeoContentFeedTests();
   await runProviderLiveReadinessTests();
   await runScheduledIngestionTests();
+  await runNewsCadenceTests();
   await runProviderSourceRegistryTests();
   runNewsExtractionFilingsTests();
   runCryptoRiskLiquidityTests();

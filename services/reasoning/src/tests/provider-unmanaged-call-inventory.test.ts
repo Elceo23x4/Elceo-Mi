@@ -9,6 +9,11 @@ const canonicalSecondaryAdapterNames=['FinnhubMarketDataFallbackAdapter','Finnhu
 const dfcOfficialAdapterNames=['FredOfficialAdapter','EcbOfficialAdapter','UsTreasuryOfficialAdapter'];
 const adapterNames=['TiingoMarketDataAdapter','CftcCotAdapter',...dfcOfficialAdapterNames,...canonicalSecondaryAdapterNames,...legacyAdapterNames];
 const runtimeProviderCallPattern = new RegExp(`(new\\s+(${adapterNames.join('|')})\\b|persistAdapterFetchAndNormalize\\s*\\(|\\.fetch(?:Managed)?\\s*\\(|fetchLiveTiingoBars\\s*\\()`);
+const directProviderExecutionPattern=/(?:\.fetch(?:Managed)?\s*\(|persistAdapterFetchAndNormalize\s*\(|fetchLiveTiingoBars\s*\()/;
+const constructionOnlyFactoryBoundaries=new Set([
+  'services/reasoning/src/evidence-fabric/execution-resolver.ts',
+  'services/reasoning/src/provider-sources/official/official-adapter-catalog.ts'
+]);
 
 export function runProviderUnmanagedCallInventoryTests(){
   const repoRoot = findRepoRoot(process.cwd());
@@ -19,6 +24,7 @@ export function runProviderUnmanagedCallInventoryTests(){
   assert.equal(scheduled?.classification, 'through_provider_api_gate');
   const resolver = rows.find((row) => row.file === 'services/reasoning/src/provider-sources/provider-adapter-resolver.ts');
   assert.equal(resolver?.classification, 'adapter_factory_no_execution');
+  for(const boundary of constructionOnlyFactoryBoundaries) assert.equal(rows.find((row)=>row.file===boundary)?.classification,'adapter_factory_no_execution');
   assert.ok(readFileSync(join(repoRoot,'services/reasoning/src/scheduled-ingestion/scheduled-ingestion-service.ts'),'utf8').includes('gateExecutor(gateRequest'));
   assert.ok(rows.some((row) => row.classification === 'fixture_only_behind_gate'));
   for (const boundary of ['services/ingestion/src/facade/provider-suite-builder.ts','services/ingestion/src/adapters/build-provider-graph.ts']) {
@@ -32,6 +38,10 @@ export function runProviderUnmanagedCallInventoryTests(){
   assert.equal(officialNegative.classification,'remaining_unmanaged_call');
   const nestedNegative=classify(join(repoRoot,'services/reasoning/src/provider-sources/unmanaged.ts'),"export async function bypass(adapter:any,request:any){return adapter.fetchManaged(request,{signal:new AbortController().signal,timeoutMs:1});}");
   assert.equal(nestedNegative.classification,'remaining_unmanaged_call');
+  const evidenceResolverExecutionNegative=classify(join(repoRoot,'services/reasoning/src/evidence-fabric/execution-resolver.ts'),"export async function bypass(adapter:any,request:any){return adapter.fetch(request);}");
+  assert.equal(evidenceResolverExecutionNegative.classification,'remaining_unmanaged_call');
+  const officialCatalogExecutionNegative=classify(join(repoRoot,'services/reasoning/src/provider-sources/official/official-adapter-catalog.ts'),"export async function bypass(adapter:any,request:any){return adapter.fetchManaged(request,{signal:new AbortController().signal,timeoutMs:1});}");
+  assert.equal(officialCatalogExecutionNegative.classification,'remaining_unmanaged_call');
 }
 function walkRuntimeFiles(cwd:string): string[] {
   const out:string[]=[];
@@ -51,7 +61,8 @@ function classify(absFile:string, source:string): { file:string; classification:
   }
   if(file.endsWith('/tiingo/tiingo-adapter.ts')||file.endsWith('/cot/cot-adapter.ts')||file.endsWith('/finnhub/finnhub-adapter.ts')||file.endsWith('/news/news-adapters.ts'))return{file,classification:'adapter_implementation'};
   if(file.includes('/provider-sources/official/')&&dfcOfficialAdapterNames.some(name=>source.includes(`class ${name}`)))return{file,classification:'adapter_implementation'};
-  if(file.endsWith('/provider-adapter-resolver.ts')&&adapterNames.some(name=>source.includes(`new ${name}`))&&!source.includes('.fetch(')&&!source.includes('.fetchManaged('))return{file,classification:'adapter_factory_no_execution'};
+  if(constructionOnlyFactoryBoundaries.has(file))return{file,classification:directProviderExecutionPattern.test(source)?'remaining_unmanaged_call':'adapter_factory_no_execution'};
+  if(file.endsWith('/provider-adapter-resolver.ts')&&adapterNames.some(name=>source.includes(`new ${name}`))&&!directProviderExecutionPattern.test(source))return{file,classification:'adapter_factory_no_execution'};
   if(file.endsWith('/ingestion-persistence-service.ts')&&source.includes('persistProviderApiGateResult')&&source.includes('persistAdapterFetchAndNormalize'))return{file,classification:'fixture_only_behind_gate'};
   if(file.includes('/provider-sources/')&&source.includes("mode: 'fixture'")&&!source.includes('live_enabled'))return{file,classification:'fixture_only_behind_gate'};
   if(file === 'services/reasoning/src/runtime/canonical-market-intelligence-boundary.ts' && source.includes('runTiingoFixtureIngestion') && source.includes("mode: 'fixture'")) return { file, classification:'fixture_only_behind_gate' };

@@ -32,7 +32,11 @@ export async function runProviderLiveReadinessTests(){
   const tiingoProd = evaluateProviderLiveReadiness('tiingo_market_data','production',{liveEnabled:true,tiingo:{liveEnabled:true,mode:'live_enabled',apiKey:'fake'}});
   assert.equal(tiingoProd.activationStatus,'production_blocked');
   const fredExecutableUnverified=evaluateProviderLiveReadiness('fred','staging',{});assert.equal(fredExecutableUnverified.activationStatus,'disabled');assert.ok(fredExecutableUnverified.reasons.includes('staging_empirical_verification_missing'));
-  const nonExecutable = evaluateProviderLiveReadiness('cftc_cot','staging',{}); assert.equal(nonExecutable.activationStatus,'fixture_only');assert.ok(nonExecutable.reasons.includes('no_executable_evidence_route'));
+  const cftcPolicy=getProviderLiveActivationPolicy('cftc_cot','staging');
+  assert.equal(cftcPolicy.liveEnabled,false);assert.equal(cftcPolicy.allowLiveFetch,false);assert.equal(cftcPolicy.requireApiKey,false);assert.match(cftcPolicy.rationale,/Executable adapter exists but staging verification is absent/);
+  const cftcExecutableUnverified=evaluateProviderLiveReadiness('cftc_cot','staging',{});
+  assert.equal(cftcExecutableUnverified.activationStatus,'disabled');assert.equal(cftcExecutableUnverified.allowLiveFetch,false);assert.equal(cftcExecutableUnverified.hasRequiredSecrets,true);assert.ok(cftcExecutableUnverified.reasons.includes('staging_empirical_verification_missing'));assert.ok(!cftcExecutableUnverified.reasons.includes('no_executable_evidence_route'));assert.ok(validateProviderLiveReadinessStatus(cftcExecutableUnverified).ok);
+  const cftcProd=evaluateProviderLiveReadiness('cftc_cot','production',{});assert.equal(cftcProd.activationStatus,'production_blocked');assert.equal(cftcProd.allowLiveFetch,false);assert.ok(cftcProd.reasons.includes('production_blocked_by_default'));
   const leakCheck = JSON.stringify(tiingoConfigured); assert.equal(leakCheck.includes('fake'),false);
   const snap = getProviderLiveReadinessSnapshot('staging',{liveEnabled:true,tiingo:{liveEnabled:true,mode:'live_enabled',apiKey:'fake'}}); assert.ok(validateProviderLiveReadinessSnapshot(snap).ok); assert.equal(snap.providers.length>5,true);
   const planAllowed = buildProviderLiveSmokePlan('tiingo_market_data','staging',{liveEnabled:true,tiingo:{liveEnabled:true,mode:'live_enabled',apiKey:'fake'}}); assert.equal(planAllowed.allowed,false); assert.ok(validateProviderLiveSmokePlan(planAllowed).ok);

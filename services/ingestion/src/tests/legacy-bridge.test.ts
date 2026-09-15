@@ -12,9 +12,9 @@ class ValidNewsProvider implements NewsProvider {
     return [
       {
         type: 'news_article',
-        provider: 'newsapi',
+        provider: 'marketaux',
         articleId: 'a-1',
-        sourceName: 'NewsAPI',
+        sourceName: 'Marketaux',
         url: 'https://example.com/a1',
         headline: `headline ${query}`,
         summary: 'summary',
@@ -33,9 +33,9 @@ class InvalidNewsProvider implements NewsProvider {
     return [
       {
         type: 'news_article',
-        provider: 'newsapi',
+        provider: 'marketaux',
         articleId: 'a-2',
-        sourceName: 'NewsAPI',
+        sourceName: 'Marketaux',
         url: 'https://example.com/a2',
         headline: 'bad',
         summary: 'bad',

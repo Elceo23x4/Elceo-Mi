@@ -2,7 +2,7 @@ import type { MarketReasoningAsset, ProviderSourceActivationChecklistItem, Provi
 import { PROVIDER_SOURCE_IDS, TRADING_ASSET_COVERAGE } from '@elceo/types';
 
 const reasoningAssets: MarketReasoningAsset[]=[...TRADING_ASSET_COVERAGE].sort();
-const finnHubFallbackAssets:MarketReasoningAsset[]=['eur_usd','gbp_usd','usd_jpy','aud_usd','usd_chf','nzd_usd','usd_cad','btc_usd'].sort();
+const finnHubFallbackAssets=(['eur_usd','gbp_usd','usd_jpy','aud_usd','usd_chf','nzd_usd','usd_cad','btc_usd'] as MarketReasoningAsset[]).sort();
 const src=(x:ProviderSourceDescriptor)=>x;
 export const providerSources: ProviderSourceDescriptor[] = [
 src({sourceId:'tiingo_market_data',family:'market_data',displayName:'Tiingo primary market data',status:'fixture_ready',activationStage:'fixture_ready',fixtureReadiness:'ready',liveActivationMode:'blocked_by_default',credentialRequirement:'api_key_required',capabilities:[{capabilityKind:'market_price',evidenceTypeId:'market_price_history',activationStage:'fixture_ready',fixtureReadiness:'ready',dryRunSupported:true,liveActivationMode:'blocked_by_default'}],assets:['aud_usd','btc_usd','eur_usd','gbp_usd','nzd_usd','usd_cad','usd_chf','usd_jpy'],notes:'Canonical primary direct-price path for the empirically bounded seven FX pairs and BTC. Other assets require separate verified direct authorities.'}),

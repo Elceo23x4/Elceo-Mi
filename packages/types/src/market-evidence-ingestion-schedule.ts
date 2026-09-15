@@ -6,7 +6,7 @@ export type ScheduledIngestionJobStatus = typeof ScheduledIngestionJobStatusValu
 export const ScheduledIngestionRunModeValues = ['dry_run_fixture', 'staging_live', 'production_live'] as const;
 export type ScheduledIngestionRunMode = typeof ScheduledIngestionRunModeValues[number];
 
-export const ScheduledIngestionCadenceValues = ['hourly', 'daily', 'weekly', 'manual'] as const;
+export const ScheduledIngestionCadenceValues = ['every_15_minutes', 'every_30_minutes', 'hourly', 'daily', 'weekly', 'manual'] as const;
 export type ScheduledIngestionCadence = typeof ScheduledIngestionCadenceValues[number];
 
 export const ScheduledIngestionRetryStatusValues = ['not_needed', 'retry_scheduled', 'exhausted', 'blocked'] as const;

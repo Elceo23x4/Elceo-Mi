@@ -27,9 +27,9 @@ export async function runScheduledIngestionTests(){
 
   const reqRepo=new MemoryProviderSourceRequestRepository(); const resRepo=new MemoryProviderSourceResponseRepository(); const payRepo=new MemoryNormalizedMarketEvidencePayloadRepository(); const runRepo=new MemoryScheduledIngestionRunRepository();
   const svc=new ScheduledIngestionService(new IngestionPersistenceService(reqRepo,resRepo,payRepo),runRepo);
-  const tiJob='sched-tiingo_market_data-market_price_history-eur_usd'; const cotJob='sched-cftc_cot-cot_report-eur_usd';
+  const tiJob='sched-tiingo_market_data-market_price_history-eur_usd'; const cotJob='sched-cftc_public_reporting-cot_report-eur_usd';
   const ti=await svc.runScheduledIngestionDryRun(tiJob,'2026-01-01T00:00:00.000Z'); assert.ok(ti.run.payloadCount>0); assert.ok(ti.run.requestId);
-  const cot=await svc.runScheduledIngestionDryRun(cotJob,'2026-01-02T00:00:00.000Z'); assert.ok(cot.run.payloadCount>0);
+  const cot=await svc.runScheduledIngestionDryRun(cotJob,'2026-01-02T00:00:00.000Z'); assert.ok(cot.run.payloadCount>0); assert.equal(cot.run.providerId,'cftc_public_reporting');
   const officialJobs=[
     ['sched-us_treasury-nominal_yield_series','interest_rates'],
     ['sched-us_treasury-real_yield_series','real_yields'],

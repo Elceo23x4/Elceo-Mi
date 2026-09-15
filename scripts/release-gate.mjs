@@ -17,6 +17,7 @@ const steps = [
   { label: 'npm run audit:image-ingress', command: 'npm', args: ['run', 'audit:image-ingress'] },
   { label: 'SEC-H repository/release governance', command: 'node', args: ['scripts/run-sec-h.mjs'] },
   { label: 'npm run typecheck', command: 'npm', args: ['run', 'typecheck'] },
+  { label: 'npm run check:data-fabric', command: 'npm', args: ['run', 'check:data-fabric'] },
   { label: 'npm run test', command: 'npm', args: ['run', 'test'] },
   { label: 'npm run build', command: 'npm', args: ['run', 'build'] },
   { label: 'npm run test:sharp', command: 'npm', args: ['run', 'test:sharp'] },

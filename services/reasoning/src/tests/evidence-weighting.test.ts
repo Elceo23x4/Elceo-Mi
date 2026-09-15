@@ -19,7 +19,7 @@ const orderedSnap=buildWeightedEvidenceSnapshot({snapshotId:'o',generatedAt:'202
 a.equal(orderedSnap.items[0]?.payloadId,'a');
 
 const snap=buildWeightedEvidenceSnapshot(assembleReasoningEvidenceInputSnapshot({payloads:[],generatedAt:'2026-01-01T00:00:00.000Z',filterPolicy:getDefaultReasoningEvidenceFilterPolicy()}),'xau_usd','intraday'); a.ok(snap.warnings.includes('no_usable_weighted_evidence'));
-const all=getDefaultAssetEvidenceWeightPolicies(); a.equal(all.length,12*4*(new Set(all.map((x)=>x.evidenceClass)).size)); a.ok(all.every((x)=>x.rationale.length>0));
+const all=getDefaultAssetEvidenceWeightPolicies(); a.equal(all.length,14*4*(new Set(all.map((x)=>x.evidenceClass)).size)); a.ok(all.every((x)=>x.rationale.length>0));
 const xau=(c:string)=>getWeightPolicy('xau_usd',c as never,'short_term').baseWeight; a.ok(xau('real_yields')>=80&&xau('inflation')>=70&&xau('central_bank_policy')>=80&&xau('dollar_liquidity')>=70&&xau('precious_metals_flows')>=55);
 const btc=(c:string)=>getWeightPolicy('btc_usd',c as never,'short_term').baseWeight; a.ok(btc('crypto_market_structure')>=80&&btc('dollar_liquidity')>=70&&btc('risk_sentiment')>=70);
 const sp=(c:string)=>getWeightPolicy('sp500',c as never,'short_term').baseWeight; a.ok(sp('risk_sentiment')>=70&&sp('volatility_surface')>=70&&sp('equity_index_breadth')>=70&&sp('earnings_macro')>=70);

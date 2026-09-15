@@ -9,7 +9,7 @@
     "services/*"
   ],
   "scripts": {
-    "build": "npm run --workspaces --if-present build",
+    "build": "npm run -w @elceo/db-runtime build && npm run --workspaces --if-present build",
     "dev": "npm run dev -w apps/web",
     "lint": "npm run --workspaces --if-present lint",
     "typecheck": "npm run --workspaces --if-present typecheck",
@@ -35,6 +35,7 @@
     "check:migrations": "node scripts/check-db-migrations.mjs",
     "release:gate": "node scripts/release-gate.mjs",
     "check:c5-readiness": "node scripts/check-c5-readiness.mjs",
+    "check:data-fabric": "node scripts/check-data-fabric.mjs",
     "security:gate": "node scripts/security-gate.mjs",
     "security:notification-client": "node scripts/check-notification-client-secrets.mjs",
     "check:infra-security": "node scripts/check-infra-security-policy.mjs",
@@ -66,7 +67,8 @@
     "test:canonical-candle-postgres": "npm run -w services/ingestion test:canonical-candle-postgres",
     "test:provider-scale-acceptance": "PROVIDER_SCALE_ACCEPTANCE=1 npm run -w services/reasoning test",
     "load:pgs5-staging": "node scripts/pgs5-staging-load.mjs",
-    "test:canonical-dashboard-12-asset-acceptance": "ADAPTIVE_MATERIALIZATION_INTEGRATION=1 CANONICAL_DASHBOARD_12_ASSET_ACCEPTANCE=1 npm run -w services/reasoning test",
+    "test:canonical-dashboard-14-asset-acceptance": "ADAPTIVE_MATERIALIZATION_INTEGRATION=1 CANONICAL_DASHBOARD_14_ASSET_ACCEPTANCE=1 npm run -w services/reasoning test",
+    "test:canonical-dashboard-12-asset-acceptance": "npm run test:canonical-dashboard-14-asset-acceptance",
     "test:backend-authority-postgres": "npm run -w @elceo/db-runtime build && npm run -w services/application-state test && ELCEO_DB_RUNTIME_TEST_OWNER=1 node scripts/test-backend-authority-postgres.mjs",
     "test:kick-off-migration-postgres": "node scripts/test-kick-off-migration-postgres.mjs",
     "test:kick-off-acceptance": "npm run -w services/reasoning test && npm run -w apps/web test && npm run test:kick-off-migration-postgres && npm run test:kick-off-production-integration",
@@ -79,9 +81,10 @@
     "test:sec-f": "npm run -w @elceo/config build && npm run -w @elceo/schemas build && npm run -w apps/web test && node scripts/test-sec-f-runtime.mjs && node scripts/check-sec-f.mjs",
     "test:sec-f-postgres": "npm run -w services/application-state test && npm run -w services/notifications test && ELCEO_DB_RUNTIME_TEST_OWNER=1 node scripts/test-sec-f-postgres.mjs",
     "test:sec-g": "node scripts/test-sec-g.mjs && node scripts/test-sec-g-adaptive-evidence-contract.mjs && node scripts/test-sec-g-k6-sanitizer.mjs && node scripts/test-sec-g-sensitive-artifact-scanner.mjs",
-    "test:sec-g-postgres": "node scripts/test-sec-g-postgres.mjs && node scripts/test-sec-g-recovery.mjs && npm run -w @elceo/db-runtime build && REDIS_URL=${REDIS_URL:-redis://127.0.0.1:6379} npm run test:canonical-dashboard-12-asset-acceptance && REDIS_URL=${REDIS_URL:-redis://127.0.0.1:6379} node scripts/seed-sec-g-dashboard-runtime.mjs",
+    "test:sec-g-postgres": "node scripts/test-sec-g-postgres.mjs && node scripts/test-sec-g-recovery.mjs && npm run -w @elceo/db-runtime build && REDIS_URL=${REDIS_URL:-redis://127.0.0.1:6379} npm run test:canonical-dashboard-14-asset-acceptance && REDIS_URL=${REDIS_URL:-redis://127.0.0.1:6379} node scripts/seed-sec-g-dashboard-runtime.mjs && npm run test:macro-vintage-postgres",
     "test:sec-g-k6": "k6 run --summary-export artifacts/sec-g/k6-summary.json load/sec-g.k6.js",
-    "test:sec-g-lifecycle": "npm run -w @elceo/db-runtime build && node scripts/test-sec-g-lifecycle.mjs"
+    "test:sec-g-lifecycle": "npm run -w @elceo/db-runtime build && node scripts/test-sec-g-lifecycle.mjs",
+    "test:macro-vintage-postgres": "node scripts/test-macro-vintage-postgres.mjs"
   },
   "engines": {
     "node": "24.x",
@@ -103,10 +106,9 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
-    "@svgr/core": "8.1.0",
-    "@svgr/plugin-jsx": "8.1.0",
-    "@svgr/plugin-svgo": "8.1.0",
-    "@svgr/webpack": "8.1.0",
+    "@svgr/core": "^8.1.0",
+    "@svgr/plugin-jsx": "^8.1.0",
+    "@svgr/plugin-svgo": "^8.1.0",
     "@types/node": "^20.19.39",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.2.14",

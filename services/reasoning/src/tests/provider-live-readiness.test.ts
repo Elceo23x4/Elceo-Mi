@@ -8,8 +8,15 @@ export async function runProviderLiveReadinessTests(){
   const policy = getProviderLiveActivationPolicy('tiingo_market_data','production');
   assert.equal(policy.productionBlockedByDefault,true); assert.ok(validateProviderLiveActivationPolicy(policy).ok);
   const quotas = getDefaultProviderQuotaPolicies(); assert.ok(quotas.every((q)=>validateProviderQuotaPolicy(q).ok));
-  const tiingoReady = evaluateProviderLiveReadiness('tiingo_market_data','staging',{liveEnabled:true,tiingo:{liveEnabled:true,mode:'live_enabled',apiKey:'fake',baseUrl:'https://api.tiingo.com'}});
-  assert.equal(tiingoReady.activationStatus,'staging_ready'); assert.equal(tiingoReady.allowLiveFetch,true); assert.equal(tiingoReady.reasons.length,0); assert.ok(validateProviderLiveReadinessStatus(tiingoReady).ok);
+  const tiingoConfigured = evaluateProviderLiveReadiness('tiingo_market_data','staging',{liveEnabled:true,tiingo:{liveEnabled:true,mode:'live_enabled',apiKey:'fake',baseUrl:'https://api.tiingo.com'}});
+  assert.equal(tiingoConfigured.activationStatus,'disabled'); assert.equal(tiingoConfigured.allowLiveFetch,false); assert.ok(tiingoConfigured.reasons.includes('staging_empirical_verification_missing')); assert.ok(validateProviderLiveReadinessStatus(tiingoConfigured).ok);
+  assert.equal(getProviderLiveActivationPolicy('tiingo_market_data','staging').allowLiveFetch,false);
+  assert.equal(getProviderLiveActivationPolicy('fred','staging').allowLiveFetch,false);
+  assert.equal(getProviderLiveActivationPolicy('ecb_public','staging').allowLiveFetch,false);
+  assert.equal(getProviderLiveActivationPolicy('us_treasury','staging').allowLiveFetch,false);
+  assert.equal(getProviderLiveActivationPolicy('fred','staging').requireApiKey,true);
+  assert.equal(getProviderLiveActivationPolicy('ecb_public','staging').requireApiKey,false);
+  assert.equal(getProviderLiveActivationPolicy('us_treasury','staging').requireApiKey,false);
   for (const baseUrl of ['http://api.tiingo.com','https://example.com']) {
     const invalidOrigin = evaluateProviderLiveReadiness('tiingo_market_data','staging',{liveEnabled:true,tiingo:{liveEnabled:true,mode:'live_enabled',apiKey:'fake',baseUrl}});
     assert.equal(invalidOrigin.allowLiveFetch,false); assert.equal(invalidOrigin.activationStatus,'invalid_config'); assert.ok(invalidOrigin.reasons.includes('tiingo_health_invalid_config')); assert.ok(validateProviderLiveReadinessStatus(invalidOrigin).ok);
@@ -24,10 +31,15 @@ export async function runProviderLiveReadinessTests(){
   assert.equal(missingOuterIntent.allowLiveFetch,false); assert.equal(missingOuterIntent.activationStatus,'disabled');
   const tiingoProd = evaluateProviderLiveReadiness('tiingo_market_data','production',{liveEnabled:true,tiingo:{liveEnabled:true,mode:'live_enabled',apiKey:'fake'}});
   assert.equal(tiingoProd.activationStatus,'production_blocked');
-  const fixtureOnly = evaluateProviderLiveReadiness('fred','staging',{}); assert.ok(fixtureOnly.activationStatus==='fixture_only' || fixtureOnly.activationStatus==='disabled');
-  const leakCheck = JSON.stringify(tiingoReady); assert.equal(leakCheck.includes('fake'),false);
+  const fredExecutableUnverified=evaluateProviderLiveReadiness('fred','staging',{});assert.equal(fredExecutableUnverified.activationStatus,'disabled');assert.ok(fredExecutableUnverified.reasons.includes('staging_empirical_verification_missing'));
+  const cftcPolicy=getProviderLiveActivationPolicy('cftc_cot','staging');
+  assert.equal(cftcPolicy.liveEnabled,false);assert.equal(cftcPolicy.allowLiveFetch,false);assert.equal(cftcPolicy.requireApiKey,false);assert.match(cftcPolicy.rationale,/Executable adapter exists but staging verification is absent/);
+  const cftcExecutableUnverified=evaluateProviderLiveReadiness('cftc_cot','staging',{});
+  assert.equal(cftcExecutableUnverified.activationStatus,'disabled');assert.equal(cftcExecutableUnverified.allowLiveFetch,false);assert.equal(cftcExecutableUnverified.hasRequiredSecrets,true);assert.ok(cftcExecutableUnverified.reasons.includes('staging_empirical_verification_missing'));assert.ok(!cftcExecutableUnverified.reasons.includes('no_executable_evidence_route'));assert.ok(validateProviderLiveReadinessStatus(cftcExecutableUnverified).ok);
+  const cftcProd=evaluateProviderLiveReadiness('cftc_cot','production',{});assert.equal(cftcProd.activationStatus,'production_blocked');assert.equal(cftcProd.allowLiveFetch,false);assert.ok(cftcProd.reasons.includes('production_blocked_by_default'));
+  const leakCheck = JSON.stringify(tiingoConfigured); assert.equal(leakCheck.includes('fake'),false);
   const snap = getProviderLiveReadinessSnapshot('staging',{liveEnabled:true,tiingo:{liveEnabled:true,mode:'live_enabled',apiKey:'fake'}}); assert.ok(validateProviderLiveReadinessSnapshot(snap).ok); assert.equal(snap.providers.length>5,true);
-  const planAllowed = buildProviderLiveSmokePlan('tiingo_market_data','staging',{liveEnabled:true,tiingo:{liveEnabled:true,mode:'live_enabled',apiKey:'fake'}}); assert.equal(planAllowed.allowed,false); assert.ok(planAllowed.warnings.includes('provider_api_gate_execution_context_not_ready_prov_p1b')); assert.ok(validateProviderLiveSmokePlan(planAllowed).ok);
+  const planAllowed = buildProviderLiveSmokePlan('tiingo_market_data','staging',{liveEnabled:true,tiingo:{liveEnabled:true,mode:'live_enabled',apiKey:'fake'}}); assert.equal(planAllowed.allowed,false); assert.ok(validateProviderLiveSmokePlan(planAllowed).ok);
   const planBlocked = buildProviderLiveSmokePlan('tiingo_market_data','production',{liveEnabled:true,tiingo:{liveEnabled:true,mode:'live_enabled',apiKey:'fake'}}); assert.equal(planBlocked.allowed,false);
   const boundary = new CanonicalMarketIntelligenceBoundaryService(new MemoryMarketEvidenceRegistrySnapshotRepository(),new MemorySeoContentArchitectureSnapshotRepository());
   assert.equal(boundary.getProviderLiveActivationPolicy('tiingo_market_data','staging').providerId,'tiingo_market_data');

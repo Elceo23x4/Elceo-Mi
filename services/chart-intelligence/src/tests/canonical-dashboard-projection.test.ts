@@ -7,7 +7,7 @@ import { CANONICAL_DASHBOARD_DISPLAY_VERSION, CANONICAL_DASHBOARD_POLICY_VERSION
 const AT = '2026-01-05T00:00:00.000Z';
 const ASSETS: Array<[(typeof LAUNCH_ASSET_SYMBOLS)[number], TradingAssetCoverage]> = [
   ['XAU/USD', 'xau_usd'], ['Nasdaq 100', 'nasdaq_100'], ['S&P 500', 'sp500'], ['DE30', 'de30'], ['BTC/USD', 'btc_usd'], ['EUR/USD', 'eur_usd'],
-  ['GBP/USD', 'gbp_usd'], ['USD/JPY', 'usd_jpy'], ['USD/CHF', 'usd_chf'], ['AUD/USD', 'aud_usd'], ['NZD/USD', 'nzd_usd'], ['USD/CAD', 'usd_cad']
+  ['GBP/USD', 'gbp_usd'], ['USD/JPY', 'usd_jpy'], ['USD/CHF', 'usd_chf'], ['AUD/USD', 'aud_usd'], ['NZD/USD', 'nzd_usd'], ['USD/CAD', 'usd_cad'], ['DXY','dxy'], ['VIX','vix']
 ];
 
 function cognition(asset: TradingAssetCoverage): MarketCognitionSnapshot {

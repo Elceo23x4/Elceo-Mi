@@ -1,0 +1,64 @@
+import assert from 'node:assert/strict';
+import { MARKET_REASONING_DIAGNOSTIC_ASSETS, TRADING_ASSET_COVERAGE, type AssetEvidenceBlueprint } from '@elceo/types';
+import { ASSET_EVIDENCE_BLUEPRINTS, EVIDENCE_EXECUTION_REGISTRATIONS, EvidenceSufficiencyEvaluator, PostgresMacroVintageRepository, PROVIDER_IDENTITY_ALIASES, assertEvidenceFabric, canonicalSourceId, evidenceImplementationState, resolveEvidenceGateExecution } from '../evidence-fabric/index';
+import { projectOfficialMacroVintage } from '../evidence-fabric/macro-vintage-projection';
+import { ECB_CSV_FIXTURE, parseEcbCsv } from '../provider-sources/official/ecb-adapter';
+import { TREASURY_NOMINAL_XML_FIXTURE, TREASURY_REAL_XML_FIXTURE, parseTreasuryXml } from '../provider-sources/official/us-treasury-adapter';
+
+const FX_TWO_LEG_CONTRACT = [
+ { asset:'eur_usd', base:['ecb_policy','euro_german_macro'], quote:['fed_policy','us_macro'] },
+ { asset:'gbp_usd', base:['boe_policy','uk_macro'], quote:['fed_policy','us_macro'] },
+ { asset:'usd_jpy', base:['fed_policy','treasury_yields'], quote:['boj_policy','japan_macro_intervention'] },
+ { asset:'usd_chf', base:['fed_policy'], quote:['snb_policy','swiss_macro'] },
+ { asset:'aud_usd', base:['rba_policy','australia_macro'], quote:['fed_policy'] },
+ { asset:'nzd_usd', base:['rbnz_policy','new_zealand_macro'], quote:['fed_policy'] },
+ { asset:'usd_cad', base:['fed_policy'], quote:['boc_policy','canada_macro'] }
+] as const;
+
+export async function runEvidenceFabricTests():Promise<void> {
+ assert.doesNotThrow(assertEvidenceFabric);
+ assert.deepEqual(new Set(ASSET_EVIDENCE_BLUEPRINTS.map(x=>x.asset)),new Set(TRADING_ASSET_COVERAGE));
+ assert.equal(TRADING_ASSET_COVERAGE.length,14); assert.deepEqual(MARKET_REASONING_DIAGNOSTIC_ASSETS,['dxy','vix']);
+ assert.equal(new Set(PROVIDER_IDENTITY_ALIASES.map(x=>x.alias)).size,PROVIDER_IDENTITY_ALIASES.length);
+ assert.equal(canonicalSourceId('federal_reserve'),'federal_reserve_official'); assert.equal(canonicalSourceId('ecb_public'),'ecb_official'); assert.equal(canonicalSourceId('boj_public'),'boj_official'); assert.equal(canonicalSourceId('us_treasury'),'us_treasury_official'); assert.equal(canonicalSourceId('fred'),'fred_macro');
+ const homes:Record<string,string[]>= {usd_chf:['snb_official','swiss_fso_official'],aud_usd:['rba_official','abs_official'],nzd_usd:['rbnz_official','stats_nz_official'],usd_cad:['bank_of_canada_official','statistics_canada_official']};
+ for(const [asset,ids] of Object.entries(homes)){const b=ASSET_EVIDENCE_BLUEPRINTS.find(x=>x.asset===asset);for(const id of ids)assert(b?.requirements.some(q=>q.routes.some(r=>r.sourceId===id)),`${asset}:${id}`);}
+ for(const contract of FX_TWO_LEG_CONTRACT){
+  const blueprint=ASSET_EVIDENCE_BLUEPRINTS.find(x=>x.asset===contract.asset);
+  assert.ok(blueprint,`${contract.asset}:missing_blueprint`);
+  const capabilities=new Set(blueprint.requirements.map(x=>x.capabilityId));
+  for(const capability of contract.base)assert.ok(capabilities.has(capability),`${contract.asset}:base_leg_missing:${capability}`);
+  for(const capability of contract.quote)assert.ok(capabilities.has(capability),`${contract.asset}:quote_leg_missing:${capability}`);
+  assert.ok(contract.base.some(capability=>blueprint.requirements.find(x=>x.capabilityId===capability)?.criticality==='critical'),`${contract.asset}:base_leg_without_critical_evidence`);
+  assert.ok(contract.quote.some(capability=>blueprint.requirements.find(x=>x.capabilityId===capability)?.criticality==='critical'),`${contract.asset}:quote_leg_without_critical_evidence`);
+ }
+ for(const asset of ['xau_usd','nasdaq_100','sp500','dxy'] as const){const caps=new Set(ASSET_EVIDENCE_BLUEPRINTS.find(x=>x.asset===asset)!.requirements.map(x=>x.capabilityId));assert.ok(caps.has('treasury_yields'),`${asset}:nominal_yields_missing`);assert.ok(caps.has('real_yields'),`${asset}:real_yields_missing`);assert.ok(!caps.has('treasury_nominal_real_yields'),`${asset}:compound_yield_capability_forbidden`);assert.ok(!caps.has('yields_real_yields'),`${asset}:compound_yield_capability_forbidden`);}
+ const evaluator=new EvidenceSufficiencyEvaluator(); const eur=structuredClone(ASSET_EVIDENCE_BLUEPRINTS.find(x=>x.asset==='eur_usd')) as AssetEvidenceBlueprint; eur.requirements.find(x=>x.capabilityId==='ecb_policy')!.routes=[]; assert.equal(evaluator.evaluate(eur).state,'degraded');
+ const priceOnly={asset:'eur_usd',requirements:[structuredClone(ASSET_EVIDENCE_BLUEPRINTS[1]!.requirements[0]!)]} as AssetEvidenceBlueprint; assert.match(evaluator.evaluate(priceOnly).reasons.join(','),/price_only/);
+ assert.equal(evidenceImplementationState('imf_official'),'source_contract_ready','unregistered source contract must not be promoted to executable state');
+ for(const id of ['world_bank_official','oecd_official'] as const){
+  assert.equal(evidenceImplementationState(id),'executable_adapter',`${id}:registered adapter must report structural executable state`);
+  const registrations=EVIDENCE_EXECUTION_REGISTRATIONS.filter(x=>x.sourceId===id);
+  assert.ok(registrations.length>0,`${id}:missing_execution_registration`);
+  for(const registration of registrations){assert.equal(registration.stagingVerified,false,`${id}:staging_readiness_must_not_be_inferred`);assert.equal(registration.productionEligible,false,`${id}:production_eligibility_must_not_be_inferred`);assert.equal(registration.productionActive,false,`${id}:production_activation_must_not_be_inferred`);}
+ }
+ const executionRoutes=new Set(EVIDENCE_EXECUTION_REGISTRATIONS.map(x=>`${x.sourceId}:${x.capabilityId}`));
+ for(const route of ['tiingo_market_data:direct_price','fred_macro:real_yields','fred_macro:financial_conditions','ecb_official:ecb_policy','us_treasury_official:treasury_yields','us_treasury_official:real_yields','world_bank_official:global_demand','oecd_official:global_demand'] as const)assert.ok(executionRoutes.has(route),`missing_execution_registration:${route}`);
+ assert.equal(evidenceImplementationState('fred_macro','real_yields'),'executable_adapter');assert.equal(evidenceImplementationState('fred_macro','financial_conditions'),'executable_adapter');assert.equal(evidenceImplementationState('ecb_official','ecb_policy'),'executable_adapter');assert.equal(evidenceImplementationState('us_treasury_official','treasury_yields'),'executable_adapter');assert.equal(evidenceImplementationState('us_treasury_official','real_yields'),'executable_adapter');
+ const fredPlan=resolveEvidenceGateExecution('fred_macro','real_yields');assert.equal(fredPlan?.gateSourceId,'fred');assert.equal(fredPlan?.providerCapabilityId,'real_yield_series');assert.deepEqual(fredPlan?.requestParams,{seriesId:'DFII10'});
+ const ecbPlan=resolveEvidenceGateExecution('ecb_official','ecb_policy');assert.equal(ecbPlan?.gateSourceId,'ecb_public');assert.equal(ecbPlan?.providerCapabilityId,'policy_rate_series');assert.deepEqual(ecbPlan?.requestParams,{series:'deposit_facility'});
+ const treasuryNominal=resolveEvidenceGateExecution('us_treasury_official','treasury_yields');assert.equal(treasuryNominal?.providerCapabilityId,'nominal_yield_series');assert.deepEqual(treasuryNominal?.requestParams,{dataset:'daily_treasury_yield_curve'});
+ const treasuryReal=resolveEvidenceGateExecution('us_treasury_official','real_yields');assert.equal(treasuryReal?.providerCapabilityId,'real_yield_series');assert.deepEqual(treasuryReal?.requestParams,{dataset:'daily_treasury_real_yield_curve'});
+ assert.equal(parseEcbCsv(ECB_CSV_FIXTURE)[0]?.OBS_VALUE,'2.25');assert.equal(parseTreasuryXml(TREASURY_NOMINAL_XML_FIXTURE)[0]?.BC_10YEAR,'4.21');assert.equal(parseTreasuryXml(TREASURY_REAL_XML_FIXTURE)[0]?.TC_10YEAR,'2.01');
+ const eurReadiness=evaluator.evaluate(ASSET_EVIDENCE_BLUEPRINTS.find(x=>x.asset==='eur_usd')!);assert.equal(eurReadiness.empiricalReady,false);assert.ok(eurReadiness.empiricalReasons.some(x=>x.includes('not_staging_verified')));
+ const dxy=ASSET_EVIDENCE_BLUEPRINTS.find(x=>x.asset==='dxy')!;const vix=ASSET_EVIDENCE_BLUEPRINTS.find(x=>x.asset==='vix')!;assert.equal(dxy.requirements.find(x=>x.directPriceRequired)?.routes[0]?.sourceId,'ice_data_indices');assert.equal(vix.requirements.find(x=>x.directPriceRequired)?.routes[0]?.sourceId,'cboe_official');assert.equal(evaluator.evaluate(dxy).state,'degraded');assert.equal(evaluator.evaluate(vix).state,'degraded');
+ const calls:{sql:string;params?:unknown[]}[]=[];const repo=new PostgresMacroVintageRepository({query:async(sql,params)=>{calls.push(params===undefined?{sql}:{sql,params});return{rows:sql.startsWith('INSERT')?[{observation_identity:'cpi'}]:[]};}});const inserted=await repo.append({observationIdentity:'cpi',correlationKey:'US:CPI:2026-01',countryOrArea:'US',indicatorId:'CPI',referencePeriod:'2026-01',scheduledReleaseAt:null,sourceReleaseAt:null,firstSeenAt:'2026-02-01T00:00:00Z',retrievedAt:'2026-02-01T00:00:01Z',effectiveAt:'2026-02-01T00:00:00Z',vintageId:'initial',previousPublishedValue:null,value:100,revisionState:'preliminary',sourceUrl:'https://api.bls.gov',sourceId:'bls_official',retrievalRequestId:'request-1'});assert.equal(inserted,'inserted');assert.match(calls[0]?.sql??'',/ON CONFLICT DO NOTHING/);
+
+ const fredProjection=projectOfficialMacroVintage({
+  request:{requestId:'fred-r1',providerId:'fred',capability:'real_yield_series',asset:null,region:'united_states',evidenceTypeId:'real_yield_series',paramsJson:JSON.stringify({seriesId:'DFII10'}),requestedAt:'2026-06-17T12:00:00.000Z'},
+  response:{requestId:'fred-r1',providerId:'fred',capability:'real_yield_series',status:'success',fetchedAt:'2026-06-17T12:00:01.000Z',sourceUrl:'https://api.stlouisfed.org/fred/series/observations?series_id=DFII10',rawPayloadJson:null,errorCode:null,errorMessage:null},
+  payload:{payloadId:'fred-r1:0',evidenceTypeId:'real_yield_series',evidenceClass:'real_yields',providerId:'fred_macro',sourceId:'fred_macro',region:'united_states',asset:null,observedAt:'2026-06-17T00:00:00.000Z',publishedAt:null,normalizedAt:'2026-06-17T12:00:01.000Z',confidenceScore:90,dataQuality:'high',valuesJson:JSON.stringify({value:1.95,date:'2026-06-17',realtimeStart:'2026-06-17',realtimeEnd:'2026-06-17'}),metadataJson:JSON.stringify({canonicalSourceId:'fred_macro',gateSourceId:'fred',requestId:'fred-r1',sourceUrl:'https://api.stlouisfed.org/fred/series/observations?series_id=DFII10'})}
+ });
+ assert.equal(fredProjection?.indicatorId,'DFII10');assert.equal(fredProjection?.revisionState,'observed');assert.equal(fredProjection?.sourceReleaseAt,null);assert.equal(fredProjection?.scheduledReleaseAt,null);assert.equal(fredProjection?.vintageId,'2026-06-17');
+ const unrelated=projectOfficialMacroVintage({request:{requestId:'t1',providerId:'tiingo_market_data',capability:'market_price_history',asset:'eur_usd',region:'global',evidenceTypeId:'direct_price',paramsJson:'{}',requestedAt:'2026-06-17T12:00:00.000Z'},response:{requestId:'t1',providerId:'tiingo_market_data',capability:'market_price_history',status:'success',fetchedAt:'2026-06-17T12:00:01.000Z',sourceUrl:'https://api.tiingo.com',rawPayloadJson:null,errorCode:null,errorMessage:null},payload:{payloadId:'t1:0',evidenceTypeId:'direct_price',evidenceClass:'price',providerId:'tiingo_market_data',sourceId:'tiingo_market_data',region:'global',asset:'eur_usd',observedAt:'2026-06-17T12:00:00.000Z',publishedAt:null,normalizedAt:'2026-06-17T12:00:01.000Z',confidenceScore:90,dataQuality:'high',valuesJson:'{}',metadataJson:'{}'}});assert.equal(unrelated,null);
+}

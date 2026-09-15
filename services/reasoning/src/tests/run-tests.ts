@@ -1,5 +1,5 @@
 import { runKickOffProductionIntegrationTests } from './kick-off-production-integration.test.js';
-import { runKickOff12AssetPassiveAcceptance } from './kick-off-12-asset-passive-acceptance.test.js';
+import { runKickOff14AssetPassiveAcceptance } from './kick-off-14-asset-passive-acceptance.test.js';
 import { runKickOffFinalLineageAcceptance } from './kick-off-final-lineage-acceptance.test.js';
 import { runKickOffOrchestrationTests } from './kick-off-orchestration.test.js';
 import { runKickOffClosureTests } from './kick-off-closure.test.js';
@@ -48,6 +48,7 @@ import { runMarketCognitionTests } from './market-cognition.test.js';
 import { runSeoContentFeedTests } from './seo-content-feed.test.js';
 import { runProviderLiveReadinessTests } from './provider-live-readiness.test.js';
 import { runScheduledIngestionTests } from './scheduled-ingestion.test.js';
+import { runNewsCadenceTests } from './news-cadence.test.js';
 import { runProviderSourceRegistryTests } from './provider-source-registry.test.js';
 import { runNewsExtractionFilingsTests } from './news-extraction-filings.test.js';
 import { runCryptoRiskLiquidityTests } from './crypto-risk-liquidity.test.js';
@@ -87,14 +88,16 @@ import { runAdaptiveMaterializationTests } from './adaptive-materialization.test
 import { runAdaptiveMaterializationRedisIntegrationTests } from './adaptive-materialization-redis.test.js';
 import { runAdaptiveMaterializationIntegrationTests } from './adaptive-materialization-integration.test.js';
 import { runProviderScaleAcceptanceTests } from './provider-scale-acceptance.test.js';
+import { runEvidenceFabricTests } from './evidence-fabric.test.js';
 
 async function run(): Promise<void> {
+  await runEvidenceFabricTests();
   await runProviderScaleAcceptanceTests();
   await runAdaptiveMaterializationTests();
   await runAdaptiveMaterializationRedisIntegrationTests();
   await runAdaptiveMaterializationIntegrationTests();
   await runKickOffProductionIntegrationTests();
-  await runKickOff12AssetPassiveAcceptance();
+  await runKickOff14AssetPassiveAcceptance();
   await runKickOffFinalLineageAcceptance();
   await runNarrativeDecayTests();
   await runPositioningStressTests();
@@ -144,6 +147,7 @@ async function run(): Promise<void> {
   runSeoContentFeedTests();
   await runProviderLiveReadinessTests();
   await runScheduledIngestionTests();
+  await runNewsCadenceTests();
   await runProviderSourceRegistryTests();
   runNewsExtractionFilingsTests();
   runCryptoRiskLiquidityTests();
@@ -180,4 +184,4 @@ async function run(): Promise<void> {
   console.log('reasoning runtime contract tests passed');
 }
 
-void run();
+void run().catch((error)=>{console.error(error);process.exitCode=1;});

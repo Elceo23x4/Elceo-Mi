@@ -13,7 +13,7 @@ export function runMarketReasoningReadinessTests(): void {
   assert(report.modules.every((m)=>m.deterministicFoundationStatus === 'implemented'), 'all deterministic foundations are implemented');
   assert(report.modules.every((m)=>m.liveProviderIntegrationStatus !== 'live_verified'), 'no module claims live verification');
   assert.equal(getMarketReasoningReadinessReport(at).generatedAt, report.generatedAt, 'fixed timestamp is deterministic');
-  assert.equal(TRADING_ASSET_COVERAGE.length, 12, 'launch-tradable count remains 12');
+  assert.equal(TRADING_ASSET_COVERAGE.length, 14, 'launch-tradable count remains 14');
   assert.deepEqual([...MARKET_REASONING_DIAGNOSTIC_ASSETS], ['dxy','vix'], 'diagnostic assets remain DXY/VIX');
   assert.doesNotThrow(() => assertMarketReasoningReadinessValid(), 'readiness assertion passes');
 

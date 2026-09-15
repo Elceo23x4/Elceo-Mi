@@ -28,6 +28,8 @@ export type CotReportRow = {
   assetManagerShort: number | null;
   leveragedFundsLong: number | null;
   leveragedFundsShort: number | null;
+  nonReportableLong?: number | null;
+  nonReportableShort?: number | null;
   otherReportablesLong: number | null;
   otherReportablesShort: number | null;
 };

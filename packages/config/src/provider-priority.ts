@@ -1,7 +1,7 @@
 export const providerPriority = {
-  marketData: ['finnhub', 'alphavantage', 'fmp'],
-  macroCalendar: ['finnhub', 'investing-firecrawl', 'fmp'],
-  news: ['marketaux', 'newsapi'],
+  marketData: ['finnhub', 'fmp'],
+  macroCalendar: ['finnhub', 'fmp'],
+  news: ['marketaux'],
   macroContext: ['imf', 'worldbank', 'oecd']
 } as const;
 

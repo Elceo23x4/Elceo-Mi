@@ -17,7 +17,9 @@ export const LAUNCH_ASSET_SYMBOLS = [
   'AUD/USD',
   'NZD/USD',
   'USD/CAD',
-  'DE30'
+  'DE30',
+  'DXY',
+  'VIX'
 ] as const;
 
 export type Timeframe = 'M5' | 'M15' | 'H1' | 'H4' | 'D1';

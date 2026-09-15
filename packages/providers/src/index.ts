@@ -7,17 +7,14 @@ export * from './interfaces/CrawlerProvider';
 export * from './interfaces/MacroContextProvider';
 
 export * from './market/FinnhubMarketDataAdapter';
-export * from './market/AlphaVantageMarketDataAdapter';
 export * from './market/FmpMarketDataAdapter';
 export * from './market/MarketDataCompositeAdapter';
 
 export * from './macro/FinnhubMacroCalendarAdapter';
-export * from './macro/InvestingCalendarScrapeAdapter';
 export * from './macro/FmpMacroCalendarAdapter';
 export * from './macro/MacroCalendarCompositeAdapter';
 
 export * from './news/MarketauxNewsAdapter';
-export * from './news/NewsApiNewsAdapter';
 export * from './news/NewsCompositeAdapter';
 
 export * from './geopolitics/GdeltEventAdapter';

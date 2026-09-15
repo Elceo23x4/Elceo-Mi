@@ -1,1 +1,1 @@
-export * from './schedule-policies'; export * from './retry-policy'; export * from './staleness-policy'; export * from './serialization'; export * from './scheduled-ingestion-service'; export * from './query-service'; export * from './replay';
+export * from './schedule-policies'; export * from './source-cadence'; export * from './retry-policy'; export * from './staleness-policy'; export * from './serialization'; export * from './scheduled-ingestion-service'; export * from './provider-failover-orchestrator'; export * from './query-service'; export * from './replay';

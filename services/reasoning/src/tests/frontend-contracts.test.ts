@@ -7,15 +7,15 @@ import { listMarketGoldenScenarios } from '../golden-scenarios/index';
 export function runFrontendContractSchemaTests(): void {
   const overview=getFrontendMarketOverviewPayload();
   assert.equal(validateFrontendMarketOverviewPayload(overview).ok,true);
-  assert.equal(overview.assets.length,12);
+  assert.equal(overview.assets.length,14);
   assert.deepEqual(new Set(overview.assets.map((x)=>x.assetId)), new Set(TRADING_ASSET_COVERAGE));
-  assert.equal(overview.assets.some((x)=>['dxy','vix'].includes(String(x.assetId))),false);
+  assert.equal(overview.assets.filter((x)=>['dxy','vix'].includes(String(x.assetId))).length,2);
   for(const asset of getFrontendSupportedAssets()) assert.equal(validateFrontendSupportedAsset(asset).ok,true);
-  assert.equal(validateFrontendSupportedAsset({...getFrontendSupportedAssets()[0],assetId:'dxy'}).ok,false);
-  assert.equal(validateFrontendSupportedAsset({...getFrontendSupportedAssets()[0],assetId:'vix'}).ok,false);
+  assert.equal(validateFrontendSupportedAsset(getFrontendSupportedAssets().find(x=>x.assetId==='dxy')).ok,true);
+  assert.equal(validateFrontendSupportedAsset(getFrontendSupportedAssets().find(x=>x.assetId==='vix')).ok,true);
   for(const a of getFrontendSupportedAssets().map(x=>x.assetId)){ const d=getFrontendAssetDashboardPayload(a); assert.equal(validateFrontendAssetDashboardPayload(d).ok,true); assert.equal(/\bbuy\b|\bsell\b|\bhold\b|guaranteed\s+profit/i.test(JSON.stringify(d)),false); }
-  assert.equal(validateFrontendAssetDashboardPayload({...getFrontendAssetDashboardPayload('eur_usd'),assetId:'dxy'}).ok,false);
-  assert.equal(validateFrontendAssetDashboardPayload({...getFrontendAssetDashboardPayload('eur_usd'),assetId:'vix'}).ok,false);
+  assert.equal(validateFrontendAssetDashboardPayload(getFrontendAssetDashboardPayload('dxy')).ok,true);
+  assert.equal(validateFrontendAssetDashboardPayload(getFrontendAssetDashboardPayload('vix')).ok,true);
   const diagnostics=getFrontendReasoningDiagnostics();
   assert.equal(diagnostics.length,2);
   assert.deepEqual(diagnostics.map((x)=>x.assetId).sort(), [...MARKET_REASONING_DIAGNOSTIC_ASSETS].sort());
@@ -25,9 +25,9 @@ export function runFrontendContractSchemaTests(): void {
   assert.equal(validateFrontendReasoningDiagnostic({...diagnostics[0],supportRole:'launch_tradable'}).ok,false);
   const coverage=getFrontendContractCoverageReport();
   assert.equal(validateFrontendContractCoverageReport(coverage).ok,true);
-  assert.equal(coverage.supportedTradableAssets.length,12);
+  assert.equal(coverage.supportedTradableAssets.length,14);
   assert.equal(coverage.reasoningDiagnosticAssets.length,2);
-  assert.equal(coverage.supportedTradableAssets.length+coverage.reasoningDiagnosticAssets.length,14);
+  assert.equal(new Set([...coverage.supportedTradableAssets,...coverage.reasoningDiagnosticAssets]).size,14);
   assert.equal(validateFrontendContractCoverageReport({...coverage,supportedTradableAssets:[...coverage.supportedTradableAssets,'dxy']}).ok,false);
   const e=getFrontendEvidenceFeedPayload(); assert.deepEqual(e.items.map(x=>x.evidenceId),[...e.items.map(x=>x.evidenceId)].sort());
   assert.equal(getFrontendProviderReadinessPayload().activationBlocked,true); assert.equal(getFrontendScheduledIngestionStatusPayload().fixtureModeStatus,'fixture_only');

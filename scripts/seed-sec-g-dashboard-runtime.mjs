@@ -56,7 +56,7 @@ try {
     throw new Error(`sec_g_credential_watchlist_count:${credentialUserWatchlists}`);
   }
 
-  // The preceding 12-asset acceptance deliberately persists adversarial dashboard
+  // The preceding 14-asset acceptance deliberately persists adversarial dashboard
   // artifacts as negative-test evidence. Do not assume the newest row per asset is
   // canonical; let the production reader validate candidates before selecting one
   // for the k6 runtime pointer set.

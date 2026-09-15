@@ -69,7 +69,7 @@ export function validateMarketAssetDirectionResolutionCoverageReport(input: unkn
   if (input.launchTradableAssetCount !== TRADING_ASSET_COVERAGE.length) errors.push(`${path}launchTradableAssetCount invalid`);
   if (input.diagnosticAssetCount !== MARKET_REASONING_DIAGNOSTIC_ASSETS.length) errors.push(`${path}diagnosticAssetCount invalid`);
   if (input.representedReasoningAssetCount !== MARKET_ASSET_CAUSALITY_ASSETS.length) errors.push(`${path}representedReasoningAssetCount invalid`);
-  if (!isObjectRecord(input.assetSupportRoles)) errors.push(`${path}assetSupportRoles invalid`); else { for (const a of TRADING_ASSET_COVERAGE) if (input.assetSupportRoles[a] !== 'launch_tradable') errors.push(`${path}${a} role invalid`); for (const a of MARKET_REASONING_DIAGNOSTIC_ASSETS) if (input.assetSupportRoles[a] !== 'reasoning_diagnostic') errors.push(`${path}${a} role invalid`); }
+  if (!isObjectRecord(input.assetSupportRoles)) errors.push(`${path}assetSupportRoles invalid`); else { for (const a of TRADING_ASSET_COVERAGE) if (input.assetSupportRoles[a] !== 'launch_tradable') errors.push(`${path}${a} role invalid`); for (const a of MARKET_REASONING_DIAGNOSTIC_ASSETS) if (!TRADING_ASSET_COVERAGE.includes(a as never) && input.assetSupportRoles[a] !== 'reasoning_diagnostic') errors.push(`${path}${a} role invalid`); }
   if (!Array.isArray(input.representedAssets) || input.representedAssets.length !== MARKET_ASSET_CAUSALITY_ASSETS.length) errors.push(`${path}representedAssets invalid`);
   if (input.genericDirectionPrimaryPathDisabled !== true) errors.push(`${path}generic path must be disabled`);
   if (!arr(input.warnings, MARKET_ASSET_DIRECTION_RESOLUTION_WARNINGS)) errors.push(`${path}warnings invalid`);

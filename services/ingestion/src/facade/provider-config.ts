@@ -23,18 +23,16 @@ export type IngestionProviderConfigSet = {
   providers: IngestionProviderConfig[];
 };
 
+/** Legacy/development compatibility inventory. Deployed provider execution must traverse the DFC Provider API Gate. */
 const PROVIDER_SPECS: Array<{ providerName: string; category: SourceCategory; requiredKeys: string[] }> = [
   { providerName: 'finnhub', category: 'market_data', requiredKeys: ['FINNHUB_API_KEY'] },
-  { providerName: 'alphavantage', category: 'market_data', requiredKeys: ['ALPHAVANTAGE_API_KEY'] },
   { providerName: 'fmp', category: 'market_data', requiredKeys: ['FMP_API_KEY'] },
   { providerName: 'finnhub-calendar', category: 'macro_calendar', requiredKeys: ['FINNHUB_API_KEY'] },
   { providerName: 'fmp-calendar', category: 'macro_calendar', requiredKeys: ['FMP_API_KEY'] },
-  { providerName: 'investing-calendar-scrape', category: 'macro_calendar', requiredKeys: ['FIRECRAWL_API_KEY'] },
   { providerName: 'imf', category: 'macro_context', requiredKeys: [] },
   { providerName: 'worldbank', category: 'macro_context', requiredKeys: [] },
   { providerName: 'oecd', category: 'macro_context', requiredKeys: [] },
   { providerName: 'marketaux', category: 'news', requiredKeys: ['MARKETAUX_API_KEY'] },
-  { providerName: 'newsapi', category: 'news', requiredKeys: ['NEWSAPI_API_KEY'] },
   { providerName: 'gdelt', category: 'geopolitics', requiredKeys: [] }
 ];
 
@@ -61,28 +59,17 @@ function providerEnabled(rawEnv: Record<string, string | undefined>, providerNam
   return providerFlag ?? true;
 }
 
-function detectRuntimeSupport(rawEnv: Record<string, string | undefined>, providerName: string): boolean {
-  if (providerName === 'investing-calendar-scrape') {
-    const unsupported = envBoolean(rawEnv.INGESTION_DISABLE_SCRAPE_ADAPTERS);
-    if (unsupported === true) return false;
-  }
-
-  return true;
-}
-
 function resolveDisableReason(params: {
   deployed: boolean;
   globallyEnabled: boolean;
   categoryEnabled: boolean;
   providerEnabled: boolean;
-  runtimeSupported: boolean;
   hasRequiredKeys: boolean;
 }): string | null {
   if (params.deployed) return 'unmanaged_provider_gate_required';
   if (!params.globallyEnabled) return 'provider_disabled_by_env';
   if (!params.categoryEnabled) return 'provider_disabled_by_env';
   if (!params.providerEnabled) return 'provider_disabled_by_env';
-  if (!params.runtimeSupported) return 'unsupported_in_current_runtime';
   if (!params.hasRequiredKeys) return 'missing_api_key';
   return null;
 }
@@ -97,14 +84,12 @@ export function getIngestionProviderConfig(rawEnv: Record<string, string | undef
     const hasRequiredKeys = presentKeys.length === spec.requiredKeys.length;
     const isCategoryEnabled = categoryEnabled(rawEnv, spec.category);
     const isProviderEnabled = providerEnabled(rawEnv, spec.providerName);
-    const runtimeSupported = detectRuntimeSupport(rawEnv, spec.providerName);
 
     const reasonIfDisabled = resolveDisableReason({
       deployed,
       globallyEnabled,
       categoryEnabled: isCategoryEnabled,
       providerEnabled: isProviderEnabled,
-      runtimeSupported,
       hasRequiredKeys
     });
 
@@ -125,18 +110,9 @@ export function getIngestionProviderConfig(rawEnv: Record<string, string | undef
     } satisfies IngestionProviderConfig;
   });
 
-  return {
-    env,
-    providers
-  };
+  return {env,providers};
 }
 
 export function toProviderCapabilityDiagnostics(config: IngestionProviderConfigSet): ProviderCapabilityDiagnostic[] {
-  return config.providers.map((provider) => ({
-    providerName: provider.providerName,
-    category: provider.category,
-    enabled: provider.enabled,
-    healthyToConstruct: provider.healthyToConstruct,
-    reason: provider.reasonIfDisabled
-  }));
+  return config.providers.map((provider) => ({providerName:provider.providerName,category:provider.category,enabled:provider.enabled,healthyToConstruct:provider.healthyToConstruct,reason:provider.reasonIfDisabled}));
 }

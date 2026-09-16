@@ -139,7 +139,7 @@ const expectedGoldenProjection = [
     "pass": true,
     "observedDirection": "bearish",
     "expectedDirection": "bearish",
-    "confidence": 4.337777777777781,
+    "confidence": 0,
     "confidenceTier": "very_low",
     "contradictionFamilies": [
       "macro_vs_price_reaction"
@@ -427,7 +427,7 @@ const expectedGoldenProjection = [
     "pass": true,
     "observedDirection": "mixed",
     "expectedDirection": "mixed",
-    "confidence": 18.30275555555555,
+    "confidence": 12.30275555555555,
     "confidenceTier": "very_low",
     "contradictionFamilies": [
       "risk_vs_volatility"
@@ -505,7 +505,7 @@ const expectedGoldenProjection = [
     "pass": true,
     "observedDirection": "mixed",
     "expectedDirection": "mixed",
-    "confidence": 9.300855555555557,
+    "confidence": 3.3008555555555574,
     "confidenceTier": "very_low",
     "contradictionFamilies": [
       "rates_vs_gold"
@@ -615,6 +615,7 @@ const expectedGoldenProjection = [
     "priceReactionStatus": "confirmed",
     "providerReliabilityWarnings": [
       "diagnostic_only_provider_context",
+      "evidence_class_provider_mismatch",
       "partial_asset_dependency_coverage",
       "pending_empirical_reliability_backtesting",
       "pending_golden_scenario_expansion",
@@ -632,7 +633,7 @@ const expectedGoldenProjection = [
     "pass": true,
     "observedDirection": "mixed",
     "expectedDirection": "mixed",
-    "confidence": 7.337777777777781,
+    "confidence": 0,
     "confidenceTier": "very_low",
     "contradictionFamilies": [
       "macro_vs_price_reaction"

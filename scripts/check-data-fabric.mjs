@@ -19,10 +19,39 @@ for(const id of expected)if(!typeSource.includes(`'${id}'`))fail.push(`launch_co
 if(assets.length!==14||new Set(assets.map(x=>x.asset)).size!==14||expected.some(id=>!assets.some(x=>x.asset===id)))fail.push('launch_matrix_not_exactly_14');
 const canonicalIds=[...providerIdsSource.matchAll(/'([^']+)'/g)].map(x=>x[1]).filter(id=>sources.some(source=>source.canonicalId===id));if(new Set(sources.map(x=>x.canonicalId)).size!==sources.length)fail.push('duplicate_canonical_source');if(canonicalIds.length!==sources.length||sources.some(source=>!canonicalIds.includes(source.canonicalId)))fail.push('canonical_source_audit_incomplete');
 if(new Set(sources.flatMap(x=>x.aliases)).size!==sources.flatMap(x=>x.aliases).length)fail.push('ambiguous_alias');
-const registered=[...fabricSource.matchAll(/sourceId:'([^']+)',capabilityId:'([^']+)',adapterModule:'([^']+)',normalizerModule:'([^']+)',fixtureModule:'([^']+)'/g)];
-const registeredRoute=new Set(registered.map(([,sourceId,capability])=>`${sourceId}:${capability}`));
-for(const [,sourceId,capability,adapter,normalizer,fixture] of registered){for(const module of [adapter,normalizer,fixture])await access(new URL(`services/reasoning/src/${module}.ts`,root)).catch(()=>fail.push(`${sourceId}:${capability}:missing_module:${module}`));if(!resolverSource.includes(sourceId))fail.push(`${sourceId}:trusted_resolver_missing`);if(!gateSource.includes('translateProviderCapability'))fail.push(`${sourceId}:gate_translation_missing`);}
-for(const s of sources){const execution=registered.some(x=>x[1]===s.canonicalId);if(Boolean(s.adapterState==='executable_adapter')!==execution)fail.push(`${s.canonicalId}:matrix_execution_mismatch`);if(s.stagingLiveEligible||s.stagingLiveEmpiricallyVerified||s.productionLiveEligible||s.productionActive)fail.push(`${s.canonicalId}:unsupported_activation_claim`);}
+
+const moduleConstants=new Map([...fabricSource.matchAll(/const\s+([A-Za-z_$][\w$]*)='([^']+)';/g)].map(([,name,value])=>[name,value]));
+const registrationBodies=[...fabricSource.matchAll(/reg\(\{([^}]+)\}\)/g)].map(x=>x[1]);
+const registrationField=(body,name)=>{
+ const literal=body.match(new RegExp(`${name}:'([^']+)'`));if(literal)return literal[1];
+ const identifier=body.match(new RegExp(`${name}:([A-Za-z_$][\\w$]*)`));if(identifier)return moduleConstants.get(identifier[1])??identifier[1];
+ return null;
+};
+const registered=registrationBodies.map(body=>({
+ sourceId:registrationField(body,'sourceId'),
+ capability:registrationField(body,'capabilityId'),
+ adapter:registrationField(body,'adapterModule'),
+ normalizer:registrationField(body,'normalizerModule'),
+ fixture:registrationField(body,'fixtureModule'),
+ trustedResolver:registrationField(body,'trustedResolver')
+})).filter(x=>x.sourceId&&x.capability);
+const registeredRoute=new Set(registered.map(x=>`${x.sourceId}:${x.capability}`));
+for(const registration of registered){
+ const {sourceId,capability,adapter,normalizer,fixture,trustedResolver}=registration;
+ for(const module of [adapter,normalizer,fixture]){
+  if(!module){fail.push(`${sourceId}:${capability}:registration_module_missing`);continue;}
+  await access(new URL(`services/reasoning/src/${module}.ts`,root)).catch(()=>fail.push(`${sourceId}:${capability}:missing_module:${module}`));
+ }
+ if(!trustedResolver)fail.push(`${sourceId}:${capability}:trusted_resolver_declaration_missing`);
+ else if(!resolverSource.includes(`function ${trustedResolver}`))fail.push(`${sourceId}:${capability}:trusted_resolver_missing:${trustedResolver}`);
+ if(!gateSource.includes('translateProviderCapability'))fail.push(`${sourceId}:gate_translation_missing`);
+}
+if(registered.some(x=>x.trustedResolver==='createOfficialEvidenceStagingExecutionResolver')&&
+ (!resolverSource.includes('getOfficialAdapterCatalogEntry(policy.providerId,policy.capability)')||
+  !resolverSource.includes('createOfficialAdapter(policy.providerId,policy.capability)')))
+ fail.push('official_catalog_resolver_contract_missing');
+
+for(const s of sources){const execution=registered.some(x=>x.sourceId===s.canonicalId);if(Boolean(s.adapterState==='executable_adapter')!==execution)fail.push(`${s.canonicalId}:matrix_execution_mismatch`);if(s.stagingLiveEligible||s.stagingLiveEmpiricallyVerified||s.productionLiveEligible||s.productionActive)fail.push(`${s.canonicalId}:unsupported_activation_claim`);}
 for(const asset of assets){
  if(!asset.requirements.some(x=>x.criticality==='critical'&&x.capabilityId!=='direct_price'))fail.push(`${asset.asset}:price_only`);
  if(asset.structuralReady||asset.empiricallyReady)fail.push(`${asset.asset}:false_readiness_claim`);
@@ -45,4 +74,4 @@ if(!migration.includes('PRIMARY KEY (observation_identity, known_at)')||!vintage
 if(!migration.includes('app_macro_vintages_as_of')||!fabricSource.includes("export * from './macro-vintage-repository'"))fail.push('durable_vintage_path_missing');
 if(!releaseGate.includes("'check:data-fabric'"))fail.push('release_gate_not_wired');
 if(/fetch\s*\(/.test(fabricSource))fail.push('evidence_fabric_arbitrary_fetch_forbidden');
-if(fail.length){console.error(fail.join('\n'));process.exit(1);}console.log(`data fabric integrity valid: 14 launch assets, ${sources.length} canonical sources, ${registered.length} proven executable registration; FX legs remain independently specified; readiness remains degraded`);
+if(fail.length){console.error(fail.join('\n'));process.exit(1);}console.log(`data fabric integrity valid: 14 launch assets, ${sources.length} canonical sources, ${registered.length} proven executable registrations; FX legs remain independently specified; readiness remains degraded`);

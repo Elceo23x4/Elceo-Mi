@@ -1,16 +1,13 @@
 export type ProviderId =
   | 'finnhub'
-  | 'alphavantage'
   | 'fmp'
   | 'marketaux'
-  | 'newsapi'
   | 'gdelt'
   | 'firecrawl'
   | 'playwright'
   | 'imf'
   | 'worldbank'
-  | 'oecd'
-  | 'investing-firecrawl';
+  | 'oecd';
 
 export type ProviderHealthStatus = 'healthy' | 'degraded' | 'down';
 

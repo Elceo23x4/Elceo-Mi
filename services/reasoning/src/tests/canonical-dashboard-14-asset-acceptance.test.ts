@@ -101,14 +101,16 @@ async function identities(pool: Pool, kind: 'cognition' | 'dashboard_projection'
 }
 
 /** Acceptance-only fixture chain: typed ingestion -> persisted cognition -> D1-A/D1-B producer -> D1-C reader. */
-export async function runCanonicalDashboard12AssetAcceptance(input: {
+export async function runCanonicalDashboard14AssetAcceptance(input: {
   client: RedisClientType;
   sqlPool: Pool;
   namespace: string;
   template: CognitionArtifact;
   runtimeCounters: () => RuntimeCounters;
 }) {
-  if (process.env.CANONICAL_DASHBOARD_12_ASSET_ACCEPTANCE !== '1') return;
+  if (process.env.CANONICAL_DASHBOARD_14_ASSET_ACCEPTANCE !== '1') return;
+  const launchAssetCount = LAUNCH_ASSET_SYMBOLS.length;
+  assert.equal(launchAssetCount, 14, 'canonical dashboard acceptance must cover the locked 14-asset launch universe');
   const ownership = new RedisAdaptiveOwnershipStore(input.client, input.namespace);
   const immutable = new SqlImmutableMaterializationStore(input.sqlPool);
   const repository = new FencedMaterializationRepository(ownership, immutable);
@@ -188,7 +190,7 @@ export async function runCanonicalDashboard12AssetAcceptance(input: {
     assert.equal(await ownership.readCurrentIdentity(coordination(asset), scope(asset)), artifact.identity, `${asset} pointer`);
   }
 
-  const passive = createProductionCanonicalDashboardProjectionReader({ redisClient: input.client, sqlPool: input.sqlPool, cacheLimits: { maxEntries: 12, maxSerializedBytes: 4_000_000 }, namespace: input.namespace });
+  const passive = createProductionCanonicalDashboardProjectionReader({ redisClient: input.client, sqlPool: input.sqlPool, cacheLimits: { maxEntries: launchAssetCount, maxSerializedBytes: 4_000_000 }, namespace: input.namespace });
   for (const asset of LAUNCH_ASSET_SYMBOLS) {
     const result = await passive.read(asset, 'intraday', 'H4');
     const expected = artifacts.get(asset)!;
@@ -273,7 +275,7 @@ export async function runCanonicalDashboard12AssetAcceptance(input: {
   const reads = [];
   for (let cycle = 0; cycle < 100; cycle++) for (const asset of LAUNCH_ASSET_SYMBOLS) reads.push(passive.read(asset, 'intraday', 'H4'));
   const results = await Promise.all(reads);
-  assert.equal(results.length, 1200);
+  assert.equal(results.length, 100 * launchAssetCount);
   for (let index = 0; index < results.length; index++) assert.equal(results[index]!.artifact?.identity, artifacts.get(LAUNCH_ASSET_SYMBOLS[index % LAUNCH_ASSET_SYMBOLS.length]!)!.identity);
   const after = {
     counters: input.runtimeCounters(),
@@ -285,8 +287,8 @@ export async function runCanonicalDashboard12AssetAcceptance(input: {
     projectionCandleLoads
   };
   assert.deepEqual(after, before);
-  assert.equal(passive.metrics.postgresReads, 12);
-  assert.equal(passive.metrics.cacheEntries, 12);
+  assert.equal(passive.metrics.postgresReads, launchAssetCount);
+  assert.equal(passive.metrics.cacheEntries, launchAssetCount);
   assert.equal(passive.metrics.evictions, 0);
   assert.ok(passive.metrics.cacheBytes <= 4_000_000);
   const passiveReadMetrics = { l1Entries: passive.metrics.cacheEntries, l1Bytes: passive.metrics.cacheBytes, evictions: passive.metrics.evictions, postgresReaderLoads: passive.metrics.postgresReads };
@@ -335,7 +337,7 @@ export async function runCanonicalDashboard12AssetAcceptance(input: {
   };
   assert.ok(Object.values(measuredDeltas).every((value) => value === 0));
   console.log(JSON.stringify({
-    acceptance: 'canonical-dashboard-12-asset-end-to-end', productionAcceptance: false,
+    acceptance: 'canonical-dashboard-14-asset-end-to-end', productionAcceptance: false,
     assets: [...artifacts].map(([asset, artifact]) => ({ asset, cognition: parents.get(asset)!.identity, candles: memberships.get(asset), projection: artifact.projectionIdentity, artifact: artifact.identity, pointer: artifact.identity, passive: artifact.identity, status: 'PASS' })),
     contamination: contaminationResults,
     transition: { asset: a, p1: { identity: p1.identity, projection: p1.projectionIdentity, candles: memberships.get(a), pointer: pointerBefore }, newObservation: [transitionObservation.observation!.observationId, transitionObservation.observation!.contentHash], p2: { identity: p2.identity, projection: p2.projectionIdentity, candles: transitionMembership, pointer: pointerAfter }, sameReader: sameReader.artifact?.identity, status: 'PASS' },

@@ -1,0 +1,49 @@
+import type { MarketEvidenceProviderAdapter, ProviderManagedExecution } from '../normalization-contracts';
+import type { NormalizedMarketEvidencePayload, ProviderCapabilityKind, ProviderSourceRequest, ProviderSourceResponse } from '@elceo/types';
+import { getProviderDescriptor } from '../provider-capability-registry';
+
+const ORIGIN='https://home.treasury.gov';
+const DATASET_BY_CAPABILITY:Readonly<Record<'nominal_yield_series'|'real_yield_series',string>>={nominal_yield_series:'daily_treasury_yield_curve',real_yield_series:'daily_treasury_real_yield_curve'};
+const ALLOWED_DATASETS=new Set(Object.values(DATASET_BY_CAPABILITY));
+export type TreasuryAdapterConfig={mode?:'fixture'|'live_disabled'|'live_enabled';fetchImpl?:typeof fetch};
+export const TREASURY_NOMINAL_XML_FIXTURE=`<?xml version="1.0" encoding="utf-8"?><feed><entry><content><m:properties xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata" xmlns:d="http://schemas.microsoft.com/ado/2007/08/dataservices"><d:NEW_DATE>2026-06-17T00:00:00</d:NEW_DATE><d:BC_5YEAR>4.08</d:BC_5YEAR><d:BC_7YEAR>4.15</d:BC_7YEAR><d:BC_10YEAR>4.21</d:BC_10YEAR><d:BC_20YEAR>4.68</d:BC_20YEAR><d:BC_30YEAR>4.79</d:BC_30YEAR></m:properties></content></entry></feed>`;
+export const TREASURY_REAL_XML_FIXTURE=`<?xml version="1.0" encoding="utf-8"?><feed><entry><content><m:properties xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata" xmlns:d="http://schemas.microsoft.com/ado/2007/08/dataservices"><d:NEW_DATE>2026-06-17T00:00:00</d:NEW_DATE><d:TC_5YEAR>1.61</d:TC_5YEAR><d:TC_7YEAR>1.83</d:TC_7YEAR><d:TC_10YEAR>2.01</d:TC_10YEAR><d:TC_20YEAR>2.48</d:TC_20YEAR><d:TC_30YEAR>2.70</d:TC_30YEAR></m:properties></content></entry></feed>`;
+/** @deprecated use the capability-specific nominal/real fixtures. */
+export const TREASURY_XML_FIXTURE=TREASURY_NOMINAL_XML_FIXTURE;
+
+type TreasuryCapability='nominal_yield_series'|'real_yield_series';
+export class UsTreasuryOfficialAdapter implements MarketEvidenceProviderAdapter{
+ readonly descriptor=getProviderDescriptor('us_treasury')??(()=>{throw new Error('missing_us_treasury_descriptor');})();
+ constructor(private readonly config:TreasuryAdapterConfig={}){}
+ fetch(request:ProviderSourceRequest){return this.fetchInternal(request);}
+ fetchManaged(request:ProviderSourceRequest,execution:ProviderManagedExecution){return this.fetchInternal(request,execution);}
+ private async fetchInternal(request:ProviderSourceRequest,execution?:ProviderManagedExecution):Promise<ProviderSourceResponse>{
+  if(!isTreasuryCapability(request.capability))return fail(request,'unsupported_capability');
+  const params=parseParams(request.paramsJson);if('code' in params)return fail(request,params.code);
+  const requiredDataset=DATASET_BY_CAPABILITY[request.capability];if(params.dataset!==requiredDataset)return fail(request,'treasury_capability_dataset_mismatch');
+  const mode=this.config.mode??'live_disabled';
+  if(mode==='fixture'){const fixture=request.capability==='nominal_yield_series'?TREASURY_NOMINAL_XML_FIXTURE:TREASURY_REAL_XML_FIXTURE;return success(request,JSON.stringify(parseTreasuryXml(fixture)),`${ORIGIN}/resource-center/data-chart-center/interest-rates/pages/xml?data=${requiredDataset}`);}
+  if(mode!=='live_enabled')return fail(request,'treasury_live_disabled');
+  const url=new URL('/resource-center/data-chart-center/interest-rates/pages/xml',ORIGIN);url.searchParams.set('data',requiredDataset);if(params.year)url.searchParams.set('field_tdr_date_value',params.year);if(params.month)url.searchParams.set('field_tdr_date_value_month',params.month);
+  const init:RequestInit=execution?{signal:execution.signal,headers:{Accept:'application/xml,text/xml'}}:{headers:{Accept:'application/xml,text/xml'}};
+  try{const response=await (this.config.fetchImpl??fetch)(url,init);if(!response.ok)return fail(request,response.status===429?'rate_limited':`treasury_http_${response.status}`);const xml=await response.text();const parsed=parseTreasuryXml(xml);if(!parsed.length)return fail(request,'treasury_empty_or_malformed');return success(request,JSON.stringify(parsed),url.toString());}catch(error){if(error instanceof Error&&error.name==='AbortError')return fail(request,'treasury_timeout');return fail(request,'treasury_fetch_error');}
+ }
+ async normalize(response:ProviderSourceResponse):Promise<NormalizedMarketEvidencePayload[]>{
+  if(!response.rawPayloadJson||!isTreasuryCapability(response.capability))return[];
+  const capability: TreasuryCapability=response.capability;
+  const dataset=DATASET_BY_CAPABILITY[capability];
+  const expectedPrefix=capability==='nominal_yield_series'?'BC_':'TC_';
+  const evidenceClass=capability==='nominal_yield_series'?'interest_rates':'real_yields';
+  const rows=JSON.parse(response.rawPayloadJson) as Array<Record<string,string>>;
+  return rows.flatMap((row,rowIndex)=>Object.entries(row)
+   .filter(([key,value])=>key.startsWith(expectedPrefix)&&Number.isFinite(Number(value)))
+   .map(([key,value],fieldIndex)=>({payloadId:`${response.requestId}:${rowIndex}:${fieldIndex}`,evidenceTypeId:capability,evidenceClass,providerId:'us_treasury_official',sourceId:'us_treasury_official',region:'united_states',asset:null,observedAt:normalizeDate(row.NEW_DATE),publishedAt:null,normalizedAt:response.fetchedAt,confidenceScore:95,dataQuality:'high',valuesJson:JSON.stringify({field:key,value:Number(value),date:row.NEW_DATE,dataset}),metadataJson:JSON.stringify({canonicalSourceId:'us_treasury_official',gateSourceId:'us_treasury',requestId:response.requestId,sourceUrl:response.sourceUrl,dataset})})));
+ }
+}
+export function parseTreasuryXml(xml:string):Array<Record<string,string>>{const rows:Array<Record<string,string>>=[];for(const match of xml.matchAll(/<m:properties\b[^>]*>([\s\S]*?)<\/m:properties>/g)){const row:Record<string,string>={};for(const field of match[1]!.matchAll(/<d:([A-Za-z0-9_]+)(?:\s[^>]*)?>([\s\S]*?)<\/d:\1>/g))row[field[1]!]=field[2]!.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim();if(Object.keys(row).length)rows.push(row);}return rows;}
+function isTreasuryCapability(value:ProviderCapabilityKind):value is TreasuryCapability{return value==='nominal_yield_series'||value==='real_yield_series';}
+function parseParams(raw:string):{ok:true;dataset:string;year:string|null;month:string|null}|{ok:false;code:string}{let value:unknown;try{value=JSON.parse(raw||'{}');}catch{return{ok:false,code:'invalid_params'};}if(!value||typeof value!=='object'||Array.isArray(value))return{ok:false,code:'invalid_params'};const p=value as Record<string,unknown>;if(Object.keys(p).some(k=>!['dataset','year','month'].includes(k)))return{ok:false,code:'unsupported_param'};if(typeof p.dataset!=='string'||!ALLOWED_DATASETS.has(p.dataset))return{ok:false,code:'unsupported_dataset'};if(p.year!==undefined&&(typeof p.year!=='string'||!/^\d{4}$/.test(p.year)))return{ok:false,code:'invalid_year'};if(p.month!==undefined&&(typeof p.month!=='string'||!/^\d{6}$/.test(p.month)))return{ok:false,code:'invalid_month'};return{ok:true,dataset:p.dataset,year:(p.year as string|undefined)??null,month:(p.month as string|undefined)??null};}
+function normalizeDate(value:string|undefined){if(!value)return new Date(0).toISOString();const parsed=Date.parse(value);return Number.isFinite(parsed)?new Date(parsed).toISOString():new Date(0).toISOString();}
+function base(r:ProviderSourceRequest):ProviderSourceResponse{return{requestId:r.requestId,providerId:r.providerId,capability:r.capability,status:'failed',fetchedAt:new Date().toISOString(),sourceUrl:null,rawPayloadJson:null,errorCode:null,errorMessage:null};}
+function fail(r:ProviderSourceRequest,code:string):ProviderSourceResponse{return{...base(r),errorCode:code,errorMessage:code};}
+function success(r:ProviderSourceRequest,payload:string,url:string):ProviderSourceResponse{return{...base(r),status:'success',rawPayloadJson:payload,sourceUrl:url};}

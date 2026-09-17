@@ -15,8 +15,14 @@ export type MarketEvidenceFrequency = (typeof MARKET_EVIDENCE_FREQUENCIES)[numbe
 export const MARKET_EVIDENCE_REGIONS = ['global','united_states','euro_area','united_kingdom','japan','canada','australia','new_zealand','switzerland','germany','china','emerging_markets'] as const;
 export type MarketEvidenceRegion = (typeof MARKET_EVIDENCE_REGIONS)[number];
 
-export const TRADING_ASSET_COVERAGE = ['xau_usd','eur_usd','gbp_usd','usd_jpy','usd_chf','aud_usd','nzd_usd','usd_cad','btc_usd','nasdaq_100','sp500','de30'] as const;
-export type TradingAssetCoverage = (typeof TRADING_ASSET_COVERAGE)[number];
+/** Canonical launch-analysis universe. The historical name is retained as a compatibility export. */
+export const LAUNCH_ASSET_COVERAGE = ['xau_usd','eur_usd','gbp_usd','usd_jpy','usd_chf','aud_usd','nzd_usd','usd_cad','btc_usd','nasdaq_100','sp500','de30','dxy','vix'] as const;
+export type LaunchAssetCoverage = (typeof LAUNCH_ASSET_COVERAGE)[number];
+export const TRADING_ASSET_COVERAGE = LAUNCH_ASSET_COVERAGE;
+export type TradingAssetCoverage = LaunchAssetCoverage;
+
+export type LaunchAssetExecutionMetadata={asset:LaunchAssetCoverage;launchAnalysisEnabled:true;directUnderlyingType:'spot'|'cash_index';executionTradability:'direct'|'analysis_only';executionVehicleKind:'spot'|'cash_index_observation'};
+export const LAUNCH_ASSET_EXECUTION_METADATA:readonly LaunchAssetExecutionMetadata[]=LAUNCH_ASSET_COVERAGE.map(asset=>({asset,launchAnalysisEnabled:true,directUnderlyingType:asset==='dxy'||asset==='vix'?'cash_index':'spot',executionTradability:asset==='dxy'||asset==='vix'?'analysis_only':'direct',executionVehicleKind:asset==='dxy'||asset==='vix'?'cash_index_observation':'spot'}));
 
 export type MarketEvidenceSource = { sourceId: string; sourceName: string; sourceKind: MarketEvidenceSourceKind; institutionName: string; region: MarketEvidenceRegion; countryOrBloc: string; accessLevel: MarketEvidenceAccessLevel; homepageUrl: string; notes: string; };
 export type MarketEvidenceTypeDefinition = { evidenceTypeId: string; evidenceClass: MarketEvidenceClass; displayName: string; description: string; frequency: MarketEvidenceFrequency; primarySources: string[]; regions: MarketEvidenceRegion[]; accessLevel: MarketEvidenceAccessLevel; isLaunchScope: boolean; isPublicAccessible: boolean; excludedReason: string | null; };

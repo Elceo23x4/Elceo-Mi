@@ -139,7 +139,7 @@ const expectedGoldenProjection = [
     "pass": true,
     "observedDirection": "bearish",
     "expectedDirection": "bearish",
-    "confidence": 4.337777777777781,
+    "confidence": 0,
     "confidenceTier": "very_low",
     "contradictionFamilies": [
       "macro_vs_price_reaction"
@@ -427,7 +427,7 @@ const expectedGoldenProjection = [
     "pass": true,
     "observedDirection": "mixed",
     "expectedDirection": "mixed",
-    "confidence": 18.30275555555555,
+    "confidence": 12.30275555555555,
     "confidenceTier": "very_low",
     "contradictionFamilies": [
       "risk_vs_volatility"
@@ -505,7 +505,7 @@ const expectedGoldenProjection = [
     "pass": true,
     "observedDirection": "mixed",
     "expectedDirection": "mixed",
-    "confidence": 9.300855555555557,
+    "confidence": 3.3008555555555574,
     "confidenceTier": "very_low",
     "contradictionFamilies": [
       "rates_vs_gold"
@@ -609,12 +609,13 @@ const expectedGoldenProjection = [
     "pass": true,
     "observedDirection": "bullish",
     "expectedDirection": "bullish",
-    "confidence": 33.33777777777778,
+    "confidence": 35.13955555555556,
     "confidenceTier": "low",
     "contradictionFamilies": [],
     "priceReactionStatus": "confirmed",
     "providerReliabilityWarnings": [
       "diagnostic_only_provider_context",
+      "evidence_class_provider_mismatch",
       "partial_asset_dependency_coverage",
       "pending_empirical_reliability_backtesting",
       "pending_golden_scenario_expansion",
@@ -632,7 +633,7 @@ const expectedGoldenProjection = [
     "pass": true,
     "observedDirection": "mixed",
     "expectedDirection": "mixed",
-    "confidence": 7.337777777777781,
+    "confidence": 0,
     "confidenceTier": "very_low",
     "contradictionFamilies": [
       "macro_vs_price_reaction"
@@ -887,8 +888,8 @@ export function runRcAFormulaRegressionTests(): void {
   const confirmedCase = byId.c6r9_macro_bullish_confirmed_price_reaction!;
   const providerCase = byId.c6r9_fixture_only_provider_high_extraction_capped!;
   assert.deepEqual({families:contradictionCase.contradictionFamilies, severity:contradictionCase.observedSeverity, status:contradictionCase.pass}, {families:['risk_vs_volatility'], severity:'moderate', status:true});
-  assert.deepEqual({confidence:confirmedCase.confidence, tier:confirmedCase.confidenceTier}, {confidence:33.33777777777778, tier:'low'});
-  assert.deepEqual({status:confirmedCase.priceReactionStatus, confidence:confirmedCase.confidence}, {status:'confirmed', confidence:33.33777777777778});
+  assert.deepEqual({confidence:confirmedCase.confidence, tier:confirmedCase.confidenceTier}, {confidence:35.13955555555556, tier:'low'});
+  assert.deepEqual({status:confirmedCase.priceReactionStatus, confidence:confirmedCase.confidence}, {status:'confirmed', confidence:35.13955555555556});
   assert.deepEqual({warnings:providerCase.providerReliabilityWarnings}, {warnings:['diagnostic_only_provider_context','partial_asset_dependency_coverage','pending_empirical_reliability_backtesting','pending_golden_scenario_expansion','pending_live_provider_activation','provider_activation_gap','provider_fixture_only','source_authority_low','unknown_provider']});
   const projection = runMarketGoldenScenarioSuite({asOfIso:'2026-06-06T00:00:00.000Z'}).results.map((x)=>({scenarioId:x.scenarioId,pass:x.pass,observedDirection:x.observedDirection,expectedDirection:x.expectedDirection,confidence:x.confidence,confidenceTier:x.confidenceTier,contradictionFamilies:x.contradictionFamilies,priceReactionStatus:x.priceReactionStatus,providerReliabilityWarnings:x.providerReliabilityWarnings,requiredReasonCodesPresent:x.requiredReasonCodesPresent,requiredWarningsPresent:x.requiredWarningsPresent,observedSeverity:x.observedSeverity}));
   assert.equal(projection.length,33);

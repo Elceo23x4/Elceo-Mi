@@ -9,6 +9,7 @@ import { MemoryMarketEvidenceRegistrySnapshotRepository, MemorySeoContentArchite
 function assert(condition: boolean, message: string): void { if (!condition) throw new Error(`Assertion failed: ${message}`); }
 const at = '2026-06-04T00:00:00.000Z';
 const item = (id: string, evidenceClass: WeightedEvidenceItem['evidenceClass'], direction: WeightedEvidenceItem['direction'], reasons: string[] = [], quality = 90): WeightedEvidenceItem => ({ payloadId:id, asset:'sp500', horizon:'intraday', evidenceTypeId:evidenceClass, evidenceClass, providerId:'fixture', observedAt:at, finalQualityScore:quality, baseWeight:50, qualityAdjustedWeight:45, role:'primary_driver', direction, contributionScore:45, reasons });
+const assetItem=(asset:WeightedEvidenceItem['asset'],id:string,evidenceClass:WeightedEvidenceItem['evidenceClass'],reasons:string[]=[]):WeightedEvidenceItem=>({...item(id,evidenceClass,'bullish',reasons),asset});
 const snapshot = (items: WeightedEvidenceItem[], warnings: string[] = []): WeightedEvidenceSnapshot => ({ snapshotId:`w-${items.map((i)=>i.payloadId).join('-')}`, generatedAt:at, asset:items[0]?.asset ?? 'sp500', horizon:'intraday' as EvidenceWeightHorizon, totalWeight:100, usableWeight:90, excludedWeight:0, items, warnings });
 const matrix = (highestSeverity: MarketContradictionMatrixResult['highestSeverity'], signalCount = 0): MarketContradictionMatrixResult => ({ resultId:`matrix-${highestSeverity}-${signalCount}`, asset:'sp500', horizon:'intraday', generatedAt:at, status:highestSeverity === 'none' ? 'aligned' : highestSeverity === 'high' || highestSeverity === 'critical' ? 'contradiction' : 'tension', highestSeverity, signals:Array.from({length:signalCount},(_,i)=>({ signalId:`supplied-${highestSeverity}-${i}`, ruleId:'supplied_context', family:'risk_vs_credit' as const, asset:'sp500' as const, horizon:'intraday' as const, generatedAt:at, status:'contradiction' as const, severity:highestSeverity === 'none' ? 'low' as const : highestSeverity === 'critical' ? 'critical' as const : highestSeverity === 'high' ? 'high' as const : highestSeverity === 'moderate' ? 'moderate' as const : 'low' as const, confidenceTier:'high' as const, evidencePointIds:['supplied-a','supplied-b'], warnings:[], reasonCodes:['contradiction_matrix_rule_applied' as const], rationale:'Supplied contradiction context for calibration drift test' })), evidencePoints:[], warnings:[], reasonCodes:[], rationale:'supplied matrix context', readiness:getMarketReasoningModuleReadiness('contradiction_matrix') });
 const input = (partial: Partial<MarketConfidenceCalibrationInput>): MarketConfidenceCalibrationInput => ({ asset:'sp500', horizon:'intraday', generatedAt:at, baseConfidence:75, evidenceQuality:90, usableWeight:90, freshness:90, coverage:70, warnings:[], reasonCodes:[], options:{ providerReliabilitySupplied:true, sourceIndependenceVerified:true, priceReactionAvailable:true }, ...partial });
@@ -52,6 +53,31 @@ export function runConfidenceCalibrationTests(): void {
   const confirmedReaction = evaluatePriceReaction({ asset:'sp500', horizon:'intraday', eventKind:'macro_release', eventTime:at, expectedDirection:'bullish', candles:[{ timestamp:'2026-06-03T23:58:00.000Z', open:100, high:100.2, low:99.8, close:100 }, { timestamp:at, open:100, high:101.2, low:99.9, close:101 }, { timestamp:'2026-06-04T00:01:00.000Z', open:101, high:101.5, low:100.8, close:101.3 }, { timestamp:'2026-06-04T00:03:00.000Z', open:101.3, high:102, low:101.1, close:101.8 }] });
   assert(cognition.confidence.finalConfidence < calibrateConfidenceFromWeightedSnapshot(cleanWeighted, { providerReliabilitySupplied:true, sourceIndependenceVerified:true, priceReaction:confirmedReaction }).finalConfidence, 'market cognition keeps conservative provider/source defaults unless confirmed price reaction context is supplied');
   assert(cognition.confidence.rationale.includes('Conservative provider/source context'), 'market cognition rationale states conservative calibration context');
+
+  const broadNonPrimaryNasdaq=snapshot([
+    assetItem('nasdaq_100','broad-policy','central_bank_policy'),assetItem('nasdaq_100','broad-real','real_yields'),assetItem('nasdaq_100','broad-financial','financial_conditions'),assetItem('nasdaq_100','broad-breadth','equity_index_breadth'),assetItem('nasdaq_100','broad-vol','volatility_surface')
+  ]);
+  const broadNonPrimaryResult=calibrateMarketConfidence(input({asset:'nasdaq_100',baseConfidence:95,evidenceQuality:95,usableWeight:95,freshness:95,coverage:95,weightedSnapshot:broadNonPrimaryNasdaq,options:{providerReliabilitySupplied:true,sourceIndependenceVerified:true,priceReactionAvailable:true}}));
+  const broadCriticalComponent=broadNonPrimaryResult.components.find((c)=>c.kind==='asset_causality_coverage');
+  assert(broadCriticalComponent?.score===0,'broad high-quality evidence does not count as Nasdaq primary-driver coverage when risk, rates, and earnings primary classes are absent');
+  assert(broadNonPrimaryResult.finalConfidence<=64&&!broadNonPrimaryResult.boosts.some((b)=>b.kind==='high_quality_evidence'),'zero asset-primary coverage blocks high confidence and prevents breadth/quality boost');
+  assert(broadNonPrimaryResult.penalties.some((p)=>p.kind==='low_evidence_coverage'&&p.severe),'zero primary coverage is a severe asset-causality coverage gap');
+
+  const stalePrimaryNasdaq=snapshot([
+    assetItem('nasdaq_100','risk-primary','risk_sentiment'),assetItem('nasdaq_100','rates-stale','interest_rates',['stale_evidence']),assetItem('nasdaq_100','earnings-primary','earnings_macro')
+  ]);
+  const stalePrimaryResult=calibrateMarketConfidence(input({asset:'nasdaq_100',baseConfidence:95,evidenceQuality:95,usableWeight:95,freshness:90,coverage:95,weightedSnapshot:stalePrimaryNasdaq,options:{providerReliabilitySupplied:true,sourceIndependenceVerified:true,priceReactionAvailable:true}}));
+  const staleCriticalComponent=stalePrimaryResult.components.find((c)=>c.kind==='asset_causality_coverage');
+  assert(staleCriticalComponent!==undefined&&staleCriticalComponent.score>60&&staleCriticalComponent.score<70,'stale primary driver is excluded from fresh asset-primary coverage');
+  assert(stalePrimaryResult.finalConfidence<=79,'partial asset-primary coverage cannot reach very-high confidence');
+
+  const completePrimaryNasdaq=snapshot([
+    assetItem('nasdaq_100','risk-fresh','risk_sentiment'),assetItem('nasdaq_100','rates-fresh','interest_rates'),assetItem('nasdaq_100','earnings-fresh','earnings_macro')
+  ]);
+  const completePrimaryResult=calibrateMarketConfidence(input({asset:'nasdaq_100',baseConfidence:95,evidenceQuality:95,usableWeight:95,freshness:95,coverage:95,weightedSnapshot:completePrimaryNasdaq,options:{providerReliabilitySupplied:true,sourceIndependenceVerified:true,priceReactionAvailable:true}}));
+  assert(completePrimaryResult.components.find((c)=>c.kind==='asset_causality_coverage')?.score===100,'all fresh Nasdaq primary-driver classes satisfy the asset-critical blueprint');
+  assert(!completePrimaryResult.penalties.some((p)=>p.kind==='low_evidence_coverage')&&completePrimaryResult.finalConfidence>stalePrimaryResult.finalConfidence,'complete fresh primary coverage removes the asset-critical penalty and outranks stale partial coverage');
+
   const contradictory = snapshot([item('risk','risk_sentiment','bullish'), item('credit','credit_stress','bullish')]);
   assert(buildMarketCognitionSnapshot(contradictory).confidence.conflictPenalty > 0 && buildMarketCognitionSnapshot(contradictory).confidence.finalConfidence < 80, 'expanded contradiction matrix severity affects final confidence');
   const unverifiedOnly = snapshot([item('risk','risk_sentiment','bullish'), item('liq','liquidity_conditions','bullish')]);

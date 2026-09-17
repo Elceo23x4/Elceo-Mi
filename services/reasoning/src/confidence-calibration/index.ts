@@ -6,6 +6,7 @@ import { evaluateContradictionsFromWeightedSnapshot } from '../contradiction-mat
 import { getMarketAssetCausalityDescriptor } from '../asset-causality-map/index';
 import { resolveFxRelativeStrengthFromWeightedSnapshot } from '../fx-relative-strength/index';
 import { evaluateProviderReliabilityForWeightedSnapshot } from '../provider-reliability/index';
+import { listWeightPoliciesForAsset } from '../evidence-weighting/index';
 
 const fxAssets = new Set<string>(['eur_usd','gbp_usd','usd_jpy','usd_chf','aud_usd','nzd_usd','usd_cad']);
 const clamp = (n: number) => Math.max(0, Math.min(100, n));
@@ -16,15 +17,28 @@ function hasReason(input: MarketConfidenceCalibrationInput, reason: string): boo
 function fromMatrix(input: MarketConfidenceCalibrationInput): MarketContradictionMatrixResult | undefined { return input.contradictionMatrix; }
 function providerResults(input: MarketConfidenceCalibrationInput) { return input.options?.providerReliabilityResults ?? (input.options?.providerReliability ? [input.options.providerReliability] : []); }
 function providerConfidenceCapFromReasons(input: MarketConfidenceCalibrationInput): number | undefined { const caps = input.weightedSnapshot?.items.flatMap((i)=>i.reasons).filter((r)=>r.startsWith('provider_confidence_cap:')).map((r)=>Number(r.split(':')[1])).filter((n)=>Number.isFinite(n)); return caps && caps.length ? Math.min(...caps) : undefined; }
+type AssetCriticalCoverage={score:number;expected:string[];present:string[];missing:string[];stale:string[]};
+function itemIsStale(reasons:string[]):boolean{return reasons.some((r)=>r.includes('stale')||r.includes('expired'));}
+function evaluateAssetCriticalCoverage(snapshot:WeightedEvidenceSnapshot):AssetCriticalCoverage{
+  const expected=unique(listWeightPoliciesForAsset(snapshot.asset as Parameters<typeof listWeightPoliciesForAsset>[0],snapshot.horizon).filter((p)=>p.role==='primary_driver'&&p.baseWeight>0).map((p)=>p.evidenceClass));
+  if(expected.length===0)return{score:100,expected:[],present:[],missing:[],stale:[]};
+  const relevant=snapshot.items.filter((i)=>i.role!=='excluded'&&expected.includes(i.evidenceClass));
+  const present=unique(relevant.filter((i)=>!itemIsStale(i.reasons)).map((i)=>i.evidenceClass));
+  const stale=unique(relevant.filter((i)=>itemIsStale(i.reasons)).map((i)=>i.evidenceClass));
+  const missing=expected.filter((e)=>!present.includes(e));
+  return{score:clamp(present.length/expected.length*100),expected,present,missing,stale};
+}
 
 export function calibrateMarketConfidence(input: MarketConfidenceCalibrationInput): MarketConfidenceCalibrationResult {
   const validation = validateMarketConfidenceCalibrationInput(input); if (validation.ok === false) throw new Error(`invalid_market_confidence_calibration_input:${validation.errors.join('|')}`);
+  const assetCriticalCoverage=input.weightedSnapshot?evaluateAssetCriticalCoverage(input.weightedSnapshot):null;
   const components: MarketConfidenceCalibrationComponent[] = [
     { kind:'evidence_quality', score:input.evidenceQuality, contribution:input.evidenceQuality*0.3, rationale:'Evidence quality carries the existing quality component into market-readiness confidence.' },
     { kind:'usable_weight', score:input.usableWeight, contribution:input.usableWeight*0.25, rationale:'Usable evidence weight preserves the current evidence-weight contribution.' },
     { kind:'evidence_freshness', score:input.freshness, contribution:input.freshness*0.2, rationale:'Freshness preserves the current staleness-aware contribution.' },
     { kind:'evidence_coverage', score:input.coverage, contribution:input.coverage*0.25, rationale:'Coverage preserves the current family breadth contribution.' }
   ];
+  if(assetCriticalCoverage)components.push({kind:'asset_causality_coverage',score:assetCriticalCoverage.score,contribution:0,rationale:`Asset-primary evidence blueprint coverage is ${Math.round(assetCriticalCoverage.score)}%; expected=${assetCriticalCoverage.expected.join(',')||'none'}; present_fresh=${assetCriticalCoverage.present.join(',')||'none'}; missing_or_stale=${assetCriticalCoverage.missing.join(',')||'none'}. This component constrains confidence rather than adding confidence.`});
   const penalties: MarketConfidenceCalibrationPenalty[] = [];
   const boosts: MarketConfidenceCalibrationBoost[] = [];
   const reasonCodes: MarketConfidenceCalibrationReasonCode[] = ['base_confidence_from_existing_decomposition','evidence_quality_component_applied','usable_weight_component_applied','freshness_component_applied','coverage_component_applied','deterministic_foundation_only'];
@@ -67,10 +81,15 @@ export function calibrateMarketConfidence(input: MarketConfidenceCalibrationInpu
   const staleItems = input.weightedSnapshot?.items.filter((i) => i.reasons.some((r) => r.includes('stale') || r.includes('expired'))).length ?? 0;
   if (input.freshness < 65 || staleItems > 0) { addPenalty(penalties, 'stale_evidence', input.freshness < 45 ? 12 : 7, input.freshness < 35, 'Stale evidence lowers market readiness.'); reasonCodes.push('stale_evidence_penalty'); warnings.push('freshness_penalty_applied'); }
   if (hasWarning(input, 'stale_evidence_conflict')) { addPenalty(penalties, 'stale_fresh_conflict', 12, false, 'Stale and fresh evidence conflict lowers readiness more than staleness alone.'); reasonCodes.push('stale_evidence_penalty'); warnings.push('freshness_penalty_applied'); }
-  if (input.coverage < 45) { addPenalty(penalties, 'low_evidence_coverage', 8, false, 'Narrow evidence coverage lowers confidence.'); }
+  const criticalCoverageMissing=assetCriticalCoverage!==null&&assetCriticalCoverage.missing.length>0;
+  if (input.coverage < 45 || criticalCoverageMissing) {
+    const criticalMagnitude=!criticalCoverageMissing?0:assetCriticalCoverage!.score===0?18:assetCriticalCoverage!.score<50?14:8;
+    const rationale=criticalCoverageMissing?`Asset-critical primary evidence is incomplete: fresh ${assetCriticalCoverage!.present.length}/${assetCriticalCoverage!.expected.length}; missing_or_stale=${assetCriticalCoverage!.missing.join(',')}; stale=${assetCriticalCoverage!.stale.join(',')||'none'}. Generic evidence breadth cannot substitute for missing primary drivers.`:'Narrow evidence coverage lowers confidence.';
+    addPenalty(penalties,'low_evidence_coverage',Math.max(input.coverage<45?8:0,criticalMagnitude),criticalCoverageMissing&&assetCriticalCoverage!.score<50,rationale);
+  }
   if (input.usableWeight < 45) { addPenalty(penalties, 'low_usable_weight', 8, false, 'Low usable evidence weight lowers confidence.'); }
   const severe = penalties.some((p) => p.severe);
-  if (!severe && input.evidenceQuality >= 80 && input.usableWeight >= 80 && input.freshness >= 80 && input.coverage >= 55 && (!matrix || matrix.highestSeverity === 'none' || matrix.highestSeverity === 'low')) { boosts.push({ kind:'high_quality_evidence', magnitude:3, rationale:'High-quality, fresh, broad evidence receives a modest deterministic boost.' }); boosts.push({ kind:'high_usable_weight', magnitude:2, rationale:'High usable weight adds a small readiness boost.' }); reasonCodes.push('boost_conditions_met'); }
+  if (!severe && (!assetCriticalCoverage || assetCriticalCoverage.missing.length===0) && input.evidenceQuality >= 80 && input.usableWeight >= 80 && input.freshness >= 80 && input.coverage >= 55 && (!matrix || matrix.highestSeverity === 'none' || matrix.highestSeverity === 'low')) { boosts.push({ kind:'high_quality_evidence', magnitude:3, rationale:'High-quality, fresh, broad evidence receives a modest deterministic boost.' }); boosts.push({ kind:'high_usable_weight', magnitude:2, rationale:'High usable weight adds a small readiness boost.' }); reasonCodes.push('boost_conditions_met'); }
   else if (severe) reasonCodes.push('boost_blocked_by_severe_context');
   let score = clamp(input.baseConfidence + boosts.reduce((n,b)=>n+b.magnitude,0) - penalties.reduce((n,p)=>n+p.magnitude,0));
   if (penalties.some((p) => ['missing_price_confirmation','high_contradiction_severity','one_sided_fx_evidence','missing_macro_forecast'].includes(p.kind))) { score = Math.min(score, 64); reasonCodes.push('confidence_cap_applied'); }
@@ -78,6 +97,7 @@ export function calibrateMarketConfidence(input: MarketConfidenceCalibrationInpu
   if (penalties.some((p) => p.kind === 'missing_provider_reliability')) { score = Math.min(score, 79); reasonCodes.push('confidence_cap_applied'); }
   if (typeof providerCap === 'number') { score = Math.min(score, providerCap); reasonCodes.push('confidence_cap_applied'); }
   if (penalties.some((p) => p.kind === 'diagnostic_only_dxy')) { score = Math.min(score, 79); reasonCodes.push('confidence_cap_applied'); }
+  if(assetCriticalCoverage&&assetCriticalCoverage.missing.length>0){score=Math.min(score,assetCriticalCoverage.score<50?64:79);reasonCodes.push('confidence_cap_applied');}
   const result: MarketConfidenceCalibrationResult = { asset:input.asset, horizon:input.horizon, generatedAt:input.generatedAt, baseConfidence:clamp(input.baseConfidence), finalConfidence:clamp(score), confidenceTier:marketConfidenceTierForScore(clamp(score)), components, penalties, boosts, warnings:unique(warnings), reasonCodes:unique(reasonCodes), rationale:'Deterministic confidence calibration adjusts evidence confidence for market-realism readiness gaps without claiming empirical backtesting.', readiness:getMarketReasoningModuleReadiness('confidence_calibration') };
   const valid = validateMarketConfidenceCalibrationResult(result); if (valid.ok === false) throw new Error(`invalid_market_confidence_calibration_result:${valid.errors.join('|')}`);
   return result;

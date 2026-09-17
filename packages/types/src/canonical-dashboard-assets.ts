@@ -16,7 +16,9 @@ export const CANONICAL_DASHBOARD_COGNITION_ASSET: Readonly<Record<LaunchAssetSym
   'USD/CHF': 'usd_chf',
   'AUD/USD': 'aud_usd',
   'NZD/USD': 'nzd_usd',
-  'USD/CAD': 'usd_cad'
+  'USD/CAD': 'usd_cad',
+  DXY: 'dxy',
+  VIX: 'vix'
 };
 
 export const cognitionAssetForCanonicalDashboardAsset = (asset: CanonicalAssetSymbol): TradingAssetCoverage => {

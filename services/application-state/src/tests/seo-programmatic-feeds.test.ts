@@ -4,12 +4,12 @@ import { getSeoCanonicalFeed, getSeoDiagnosticAssetPages, getSeoMacroEventPages,
 
 export function runSeoProgrammaticFeedsTests(): void {
   const assets=getSeoSupportedAssetIndexFeed();
-  assert.equal(assets.assets.length,12);
+  assert.equal(assets.assets.length,14);
   assert.equal(validateSeoProgrammaticAssetIndexFeed(assets).ok,true);
-  assert.ok(!assets.assets.some((x)=>['dxy','vix'].includes(String(x.assetId))));
+  assert.equal(assets.assets.filter((x)=>['dxy','vix'].includes(String(x.assetId))).length,2);
   assert.ok(assets.assets.some((x)=>x.assetId==='xau_usd')&&assets.assets.some((x)=>x.assetId==='usd_cad'));
-  assert.equal(validateSeoProgrammaticSupportedAssetPage({...assets.assets[0],assetId:'dxy'}).ok,false);
-  assert.equal(validateSeoProgrammaticSupportedAssetPage({...assets.assets[0],assetId:'vix'}).ok,false);
+  assert.equal(validateSeoProgrammaticSupportedAssetPage(assets.assets.find(x=>x.assetId==='dxy')).ok,true);
+  assert.equal(validateSeoProgrammaticSupportedAssetPage(assets.assets.find(x=>x.assetId==='vix')).ok,true);
   const diagnostics=getSeoDiagnosticAssetPages();
   assert.equal(diagnostics.length,2);
   diagnostics.forEach((x)=>assert.equal(validateSeoProgrammaticDiagnosticAssetPage(x).ok,true));
@@ -27,7 +27,7 @@ export function runSeoProgrammaticFeedsTests(): void {
   assert.equal(safety.status,'pass');
   const cov=getSeoProgrammaticCoverageReport();
   assert.equal(validateSeoProgrammaticCoverageReport(cov).ok,true);
-  assert.equal(cov.tier1aCovered,true); assert.equal(cov.tier1bCovered,true); assert.equal(cov.supportedTradableAssetCount,12); assert.equal(cov.reasoningDiagnosticAssetCount,2); assert.equal(cov.representedReasoningAssetCount,14);
+  assert.equal(cov.tier1aCovered,true); assert.equal(cov.tier1bCovered,true); assert.equal(cov.supportedTradableAssetCount,14); assert.equal(cov.reasoningDiagnosticAssetCount,2); assert.equal(cov.representedReasoningAssetCount,14);
   assert.equal(validateSeoProgrammaticCoverageReport({...cov,supportedTradableAssetCount:13}).ok,false);
   assert.equal(validateSeoProgrammaticCoverageReport({...cov,reasoningDiagnosticAssetCount:1}).ok,false);
   assert.equal(validateSeoProgrammaticCoverageReport({...cov,representedReasoningAssetCount:13}).ok,false);

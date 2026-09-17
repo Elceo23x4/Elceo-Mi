@@ -1,4 +1,4 @@
-import { AlphaVantageMarketDataAdapter, FirecrawlExtractionAdapter, GdeltEventAdapter, InvestingCalendarScrapeAdapter } from '@elceo/providers';
+import { FirecrawlExtractionAdapter, GdeltEventAdapter, MarketauxNewsAdapter } from '@elceo/providers';
 import { fetchJson } from '../../../../packages/providers/src/http';
 
 function assert(condition: boolean, message: string): void {
@@ -19,14 +19,13 @@ export async function runProviderPreflightHardeningTests(): Promise<void> {
       serialized = JSON.stringify(error, Object.getOwnPropertyNames(error));
     }
     assert(serialized.length > 0 && !serialized.includes(sentinel) && serialized.includes('[REDACTED]'), 'HTTP errors must redact query and header credential sentinels');
-    const candles = await new AlphaVantageMarketDataAdapter(sentinel).getCandles('EUR/USD', '1h', '', '');
-    assert(candles.length === 0, 'unsupported Alpha Vantage candles must not be synthesized');
     const events = await new GdeltEventAdapter().searchEvents('risk', '', '');
     assert(events.length === 0, 'GDELT failure must not become geopolitical evidence');
     assert(await new FirecrawlExtractionAdapter().extract('https://example.test') === null, 'missing Firecrawl key must not create content');
     assert(await new FirecrawlExtractionAdapter(sentinel).extract('https://example.test') === null, 'failed Firecrawl extraction must remain unavailable');
-    const calendar = await new InvestingCalendarScrapeAdapter().getCalendar('', '');
-    assert(calendar.length === 0, 'Investing calendar must not emit placeholder evidence');
+    let marketauxFailed=false;
+    try{await new MarketauxNewsAdapter(sentinel).searchNews('markets','2026-09-14T00:00:00Z','2026-09-14T01:00:00Z');}catch{marketauxFailed=true;}
+    assert(marketauxFailed,'failed Marketaux transport must fail closed rather than synthesize news');
   } finally {
     globalThis.fetch = originalFetch;
   }

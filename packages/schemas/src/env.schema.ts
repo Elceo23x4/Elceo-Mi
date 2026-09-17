@@ -6,10 +6,8 @@ export type ProviderEnv = {
   TENANT_DATABASE_URL?: string;
   REDIS_URL?: string;
   FINNHUB_API_KEY?: string;
-  ALPHAVANTAGE_API_KEY?: string;
   FMP_API_KEY?: string;
   MARKETAUX_API_KEY?: string;
-  NEWSAPI_API_KEY?: string;
   FIRECRAWL_API_KEY?: string;
   KAFKA_BROKERS?: string;
   KAFKA_CLIENT_ID?: string;
@@ -91,10 +89,8 @@ export function readProviderEnv(env: Record<string, string | undefined> = {}): P
   if (env.TENANT_DATABASE_URL) out.TENANT_DATABASE_URL=env.TENANT_DATABASE_URL;
   if (env.REDIS_URL) out.REDIS_URL=env.REDIS_URL;
   if (env.FINNHUB_API_KEY) out.FINNHUB_API_KEY = env.FINNHUB_API_KEY;
-  if (env.ALPHAVANTAGE_API_KEY) out.ALPHAVANTAGE_API_KEY = env.ALPHAVANTAGE_API_KEY;
   if (env.FMP_API_KEY) out.FMP_API_KEY = env.FMP_API_KEY;
   if (env.MARKETAUX_API_KEY) out.MARKETAUX_API_KEY = env.MARKETAUX_API_KEY;
-  if (env.NEWSAPI_API_KEY) out.NEWSAPI_API_KEY = env.NEWSAPI_API_KEY;
   if (env.FIRECRAWL_API_KEY) out.FIRECRAWL_API_KEY = env.FIRECRAWL_API_KEY;
   if (env.KAFKA_BROKERS) out.KAFKA_BROKERS = env.KAFKA_BROKERS;
   if (env.KAFKA_CLIENT_ID) out.KAFKA_CLIENT_ID = env.KAFKA_CLIENT_ID;

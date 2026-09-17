@@ -48,7 +48,7 @@ for(const registration of registered){
 }
 if(registered.some(x=>x.trustedResolver==='createOfficialEvidenceStagingExecutionResolver')&&
  (!resolverSource.includes('getOfficialAdapterCatalogEntry(policy.providerId,policy.capability)')||
-  !resolverSource.includes('createOfficialAdapter(policy.providerId,policy.capability)')))
+  !resolverSource.includes('createOfficialAdapter(policy.providerId,policy.capability,')))
  fail.push('official_catalog_resolver_contract_missing');
 
 for(const s of sources){const execution=registered.some(x=>x.sourceId===s.canonicalId);if(Boolean(s.adapterState==='executable_adapter')!==execution)fail.push(`${s.canonicalId}:matrix_execution_mismatch`);if(s.stagingLiveEligible||s.stagingLiveEmpiricallyVerified||s.productionLiveEligible||s.productionActive)fail.push(`${s.canonicalId}:unsupported_activation_claim`);}

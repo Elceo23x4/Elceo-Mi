@@ -1,0 +1,107 @@
+{
+  "_meta": {
+    "route": "/api/analytics/latest",
+    "method": "GET",
+    "frozenMainCommit": "20266494efd3a8d3a97c3ea9335c672e20fe7fa5",
+    "scenario": "latest_user_analytics",
+    "sourceContract": "packages/types/src/analytics.ts:AnalyticsSnapshot"
+  },
+  "ok": true,
+  "data": {
+    "snapshot": {
+      "snapshotId": "analytics-snapshot-demo-001",
+      "summary": {
+        "window": {
+          "subjectKind": "user",
+          "subjectId": "user-demo-001",
+          "assetScope": "*",
+          "timeframeScope": "*",
+          "lookbackDays": 180,
+          "generatedAt": "2026-09-18T00:00:00.000Z"
+        },
+        "totals": {
+          "closedCaseCount": 18,
+          "reviewedCaseCount": 16,
+          "winCount": 9,
+          "lossCount": 6,
+          "breakevenCount": 2,
+          "mixedCount": 1,
+          "openCount": 3,
+          "linkedReasoningCount": 15,
+          "linkedDriftCount": 5,
+          "avgRMultiple": 0.74,
+          "avgPnlPercent": 0.61,
+          "medianRMultiple": 0.55,
+          "medianPnlPercent": 0.42,
+          "winRate": 0.5,
+          "lossRate": 0.3333,
+          "expectancyR": 0.31
+        },
+        "setupPatterns": [
+          {
+            "setupType": "macro-continuation",
+            "sampleCount": 8,
+            "winCount": 5,
+            "lossCount": 2,
+            "breakevenCount": 1,
+            "mixedCount": 0,
+            "avgRMultiple": 0.92,
+            "avgPnlPercent": 0.73,
+            "winRate": 0.625,
+            "expectancyR": 0.48,
+            "disciplineScore": 82,
+            "performanceScore": 79
+          }
+        ],
+        "directionPatterns": [
+          {
+            "direction": "long",
+            "sampleCount": 10,
+            "avgRMultiple": 0.8,
+            "avgPnlPercent": 0.65,
+            "winRate": 0.6,
+            "performanceScore": 77
+          }
+        ],
+        "executionQuality": {
+          "disciplinedCount": 10,
+          "acceptableCount": 4,
+          "weakCount": 2,
+          "impulsiveCount": 0,
+          "missingQualityCount": 2,
+          "disciplineScore": 78
+        },
+        "planAdherence": {
+          "comparableEntryCount": 12,
+          "avgEntryDeviationPercent": 0.18,
+          "maxEntryDeviationPercent": 0.62,
+          "adherenceScore": 74
+        },
+        "behaviorPatterns": [
+          {
+            "behaviorTag": "confirmation-discipline",
+            "sampleCount": 9,
+            "winAssociationScore": 76,
+            "lossAssociationScore": 22,
+            "impulsiveAssociationScore": 4,
+            "importanceScore": 81
+          }
+        ],
+        "reviewInsights": {
+          "repeatedMistakes": ["early-entry"],
+          "repeatedStrengths": ["post-trade-review"],
+          "cautionNotes": ["Performance is weaker when confirmation is skipped."],
+          "confidenceNotes": ["Sample size remains limited for setup-level conclusions."]
+        },
+        "reasoningLinkSummary": {
+          "linkedCaseCount": 15,
+          "linkedWinRate": 0.5333,
+          "linkedAvgRMultiple": 0.79,
+          "linkedAvgPnlPercent": 0.66
+        },
+        "supportingCaseIds": ["jcase-demo-001", "jcase-demo-002"]
+      },
+      "createdAt": "2026-09-18T00:00:00.000Z"
+    }
+  }
+}

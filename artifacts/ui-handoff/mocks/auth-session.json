@@ -1,0 +1,18 @@
+{
+  "_meta": {
+    "route": "/api/auth/{...nextauth}",
+    "method": "GET",
+    "frozenMainCommit": "20266494efd3a8d3a97c3ea9335c672e20fe7fa5",
+    "scenario": "authenticated_session_projection",
+    "sourceContract": "apps/web/lib/auth/config.ts:Auth.js session callback"
+  },
+  "user": {
+    "id": "user-demo-001",
+    "name": "Demo User",
+    "email": "demo@example.invalid",
+    "role": "user",
+    "planTier": "focus_plan",
+    "onboardingCompletedAt": "2026-09-01T12:00:00.000Z"
+  },
+  "expires": "2026-09-25T00:00:00.000Z"
+}

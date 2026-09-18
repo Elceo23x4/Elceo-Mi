@@ -1,0 +1,33 @@
+{
+  "_meta": {
+    "route": "/api/admin/system-summary",
+    "method": "GET",
+    "frozenMainCommit": "20266494efd3a8d3a97c3ea9335c672e20fe7fa5",
+    "scenario": "healthy_admin_control_plane",
+    "sourceContract": "packages/types/src/admin-control-plane.ts:AdminSystemSummary",
+    "browserSafe": false,
+    "accessNote": "Trusted server mediation required; do not expose x-elceo-internal-token to browser JavaScript."
+  },
+  "ok": true,
+  "data": {
+    "summary": {
+      "generatedAt": "2026-09-18T00:00:00.000Z",
+      "overallHealth": "healthy",
+      "ingestionStatus": "healthy",
+      "reasoningStatus": "healthy",
+      "notificationsStatus": "healthy",
+      "refreshStatus": "healthy",
+      "opsStatus": "healthy",
+      "workspaceStatus": "healthy",
+      "blockedOpsRunCount": 0,
+      "failedOpsRunCount": 0,
+      "staleFreshnessCount": 0,
+      "failedFreshnessCount": 0,
+      "degradedNotificationTargetCount": 0,
+      "criticalReceiptCount": 0,
+      "latestRefreshRunStatus": "succeeded",
+      "latestOpsRunStatus": "succeeded",
+      "latestIngestionRunStatus": "succeeded"
+    }
+  }
+}

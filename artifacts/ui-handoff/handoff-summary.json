@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "frozenMainCommit": "20266494efd3a8d3a97c3ea9335c672e20fe7fa5",
+  "frozenFunctionalTree": "6f81f55269031e0ec6467cd60283593dd5b7c2d3",
+  "generatedAt": "2026-09-18T00:19:01Z",
+  "routeFileCount": 153,
+  "operationCount": 168,
+  "browserSafeOperationCount": 99,
+  "userUiOperationCount": 96,
+  "adminServerBridgeOperationCount": 52,
+  "superAdminServerBridgeOperationCount": 3,
+  "serverInternalOperationCount": 9,
+  "providerWebhookOperationCount": 4,
+  "routeFamilies": [
+    "account",
+    "admin",
+    "analytics",
+    "auth",
+    "billing",
+    "coaching",
+    "dashboard",
+    "internal",
+    "journal",
+    "notifications",
+    "ops",
+    "portfolio",
+    "refresh",
+    "workspace"
+  ],
+  "unresolvedFieldConstraintOperations": 50,
+  "note": "Unresolved field-constraint count is informational: the handoff intentionally leaves constraints unspecified where the frozen route does not expose a statically provable validator reference."
+}

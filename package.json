@@ -84,7 +84,10 @@
     "test:sec-g-postgres": "node scripts/test-sec-g-postgres.mjs && node scripts/test-sec-g-recovery.mjs && npm run -w @elceo/db-runtime build && REDIS_URL=${REDIS_URL:-redis://127.0.0.1:6379} npm run test:canonical-dashboard-14-asset-acceptance && REDIS_URL=${REDIS_URL:-redis://127.0.0.1:6379} node scripts/seed-sec-g-dashboard-runtime.mjs && npm run test:macro-vintage-postgres",
     "test:sec-g-k6": "k6 run --summary-export artifacts/sec-g/k6-summary.json load/sec-g.k6.js",
     "test:sec-g-lifecycle": "npm run -w @elceo/db-runtime build && node scripts/test-sec-g-lifecycle.mjs",
-    "test:macro-vintage-postgres": "node scripts/test-macro-vintage-postgres.mjs"
+    "test:macro-vintage-postgres": "node scripts/test-macro-vintage-postgres.mjs",
+    "compile:ui-handoff": "npm run -w @elceo/db-runtime build && npm exec tsc -- -p apps/web/tsconfig.test.json",
+    "generate:ui-handoff": "npm run compile:ui-handoff && node scripts/generate-ui-handoff.mjs",
+    "check:ui-handoff": "npm run compile:ui-handoff && node scripts/check-ui-handoff.mjs"
   },
   "engines": {
     "node": "24.x",

@@ -1,0 +1,69 @@
+{
+  "_meta": {
+    "route": "/api/journal/cases",
+    "method": "GET",
+    "frozenMainCommit": "20266494efd3a8d3a97c3ea9335c672e20fe7fa5",
+    "scenario": "journal_case_list",
+    "sourceContract": "packages/types/src/journal.ts:CanonicalJournalCase"
+  },
+  "ok": true,
+  "data": {
+    "cases": [
+      {
+        "identity": {
+          "caseId": "jcase-demo-001",
+          "subjectKind": "user",
+          "subjectId": "user-demo-001",
+          "asset": "XAU/USD",
+          "timeframe": "H4",
+          "title": "Gold real-yield continuation"
+        },
+        "status": "planned",
+        "plan": {
+          "direction": "long",
+          "thesis": "Bullish pressure remains usable while the contradiction layer stays below invalidation.",
+          "setupType": "macro-continuation",
+          "conviction": "standard",
+          "entryPricePlanned": 2308,
+          "stopLossPlanned": 2294,
+          "takeProfitPlanned": [2325, 2342],
+          "riskAmountPlanned": 120,
+          "riskPercentPlanned": 0.5,
+          "invalidationNote": "Invalidate if server cognition flips and the H4 zone fails.",
+          "executionChecklist": ["wait-for-confirmation", "respect-stop"],
+          "createdFromReasoningRunId": "reasoning-demo-001",
+          "createdFromSnapshotId": "reasoning-snapshot-demo-001",
+          "createdFromDriftId": null
+        },
+        "execution": {
+          "entryPriceExecuted": null,
+          "positionSize": null,
+          "openedAt": null,
+          "lastAdjustedAt": null,
+          "notes": [],
+          "executionQuality": null
+        },
+        "closure": {
+          "exitPrice": null,
+          "closedAt": null,
+          "pnlAmount": null,
+          "pnlPercent": null,
+          "rMultiple": null,
+          "outcome": "open",
+          "closureReason": null
+        },
+        "review": {
+          "reviewedAt": null,
+          "whatWentWell": [],
+          "whatWentWrong": [],
+          "lessons": [],
+          "behaviorTags": [],
+          "followUpActions": []
+        },
+        "tags": ["gold", "macro"],
+        "createdAt": "2026-09-17T18:00:00.000Z",
+        "updatedAt": "2026-09-17T20:00:00.000Z"
+      }
+    ]
+  }
+}

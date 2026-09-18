@@ -1,0 +1,89 @@
+{
+  "_meta": {
+    "route": "/api/dashboard/{asset}",
+    "method": "GET",
+    "frozenMainCommit": "20266494efd3a8d3a97c3ea9335c672e20fe7fa5",
+    "scenario": "focus_plan_materialized_dashboard",
+    "sourceContract": "packages/types/src/chart.ts:DashboardChartWorkspaceViewModel"
+  },
+  "dashboard": {
+    "contract_version": "dashboard-display-v2",
+    "asset_code": "XAU/USD",
+    "directional_bias": "bullish",
+    "confidence_total": 70,
+    "confidence_anatomy": {
+      "sourceConfidence": 70,
+      "freshness": 76,
+      "macroCoverage": 68
+    },
+    "contradiction": {
+      "state": "transition",
+      "score": 62,
+      "score_availability": "available",
+      "evidence_lineage": [
+        {
+          "severity": "medium",
+          "source_id": "us_treasury_official",
+          "evidence_ids": ["ev-treasury-real-yield-001"],
+          "rationale": "Real-yield pressure remains in tension with the current gold impulse."
+        }
+      ]
+    },
+    "zones": [],
+    "annotations": [],
+    "evidence_notes": [],
+    "modules": [
+      {
+        "module_id": "market-regime",
+        "title": "Market regime",
+        "body": "Directional evidence is usable but contradiction remains active.",
+        "rank_score": 78,
+        "rank_availability": "available"
+      }
+    ]
+  },
+  "chart": {
+    "candles": [
+      {
+        "timestamp_utc": "2026-09-17T20:00:00.000Z",
+        "open": 2302.5,
+        "high": 2312.4,
+        "low": 2299.8,
+        "close": 2309.7,
+        "volume": 18240
+      }
+    ],
+    "zones": [
+      {
+        "zone_id": "zone-xau-h4-01",
+        "asset_code": "XAU/USD",
+        "timeframe": "H4",
+        "lower": 2300,
+        "upper": 2310,
+        "center": 2305,
+        "touches": 4,
+        "reaction_magnitude_atr": 1.2,
+        "hours_since_last_touch": 5,
+        "significance_score": 78
+      }
+    ],
+    "annotations": [
+      {
+        "kind": "macro_event_marker",
+        "annotation_id": "macro-us-001",
+        "asset_code": "XAU/USD",
+        "event_id": "event-us-macro-001",
+        "timestamp_utc": "2026-09-18T12:30:00.000Z",
+        "evidence_ids": ["ev-us-macro-001"]
+      }
+    ],
+    "default_filters": {
+      "keyLevelZones": true,
+      "macroEvents": true,
+      "contradiction": true,
+      "evidenceNotes": true,
+      "impulseOrigins": false
+    },
+    "annotation_density_target": "moderate"
+  }
+}

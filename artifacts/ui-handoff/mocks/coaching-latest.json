@@ -1,0 +1,65 @@
+{
+  "_meta": {
+    "route": "/api/coaching/latest",
+    "method": "GET",
+    "frozenMainCommit": "20266494efd3a8d3a97c3ea9335c672e20fe7fa5",
+    "scenario": "latest_coaching_snapshot",
+    "sourceContract": "packages/types/src/coaching.ts:CoachingSnapshot"
+  },
+  "ok": true,
+  "data": {
+    "snapshot": {
+      "snapshotId": "coaching-snapshot-demo-001",
+      "summary": {
+        "subjectKind": "user",
+        "subjectId": "user-demo-001",
+        "assetScope": "*",
+        "timeframeScope": "*",
+        "generatedAt": "2026-09-18T00:00:00.000Z",
+        "analyticsSnapshotId": "analytics-snapshot-demo-001",
+        "journalInfluenceSnapshotId": "journal-influence-demo-001",
+        "totalSignalsConsidered": 24,
+        "focusAreas": [
+          {
+            "focusId": "focus-demo-001",
+            "theme": "execution_precision",
+            "priority": "high",
+            "headline": "Require confirmation before entry",
+            "explanation": "Reviewed cases show weaker outcomes when execution starts before the planned confirmation condition.",
+            "supportingMetrics": {
+              "disciplineScore": 78,
+              "adherenceScore": 74
+            },
+            "supportingCaseIds": ["jcase-demo-001", "jcase-demo-002"],
+            "sourceKinds": ["analytics", "journal_review"],
+            "score": 82
+          }
+        ],
+        "strengths": [
+          {
+            "strengthId": "strength-demo-001",
+            "theme": "review_quality",
+            "headline": "Post-trade review consistency",
+            "explanation": "Most closed cases include structured review evidence.",
+            "supportingCaseIds": ["jcase-demo-001"],
+            "score": 76
+          }
+        ],
+        "actionPlan": [
+          {
+            "actionId": "coach-action-demo-001",
+            "theme": "execution_precision",
+            "priority": "high",
+            "instruction": "Record the confirmation condition before executing the next planned case.",
+            "successMetric": "Confirmation condition documented before execution in the next five reviewed cases.",
+            "supportingFocusIds": ["focus-demo-001"],
+            "score": 80
+          }
+        ],
+        "summaryNotes": ["Coaching is derived from the user's server-side journal and analytics state."],
+        "supportingCaseIds": ["jcase-demo-001", "jcase-demo-002"]
+      },
+      "createdAt": "2026-09-18T00:00:00.000Z"
+    }
+  }
+}

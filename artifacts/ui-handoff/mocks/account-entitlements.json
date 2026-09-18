@@ -1,0 +1,47 @@
+{
+  "_meta": {
+    "route": "/api/account/entitlements",
+    "method": "GET",
+    "frozenMainCommit": "20266494efd3a8d3a97c3ea9335c672e20fe7fa5",
+    "scenario": "premium_active_account",
+    "sourceContract": "packages/types/src/entitlements.ts"
+  },
+  "ok": true,
+  "data": {
+    "accountState": {
+      "subjectKind": "user",
+      "subjectId": "user-demo-001",
+      "planKind": "premium",
+      "accountState": "active",
+      "planStartedAt": "2026-09-01T00:00:00.000Z",
+      "planEndsAt": "2026-10-01T00:00:00.000Z",
+      "trialEndsAt": null,
+      "internalOverride": false,
+      "updatedAt": "2026-09-18T00:00:00.000Z"
+    },
+    "profile": {
+      "planKind": "premium",
+      "accountState": "active",
+      "allowedFeatures": [
+        "workspace.read",
+        "workspace.refresh",
+        "journal.read",
+        "journal.write",
+        "journal.influence.generate",
+        "portfolio.read",
+        "portfolio.write",
+        "portfolio.snapshot.generate",
+        "analytics.read",
+        "analytics.generate",
+        "coaching.read",
+        "coaching.generate",
+        "notifications.read",
+        "notifications.write"
+      ],
+      "limitedFeatures": [],
+      "blockedFeatures": [],
+      "usageLimits": [],
+      "generatedAt": "2026-09-18T00:00:00.000Z"
+    }
+  }
+}

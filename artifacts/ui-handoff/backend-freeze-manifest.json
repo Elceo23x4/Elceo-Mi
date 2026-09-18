@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "frozen",
+  "repository": "Elceo23x4/Elceo-Mi",
+  "frozenMainCommit": "20266494efd3a8d3a97c3ea9335c672e20fe7fa5",
+  "frozenFunctionalTree": "6f81f55269031e0ec6467cd60283593dd5b7c2d3",
+  "freezeRecordedAt": "2026-09-18T00:19:01Z",
+  "acceptance": {
+    "integratedMainCi": {
+      "workflow": "CI Validation",
+      "runNumber": 784,
+      "conclusion": "success"
+    },
+    "exactTreeLineage": {
+      "pr": 245,
+      "prHead": "fba899750476a68be24bbd9137420197a6c2fc21",
+      "secGRunNumber": 180,
+      "secGConclusion": "success",
+      "secHRunNumber": 158,
+      "secHConclusion": "success"
+    }
+  },
+  "freezePolicy": {
+    "functionalBackendChangesAllowed": false,
+    "documentationAllowed": true,
+    "uiImplementationAllowed": true,
+    "handoffValidationToolingAllowed": true,
+    "deploymentConfigurationAllowed": true,
+    "providerActivationWorkIsSeparate": true,
+    "objectiveDefectCorrectionRequiresExplicitReview": true
+  },
+  "authoritativeHandoff": {
+    "readme": "docs/ui-handoff/README.md",
+    "openapi": "artifacts/ui-handoff/openapi.json",
+    "routeInventory": "artifacts/ui-handoff/route-inventory.json",
+    "summary": "artifacts/ui-handoff/handoff-summary.json"
+  }
+}

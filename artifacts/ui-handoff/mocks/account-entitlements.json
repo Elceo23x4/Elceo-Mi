@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "data": {
+    "plan": "focus",
+    "status": "active",
+    "features": [
+      "dashboard.full_cognition",
+      "portfolio.advanced",
+      "notification.advanced_preferences"
+    ],
+    "usage": {
+      "period": "monthly"
+    }
+  }
+}

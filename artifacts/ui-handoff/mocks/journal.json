@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "data": {
+    "items": [
+      {
+        "caseId": "case_demo_001",
+        "asset": "xau_usd",
+        "state": "planned",
+        "openedAt": null
+      }
+    ],
+    "nextCursor": null
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "freezeCommit": "20266494efd3a8d3a97c3ea9335c672e20fe7fa5",
+  "functionalTree": "6f81f55269031e0ec6467cd60283593dd5b7c2d3",
+  "handoffVersion": "2026-09-18",
+  "routeFileCount": 153,
+  "routeMethodCount": 168,
+  "openApiOperationCount": 168,
+  "browserSafeMethodCount": 159,
+  "serverInternalMethodCount": 9,
+  "mockCount": 16
+}

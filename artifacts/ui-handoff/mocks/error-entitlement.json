@@ -1,0 +1,10 @@
+{
+  "ok": false,
+  "error": {
+    "code": "forbidden",
+    "message": "Required entitlement is not active",
+    "details": {
+      "reason": "focus_plan_required"
+    }
+  }
+}

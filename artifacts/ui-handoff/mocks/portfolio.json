@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "data": {
+    "watchlist": [
+      {
+        "asset": "eur_usd",
+        "status": "active"
+      }
+    ],
+    "positions": [],
+    "actions": [],
+    "snapshotState": "ready"
+  }
+}

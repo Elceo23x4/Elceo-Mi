@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "data": {
+    "state": "active",
+    "plan": "focus",
+    "providerActivation": "environment_required",
+    "renewalAt": "2026-10-18T00:00:00.000Z",
+    "cancelAtPeriodEnd": false,
+    "reconciliationState": "settled"
+  }
+}

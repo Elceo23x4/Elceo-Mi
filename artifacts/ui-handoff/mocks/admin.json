@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "data": {
+    "scope": "admin_read",
+    "systemState": "healthy",
+    "providerActivation": "environment_verification_required"
+  }
+}

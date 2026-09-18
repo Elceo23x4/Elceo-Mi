@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "data": {
+    "state": "ready",
+    "focus": "discipline",
+    "insights": [
+      "Wait for evidence alignment before escalation."
+    ],
+    "actionPlan": []
+  }
+}

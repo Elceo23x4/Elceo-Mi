@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "data": {
+    "scope": "super_admin",
+    "stepUp": {
+      "required": true,
+      "state": "verified"
+    },
+    "commercialControl": {
+      "targetUserId": "usr_demo_002",
+      "state": "eligible"
+    }
+  }
+}

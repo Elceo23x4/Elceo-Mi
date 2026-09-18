@@ -1,0 +1,46 @@
+{
+  "ok": true,
+  "data": {
+    "asset": "eur_usd",
+    "directionalBias": {
+      "state": "mixed",
+      "baseCurrency": {
+        "currency": "EUR",
+        "pressure": "supportive"
+      },
+      "quoteCurrency": {
+        "currency": "USD",
+        "pressure": "supportive"
+      },
+      "relativePressure": "mixed"
+    },
+    "confidence": {
+      "band": "medium",
+      "score": 0.62,
+      "drivers": [
+        "evidence_quality",
+        "freshness"
+      ],
+      "cautions": [
+        "contradiction_window_open"
+      ]
+    },
+    "freshness": {
+      "state": "fresh"
+    },
+    "marketRegime": "mixed",
+    "evidenceStack": [
+      {
+        "kind": "macro",
+        "sourceAuthority": "official_first_party",
+        "state": "fresh"
+      }
+    ],
+    "contradictions": [
+      {
+        "kind": "fx_base_quote",
+        "severity": "moderate"
+      }
+    ]
+  }
+}

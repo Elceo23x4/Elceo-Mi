@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "dependency_failed",
+    "message": "Required dependency is unavailable"
+  }
+}

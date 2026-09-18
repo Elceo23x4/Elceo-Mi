@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "data": {
+    "summary": {
+      "unread": 1,
+      "total": 3
+    },
+    "inbox": [
+      {
+        "id": "ntf_demo_001",
+        "topic": "market_context",
+        "state": "unread"
+      }
+    ],
+    "deliveryHealth": "degraded_provider_activation_required"
+  }
+}

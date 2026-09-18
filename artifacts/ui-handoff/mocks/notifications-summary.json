@@ -1,0 +1,36 @@
+{
+  "_meta": {
+    "route": "/api/notifications/summary",
+    "method": "GET",
+    "frozenMainCommit": "20266494efd3a8d3a97c3ea9335c672e20fe7fa5",
+    "scenario": "healthy_notification_summary",
+    "sourceContract": "services/notifications/src/management/summary-service.ts"
+  },
+  "ok": true,
+  "data": {
+    "managementSummary": {
+      "subjectTargetCount": 3,
+      "activeTargetCount": 3,
+      "subscriptionCount": 5,
+      "enabledSubscriptionCount": 4,
+      "inboxUnreadCount": 2,
+      "inboxArchivedCount": 6,
+      "recentDeliveredCount": 14,
+      "recentFailedCount": 1,
+      "recentDeadCount": 0
+    },
+    "feedbackSummary": {
+      "acceptedCount": 14,
+      "deliveredCount": 13,
+      "bouncedCount": 0,
+      "complainedCount": 0,
+      "unsubscribedCount": 0,
+      "invalidTargetCount": 0,
+      "providerFailedCount": 1,
+      "unknownCount": 0,
+      "disabledTargetCount": 0,
+      "degradedTargetCount": 0
+    },
+    "inboxUnreadCount": 2
+  }
+}

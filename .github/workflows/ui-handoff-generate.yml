@@ -1,0 +1,57 @@
+name: UI Handoff Artifact Generation
+
+on:
+  push:
+    branches:
+      - codex/backend-freeze-ui-handoff
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout handoff branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/backend-freeze-ui-handoff
+          fetch-depth: 0
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          cache: npm
+
+      - name: Activate npm 10.8.2
+        run: npm install --global npm@10.8.2
+
+      - name: Deterministic dependency installation
+        run: npm ci
+
+      - name: Compile canonical route inventory
+        run: |
+          npm run -w @elceo/db-runtime build
+          npm exec tsc -- -p apps/web/tsconfig.test.json
+
+      - name: Generate UI handoff artifacts
+        run: node scripts/generate-ui-handoff.mjs
+
+      - name: Commit generated artifacts
+        run: |
+          git add artifacts/ui-handoff/route-inventory.json \
+                  artifacts/ui-handoff/openapi.json \
+                  artifacts/ui-handoff/handoff-summary.json \
+                  docs/ui-handoff/api-explorer.html
+          if git diff --cached --quiet; then
+            echo "Generated UI handoff artifacts already synchronized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "artifacts: generate frozen UI handoff inventory"
+          git push origin HEAD:codex/backend-freeze-ui-handoff

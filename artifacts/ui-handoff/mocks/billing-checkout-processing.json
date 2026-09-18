@@ -1,0 +1,52 @@
+{
+  "_meta": {
+    "route": "/api/billing/checkout",
+    "method": "POST",
+    "frozenMainCommit": "20266494efd3a8d3a97c3ea9335c672e20fe7fa5",
+    "scenario": "sandbox_provider_checkout_processing",
+    "sourceContract": "apps/web/app/api/billing/checkout/route.ts + services/application-state/src/billing/internal-payment.ts"
+  },
+  "ok": true,
+  "liveActivation": "blocked",
+  "sandboxOnly": true,
+  "productionLive": false,
+  "providerMode": "sandbox_provider",
+  "reused": false,
+  "checkoutUrl": "https://payments.example.invalid/checkout/demo-session",
+  "operation": {
+    "internalPaymentOperationId": "ipo_demo_001",
+    "businessIdempotencyKey": "business:user-demo-001:checkout-focus-20260918-001",
+    "providerIdempotencyKey": "pik_demo_001",
+    "subjectUserId": "user-demo-001",
+    "targetPlan": "focus_plan",
+    "billingInterval": "monthly",
+    "amount": "2000",
+    "currency": "USD",
+    "commercialPriceVersionId": "price-version-demo-001",
+    "quotedProviderProductReference": null,
+    "provider": "stripe",
+    "state": "processing",
+    "providerPaymentReference": "pay_demo_001",
+    "providerCheckoutSessionReference": "session_demo_001",
+    "providerCustomerReference": null,
+    "providerSubscriptionReference": null,
+    "providerTransactionReference": null,
+    "subscriptionState": null,
+    "currentPeriodStart": null,
+    "currentPeriodEnd": null,
+    "cancelAtPeriodEnd": false,
+    "providerEventReferences": [],
+    "version": 2,
+    "createdAt": "2026-09-18T00:00:00.000Z",
+    "updatedAt": "2026-09-18T00:00:01.000Z",
+    "expiresAt": "2026-09-18T00:30:00.000Z",
+    "reconciliationState": "not_required",
+    "lastProviderComparisonSnapshot": {
+      "providerKind": "stripe",
+      "retryable": false,
+      "unknownOutcome": false,
+      "acceptedByProvider": true
+    },
+    "safeErrorCategory": null
+  }
+}

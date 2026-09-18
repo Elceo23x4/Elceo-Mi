@@ -1,0 +1,48 @@
+{
+  "_meta": {
+    "route": "/api/portfolio/watchlist",
+    "method": "GET",
+    "frozenMainCommit": "20266494efd3a8d3a97c3ea9335c672e20fe7fa5",
+    "scenario": "active_watchlist",
+    "sourceContract": "packages/types/src/portfolio.ts:WatchlistEntry"
+  },
+  "ok": true,
+  "data": {
+    "entries": [
+      {
+        "entryId": "watch-demo-001",
+        "subjectKind": "user",
+        "subjectId": "user-demo-001",
+        "asset": "EUR/USD",
+        "timeframe": "H4",
+        "priority": "high",
+        "status": "thesis_active",
+        "thesisHealth": "stable",
+        "note": "Wait for server-side confirmation before promoting the setup.",
+        "linkedReasoningRunId": "reasoning-demo-eurusd-001",
+        "linkedSnapshotId": "reasoning-snapshot-eurusd-001",
+        "linkedDriftId": null,
+        "linkedJournalCaseId": "jcase-demo-002",
+        "createdAt": "2026-09-16T09:00:00.000Z",
+        "updatedAt": "2026-09-17T20:00:00.000Z"
+      },
+      {
+        "entryId": "watch-demo-002",
+        "subjectKind": "user",
+        "subjectId": "user-demo-001",
+        "asset": "USD/JPY",
+        "timeframe": "H4",
+        "priority": "medium",
+        "status": "readiness_pending",
+        "thesisHealth": "weakening",
+        "note": "Quote-side evidence remains incomplete; keep position sizing disabled in UI.",
+        "linkedReasoningRunId": "reasoning-demo-usdjpy-001",
+        "linkedSnapshotId": "reasoning-snapshot-usdjpy-001",
+        "linkedDriftId": "drift-demo-001",
+        "linkedJournalCaseId": null,
+        "createdAt": "2026-09-17T08:00:00.000Z",
+        "updatedAt": "2026-09-17T21:00:00.000Z"
+      }
+    ]
+  }
+}

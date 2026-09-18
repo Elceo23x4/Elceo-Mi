@@ -13,7 +13,7 @@ jobs:
   generate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout handoff branch
         uses: actions/checkout@v4
@@ -33,25 +33,36 @@ jobs:
       - name: Deterministic dependency installation
         run: npm ci
 
-      - name: Compile canonical route inventory
+      - name: Wire permanent handoff npm commands
         run: |
-          npm run -w @elceo/db-runtime build
-          npm exec tsc -- -p apps/web/tsconfig.test.json
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'package.json';
+          const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
+          pkg.scripts['compile:ui-handoff'] = 'npm run -w @elceo/db-runtime build && npm exec tsc -- -p apps/web/tsconfig.test.json';
+          pkg.scripts['generate:ui-handoff'] = 'npm run compile:ui-handoff && node scripts/generate-ui-handoff.mjs';
+          pkg.scripts['check:ui-handoff'] = 'npm run compile:ui-handoff && node scripts/check-ui-handoff.mjs';
+          fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
+          NODE
 
       - name: Generate UI handoff artifacts
-        run: node scripts/generate-ui-handoff.mjs
+        run: npm run generate:ui-handoff
 
-      - name: Commit generated artifacts
+      - name: Verify UI handoff synchronization
+        run: npm run check:ui-handoff
+
+      - name: Commit package command and generated artifacts
         run: |
-          git add artifacts/ui-handoff/route-inventory.json \
+          git add package.json \
+                  artifacts/ui-handoff/route-inventory.json \
                   artifacts/ui-handoff/openapi.json \
                   artifacts/ui-handoff/handoff-summary.json \
                   docs/ui-handoff/api-explorer.html
           if git diff --cached --quiet; then
-            echo "Generated UI handoff artifacts already synchronized."
+            echo "UI handoff package already synchronized."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "artifacts: generate frozen UI handoff inventory"
+          git commit -m "chore: wire and verify frozen UI handoff"
           git push origin HEAD:codex/backend-freeze-ui-handoff

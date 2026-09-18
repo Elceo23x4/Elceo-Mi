@@ -1,0 +1,64 @@
+name: UI Handoff Synchronization
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web/app/api/**'
+      - 'apps/web/lib/server/access/route-policy-inventory.ts'
+      - 'apps/web/lib/server/api/**'
+      - 'apps/web/lib/server/auth/**'
+      - 'packages/types/**'
+      - 'packages/schemas/**'
+      - 'docs/backend-freeze.md'
+      - 'docs/ui-handoff/**'
+      - 'artifacts/ui-handoff/**'
+      - 'scripts/generate-ui-handoff.mjs'
+      - 'scripts/check-ui-handoff.mjs'
+      - 'package.json'
+      - '.github/workflows/ui-handoff-check.yml'
+  push:
+    branches:
+      - main
+      - codex/backend-freeze-ui-handoff
+    paths:
+      - 'apps/web/app/api/**'
+      - 'apps/web/lib/server/access/route-policy-inventory.ts'
+      - 'apps/web/lib/server/api/**'
+      - 'apps/web/lib/server/auth/**'
+      - 'packages/types/**'
+      - 'packages/schemas/**'
+      - 'docs/backend-freeze.md'
+      - 'docs/ui-handoff/**'
+      - 'artifacts/ui-handoff/**'
+      - 'scripts/generate-ui-handoff.mjs'
+      - 'scripts/check-ui-handoff.mjs'
+      - 'package.json'
+      - '.github/workflows/ui-handoff-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify UI handoff contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          cache: npm
+
+      - name: Activate npm 10.8.2
+        run: npm install --global npm@10.8.2
+
+      - name: Deterministic dependency installation
+        run: npm ci
+
+      - name: Verify handoff is synchronized with frozen contracts
+        run: npm run check:ui-handoff

@@ -1,0 +1,47 @@
+name: UI Handoff Materialize
+
+on:
+  push:
+    branches:
+      - backend-freeze-ui-handoff
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: backend-freeze-ui-handoff
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+      - name: Add handoff package commands
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const path='package.json';
+          const pkg=JSON.parse(readFileSync(path,'utf8'));
+          pkg.scripts['generate:ui-handoff']='node scripts/generate-ui-handoff.mjs';
+          pkg.scripts['check:ui-handoff']='node scripts/check-ui-handoff.mjs';
+          writeFileSync(path,JSON.stringify(pkg,null,2)+'\n');
+          NODE
+      - name: Generate machine handoff
+        run: node scripts/generate-ui-handoff.mjs
+      - name: Validate handoff synchronization
+        run: node scripts/check-ui-handoff.mjs
+      - name: Commit generated handoff artifacts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json artifacts/ui-handoff
+          if git diff --cached --quiet; then
+            echo "handoff already materialized"
+          else
+            git commit -m "docs: materialize frozen UI handoff artifacts"
+            git push origin HEAD:backend-freeze-ui-handoff
+          fi

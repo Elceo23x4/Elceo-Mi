@@ -1,8 +1,8 @@
 # ELCEO Backend Freeze
 
-**Status:** FROZEN  
-**Frozen main commit:** `20266494efd3a8d3a97c3ea9335c672e20fe7fa5`  
-**Frozen functional tree:** `6f81f55269031e0ec6467cd60283593dd5b7c2d3`  
+**Status:** FROZEN
+**Frozen main commit:** `20266494efd3a8d3a97c3ea9335c672e20fe7fa5`
+**Frozen functional tree:** `6f81f55269031e0ec6467cd60283593dd5b7c2d3`
 **Freeze acceptance:** CI Validation `#784` on the merged `main` commit completed successfully.
 
 ## What this freeze means

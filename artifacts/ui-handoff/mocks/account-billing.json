@@ -1,0 +1,30 @@
+{
+  "_meta": {
+    "route": "/api/account/billing",
+    "method": "GET",
+    "frozenMainCommit": "20266494efd3a8d3a97c3ea9335c672e20fe7fa5",
+    "scenario": "active_focus_plan_subscription",
+    "sourceContract": "packages/types/src/app-api.ts:AccountBillingSnapshotDto"
+  },
+  "ok": true,
+  "data": {
+    "snapshot": {
+      "generatedAt": "2026-09-18T00:00:00.000Z",
+      "plan": {
+        "kind": "premium",
+        "accountState": "active",
+        "startedAt": "2026-09-01T00:00:00.000Z",
+        "endsAt": "2026-10-01T00:00:00.000Z",
+        "trialEndsAt": null
+      },
+      "subscription": {
+        "state": "active",
+        "currentPeriodStart": "2026-09-01T00:00:00.000Z",
+        "currentPeriodEnd": "2026-10-01T00:00:00.000Z",
+        "trialEndsAt": null,
+        "canceledAt": null,
+        "willCancelAtPeriodEnd": false
+      }
+    }
+  }
+}

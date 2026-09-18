@@ -1,0 +1,102 @@
+{
+  "_meta": {
+    "route": "/api/workspace/current",
+    "method": "GET",
+    "frozenMainCommit": "20266494efd3a8d3a97c3ea9335c672e20fe7fa5",
+    "scenario": "current_workspace_attention_needed",
+    "sourceContract": "packages/types/src/workspace.ts:WorkspaceSnapshot"
+  },
+  "ok": true,
+  "data": {
+    "snapshot": {
+      "snapshotId": "workspace-snapshot-demo-001",
+      "summary": {
+        "subjectKind": "user",
+        "subjectId": "user-demo-001",
+        "generatedAt": "2026-09-18T00:00:00.000Z",
+        "healthState": "attention_needed",
+        "attentionLevel": "medium",
+        "dependencyStatus": {
+          "portfolio": "loaded",
+          "coaching": "loaded",
+          "analytics": "loaded",
+          "reasoning": "loaded",
+          "notifications": "loaded"
+        },
+        "portfolio": {
+          "portfolioSnapshotId": "portfolio-snapshot-demo-001",
+          "activeWatchlistCount": 4,
+          "activePositionCount": 1,
+          "weakeningThesisCount": 1,
+          "invalidatedThesisCount": 0,
+          "openActionCount": 2,
+          "criticalActionCount": 0
+        },
+        "coaching": {
+          "coachingSnapshotId": "coaching-snapshot-demo-001",
+          "focusAreaCount": 2,
+          "strengthCount": 1,
+          "actionPlanCount": 2,
+          "topFocusHeadline": "Wait for confirmation before increasing conviction",
+          "topFocusPriority": "high",
+          "topStrengthHeadline": "Journal reviews are consistent",
+          "supportingCaseIds": ["jcase-demo-001"]
+        },
+        "analytics": {
+          "analyticsSnapshotId": "analytics-snapshot-demo-001",
+          "closedCaseCount": 18,
+          "reviewedCaseCount": 16,
+          "disciplineScore": 78,
+          "adherenceScore": 74,
+          "topSetupType": "macro-continuation",
+          "topBehaviorTag": "confirmation-discipline"
+        },
+        "notifications": {
+          "unreadInboxCount": 2,
+          "degradedTargetCount": 0,
+          "criticalReceiptCount": 0,
+          "providerHealthAttention": "low"
+        },
+        "recentReasoningSignals": [
+          {
+            "reasoningRunId": "reasoning-demo-001",
+            "snapshotId": "reasoning-snapshot-demo-001",
+            "asset": "XAU/USD",
+            "timeframe": "H4",
+            "bias": "bullish",
+            "confidenceScore": 70,
+            "contradictionScore": 62,
+            "freshnessScore": 76,
+            "evaluatedAt": "2026-09-17T20:00:00.000Z"
+          }
+        ],
+        "agenda": [
+          {
+            "agendaId": "agenda-demo-001",
+            "sourceKind": "thesis_health",
+            "priority": "medium",
+            "headline": "Review weakening EUR/USD thesis",
+            "rationale": "The server-owned portfolio snapshot marks thesis health as weakening.",
+            "linkedActionId": "action-demo-001",
+            "linkedFocusId": null,
+            "linkedNotificationDecisionId": null,
+            "linkedReasoningRunId": "reasoning-demo-002",
+            "linkedPositionId": null,
+            "linkedWatchlistEntryId": "watch-demo-002",
+            "supportingCaseIds": ["jcase-demo-002"],
+            "score": 64
+          }
+        ],
+        "supportingCaseIds": ["jcase-demo-001", "jcase-demo-002"],
+        "attentionDetail": {
+          "portfolioAttentionScore": 54,
+          "coachingAttentionScore": 48,
+          "notificationAttentionScore": 12,
+          "reasoningAttentionScore": 46,
+          "dependencyPenaltyApplied": 0
+        }
+      },
+      "createdAt": "2026-09-18T00:00:00.000Z"
+    }
+  }
+}

@@ -16,3 +16,6 @@ All frontend contracts are fixture/mock driven for UI integration planning only.
 - Provider readiness remains shell-only; no live sends, no provider keys, no SDK activation in this batch.
 - Profile UI activation remains future work; C6-A11G will cover provider activation checklist + env templates.
 \n## C6-A11H update (2026-05-16)\n- Added backend-only SEO/programmatic contract feed finalization module + validators + tests.\n- Contract-level only (no UI, no public routes activated).\n- Public feeds exclude premium/admin/internal/secrets/raw provider payloads and avoid recommendation/advice language.\n- No live provider calls; C6-A11I remains observability/audit/logging readiness.\n
+## Current-status pointer (2026-09-18)
+
+This file is a historical C6-A10/C6-A11 record and is not the current UI integration truth source. The frozen-backend handoff is now maintained in `docs/ui-handoff/README.md`, `docs/backend-freeze.md`, and the machine-readable artifacts under `artifacts/ui-handoff/`. Later backend work superseded several fixture-era/deferred assumptions above; preserve them here only as project history.

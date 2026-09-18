@@ -1,0 +1,25 @@
+{
+  "_meta": {
+    "route": "/api/admin/commercial/users/{userId}/control-snapshot",
+    "method": "GET",
+    "frozenMainCommit": "20266494efd3a8d3a97c3ea9335c672e20fe7fa5",
+    "scenario": "durable_control_snapshot_no_active_override",
+    "sourceContract": "packages/types/src/super-admin-commercial-controls.ts:SuperAdminCommercialControlSnapshot",
+    "browserSafe": false,
+    "accessNote": "Trusted server mediation required. High-risk super-admin mutations additionally require step-up verification."
+  },
+  "ok": true,
+  "data": {
+    "targetUserId": "user-demo-002",
+    "snapshot": {
+      "generatedAt": "2026-09-18T00:00:00.000Z",
+      "targetUserId": "user-demo-002",
+      "activeGiftCount": 0,
+      "activeRestrictionCount": 0,
+      "activeGift": null,
+      "activeRestriction": null,
+      "persistenceStatus": "durable",
+      "stepUpReadinessState": "provider_pending"
+    }
+  }
+}

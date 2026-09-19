@@ -12,6 +12,16 @@ Backend freeze authority:
 
 Historical backend documents remain valid as historical evidence, but they must not override the frozen implementation or this handoff package.
 
+## Frontend repository boundary
+
+The production ELCEO UI is planned to be implemented in a **separate frontend repository** from `Elceo-Mi`.
+
+`Elceo-Mi` remains the backend/source-contract repository and retains the canonical handoff because it owns the frozen API/runtime truth: routes, schemas, DTOs, authentication and authorization rules, state ownership, billing/payment truth, notification behaviour, and server-owned cognition.
+
+The UI page inventory and the other files in this directory are therefore **implementation contracts for the separate UI repository**, not an instruction to build the complete production frontend inside `Elceo-Mi`.
+
+Existing UI/prototype code in this repository may be used as implementation evidence or migration reference, but repository separation remains the target architecture. Any backend change later discovered to be necessary for the UI must be handled as an explicit contract change in `Elceo-Mi`, not hidden inside frontend-owned logic.
+
 ## Start here
 
 1. **API explorer:** `docs/ui-handoff/api-explorer.html`
@@ -19,14 +29,15 @@ Historical backend documents remain valid as historical evidence, but they must 
 3. **Canonical route inventory:** `artifacts/ui-handoff/route-inventory.json`
 4. **Generated counts/coverage:** `artifacts/ui-handoff/handoff-summary.json`
 5. **Mock payloads:** `artifacts/ui-handoff/mocks/`
-6. **UI states:** `docs/ui-handoff/ui-state-matrix.md`
-7. **Validation rules:** `docs/ui-handoff/validation-and-field-rules.md`
-8. **Auth/session/authorization:** `docs/ui-handoff/auth-session-and-authorization.md`
-9. **State ownership:** `docs/ui-handoff/state-ownership.md`
-10. **Frontend integration map:** `docs/ui-handoff/frontend-integration-map.md`
-11. **Billing/payment UI contract:** `docs/ui-handoff/billing-payment-state-machine.md`
-12. **Notifications UI contract:** `docs/ui-handoff/notifications-ui-contract.md`
-13. **Explicit unresolved documentation limits:** `docs/ui-handoff/contract-gaps.md`
+6. **Canonical UI page/surface inventory:** `docs/ui-handoff/ui-page-inventory.md`
+7. **UI states:** `docs/ui-handoff/ui-state-matrix.md`
+8. **Validation rules:** `docs/ui-handoff/validation-and-field-rules.md`
+9. **Auth/session/authorization:** `docs/ui-handoff/auth-session-and-authorization.md`
+10. **State ownership:** `docs/ui-handoff/state-ownership.md`
+11. **Frontend integration map:** `docs/ui-handoff/frontend-integration-map.md`
+12. **Billing/payment UI contract:** `docs/ui-handoff/billing-payment-state-machine.md`
+13. **Notifications UI contract:** `docs/ui-handoff/notifications-ui-contract.md`
+14. **Explicit unresolved documentation limits:** `docs/ui-handoff/contract-gaps.md`
 
 ## Source-of-truth order
 
@@ -110,6 +121,8 @@ npm run check:ui-handoff
 ```
 
 `check:ui-handoff` fails on route/OpenAPI drift, internal routes marked browser-safe, stale generated files, malformed mocks, secret-like mock values, freeze-baseline mismatch, or stale fixture-era handoff language.
+
+When the separate production UI repository is created, record which backend freeze commit/tree its integration targets. If the backend freeze later changes, deliberately resynchronize the handoff instead of allowing the repositories to drift implicitly.
 
 ## UI implementation rule
 
